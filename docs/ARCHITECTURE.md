@@ -101,7 +101,7 @@ _否掉(试过,是错的):_ 「按逃逸层数往上倒推一个公共服务根�
 | UI            | React 19                    |                                     |
 | 样式          | CSS token 层                | 主题、密度、动效归 app 所有         |
 | DB            | Node SQLite, WAL            | 追加式事件 + 可重建读模型           |
-| deck 运行时   | reveal.js + GSAP            | 来自 orca-transition-skill,原样复用 |
+| deck 运行时   | reveal.js + GSAP            | 来自 orca-ppt-skill,原样复用        |
 | 录制          | playwright-core,逐帧 seek   | 同上,`capture.mjs` 包成 job         |
 | 测试          | Vitest                      |                                     |
 
@@ -134,7 +134,7 @@ deck 存成**磁盘上的真实工程目录**,不是数据库里的 blob:
 ```
 
 _为什么:_ 用户随时能把这个目录拿走,用别的 agent、别的编辑器继续干,产品不绑架内容。
-这条和 orca-transition-skill 现在的产物形态一致 —— 手工跑 skill 出来的目录,能直接被本产品
+这条和 orca-ppt-skill 现在的产物形态一致 —— 手工跑 skill 出来的目录,能直接被本产品
 打开。
 
 ---

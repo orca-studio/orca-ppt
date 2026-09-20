@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Layout } from './layout.js'
-import { applyTheme, nextTheme, readTheme, THEME_LABEL, type ThemeSource } from './theme.js'
+import { ThemeButton } from './ThemeButton.js'
 import { ViewMenu } from './ViewMenu.js'
 
 /**
@@ -34,7 +34,6 @@ export function Toolbar({
   onPresent,
 }: ToolbarProps) {
   const live = useAgentLive(agentSeenAt)
-  const [theme, setTheme] = useState<ThemeSource>(readTheme)
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
@@ -90,17 +89,7 @@ export function Toolbar({
         <button type="button" onClick={onOpen}>
           打开…
         </button>
-        <button
-          type="button"
-          title={`主题:${THEME_LABEL[theme]}`}
-          onClick={() => {
-            const next = nextTheme(theme)
-            applyTheme(next)
-            setTheme(next)
-          }}
-        >
-          {THEME_LABEL[theme]}
-        </button>
+        <ThemeButton />
       </div>
 
       <span className="toolbar-agent" data-live={live}>

@@ -3,6 +3,7 @@ import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contrac
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
+import { Gallery } from './Gallery.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type StageHandle } from './Stage.js'
@@ -10,6 +11,7 @@ import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
+type Template = RequestResult<'catalog.templates'>['templates'][number]
 
 export function App({ serverUrl }: { serverUrl: string }) {
   const transport = useRef<Transport>(undefined)
@@ -29,6 +31,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
   const [autoplay, setAutoplay] = useState(false)
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [creating, setCreating] = useState(false)
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
@@ -159,6 +163,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'toggle-nav') toggleNavRef.current()
     })
 
+    void next
+      .request('catalog.templates', {})
+      .then((result) => setTemplates(result.templates))
+      .catch(() => setTemplates([]))
+
     const initial = window.orca?.initialDeck
     if (initial) void openWith(next, initial)
   }, [serverUrl, openWith])
@@ -264,6 +273,33 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void active.request('deck.autoplay', { deckId: current.deck.id, on: !autoplay })
   }, [autoplay])
 
+  /** 选了模板就建、就打开 —— 中间不该再让人挑一次目录。 */
+  const create = useCallback(
+    async (template: Template, title: string) => {
+      const active = transport.current
+      if (!active) return
+      // 放哪儿:让人挑一次父目录。deck 是磁盘上的目录,得由他决定放在哪。
+      const parentDir = await window.orca?.pickDeck?.()
+      if (!parentDir) return
+
+      setCreating(true)
+      setError(undefined)
+      try {
+        const made = await active.request('deck.create', {
+          parentDir,
+          title,
+          from: template.id,
+        })
+        await openWith(active, made.path)
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : String(cause))
+      } finally {
+        setCreating(false)
+      }
+    },
+    [openWith],
+  )
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -307,6 +343,23 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }, 1000)
     return () => clearInterval(timer)
   }, [autoplay])
+
+  // 没打开稿子时,整屏是模板选择器 —— 三栏都没有内容可放,摆在那儿只是空框。
+  if (!deck) {
+    // 选择器上不摆顶栏:播放、自动播放、视图切换在这儿全是灰的 —— 没有稿子可播、
+    // 没有栏可切。它自己的 header 当窗口拖动区。
+    return (
+      <div className="app app--gallery">
+        <Gallery
+          templates={templates}
+          busy={creating}
+          error={error}
+          onCreate={(template, title) => void create(template, title)}
+          onOpen={() => void pickDeck(open)}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="app">

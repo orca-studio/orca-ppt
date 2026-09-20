@@ -27,7 +27,7 @@ agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的
 
 ```bash
 # 开发时直接开一份稿子
-ORCA_PPT_DECK=~/ghq/github.com/zhenwusw/orca-transition-skill/examples/forest-timeline pnpm dev
+ORCA_PPT_DECK=~/ghq/github.com/zhenwusw/orca-ppt-skill/examples/forest-timeline pnpm dev
 ```
 
 ## 为什么
@@ -62,7 +62,7 @@ pnpm test
 
 规范、主题、版式、录制脚本不在本仓,从 skill 读:
 
-- [orca-transition-skill](https://github.com/zhenwusw/orca-transition-skill) — 转场、主题、版式、`capture.mjs`
+- [orca-ppt-skill](https://github.com/zhenwusw/orca-ppt-skill) — 转场、主题、版式、`capture.mjs`
 - [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) — 场景内部的 MG 动画
 - [ppt.orca-studio.ai](https://ppt.orca-studio.ai) — 示例库
 

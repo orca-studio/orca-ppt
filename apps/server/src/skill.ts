@@ -6,7 +6,13 @@ import { join } from 'node:path'
  * 规范、主题、版式、录制脚本都从 skill 目录读,不抄进本仓 —— skill 更新产品跟着更新,
  * 不两边同步(见 docs/DECK-MODE.md 末节)。
  */
+/**
+ * 两个名字都认:仓从 `orca-transition-skill` 改成了 `orca-ppt-skill`(和应用同源),
+ * 但已经克隆在本地的旧目录不会自己改名,也不该因此突然找不到 skill。
+ */
 const DEFAULT_LOCATIONS = [
+  join(homedir(), 'ghq/github.com/zhenwusw/orca-ppt-skill'),
+  join(homedir(), '.claude/skills/orca-ppt'),
   join(homedir(), 'ghq/github.com/zhenwusw/orca-transition-skill'),
   join(homedir(), '.claude/skills/orca-transition'),
 ]

@@ -274,7 +274,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '列出现成主题和版式',
         description:
-          '来自 orca-transition-skill 的主题和版式目录。选主题阶段先从这里挑,不合适再新建 —— 颜色只能来自主题文件,不要在稿子里改颜色。',
+          '来自 orca-ppt-skill 的主题和版式目录。选主题阶段先从这里挑,不合适再新建 —— 颜色只能来自主题文件,不要在稿子里改颜色。',
       },
       run: async () => json(await call('catalog.list', {})),
     },

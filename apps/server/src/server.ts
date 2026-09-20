@@ -23,6 +23,7 @@ import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, resolveSkillPath, type Catalog } from './skill.js'
+import { instantiate, listTemplates } from './templates.js'
 
 /**
  * 本地 server 拥有全部状态。界面和 MCP server 都是它的薄客户端 —— 界面不 spawn 进程、
@@ -202,8 +203,22 @@ export async function startServer(
       case 'deck.create': {
         const params = parseParams('deck.create', raw)
         const path = join(params.parentDir, slugify(params.title))
-        await mkdir(join(path, '.deck'), { recursive: true })
+
+        if (params.from) {
+          if (!catalog.skillPath) throw new Error('找不到 skill,没有模板可用')
+          await instantiate({
+            skillPath: catalog.skillPath,
+            templateId: params.from,
+            targetDir: path,
+          })
+        } else {
+          await mkdir(join(path, '.deck'), { recursive: true })
+        }
         return { path }
+      }
+      case 'catalog.templates': {
+        parseParams('catalog.templates', raw)
+        return { templates: await listTemplates(catalog.skillPath) }
       }
       case 'deck.showSlide': {
         const params = parseParams('deck.showSlide', raw)

@@ -60,9 +60,33 @@ export const requests = {
       phases: z.array(PhaseReport),
     }),
   },
+  /**
+   * 新建一份稿子。`from` 指一个模板或示例,不给就是个空目录。
+   *
+   * 模板和示例都来自 skill —— 它已经有一整套能直接放映的成稿,没道理让人从空白开始。
+   */
   'deck.create': {
-    params: z.object({ parentDir: z.string(), title: z.string() }),
+    params: z.object({
+      parentDir: z.string(),
+      title: z.string(),
+      from: z.string().optional(),
+    }),
     result: z.object({ path: z.string() }),
+  },
+  /** 新建时能从哪儿起头:skill 的空白模板和示例。 */
+  'catalog.templates': {
+    params: z.object({}),
+    result: z.object({
+      templates: z.array(
+        z.object({
+          id: z.string(),
+          kind: z.enum(['template', 'example']),
+          title: z.string(),
+          /** 缩略图的绝对路径。skill 自己就给示例生成了 thumb.jpg,不用我们再渲。 */
+          thumbnail: z.string().optional(),
+        }),
+      ),
+    }),
   },
   /** 跳到第几页。界面点页胶片走它,agent 说「你看第 4 页」也走它。 */
   'deck.showSlide': {

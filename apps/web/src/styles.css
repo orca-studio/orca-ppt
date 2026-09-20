@@ -1058,3 +1058,188 @@ code {
   background: var(--accent);
   color: var(--panel);
 }
+
+/* 模板选择器:没打开稿子时的首屏 */
+.gallery {
+  overflow: auto;
+  padding: 28px 32px 90px;
+  background: var(--bg);
+  position: relative;
+}
+
+.gallery > header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.gallery h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.gallery > header button {
+  margin-left: auto;
+  padding: 0 14px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.gallery > header button:hover {
+  background: var(--control-hover);
+}
+
+.gallery h2 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.gallery h2 em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.gallery section + section {
+  margin-top: 28px;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 18px;
+}
+
+.gallery-grid button {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gallery-grid img,
+.gallery-blank {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+}
+
+.gallery-grid button[data-picked='true'] img,
+.gallery-grid button[data-picked='true'] .gallery-blank {
+  outline-color: var(--accent);
+}
+
+.gallery-title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery > footer {
+  position: sticky;
+  bottom: 0;
+  margin: 24px -32px -90px;
+  padding: 14px 32px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  gap: 10px;
+}
+
+.gallery > footer input {
+  flex: 1;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.gallery-create {
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--panel);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.gallery-create:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gallery-empty,
+.gallery-error {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.gallery-error {
+  color: var(--danger);
+}
+
+/* 空白模板要看得出是空白,别和「没渲出缩略图的示例」撞脸 */
+.gallery-blank {
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.gallery-blank[data-kind='template'] {
+  border-style: dashed;
+  box-shadow: none;
+}
+
+/* 选择器没有顶栏,它自己的 header 当窗口拖动区 */
+.app--gallery {
+  grid-template-rows: 1fr;
+}
+
+.gallery > header {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.gallery > header button {
+  -webkit-app-region: no-drag;
+}
+
+:root[data-platform='darwin'] .gallery > header {
+  padding-left: 66px;
+}
+
+.gallery > header button + button {
+  margin-left: 0;
+}

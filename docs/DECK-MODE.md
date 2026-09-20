@@ -120,7 +120,7 @@ _不做:_ **自动视觉自评**(抽关键帧调模型打分)和**自动修复�
 
 ## 与 skill 的关系
 
-`orca-transition-skill` 和 `orca-motion-skill` 不被抄进本仓,而是作为**内容层依赖**被读取:
+`orca-ppt-skill` 和 `orca-motion-skill` 不被抄进本仓,而是作为**内容层依赖**被读取:
 规范文档、主题、版式模板、`capture.mjs` 都从 skill 目录读。skill 更新,产品跟着更新,不用
 两边同步。
 

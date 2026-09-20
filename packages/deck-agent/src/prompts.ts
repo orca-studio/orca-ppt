@@ -21,7 +21,7 @@ export interface PhaseContext {
 const COMMON = (context: PhaseContext): string => {
   const skill = context.skillPath
     ? `转场规范、主题、版式模板都在 \`${context.skillPath}\`。先读它的 \`SKILL.md\`。`
-    : '找不到 orca-transition-skill —— 先说明这一点,不要凭印象编一套规范出来。'
+    : '找不到 orca-ppt-skill —— 先说明这一点,不要凭印象编一套规范出来。'
   return `你在一个演示稿工程目录里工作,当前目录就是这份 deck。\n${skill}`
 }
 

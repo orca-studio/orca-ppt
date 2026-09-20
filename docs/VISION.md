@@ -4,7 +4,7 @@
 
 做演示稿这件事,今天被切成了两半,中间那道缝没人补。
 
-**一半是「写」。** Agent 已经能写出不错的 HTML 稿子 —— `orca-transition-skill` 这类
+**一半是「写」。** Agent 已经能写出不错的 HTML 稿子 —— `orca-ppt-skill` 这类
 skill 把转场规范、主题、版式都给足了,模型照着做,出来的东西能看。但这一半发生在终端
 里:你说一句、它写一版、你自己开浏览器翻一遍、再回终端描述哪里不对。**问题不在模型,
 在于你必须用文字描述一个视觉对象。** 「第四页那个标题」「转场太快了」—— 你在给一个看
@@ -75,11 +75,11 @@ critique 归人:演示稿哪里不对,人一眼就能判,不像设计工具那�
 
 这个产品的内容层已经存在,不用从零写:
 
-| 资产                                                                       | 作用                                    |
-| -------------------------------------------------------------------------- | --------------------------------------- |
-| [orca-transition-skill](https://github.com/zhenwusw/orca-transition-skill) | 转场规范、主题、版式模板、`capture.mjs` |
-| [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill)         | 场景内部的 MG 动画                      |
-| [ppt.orca-studio.ai](https://ppt.orca-studio.ai)                           | 示例库,也是参考锚定的素材来源           |
+| 资产                                                               | 作用                                    |
+| ------------------------------------------------------------------ | --------------------------------------- |
+| [orca-ppt-skill](https://github.com/zhenwusw/orca-ppt-skill)       | 转场规范、主题、版式模板、`capture.mjs` |
+| [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) | 场景内部的 MG 动画                      |
+| [ppt.orca-studio.ai](https://ppt.orca-studio.ai)                   | 示例库,也是参考锚定的素材来源           |
 
 产品要做的是把它们从「agent 读的文档」变成「人能点的界面」。
 
