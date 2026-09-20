@@ -115,11 +115,11 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
                 之后同一个标签会横跨好几个主题(「高对比」「衬线」现在就是),那时候
                 这排字直接变成筛选条,不用回头改数据。
               */}
-              {item.scenes.length > 0 && (
-                <span className="gallery-scene">{item.scenes.join(' · ')}</span>
+              {item.tags.scene.length > 0 && (
+                <span className="gallery-scene">{item.tags.scene.join(' · ')}</span>
               )}
-              {item.styles.length > 0 && (
-                <span className="gallery-style">{item.styles.join(' · ')}</span>
+              {item.tags.style.length > 0 && (
+                <span className="gallery-style">{item.tags.style.join(' · ')}</span>
               )}
             </button>
           ))}

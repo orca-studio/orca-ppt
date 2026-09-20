@@ -46,19 +46,34 @@ export interface Catalog {
  * **主题就是场景** —— 用这个产品的人都带着自己的场合来:年度复盘、对外路演、内部分享。
  * 所以卡上要写它适合什么场合,不能只写它长什么样;光看颜色人挑不出来。
  */
+export interface ThemeTags {
+  /** 什么场合用它:年度复盘、对外路演、内部分享。 */
+  scene: string[]
+  /** 什么调子:沉静、高对比、衬线。 */
+  style: string[]
+}
+
 export interface Theme {
   name: string
   title: string
   /**
-   * 适合什么场合、是什么调子。写在主题文件开头的「场景：」「风格：」两行。
+   * 这个主题带的标签,按轴分组。写在主题文件开头的「场景：」「风格：」两行。
    *
-   * **存成标签而不是一句话**:一个主题会同时落在好几个标签下(「高对比」在两个主题里,
-   * 「衬线」在三个),主题多起来之后这就是筛选条的数据。存成散文就永远过滤不了,
-   * 而现在多写这一步几乎不要钱 —— Keynote 的侧边栏正是这么长出来的:它的主题名就是
-   * 「场景(风格)」,一套命名同时生出两个轴,所以一个主题会出现在好几处。
+   * **是标签,不是描述**:同一个标签会横跨好几个主题(「高对比」在两个主题里,
+   * 「衬线」在三个),主题多起来之后这就是筛选条的数据 —— 存成一句散文就永远过滤不了。
+   *
+   * 为什么是一个 `tags` 而不是并列的 `scenes` / `styles` 两个字段:那样读起来像
+   * 这一个主题自己的两条属性,看不出它们是同一类东西,加第三个轴的人多半会写成一个
+   * 标量,当场破掉这个模式。包成一层之后,轴是可枚举的 —— 将来的筛选条直接
+   * `Object.entries(tags)` 就能铺开。
+   *
+   * 轴仍然是具名的(不是 `Record<string, string[]>`):界面对两个轴的处理**不一样** ——
+   * 场景是人先问的那一半,给正文色;风格是补充,淡一档。开放的 record 会把这个丢掉。
+   *
+   * Keynote 的侧边栏正是这么长出来的:它的主题名就是「场景(风格)」——「烹饪(朴素)」
+   * 「品牌(现代)」,一套命名同时生出两个轴,所以一个主题会出现在好几处。
    */
-  scenes: string[]
-  styles: string[]
+  tags: ThemeTags
   /**
    * 样张的绝对路径 —— **每个主题一张,内容完全一样**,只有设计不同(见 skill 的
    * scripts/theme-samples.mjs)。没有样张的主题不进选择器:一张白卡片,人看不出
@@ -72,7 +87,7 @@ export interface Theme {
  *
  * 分隔符收得宽一点(`/ 、· ,` 都认):这行是人手写的,为一个顿号漏掉半行标签不值得。
  */
-export function tags(head: string, field: string): string[] {
+export function tagLine(head: string, field: string): string[] {
   const line = head.match(new RegExp(`${field}[:：]\\s*([^\\n]+)`))?.[1]
   if (!line) return []
   return line
@@ -109,8 +124,7 @@ async function readTheme(dir: string, name: string): Promise<Theme> {
     name,
     // 主题文件开头那行注释里写着人读的名字,比文件名好看。
     title: head.match(/主题[:：]\s*([^\n(（]+)/)?.[1]?.trim() || name,
-    scenes: tags(head, '场景'),
-    styles: tags(head, '风格'),
+    tags: { scene: tagLine(head, '场景'), style: tagLine(head, '风格') },
     ...(hasSample ? { sample } : {}),
   }
 }

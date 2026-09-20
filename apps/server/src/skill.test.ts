@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readCatalog, resolveSkillPath, tags } from './skill.js'
+import { readCatalog, resolveSkillPath, tagLine } from './skill.js'
 
 async function fakeSkill() {
   const dir = await mkdtemp(join(tmpdir(), 'skill-'))
@@ -40,12 +40,11 @@ describe('readCatalog', () => {
     const catalog = await readCatalog(await fakeSkill())
     expect(catalog.themes).toEqual([
       // 没写标签的主题给空数组,不编一个
-      { name: 'clearing', title: 'clearing', scenes: [], styles: [] },
+      { name: 'clearing', title: 'clearing', tags: { scene: [], style: [] } },
       {
         name: 'editorial-forest',
         title: 'Editorial Forest',
-        scenes: ['年度复盘', '研究汇报'],
-        styles: ['沉静', '衬线'],
+        tags: { scene: ['年度复盘', '研究汇报'], style: ['沉静', '衬线'] },
       },
     ])
     expect(catalog.layouts).toEqual(['bento'])
@@ -61,19 +60,19 @@ describe('readCatalog', () => {
   })
 })
 
-describe('tags', () => {
+describe('tagLine', () => {
   const head = `/* 主题：Editorial Forest（取自别处）
  * 场景：年度复盘 / 研究汇报
  * 风格：沉静 · 衬线 · 读物感
  * 在 tokens.css 之后引入。*/`
 
   it('一行拆成一组标签', () => {
-    expect(tags(head, '场景')).toEqual(['年度复盘', '研究汇报'])
-    expect(tags(head, '风格')).toEqual(['沉静', '衬线', '读物感'])
+    expect(tagLine(head, '场景')).toEqual(['年度复盘', '研究汇报'])
+    expect(tagLine(head, '风格')).toEqual(['沉静', '衬线', '读物感'])
   })
 
   it('几种分隔符都认 —— 这行是人手写的,为一个顿号漏掉半行不值得', () => {
-    expect(tags(' * 场景：路演、年鉴,复盘 / 分享', '场景')).toEqual([
+    expect(tagLine(' * 场景：路演、年鉴,复盘 / 分享', '场景')).toEqual([
       '路演',
       '年鉴',
       '复盘',
@@ -82,15 +81,15 @@ describe('tags', () => {
   })
 
   it('没有这一行就是空,不报错也不编一个', () => {
-    expect(tags('/* 主题：无标签 */', '场景')).toEqual([])
+    expect(tagLine('/* 主题：无标签 */', '场景')).toEqual([])
   })
 
   it('全角冒号和半角冒号都认', () => {
-    expect(tags(' * 风格: 明快', '风格')).toEqual(['明快'])
+    expect(tagLine(' * 风格: 明快', '风格')).toEqual(['明快'])
   })
 
   it('注释的星号不会混进标签里', () => {
-    expect(tags(' * 场景：产品发布 / 方案提案\n * 风格：明快', '场景')).toEqual([
+    expect(tagLine(' * 场景：产品发布 / 方案提案\n * 风格：明快', '场景')).toEqual([
       '产品发布',
       '方案提案',
     ])
