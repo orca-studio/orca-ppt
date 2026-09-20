@@ -13,6 +13,7 @@ declare global {
       anchorFor(element: Element): any
       selectorFor(element: Element): string
       armed(): boolean
+      slideInfo(): any
     }
     Reveal?: any
   }
@@ -190,5 +191,53 @@ describe('arm', () => {
     // 高亮框被忽略,锚还没产生
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(await pending).toBeNull()
+  })
+})
+
+describe('slideInfo', () => {
+  function withReveal(html: string) {
+    document.body.innerHTML = `<div class="slides">${html}</div>`
+    const sections = document.querySelectorAll('.slides > section')
+    window.Reveal = { getIndices: () => ({ h: 1 }), getCurrentSlide: () => sections[1] }
+  }
+
+  it('报出停留时长和参与转场的元素 —— 只有画布答得出来', () => {
+    withReveal(
+      '<section></section>' +
+        '<section data-hold="2.5" data-auto-animate-duration="1.2">' +
+        '<p data-id="title">走过的四站</p>' +
+        '<span data-carry="metric">68%</span>' +
+        '<p>不参与转场的</p>' +
+        '</section>',
+    )
+    const info = window.__orcaInspect.slideInfo()
+    expect(info.index).toBe(1)
+    expect(info.hold).toBe('2.5')
+    expect(info.duration).toBe('1.2')
+    expect(info.carries).toEqual([
+      { id: 'title', kind: 'data-id', text: '走过的四站' },
+      { id: 'metric', kind: 'data-carry', text: '68%' },
+    ])
+  })
+
+  it('没写 data-hold 就如实报 null,不编一个默认值', () => {
+    withReveal('<section></section><section><p data-id="a">x</p></section>')
+    expect(window.__orcaInspect.slideInfo().hold).toBeNull()
+  })
+
+  it('一个参与转场的元素都没有时是空数组 —— 这本身是有用的信息', () => {
+    withReveal('<section></section><section><p>光秃秃的一页</p></section>')
+    expect(window.__orcaInspect.slideInfo().carries).toEqual([])
+  })
+
+  it('文字太长就截断 —— 右栏放不下,而且长了也帮不上定位', () => {
+    withReveal(`<section></section><section><p data-id="a">${'字'.repeat(40)}</p></section>`)
+    expect(window.__orcaInspect.slideInfo().carries[0].text).toHaveLength(25)
+  })
+
+  it('没有 Reveal 时给 null,不抛', () => {
+    document.body.innerHTML = ''
+    delete window.Reveal
+    expect(window.__orcaInspect.slideInfo()).toBeNull()
   })
 })

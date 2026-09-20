@@ -1,6 +1,6 @@
 import { copyFile, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
-import { tagAttr, type TagSet } from './tags.js'
+import { keepKnown, tagAttr, type Vocabulary } from './tags.js'
 
 /**
  * 新建稿子从哪儿起头。两类,都来自 skill:
@@ -13,30 +13,16 @@ import { tagAttr, type TagSet } from './tags.js'
  * runtime),重写一次相对前缀就行。不重写的话,稿子一挪位置就全白。
  */
 
-/**
- * 一份稿子带的标签。**是标签不是分类** —— 见 tags.ts。
- *
- * - `mode` 是真互斥的:SKILL.md 的「两种模式」,对应两个起始文件,一份稿子只能是一种。
- *   互斥不等于要做成分类系统 —— 它只是这个轴上恰好只有一个值。
- * - `page` 是叠加的:一份汇报稿可以既有 bento 页、又有时间线页。
- *   **Bento 曾经被我当成和汇报稿并列的第三种模式,那是错的** —— 它是汇报稿里的一种
- *   页型,塞进互斥的枚举就只能挑一个,信息当场丢掉。
- *
- * 都写在稿子的 `<html>` 上(`data-layout` / `data-tags`),从起始文件复制出来就带着,
- * 不靠写稿的人记得填。
- */
-export interface DeckTags extends TagSet {
-  mode: string[]
-  page: string[]
-}
-
 export interface DeckTemplate {
   id: string
   kind: 'template' | 'example'
   title: string
   /** 缩略图的绝对路径。空白模板没有。 */
   thumbnail?: string
-  tags: DeckTags
+  /** 汇报稿还是故事稿。两个起始文件,一份稿子只能是一种 —— 这是模式,不是标签。 */
+  mode?: string
+  /** 标签。**从 skill 的 `runtime/tags.json` 里挑,不能自由决定**(见 tags.ts)。 */
+  tags: string[]
 }
 
 /** 模式只有这两种,对应两个起始文件。认不出来的不猜。 */
@@ -47,7 +33,10 @@ const BLANKS: Array<{ file: string; title: string; mode: string }> = [
   { file: 'story-starter.html', title: '故事稿', mode: 'story' },
 ]
 
-export async function listTemplates(skillPath: string | undefined): Promise<DeckTemplate[]> {
+export async function listTemplates(
+  skillPath: string | undefined,
+  vocabulary: Vocabulary = [],
+): Promise<DeckTemplate[]> {
   if (!skillPath) return []
 
   const blanks: DeckTemplate[] = []
@@ -58,17 +47,19 @@ export async function listTemplates(skillPath: string | undefined): Promise<Deck
         id: `template:${blank.file}`,
         kind: 'template',
         title: blank.title,
-        tags: { mode: [blank.mode], page: [] },
+        mode: blank.mode,
+        // 空白起始文件不带标签 —— 它还不是任何一类稿子,主题才决定那个。
+        tags: [],
       })
     } catch {
       // skill 里没有这份模板
     }
   }
 
-  return [...blanks, ...(await listExamples(skillPath))]
+  return [...blanks, ...(await listExamples(skillPath, vocabulary))]
 }
 
-async function listExamples(skillPath: string): Promise<DeckTemplate[]> {
+async function listExamples(skillPath: string, vocabulary: Vocabulary): Promise<DeckTemplate[]> {
   const root = join(skillPath, 'examples')
   let names: string[]
   try {
@@ -103,18 +94,18 @@ async function listExamples(skillPath: string): Promise<DeckTemplate[]> {
       kind: 'example',
       title: titleOf(html) ?? name,
       thumbnail: thumb,
-      tags: tagsOf(html),
+      ...tagsOf(html, vocabulary),
     })
   }
   return examples
 }
 
-/** 稿子自己声明的标签。读不出来就是空 —— 不猜,归错一个标签比没有标签更糟。 */
-function tagsOf(html: string): DeckTags {
+/** 稿子自己声明的模式和标签。读不出来就是空 —— 不猜,归错一个标签比没有标签更糟。 */
+function tagsOf(html: string, vocabulary: Vocabulary): { mode?: string; tags: string[] } {
   const mode = html.match(/<html[^>]*\bdata-layout="([a-z0-9-]+)"/i)?.[1]
   return {
-    mode: mode && MODES.has(mode) ? [mode] : [],
-    page: tagAttr(html),
+    ...(mode && MODES.has(mode) ? { mode } : {}),
+    tags: keepKnown(tagAttr(html), vocabulary).kept,
   }
 }
 

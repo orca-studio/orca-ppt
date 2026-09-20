@@ -3,92 +3,55 @@ import type { RequestResult } from '@orca-ppt/contracts'
 export type Template = RequestResult<'catalog.templates'>['templates'][number]
 
 /**
- * 按标签分面 —— **不是分类**。
+ * 按标签铺成一列分区 —— **不是分类**。
  *
  * 分类:一个条目属于且只属于一个组,组是事先定好的一张表。
- * 分面:按某个轴上的标签分组,**一个条目会出现在好几组里**,组是由条目自己带的标签
- * 决定的,不用另外维护一张表。
+ * 分区:按标签分组,**一个条目会出现在好几组里**,组由条目自己带的标签决定。
  *
- * 为什么必须是后者:一份汇报稿可以既有 bento 页、又有时间线页,它该在这两处都出现。
- * 塞进互斥的分类就只能挑一个,信息当场丢掉 —— 这个错我们已经犯过一次(把 Bento 当成
- * 和汇报稿并列的第三种模式)。
+ * 「最近使用」也是一个分区,但它**不是标签** —— 它不写在任何文件里,是系统从使用记录
+ * 算出来的。所以它单独传进来,不从 `tags` 里读(塞进 tags 就等于说它是条目的属性,
+ * 而它今天有明天就没了)。
  */
 
-export interface Facet {
-  /** 标签本身,也是这一组的名字。 */
-  value: string
-  items: Template[]
+export interface Section<T> {
+  /** 分区标题。标签区用词表里的 label,派生区用它自己的名字。 */
+  title: string
+  items: T[]
 }
 
 /**
- * 把一批条目按某个轴上的标签铺开。
- *
- * `order` 给出想优先的标签(比如「最近使用」排最前);没列到的按第一次出现的顺序跟在后面。
- * 不排序 —— 顺序是作者和使用决定的,字母序对人没有意义。
+ * `min` 是成区的门槛。**大部分模板只有一个标签**,门槛给 1 就会出来一堆只有一张卡的
+ * 区,比平铺还难读。给 2:标签不够多时人看到的就是一个平铺的全表,等条目多了分区自己
+ * 长出来。
  */
-export function facetsOf<T extends { tags: Record<string, string[]> }>(
+export function sectionsOf<T extends { tags: string[] }>(
   items: T[],
-  axis: string,
-  order: string[] = [],
-): Array<{ value: string; items: T[] }> {
-  const byValue = new Map<string, T[]>()
+  options: {
+    /** 排在最前的派生分区,比如「最近使用」。空的不显示。 */
+    derived?: Array<{ title: string; items: T[] }>
+    /** 兜底那一区的名字。它带上全部条目 —— 保证每个条目至少露一次。 */
+    fallback: string
+    label?: (tag: string) => string
+    min?: number
+  },
+): Array<Section<T>> {
+  const { derived = [], fallback, label = (tag) => tag, min = 2 } = options
+  if (items.length === 0) return []
+
+  const byTag = new Map<string, T[]>()
   for (const item of items) {
-    for (const value of item.tags[axis] ?? []) {
-      const bucket = byValue.get(value)
+    for (const tag of item.tags) {
+      const bucket = byTag.get(tag)
       if (bucket) bucket.push(item)
-      else byValue.set(value, [item])
+      else byTag.set(tag, [item])
     }
   }
 
-  const seen = [...byValue.keys()]
-  const ranked = [
-    ...order.filter((value) => byValue.has(value)),
-    ...seen.filter((value) => !order.includes(value)),
+  return [
+    ...derived.filter((section) => section.items.length > 0),
+    ...[...byTag.entries()]
+      .filter(([, members]) => members.length >= min)
+      .map(([tag, members]) => ({ title: label(tag), items: members })),
+    { title: fallback, items },
   ]
-  return ranked.map((value) => ({ value, items: byValue.get(value) ?? [] }))
-}
-
-/** 带这个标签的条目。带不带这个轴上的别的标签都不影响。 */
-export function withTag<T extends { tags: Record<string, string[]> }>(
-  items: T[],
-  axis: string,
-  value: string,
-): T[] {
-  return items.filter((item) => (item.tags[axis] ?? []).includes(value))
-}
-
-/**
- * 铺成一列分区。**标签是分区,不是卡片上的一条属性** ——
- * 这是分面模型最容易做丢的一点:分区意味着同一个条目会在下面的分区里**再出现一次**
- * (Keynote 里「启动(简易)」在「最近使用」和「商业」各有一份)。做成属性就只能出现
- * 一次,重复出现这件事本身就没了,而那正是分面区别于分类的地方。
- *
- * `axes` 按顺序产生分区;`fallback` 是兜底那一区(带上全部条目),它保证每个条目至少
- * 露一次 —— 标签再怎么不全,人也不该找不到东西。
- */
-export function sectionsOf<T extends { tags: Record<string, string[]> }>(
-  items: T[],
-  axes: string[],
-  fallback?: string,
-): Array<{ value: string; items: T[] }> {
-  const sections = axes.flatMap((axis) => facetsOf(items, axis))
-  if (fallback && items.length > 0) sections.push({ value: fallback, items })
-  return sections
-}
-
-/**
- * 某个轴上出现过的全部标签。**这就是筛选条的数据** —— 有什么标签由条目自己决定,
- * 不用另外维护一张表。有了新标签,筛选条自己就长出来了。
- */
-export function axisValues<T extends { tags: Record<string, string[]> }>(
-  items: T[],
-  axis: string,
-): string[] {
-  const seen: string[] = []
-  for (const item of items) {
-    for (const value of item.tags[axis] ?? []) {
-      if (!seen.includes(value)) seen.push(value)
-    }
-  }
-  return seen
 }

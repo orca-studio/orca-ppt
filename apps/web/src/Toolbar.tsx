@@ -3,7 +3,10 @@ import type { Layout } from './layout.js'
 import { ViewMenu } from './ViewMenu.js'
 
 /**
- * 顶栏。只放**动作**,而且只放主要的那个。
+ * 顶栏。只放**动作**。
+ *
+ * 「指给 agent 看」摆在这儿,是因为它是一个**动作**,不是一个作用域 —— 右栏按
+ * 作用域组织(页/转场/稿子),把一个动作塞进去,人找不到它该归哪一档。
  *
  * 自动播放归「放映」菜单和画布底下那行(它是放映方式,不是全局动作);打开是 ⌘O,
  * 菜单里有;主题是偏好,归「显示 > 外观」;agent 状态是状态,归底部状态栏。
@@ -17,9 +20,22 @@ export interface ToolbarProps {
   onLayoutChange: (next: Partial<Layout>) => void
   canPresent: boolean
   onPresent: () => void
+  /** 进入取锚状态:点画布上一处,指给 agent 看。 */
+  picking: boolean
+  canPick: boolean
+  onPick: () => void
 }
 
-export function Toolbar({ title, layout, onLayoutChange, canPresent, onPresent }: ToolbarProps) {
+export function Toolbar({
+  title,
+  layout,
+  onLayoutChange,
+  canPresent,
+  onPresent,
+  picking,
+  canPick,
+  onPick,
+}: ToolbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const viewRef = useRef<HTMLDivElement>(null)
 
@@ -57,6 +73,17 @@ export function Toolbar({ title, layout, onLayoutChange, canPresent, onPresent }
       <div className="toolbar-actions">
         <button
           type="button"
+          className="toolbar-pick"
+          data-on={picking}
+          onClick={onPick}
+          disabled={!canPick}
+          title={picking ? '点画布上的元素,Esc 取消' : '指给 agent 看:点画布上一处'}
+          aria-label="指给 agent 看"
+        >
+          <TargetIcon />
+        </button>
+        <button
+          type="button"
           className="toolbar-play"
           onClick={onPresent}
           disabled={!canPresent}
@@ -75,6 +102,20 @@ function PlayIcon() {
   return (
     <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">
       <path d="M1 1.2 L8 5 L1 8.8 Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** 准星:点中画布上的一处。 */
+function TargetIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+      <circle cx="6.5" cy="6.5" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="6.5" cy="6.5" r="1.3" fill="currentColor" />
+      <line x1="6.5" y1="0" x2="6.5" y2="1.6" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="6.5" y1="11.4" x2="6.5" y2="13" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="0" y1="6.5" x2="1.6" y2="6.5" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="11.4" y1="6.5" x2="13" y2="6.5" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }

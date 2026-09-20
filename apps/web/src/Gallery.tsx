@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { assetUrl } from './assets.js'
-import { facetsOf, sectionsOf, type Template } from './facets.js'
+import { sectionsOf, type Template } from './facets.js'
 
-export type Theme = RequestResult<'catalog.list'>['themes'][number]
+export type Catalog = RequestResult<'catalog.list'>
+export type Theme = Catalog['themes'][number]
 
 /**
  * 没有打开稿子时的首屏:选个起头。
@@ -19,6 +20,10 @@ export type Theme = RequestResult<'catalog.list'>['themes'][number]
  */
 export interface GalleryProps {
   themes: Theme[]
+  /** 最近用过的主题(文件名),最近的在前。**不是标签** —— 系统算出来的一个视图。 */
+  recent: string[]
+  /** 标签 id → 显示名。词表在 skill 里,界面只负责显示 label。 */
+  tagLabel: (id: string) => string
   templates: Template[]
   busy: boolean
   error: string | undefined
@@ -36,19 +41,16 @@ const MODES: Array<{ key: string; title: string; hint: string }> = [
   { key: 'story', title: '故事稿', hint: '一页一张照片,讲演变' },
 ]
 
-/**
- * 主题按哪些轴分区。目前只有 `use`(现在只产出「最近使用」)。
- *
- * **标签是分区,不是卡片上的一条属性** —— 分区意味着同一张卡会在下面的兜底区里再出现
- * 一次,这正是分面区别于分类的地方。做成卡片上一行小字就只能出现一次,重复出现这件事
- * 本身就没了。
- *
- * 场景标签今天每个主题各不相同(五个主题五个场景),拿来分区就是五个各一张卡的区,
- * 是虚胖;风格标签有重叠(「衬线」三个、「高对比」两个),等主题多起来再加进这里。
- */
-const THEME_AXES = ['use']
-
-export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: GalleryProps) {
+export function Gallery({
+  themes,
+  recent,
+  tagLabel,
+  templates,
+  busy,
+  error,
+  onCreate,
+  onOpen,
+}: GalleryProps) {
   const [mode, setMode] = useState('standard')
   const [theme, setTheme] = useState<string | undefined>()
   const [example, setExample] = useState<Template | undefined>()
@@ -58,14 +60,32 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
   // **没样张的主题不显示** —— 一张白卡片,人看不出自己在挑什么。新主题做好样张自然出现。
   const shown = useMemo(() => themes.filter((item) => item.sample), [themes])
 
-  const themeSections = useMemo(() => sectionsOf(shown, THEME_AXES, '全部主题'), [shown])
+  const themeSections = useMemo(
+    () =>
+      sectionsOf(shown, {
+        // 「最近使用」排最前,而且**不从 tags 里读** —— 它不是标签。
+        derived: [
+          {
+            title: '最近使用',
+            items: recent
+              .map((name) => shown.find((item) => item.name === name))
+              .filter((item): item is Theme => item !== undefined),
+          },
+        ],
+        fallback: '全部主题',
+        label: tagLabel,
+      }),
+    [shown, recent, tagLabel],
+  )
 
   // 示例按**页型**铺开:一份稿子有几种页型就出现几次。这是分面,不是分类。
   const examples = useMemo(() => templates.filter((item) => item.kind === 'example'), [templates])
-  const pageFacets = useMemo(() => facetsOf(examples, 'page'), [examples])
-  const untagged = useMemo(() => examples.filter((item) => item.tags.page.length === 0), [examples])
+  const exampleSections = useMemo(
+    () => sectionsOf(examples, { fallback: '全部示例', label: tagLabel }),
+    [examples, tagLabel],
+  )
 
-  const blank = templates.find((item) => item.kind === 'template' && item.tags.mode.includes(mode))
+  const blank = templates.find((item) => item.kind === 'template' && item.mode === mode)
   const picked = example ?? (theme ? blank : undefined)
   const pickedName = example?.title ?? themes.find((t) => t.name === theme)?.title ?? ''
 
@@ -119,8 +139,8 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
         <p className="gallery-note">{MODES.find((item) => item.key === mode)?.hint}</p>
 
         {themeSections.map((section) => (
-          <section key={section.value} className="gallery-themes">
-            <h2>{section.value}</h2>
+          <section key={section.title} className="gallery-themes">
+            <h2>{section.title}</h2>
             <div className="gallery-grid gallery-grid--themes">
               {section.items.map((item) => (
                 <button
@@ -134,11 +154,9 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
                 >
                   <img src={assetUrl(item.sample)} alt="" />
                   <span className="gallery-title">{item.title}</span>
-                  {item.tags.scene.length > 0 && (
-                    <span className="gallery-scene">{item.tags.scene.join(' · ')}</span>
-                  )}
-                  {item.tags.style.length > 0 && (
-                    <span className="gallery-style">{item.tags.style.join(' · ')}</span>
+                  {item.summary && <span className="gallery-scene">{item.summary}</span>}
+                  {item.tags.length > 0 && (
+                    <span className="gallery-style">{item.tags.map(tagLabel).join(' · ')}</span>
                   )}
                 </button>
               ))}
@@ -156,14 +174,11 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
               按页型铺开,一份稿子有几种页型就出现几次 —— 这是**分面**不是分类。
               没标页型的收在最后一组,不丢也不硬塞进某一类。
             */}
-            {[
-              ...pageFacets,
-              ...(untagged.length > 0 ? [{ value: '其他', items: untagged }] : []),
-            ].map((facet) => (
-              <section key={facet.value}>
-                <h2>{facet.value}</h2>
+            {exampleSections.map((section) => (
+              <section key={section.title}>
+                <h2>{section.title}</h2>
                 <div className="gallery-grid">
-                  {facet.items.map((item) => (
+                  {section.items.map((item) => (
                     <button
                       key={item.id}
                       type="button"

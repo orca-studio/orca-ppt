@@ -15,7 +15,7 @@ import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyTextEdit } from './edit.js'
-import { noteThemeUsed, themeOf } from './recent.js'
+import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
 import { findEntryName, openDeck, type OpenedDeck } from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
@@ -24,7 +24,7 @@ import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
-import { readCatalog, resolveSkillPath, withDerivedTags, type Catalog } from './skill.js'
+import { readCatalog, readVocabulary, resolveSkillPath, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
 import { readTransitionPlan } from './transitions.js'
 
@@ -158,6 +158,8 @@ export async function startServer(
 
   // skill 在哪一次解析,之后一直用。找不到也要能起来 —— 提示词里会如实说明。
   const catalog: Catalog = await readCatalog(await resolveSkillPath())
+  // 词表读一次就够 —— 它跟着 skill 的文件走,和 catalog 一样。
+  const vocabulary = catalog.skillPath ? readVocabulary(catalog.skillPath) : Promise.resolve([])
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
@@ -198,12 +200,12 @@ export async function startServer(
         watcher.watch(opened.deck.id, opened.deck.path)
         // 记一笔「最近用过这个主题」—— 选择器上最有用的那个标签(派生的,见 recent.ts)。
         // 读不出主题或者写不进去都不管:少一个标签,不值得让打开稿子这件事失败。
-        if (opened.entryFile) {
-          void readFile(opened.entryFile, 'utf8')
-            .then((html) => themeOf(html))
-            .then((theme) => (theme ? noteThemeUsed(theme) : undefined))
-            .catch(() => {})
-        }
+        const theme = opened.entryFile
+          ? themeOf(await readFile(opened.entryFile, 'utf8').catch(() => ''))
+          : undefined
+        // 记一笔「最近用过这个主题」—— 选择器上最有用的那个标签(派生的,见 recent.ts)。
+        // 写不进去也不管:少一个标签,不值得让打开稿子这件事失败。
+        if (theme) void noteThemeUsed(theme)
         // 界面要跟着开。agent 开了稿子而人的窗口还停在原地的话,画布没加载,
         // 它接着调 capture_slide 就只会等到超时。
         bus.broadcast('deck.opened', { deckId: opened.deck.id, path: opened.deck.path })
@@ -217,6 +219,7 @@ export async function startServer(
           transitionPlan: readTransitionPlan(opened),
           phases: await readPhaseStatus(opened.deck.path),
           previewUrl: mountPreview(opened),
+          ...(theme ? { theme } : {}),
         }
       }
       case 'deck.create': {
@@ -239,7 +242,9 @@ export async function startServer(
       }
       case 'catalog.templates': {
         parseParams('catalog.templates', raw)
-        return { templates: await listTemplates(catalog.skillPath) }
+        return {
+          templates: await listTemplates(catalog.skillPath, await vocabulary),
+        }
       }
       case 'deck.showSlide': {
         const params = parseParams('deck.showSlide', raw)
@@ -346,8 +351,16 @@ export async function startServer(
       }
       case 'catalog.list': {
         parseParams('catalog.list', raw)
-        // 派生标签现算 —— catalog 本身是缓存的(跟着文件走),这一层跟着状态走。
-        return { ...catalog, themes: await withDerivedTags(catalog.themes) }
+        /*
+         * 「最近使用」**不是标签**,所以不混进主题的 tags,单独一个字段。
+         *
+         * 标签写在文件里、由词表管着、由维护者决定;最近使用是系统从使用记录算出来的,
+         * 谁都没「决定」过它。塞进 tags 就等于说它是这个主题的一个属性 —— 它不是,
+         * 它是这批主题的一个视图,今天有明天就没了。
+         *
+         * 也因此它必须**每次请求现算**:catalog 是启动时读一次就缓存的(跟着文件走)。
+         */
+        return { ...catalog, tags: await vocabulary, recent: await readRecentThemes() }
       }
       case 'requests.add': {
         const params = parseParams('requests.add', raw)

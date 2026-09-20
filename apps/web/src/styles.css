@@ -727,22 +727,16 @@ code {
 }
 
 .pending {
-  overflow: auto;
-  padding: 16px;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .pending-empty p {
   margin: 0 0 8px;
   line-height: 1.7;
-}
-
-.pending header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  margin-bottom: 10px;
 }
 
 .pending header code {
@@ -751,29 +745,9 @@ code {
   color: var(--accent);
 }
 
-.pending ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.pending li {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel);
-}
-
 .pending img {
-  width: 56px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 2px;
+  height: 18px;
+  border-radius: 3px;
   flex: none;
 }
 
@@ -1587,4 +1561,151 @@ code {
 
 .rail-how button:hover:not(:disabled) {
   background: var(--control-hover);
+}
+
+/* ── 右栏:三个作用域 ─────────────────────────────────────────
+   三档是**作用域**不是工具:这一页 / 这一次转场 / 整份稿子。
+   人心里想改的东西天然带着一个作用域,按作用域分,找东西不用记它归在哪个工具下。 */
+
+.inspector-head {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px;
+}
+
+.inspector-head button {
+  flex: 1;
+  height: 24px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.inspector-head button:hover {
+  background: var(--control);
+}
+
+.inspector-head button[data-on='true'] {
+  background: var(--control-on);
+  color: var(--text);
+}
+
+.inspector {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  font-size: 12px;
+}
+
+.inspector-row {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+
+/* 标签列对齐:值参差不齐的话整块读起来像一堆碎片。 */
+.inspector-row > span:first-child {
+  min-width: 4.5em;
+  flex: none;
+}
+
+.inspector-row > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inspector h3 {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.inspector-carries {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.inspector-carries li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.inspector-carries code {
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--control);
+  flex: none;
+}
+
+.inspector-carries .muted {
+  font-size: 10px;
+  flex: none;
+}
+
+.inspector-carries em {
+  font-style: normal;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.inspector-actions button {
+  flex: 1;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.inspector-actions button:hover {
+  background: var(--control-hover);
+}
+
+/* 指给 agent 看:和播放一样是个圆钮,但它是次要动作,不给实心底。 */
+.toolbar-pick {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.toolbar-pick:hover:not(:disabled) {
+  background: var(--control-hover);
+}
+
+.toolbar-pick[data-on='true'] {
+  background: var(--accent);
+  color: var(--panel);
+}
+
+.toolbar-pick:disabled {
+  opacity: 0.4;
+  cursor: default;
 }

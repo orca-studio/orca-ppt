@@ -179,9 +179,46 @@
     active(null)
   }
 
+  /**
+   * 这一页的情况 —— 右栏「页」那一档要显示的东西。
+   *
+   * 只有 guest 答得出来:停留时长写在 section 的 `data-hold` 上,参与转场的元素靠
+   * `data-id` / `data-carry` / `data-zoom` 认 —— 这些都在**运行时的 DOM** 里,
+   * 服务端读 HTML 也能看见,但页号对不上(reveal 会克隆节点),不如直接问画布。
+   */
+  function slideInfo() {
+    const slide =
+      (window.Reveal && window.Reveal.getCurrentSlide && window.Reveal.getCurrentSlide()) || null
+    if (!slide) return null
+
+    const carries = []
+    for (const element of slide.querySelectorAll('[data-id],[data-carry],[data-zoom]')) {
+      const text = (element.textContent || '').trim()
+      carries.push({
+        id: element.getAttribute('data-id') || element.getAttribute('data-carry') || '',
+        // 这个元素是靠什么参与转场的。名字直接显示,不翻译 —— 人要去稿子里找的就是它。
+        kind: element.hasAttribute('data-id')
+          ? 'data-id'
+          : element.hasAttribute('data-carry')
+            ? 'data-carry'
+            : 'data-zoom',
+        text: text.length > 24 ? text.slice(0, 24) + '…' : text,
+      })
+    }
+
+    return {
+      index: currentSlide(),
+      // 没写 data-hold 时 reveal 不会自己停 —— 如实报 null,不编一个默认值。
+      hold: slide.getAttribute('data-hold'),
+      duration: slide.getAttribute('data-auto-animate-duration'),
+      carries,
+    }
+  }
+
   window.__orcaInspect = {
     arm,
     disarm,
+    slideInfo,
     anchorFor,
     selectorFor: (element) => selectorFor(element, slideRootOf(element)),
     armed: () => active !== null,

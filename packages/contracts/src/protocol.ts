@@ -46,6 +46,11 @@ export const requests = {
       /** 放映画布要加载的 loopback 地址。成品还没出来时为空。 */
       previewUrl: z.string(),
       /**
+       * 这份稿子用的主题(文件名)。从它引的那行 `runtime/themes/<名字>.css` 认出来。
+       * 空白起始文件没配主题时没有 —— 不猜一个。
+       */
+      theme: z.string().optional(),
+      /**
        * 稿子里真实的页数。skill 做出来的 deck 没有 outline.json,slides 为空,
        * 翻页和页码要靠这个数 —— 它来自 HTML 本身,永远是准的。
        */
@@ -91,15 +96,10 @@ export const requests = {
           title: z.string(),
           /** 缩略图的绝对路径。skill 自己就给示例生成了 thumb.jpg,不用我们再渲。 */
           thumbnail: z.string().optional(),
-          /**
-           * 这份稿子带的标签。**是标签不是分类**:`mode` 恰好互斥(两个起始文件),
-           * `page` 是叠加的 —— 一份汇报稿可以既有 bento 页、又有时间线页,
-           * 它该同时出现在这几处。塞进互斥的枚举就只能挑一个,信息当场丢掉。
-           */
-          tags: z.object({
-            mode: z.array(z.string()),
-            page: z.array(z.string()),
-          }),
+          /** 汇报稿还是故事稿。两个起始文件,一份稿子只能是一种 —— 这是模式,不是标签。 */
+          mode: z.string().optional(),
+          /** 标签。**从词表里挑,不能自由决定**。 */
+          tags: z.array(z.string()),
         }),
       ),
     }),
@@ -222,30 +222,30 @@ export const requests = {
         z.object({
           name: z.string(),
           title: z.string(),
+          /** 一句话:适合什么场合、什么调子。**不是标签**,不参与分区和筛选。 */
+          summary: z.string().optional(),
           /**
-           * 这个主题带的标签,按轴分组。**主题就是场景** —— 用这个产品的人都带着
-           * 自己的场合来,光看颜色挑不出来。
-           *
-           * 是标签不是描述:同一个标签横跨好几个主题,主题多起来之后这就是筛选条的
-           * 数据。包成一个 `tags` 而不是并列两个字段,是为了说清它们是同一类东西、
-           * 轴是可枚举的;轴本身仍然具名,因为界面对两个轴的处理不一样。
+           * 标签。**从 skill 的 `runtime/tags.json` 里挑,不能自由决定** ——
+           * 那份词表取自 Keynote 的主题侧边栏。不在词表里的会被丢掉并记进 unknownTags。
            */
-          tags: z.object({
-            /** 什么场合用它。**声明的** —— 写在主题文件头里。 */
-            scene: z.array(z.string()),
-            /** 什么调子。**声明的**。 */
-            style: z.array(z.string()),
-            /**
-             * 怎么用过它,目前只有「最近使用」。**派生的** —— 从文件之外的状态算出来,
-             * 同一个主题今天带、下个月就不带了。分类表长不出这种东西:它不是内容的
-             * 属性,是使用的属性。
-             */
-            use: z.array(z.string()),
-          }),
+          tags: z.array(z.string()),
           /** 样张的绝对路径。每个主题一张,内容完全一样,只有设计不同。 */
           sample: z.string().optional(),
         }),
       ),
+      /**
+       * 最近用过的主题(文件名),最近的在前。**不是标签** —— 它不写在任何文件里,
+       * 是系统从使用记录算出来的一个视图,今天有明天就没了。塞进 tags 就等于说它是
+       * 这个主题的属性。
+       */
+      recent: z.array(z.string()),
+      /** 词表本身。界面显示 label,文件里写的是 id。 */
+      tags: z.array(z.object({ id: z.string(), label: z.string(), icon: z.string().optional() })),
+      /**
+       * 标签有毛病的条目,一条一句人话:拼错的、以及**一个标签都没挂的**。
+       * 上新一份模板必须挑一个标签 —— 词表靠这份报告执行,不靠文档。
+       */
+      tagIssues: z.array(z.string()),
       layouts: z.array(z.string()),
       skillPath: z.string().optional(),
     }),

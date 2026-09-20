@@ -4,11 +4,12 @@ import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
 import { Gallery, type Theme } from './Gallery.js'
+import { Inspector } from './Inspector.js'
 import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
-import { Stage, type StageHandle, type TextEdit } from './Stage.js'
+import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
 import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
@@ -38,6 +39,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [autoplay, setAutoplay] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
   const [themes, setThemes] = useState<Theme[]>([])
+  /** 最近用过的主题。**不是标签** —— 系统从使用记录算出来的,所以单独一个字段。 */
+  const [recent, setRecent] = useState<string[]>([])
+  /** 标签 id → 显示名。词表在 skill 里,界面只管显示。 */
+  const [tagLabels, setTagLabels] = useState<Record<string, string>>({})
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [creating, setCreating] = useState(false)
@@ -202,7 +207,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // 主题是选择器的主角 —— 主题就是场景,人带着自己的场合来。
     void next
       .request('catalog.list', {})
-      .then((result) => setThemes(result.themes))
+      .then((result) => {
+        setThemes(result.themes)
+        setRecent(result.recent)
+        setTagLabels(Object.fromEntries(result.tags.map((tag) => [tag.id, tag.label])))
+        // 标签不能自由决定:拼错的、没挂标签的都在这儿,不默默放过。
+        if (result.tagIssues.length > 0) console.warn('标签有问题:', result.tagIssues)
+      })
       .catch(() => setThemes([]))
 
     const initial = window.orca?.initialDeck
@@ -436,6 +447,29 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const agentLive = isLive(agent, now)
   const agentCaption = caption(agent)
 
+  /**
+   * 这一页在画布上的情况(停留时长、参与转场的元素)。只有画布答得出来,所以翻一页
+   * 就重新问一次。画布没加载时是 null —— 界面如实说「画布还没加载」,不编。
+   */
+  const [slideInfo, setSlideInfo] = useState<SlideInfo | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    // **先等画布加载完**。不等的话,刚打开稿子时问到的永远是 null,右栏一直显示
+    // 「画布还没加载」—— 看起来像功能坏了,其实只是问早了。
+    void stage.current
+      ?.whenReady()
+      .then(() => stage.current?.slideInfo())
+      .then((info) => {
+        if (!cancelled) setSlideInfo(info ?? null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [slide, deck?.previewUrl])
+
+  /** 这份稿子用的主题,显示人读的那个名字。 */
+  const themeTitle = themes.find((item) => item.name === deck?.theme)?.title ?? deck?.theme
+
   /** 一页显示什么文字。outline 的 subject 是定下来的决定,优先于从稿子认出来的标签。 */
   const titleOf = useCallback(
     (index: number) => deck?.slides[index]?.subject ?? deck?.slideTitles[index] ?? '—',
@@ -472,6 +506,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
       <div className="app app--gallery">
         <Gallery
           themes={themes}
+          recent={recent}
+          tagLabel={(id) => tagLabels[id] ?? id}
           templates={templates}
           busy={creating}
           error={error}
@@ -490,6 +526,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
         onLayoutChange={changeLayout}
         canPresent={Boolean(deck?.previewUrl)}
         onPresent={present}
+        picking={picking}
+        canPick={Boolean(deck?.previewUrl)}
+        onPick={() => {
+          if (!picking) return void pick()
+          stage.current?.cancelPick()
+          setPicking(false)
+        }}
       />
       <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
@@ -586,6 +629,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 第 {slide + 1} / {deck.slideCount} 页
               </span>
             )}
+            {/*
+              「已指给 agent · …」是刚发生了什么,归状态栏 —— 那个动作本身在工具栏上,
+              它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
+            */}
+            <Pending requests={requests} crops={crops} />
             {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
             <span className="status-right">
               {/*
@@ -605,37 +653,20 @@ export function App({ serverUrl }: { serverUrl: string }) {
         </section>
 
         <section className="pane">
-          <header className="pane-head">检视</header>
           {deck ? (
-            <div className="queue">
-              {/*
-                只有一个按钮。原来旁边还有个「想说什么」输入框和一条待办队列 ——
-                那是「人挂待办、agent 来取」那套模型的东西,那个环节已经不存在了:
-                人本来就在跟 agent 说话,点一下只是**指给它看**,话在对话里说。
-              */}
-              <div className="queue-pick">
-                <button
-                  type="button"
-                  className="pick"
-                  data-picking={picking}
-                  onClick={() => {
-                    if (!picking) return void pick()
-                    stage.current?.cancelPick()
-                    setPicking(false)
-                  }}
-                  disabled={!deck.previewUrl}
-                >
-                  {picking ? '点画布上的元素,Esc 取消' : '在画布上点一处'}
-                </button>
-              </div>
-              <Pending requests={requests} crops={crops} />
-              {/* 阶段是背景信息,排在动作后面 */}
-              <PhaseRail
-                rows={deck.phases}
-                onOpenArtifact={(phase) => void openArtifact(phase)}
-                onLoadPrompt={loadPrompt}
-              />
-            </div>
+            <Inspector
+              slide={slide}
+              slideCount={deck.slideCount}
+              title={titleOf(slide)}
+              info={slideInfo}
+              note={deck.transitionPlan.find((row) => row.from === slide)}
+              phases={deck.phases}
+              themeTitle={themeTitle}
+              onReplay={() => replay(slide)}
+              onFlag={() => flagTransition(slide, slide + 1)}
+              onOpenArtifact={(phase) => void openArtifact(phase)}
+              onLoadPrompt={loadPrompt}
+            />
           ) : (
             <div className="pane-body">先打开一份 deck。</div>
           )}

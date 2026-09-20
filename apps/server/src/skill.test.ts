@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readCatalog, resolveSkillPath, withDerivedTags } from './skill.js'
+import { readCatalog, resolveSkillPath } from './skill.js'
 
 async function fakeSkill() {
   const dir = await mkdtemp(join(tmpdir(), 'skill-'))
@@ -12,11 +12,15 @@ async function fakeSkill() {
   await writeFile(
     join(dir, 'runtime/themes/editorial-forest.css'),
     '/* 主题：Editorial Forest（配色取自 …）\n' +
-      ' * 场景：年度复盘 / 研究汇报\n' +
-      ' * 风格：沉静 · 衬线\n' +
+      ' * 标签：editorial\n' +
+      ' * 一句话：沉静，有读物的分量\n' +
       ' * 在 tokens.css 之后引入。\n */',
   )
-  await writeFile(join(dir, 'runtime/themes/clearing.css'), '/* 没写主题名 */')
+  await writeFile(join(dir, 'runtime/themes/clearing.css'), '/* 没写主题名，也没挂标签 */')
+  await writeFile(
+    join(dir, 'runtime/tags.json'),
+    JSON.stringify({ tags: [{ id: 'editorial', label: '社论' }] }),
+  )
   await writeFile(join(dir, 'runtime/themes/notes.md'), 'ignore me')
   await writeFile(join(dir, 'templates/layouts/bento.html'), '<div></div>')
   return dir
@@ -40,12 +44,12 @@ describe('readCatalog', () => {
     const catalog = await readCatalog(await fakeSkill())
     expect(catalog.themes).toEqual([
       // 没写标签的主题给空数组,不编一个
-      // use 是派生的:没用过就是空,它不写在文件里
-      { name: 'clearing', title: 'clearing', tags: { scene: [], style: [], use: [] } },
+      { name: 'clearing', title: 'clearing', tags: [] },
       {
         name: 'editorial-forest',
         title: 'Editorial Forest',
-        tags: { scene: ['年度复盘', '研究汇报'], style: ['沉静', '衬线'], use: [] },
+        summary: '沉静，有读物的分量',
+        tags: ['editorial'],
       },
     ])
     expect(catalog.layouts).toEqual(['bento'])
@@ -57,7 +61,7 @@ describe('readCatalog', () => {
   })
 
   it('没有 skill 时给空目录,不抛', async () => {
-    expect(await readCatalog(undefined)).toEqual({ themes: [], layouts: [] })
+    expect(await readCatalog(undefined)).toEqual({ themes: [], layouts: [], tagIssues: [] })
   })
 })
 
@@ -76,35 +80,41 @@ describe('主题样张', () => {
   })
 })
 
-describe('派生标签:最近使用', () => {
-  it('用过的主题带上「最近使用」—— 它不写在文件里,是从使用记录算出来的', async () => {
-    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
-    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
-
-    const catalog = await readCatalog(await fakeSkill())
-    const themes = await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: recent })
-    expect(themes.find((t) => t.name === 'clearing')?.tags.use).toEqual(['最近使用'])
-    expect(themes.find((t) => t.name === 'editorial-forest')?.tags.use).toEqual([])
+describe('标签', () => {
+  it('只认词表里的 id,不在词表里的丢掉', async () => {
+    const dir = await fakeSkill()
+    await writeFile(
+      join(dir, 'runtime/themes/rogue.css'),
+      ['/* 主题：Rogue', ' * 标签：editorial / 我自己造的词', ' */'].join('\n'),
+    )
+    const catalog = await readCatalog(dir)
+    expect(catalog.themes.find((t) => t.name === 'rogue')?.tags).toEqual(['editorial'])
   })
 
-  it('没有使用记录时一个都不带,不编一个', async () => {
-    const catalog = await readCatalog(await fakeSkill())
-    const themes = await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: '/nope.json' })
-    expect(themes.every((t) => t.tags.use.length === 0)).toBe(true)
+  it('拼错的要报出来 —— 默默接受错别字等于回到自由发挥', async () => {
+    const dir = await fakeSkill()
+    await writeFile(
+      join(dir, 'runtime/themes/rogue.css'),
+      ['/* 主题：Rogue', ' * 标签：editoral', ' */'].join('\n'),
+    )
+    const catalog = await readCatalog(dir)
+    expect(catalog.tagIssues.join()).toContain('editoral')
   })
 
-  it('**不在 readCatalog 里算** —— catalog 是缓存的,派生标签缓存了就等于取消了', async () => {
-    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
-    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
+  it('一个标签都没挂的也要报 —— 上新一份模板必须挑一个', async () => {
     const catalog = await readCatalog(await fakeSkill())
-    expect(catalog.themes.every((t) => t.tags.use.length === 0)).toBe(true)
+    expect(catalog.tagIssues.join()).toContain('clearing')
   })
 
-  it('不改原对象 —— 写进去就把这一刻的状态焊在缓存里了', async () => {
-    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
-    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
-    const catalog = await readCatalog(await fakeSkill())
-    await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: recent })
-    expect(catalog.themes.every((t) => t.tags.use.length === 0)).toBe(true)
+  it('读不到词表时原样放行 —— 校验是为了抓错别字,不是缺文件时清空标签', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'skill-'))
+    await writeFile(join(dir, 'SKILL.md'), '# skill')
+    await mkdir(join(dir, 'runtime/themes'), { recursive: true })
+    await writeFile(
+      join(dir, 'runtime/themes/x.css'),
+      ['/* 主题：X', ' * 标签：whatever', ' */'].join('\n'),
+    )
+    const catalog = await readCatalog(dir)
+    expect(catalog.themes[0]?.tags).toEqual(['whatever'])
   })
 })

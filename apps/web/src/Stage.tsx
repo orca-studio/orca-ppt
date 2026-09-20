@@ -45,10 +45,22 @@ export interface StageHandle {
   spotlight(text: string): void
   /** 等画布加载完。重载途中截图会截到空白,得等它。 */
   whenReady(timeoutMs?: number): Promise<boolean>
+  /** 这一页的情况:停留时长、参与转场的元素。只有画布答得出来。 */
+  slideInfo(): Promise<SlideInfo | null>
 }
 
 /** 攒着的点亮过期时间。隔太久再闪一下,人根本对不上是哪次改动。 */
 const SPOTLIGHT_TTL_MS = 8_000
+
+/** 这一页在画布上的情况。右栏「页」那一档显示它。 */
+export interface SlideInfo {
+  index: number
+  /** 停留多久(秒)。没写 `data-hold` 时是 null —— 如实报,不编一个默认值。 */
+  hold: string | null
+  /** 转场时长(秒)。没写时是 null。 */
+  duration: string | null
+  carries: Array<{ id: string; kind: string; text: string }>
+}
 
 /** guest 里改完的一处文字。服务端靠 `oldText` 在源码里定位,不靠选择器。 */
 export interface TextEdit {
@@ -83,8 +95,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const restoreTo = useRef<number | undefined>(undefined)
   /** 等着点亮的那段文字 —— 攒到下一次加载完成。 */
   const pendingSpotlight = useRef<{ text: string; at: number } | undefined>(undefined)
-  /** 画布正在加载吗。重载途中截图会截到空白。 */
-  const loading = useRef(false)
+  /**
+   * 画布加载好了没有。**初值是「没好」** —— 初次挂载时 dom-ready 还没来过,
+   * 给 false 的话刚打开稿子时问什么都答不上来(右栏会一直显示「画布还没加载」)。
+   */
+  const loading = useRef(true)
   const waiters = useRef<Array<() => void>>([])
   // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
   const onTextEditRef = useRef(onTextEdit)
@@ -203,6 +218,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           // guest 还没附着
           return undefined
         }
+      },
+      slideInfo: async () => {
+        const result = await ref.current
+          ?.executeJavaScript('window.__orcaInspect.slideInfo()')
+          .catch(() => null)
+        return (result as SlideInfo | null) ?? null
       },
       spotlight: (text: string) => {
         // 一律攒到下一次加载完成:改文字必然引发重载,现在点亮的是马上要被换掉的 DOM。
