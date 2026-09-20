@@ -291,6 +291,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
       <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
+          {/*
+            非默认视图要标出来。不标的话「大纲」看起来就是「导航器坏了、缩略图没加载」——
+            两者只差一张图,分不出是模式还是故障。
+          */}
+          {layout.nav === 'outline' && <header className="pane-head">大纲</header>}
           <div className="pane-body">
             {deck ? (
               <ol className="filmstrip">
