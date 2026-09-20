@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import type { Layout } from './layout.js'
 import { applyTheme, nextTheme, readTheme, THEME_LABEL, type ThemeSource } from './theme.js'
+import { ViewMenu } from './ViewMenu.js'
 
 /**
  * 顶栏。全局动作都在这儿 —— 在这之前整个应用一个全局动作都没有,三个栏头只是三个标签,
@@ -9,8 +11,8 @@ import { applyTheme, nextTheme, readTheme, THEME_LABEL, type ThemeSource } from 
  */
 export interface ToolbarProps {
   title: string | undefined
-  navOpen: boolean
-  onToggleNav: () => void
+  layout: Layout
+  onLayoutChange: (next: Partial<Layout>) => void
   canPresent: boolean
   /** agent 最近一次调 MCP 工具的时刻,没有就是从没调过。 */
   agentSeenAt: number | undefined
@@ -20,8 +22,8 @@ export interface ToolbarProps {
 
 export function Toolbar({
   title,
-  navOpen,
-  onToggleNav,
+  layout,
+  onLayoutChange,
   canPresent,
   agentSeenAt,
   onOpen,
@@ -29,19 +31,35 @@ export function Toolbar({
 }: ToolbarProps) {
   const live = useAgentLive(agentSeenAt)
   const [theme, setTheme] = useState<ThemeSource>(readTheme)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   return (
     <header className="toolbar">
-      <button
-        type="button"
-        className="toolbar-nav"
-        data-on={navOpen}
-        onClick={onToggleNav}
-        title={navOpen ? '隐藏页胶片(⌃⌘S)' : '显示页胶片(⌃⌘S)'}
-        aria-label="页胶片"
-      >
-        <SidebarIcon />
-      </button>
+      <div className="toolbar-view">
+        <button
+          type="button"
+          className="toolbar-nav"
+          data-on={menuOpen || layout.nav !== 'off'}
+          onClick={() => setMenuOpen((open) => !open)}
+          title="视图"
+          aria-label="视图"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+        >
+          <SidebarIcon />
+        </button>
+        {menuOpen && (
+          <ViewMenu
+            layout={layout}
+            onChange={(next) => {
+              onLayoutChange(next)
+              // 选完就关,和 Keynote 一致 —— 开着会挡住刚切出来的视图。
+              setMenuOpen(false)
+            }}
+            onClose={() => setMenuOpen(false)}
+          />
+        )}
+      </div>
       <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
 
       <div className="toolbar-actions">

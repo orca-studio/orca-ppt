@@ -3,7 +3,8 @@ import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contrac
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
-import { readNavOpen, writeNavOpen } from './layout.js'
+import { readLayout, writeLayout, type Layout } from './layout.js'
+import { LightTable } from './LightTable.js'
 import { Stage, type StageHandle } from './Stage.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
@@ -27,7 +28,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
-  const [navOpen, setNavOpen] = useState(readNavOpen)
+  const [layout, setLayout] = useState<Layout>(readLayout)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -224,10 +225,20 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void active.request('deck.present', { deckId: current.deck.id, slide: slideRef.current })
   }, [])
 
+  const changeLayout = useCallback((next: Partial<Layout>) => {
+    setLayout((current) => {
+      const merged = { ...current, ...next }
+      writeLayout(merged)
+      return merged
+    })
+  }, [])
+
+  /** 菜单里的「显示/隐藏页胶片」:在导航器和收起之间来回。 */
   const toggleNav = useCallback(() => {
-    setNavOpen((open) => {
-      writeNavOpen(!open)
-      return !open
+    setLayout((current) => {
+      const merged: Layout = { ...current, nav: current.nav === 'off' ? 'thumbs' : 'off' }
+      writeLayout(merged)
+      return merged
     })
   }, [])
 
@@ -255,6 +266,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void window.orca?.openFile?.(path)
   }, [])
 
+  /** 一页显示什么文字。outline 的 subject 是定下来的决定,优先于从稿子认出来的标签。 */
+  const titleOf = useCallback(
+    (index: number) => deck?.slides[index]?.subject ?? deck?.slideTitles[index] ?? '—',
+    [deck],
+  )
+
   const onSlideChange = useCallback((index: number) => {
     setSlide(index)
     slideRef.current = index
@@ -264,14 +281,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
     <div className="app">
       <Toolbar
         title={deck?.deck.title}
-        navOpen={navOpen}
-        onToggleNav={toggleNav}
+        layout={layout}
+        onLayoutChange={changeLayout}
         canPresent={Boolean(deck?.previewUrl)}
         agentSeenAt={agentSeenAt}
         onOpen={() => void pickDeck(open)}
         onPresent={present}
       />
-      <div className="shell" data-nav={navOpen ? 'open' : 'closed'}>
+      <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
           <div className="pane-body">
@@ -285,14 +302,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       onClick={() => goto(index)}
                     >
                       <span className="filmstrip-no">{index + 1}</span>
-                      {thumbs[index] ? (
-                        <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
-                      ) : (
-                        <span className="filmstrip-thumb filmstrip-thumb--empty" />
-                      )}
-                      <span className="filmstrip-title">
-                        {deck.slides[index]?.subject ?? deck.slideTitles[index] ?? '—'}
-                      </span>
+                      {layout.nav === 'thumbs' &&
+                        (thumbs[index] ? (
+                          <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
+                        ) : (
+                          <span className="filmstrip-thumb filmstrip-thumb--empty" />
+                        ))}
+                      <span className="filmstrip-title">{titleOf(index)}</span>
                     </button>
                   </li>
                 ))}
@@ -304,11 +320,23 @@ export function App({ serverUrl }: { serverUrl: string }) {
         </section>
 
         <section className="pane">
-          {deck?.previewUrl ? (
+          {deck && layout.lightTable ? (
+            <LightTable
+              count={deck.slideCount}
+              current={slide}
+              thumbs={thumbs}
+              titleOf={titleOf}
+              onPick={(index) => {
+                goto(index)
+                changeLayout({ lightTable: false })
+              }}
+            />
+          ) : deck?.previewUrl ? (
             <Stage
               ref={stage}
               previewUrl={deck.previewUrl}
               slideCount={deck.slideCount}
+              initialSlide={slide}
               onSlideChange={onSlideChange}
             />
           ) : (

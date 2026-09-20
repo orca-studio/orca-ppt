@@ -35,11 +35,13 @@ export interface StageHandle {
 export interface StageProps {
   previewUrl: string
   slideCount: number
+  /** 重新挂载时回到这一页 —— 从看片台切回来不该跳回第一页。 */
+  initialSlide: number
   onSlideChange: (index: number) => void
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, slideCount, onSlideChange },
+  { previewUrl, slideCount, initialSlide, onSlideChange },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -54,7 +56,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     const onLoad = () => {
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
       void view.executeJavaScript(inspectScript).then(() => {
-        const slide = restoreTo.current
+        const slide = restoreTo.current ?? initialSlide
         restoreTo.current = undefined
         if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
       })
@@ -73,6 +75,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       view.removeEventListener('dom-ready', onLoad)
       view.removeEventListener('did-fail-load', onFail)
     }
+    // initialSlide 只在挂载那次用得上,变了不该重装监听
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useImperativeHandle(
