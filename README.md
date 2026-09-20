@@ -15,12 +15,13 @@
 **状态:MCP 已接通。** 放映、检视锚、五阶段(定题 → 选主题 → 列页面 → 写转场 → 出稿)、
 产物校验都在,agent 通过 MCP 驱动。还没有转场时间轴和录制。
 
-```jsonc
-// 先开应用,再让 agent 连
-{
-  "mcpServers": { "orca-pptcode": { "command": "node", "args": ["<仓库>/apps/mcp/dist/main.js"] } },
-}
+```bash
+# 应用开着的时候,MCP 就挂在这儿
+claude mcp add --transport http orca-pptcode http://127.0.0.1:6722/mcp
 ```
+
+agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的做法、跑产物校验,
+还能 **`capture_slide` 自己截一张图看效果** —— 稿子好不好只有放映能回答。
 
 细节见 [MCP.md](./docs/MCP.md)。
 

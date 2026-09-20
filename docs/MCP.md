@@ -83,19 +83,27 @@ MCP 没有可靠的「把消息推进用户对话」的原语。notification 能
 
 ## 装
 
-应用启动时把 server 端口写进 `~/.orca-pptcode/port`,MCP server 读它 —— 所以先开应用,
-再让 agent 连。
+应用开着的时候,MCP 就挂在 `http://127.0.0.1:6722/mcp` 上。
 
-```jsonc
-// Claude Code:~/.claude.json 或项目里的 .mcp.json
-{
-  "mcpServers": {
-    "orca-pptcode": {
-      "command": "node",
-      "args": ["<仓库>/apps/mcp/dist/main.js"],
-    },
-  },
-}
+```bash
+claude mcp add --transport http orca-pptcode http://127.0.0.1:6722/mcp
+codex mcp add orca-pptcode --url http://127.0.0.1:6722/mcp
 ```
 
-`ORCA_PPTCODE_PORT` 可以覆盖端口文件 —— 同时跑两个实例时用它指定。
+Cursor 手动加进 `~/.cursor/mcp.json`:
+
+```jsonc
+{ "mcpServers": { "orca-pptcode": { "type": "http", "url": "http://127.0.0.1:6722/mcp" } } }
+```
+
+应用里待办栏的底部有「复制连接命令」。
+
+**为什么是 HTTP 不是 stdio:** stdio 要在 agent 配置里写一条指向本仓 `dist` 的路径
+(打包之后就废了),还要多起一个进程、再想办法告诉它连哪个端口。HTTP 只要一行,而且
+MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法,不经过第二条连接。
+
+**端口是固定的**(`ORCA_PPTCODE_PORT` 可覆盖)。安装命令里写死了这个 URL,端口一变命令
+就失效,所以不能用随机端口。被占了就如实失败 —— 多半是已经开着一个实例,那正是我们想要
+的。
+
+应用没开的时候 MCP 连不上,这是对的:画布在应用里,没有应用就没有可看的东西。
