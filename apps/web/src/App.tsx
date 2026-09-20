@@ -4,6 +4,7 @@ import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
 import { Stage, type StageHandle } from './Stage.js'
+import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
@@ -21,6 +22,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [requests, setRequests] = useState<PendingRequest[]>([])
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
+  const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -83,6 +85,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
       // previewUrl 没变就只是内容变了,重载并回到原来那一页;
       // 从空变成有值说明成品刚出现,Stage 这时才第一次挂上,不用我们管。
       if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
+    })
+
+    next.subscribe('mcp.activity', (data) => setAgentSeenAt(data.at))
+
+    // 放映只有壳开得了窗口。
+    next.subscribe('present.request', (data) => {
+      void window.orca?.present?.({ previewUrl: data.previewUrl, slide: data.slide })
     })
 
     // 缩略图也只有壳渲得了(隐藏窗口,不碰可见画布)。
@@ -195,6 +204,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void active.request('requests.remove', { deckId: current.deck.id, id })
   }, [])
 
+  const present = useCallback(() => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return
+    // 走协议而不是直接开窗:agent 说「放给我看」触发的是同一条路。
+    void active.request('deck.present', { deckId: current.deck.id, slide: slideRef.current })
+  }, [])
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -217,107 +234,119 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [])
 
   return (
-    <div className="shell">
-      <section className="pane">
-        <header className="pane-head">大纲</header>
-        <div className="pane-body">
-          {deck && (
-            <PhaseRail
-              rows={deck.phases}
-              onRun={requestPhase}
-              onOpenArtifact={(phase) => void openArtifact(phase)}
+    <div className="app">
+      <Toolbar
+        title={deck?.deck.title}
+        canPresent={Boolean(deck?.previewUrl)}
+        agentSeenAt={agentSeenAt}
+        onOpen={() => void pickDeck(open)}
+        onPresent={present}
+      />
+      <div className="shell">
+        {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
+        <section className="pane pane--nav">
+          <div className="pane-body">
+            {deck ? (
+              <ol className="filmstrip">
+                {Array.from({ length: deck.slideCount }, (_, index) => (
+                  <li key={index}>
+                    <button
+                      type="button"
+                      data-current={index === slide}
+                      onClick={() => goto(index)}
+                    >
+                      <span className="filmstrip-no">{index + 1}</span>
+                      {thumbs[index] ? (
+                        <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
+                      ) : (
+                        <span className="filmstrip-thumb filmstrip-thumb--empty" />
+                      )}
+                      <span className="filmstrip-title">
+                        {deck.slides[index]?.subject ?? deck.slideTitles[index] ?? '—'}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <DeckPicker onPick={() => void pickDeck(open)} onPath={open} error={error} />
+            )}
+          </div>
+        </section>
+
+        <section className="pane">
+          {deck?.previewUrl ? (
+            <Stage
+              ref={stage}
+              previewUrl={deck.previewUrl}
+              slideCount={deck.slideCount}
+              onSlideChange={onSlideChange}
             />
-          )}
-          {deck ? (
-            <ol className="filmstrip">
-              {Array.from({ length: deck.slideCount }, (_, index) => (
-                <li key={index}>
-                  <button type="button" data-current={index === slide} onClick={() => goto(index)}>
-                    <span className="filmstrip-no">{index + 1}</span>
-                    {thumbs[index] ? (
-                      <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
-                    ) : (
-                      <span className="filmstrip-thumb filmstrip-thumb--empty" />
-                    )}
-                    <span className="filmstrip-title">
-                      {deck.slides[index]?.subject ?? deck.slideTitles[index] ?? '—'}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
           ) : (
-            <DeckPicker onPick={() => void pickDeck(open)} onPath={open} error={error} />
-          )}
-        </div>
-      </section>
-
-      <section className="pane">
-        <header className="pane-head">{deck ? deck.deck.title : '放映'}</header>
-        {deck?.previewUrl ? (
-          <Stage
-            ref={stage}
-            previewUrl={deck.previewUrl}
-            slideCount={deck.slideCount}
-            onSlideChange={onSlideChange}
-          />
-        ) : (
-          <div className="stage">
-            <div className="stage-frame">
-              {deck
-                ? '成品还没出来 —— 把阶段跑到「出稿」,它会在这里放映。'
-                : '打开一个 deck 目录,它会在这里放映。'}
+            <div className="stage">
+              <div className="stage-canvas">
+                <div className="stage-frame">
+                  {deck
+                    ? '成品还没出来 —— 把阶段跑到「出稿」,它会在这里放映。'
+                    : '打开一个 deck 目录,它会在这里放映。'}
+                </div>
+              </div>
             </div>
-          </div>
-        )}
-        <footer className="status">
-          <span className="dot" data-off={state !== 'open'}>
-            ●
-          </span>
-          <span>{state}</span>
-          {deck && (
-            <span>
-              第 {slide + 1} / {deck.slideCount} 页
+          )}
+          <footer className="status">
+            <span className="dot" data-off={state !== 'open'}>
+              ●
             </span>
-          )}
-        </footer>
-      </section>
+            <span>{state}</span>
+            {deck && (
+              <span>
+                第 {slide + 1} / {deck.slideCount} 页
+              </span>
+            )}
+          </footer>
+        </section>
 
-      <section className="pane">
-        <header className="pane-head">待办</header>
-        {deck ? (
-          <div className="queue">
-            <div className="queue-pick">
-              <input
-                value={note}
-                placeholder="想说什么(可以空着)"
-                onChange={(event) => setNote(event.target.value)}
+        <section className="pane">
+          <header className="pane-head">制作</header>
+          {deck ? (
+            <div className="queue">
+              <PhaseRail
+                rows={deck.phases}
+                onRun={requestPhase}
+                onOpenArtifact={(phase) => void openArtifact(phase)}
               />
-              <button
-                type="button"
-                className="pick"
-                data-picking={picking}
-                onClick={() => {
-                  if (!picking) return void pick()
-                  stage.current?.cancelPick()
-                  setPicking(false)
-                }}
-                disabled={!deck.previewUrl}
-              >
-                {picking ? '点画布上的元素,Esc 取消' : '在画布上点一处'}
-              </button>
+              <div className="queue-pick">
+                <input
+                  value={note}
+                  placeholder="想说什么(可以空着)"
+                  onChange={(event) => setNote(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="pick"
+                  data-picking={picking}
+                  onClick={() => {
+                    if (!picking) return void pick()
+                    stage.current?.cancelPick()
+                    setPicking(false)
+                  }}
+                  disabled={!deck.previewUrl}
+                >
+                  {picking ? '点画布上的元素,Esc 取消' : '在画布上点一处'}
+                </button>
+              </div>
+              <Pending
+                requests={requests}
+                crops={crops}
+                mcpUrl={serverUrl.replace(/^ws:/, 'http:') + '/mcp'}
+                onRemove={removeRequest}
+              />
             </div>
-            <Pending
-              requests={requests}
-              crops={crops}
-              mcpUrl={serverUrl.replace(/^ws:/, 'http:') + '/mcp'}
-              onRemove={removeRequest}
-            />
-          </div>
-        ) : (
-          <div className="pane-body">先打开一份 deck。</div>
-        )}
-      </section>
+          ) : (
+            <div className="pane-body">先打开一份 deck。</div>
+          )}
+        </section>
+      </div>
     </div>
   )
 }

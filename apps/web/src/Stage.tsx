@@ -138,14 +138,16 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
 
   return (
     <div className="stage">
-      <div className="stage-frame stage-frame--live">
-        <webview
-          ref={ref as unknown as React.Ref<HTMLWebViewElement>}
-          src={previewUrl}
-          // 独立持久 partition:deck 的存储和应用本身完全隔开。
-          partition="persist:deck-preview"
-        />
-        {error && <div className="stage-error">{error}</div>}
+      <div className="stage-canvas">
+        <div className="stage-frame stage-frame--live">
+          <webview
+            ref={ref as unknown as React.Ref<HTMLWebViewElement>}
+            src={previewUrl}
+            // 独立持久 partition:deck 的存储和应用本身完全隔开。
+            partition="persist:deck-preview"
+          />
+          {error && <div className="stage-error">{error}</div>}
+        </div>
       </div>
       <div className="stage-meta">{slideCount} 页 · 方向键翻页</div>
     </div>

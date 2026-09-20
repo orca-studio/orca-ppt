@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.js'
+import { applyTheme, readTheme } from './theme.js'
 import './styles.css'
 
 declare global {
@@ -18,6 +19,10 @@ declare global {
         box: { x: number; y: number; w: number; h: number }
         viewport: { w: number; h: number }
       }) => Promise<string | undefined>
+      /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
+      setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
+      /** 全屏放映。稿子好不好只有放映能回答。 */
+      present?: (input: { previewUrl: string; slide: number }) => Promise<boolean>
       /** 离屏渲每一页的缩略图。不碰可见画布。 */
       renderThumbnails?: (input: {
         previewUrl: string
@@ -37,6 +42,9 @@ const port = window.orca?.serverPort ?? Number(import.meta.env.VITE_ORCA_PORT ??
 // 标题栏是藏起来的(macOS hiddenInset),所以窗口靠分栏标题那条来拖动。
 // 红绿灯按钮浮在左上角,第一栏的标题要给它让出位置 —— 这两件事都按平台来。
 document.documentElement.dataset.platform = window.orca?.platform ?? 'web'
+
+// 默认跟随系统。显式选过的会在这里被重新应用。
+applyTheme(readTheme())
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { BrowserWindow, app, dialog, ipcMain, shell, webContents } from 'electron'
+import { BrowserWindow, app, dialog, ipcMain, nativeTheme, shell, webContents } from 'electron'
 import { paddedRect, type Rect } from './anchor-crop.js'
 import { ServerSupervisor } from './server-supervisor.js'
 
@@ -129,6 +129,50 @@ ipcMain.handle('deck:capture-full', async (_event, input: { guestId: number }) =
   return file
 })
 
+/** 同时只放映一份 —— 再点一次「播放」应该是换内容,不是叠一个新窗口。 */
+let presenter: BrowserWindow | undefined
+
+/**
+ * 全屏放映。
+ *
+ * 开一个独立的无边框窗口,而不是把主窗口切全屏:放映时三栏工作台不该还在旁边,
+ * 而且放完要能原样退回来。Esc 关掉,方向键归 reveal 自己(guest 有焦点)。
+ */
+ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide: number }) => {
+  presenter?.destroy()
+
+  const window = new BrowserWindow({
+    fullscreen: true,
+    backgroundColor: '#000000',
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  })
+  presenter = window
+  window.on('closed', () => {
+    if (presenter === window) presenter = undefined
+  })
+
+  // Esc 退出放映,和 Keynote 一致。这一道管真实键盘。
+  window.webContents.on('before-input-event', (event, key) => {
+    if (key.type !== 'keyDown' || key.key !== 'Escape') return
+    event.preventDefault()
+    window.close()
+  })
+
+  await window.loadURL(`${input.previewUrl}#/${input.slide}`)
+  // 第二道:reveal 自己也绑了 Esc(总览模式),而且程序注入的按键不走
+  // before-input-event。捕获阶段先截下来。
+  await window.webContents.executeJavaScript(
+    `addEventListener('keydown', (e) => {
+       if (e.key !== 'Escape') return
+       e.preventDefault()
+       e.stopImmediatePropagation()
+       window.close()
+     }, true)`,
+  )
+  window.focus()
+  return true
+})
+
 /**
  * 每页渲一张缩略图。
  *
@@ -187,6 +231,17 @@ ipcMain.handle(
     }
   },
 )
+
+/**
+ * 主题。`system` 让 Electron 自己跟着系统走,`light`/`dark` 是用户在应用里显式选的。
+ *
+ * 壳这一层也要设:原生的菜单、对话框、滚动条是 Chromium 按 nativeTheme 画的,
+ * 只改 CSS 的话它们会和界面对不上。
+ */
+ipcMain.handle('app:theme', (_event, source: 'system' | 'light' | 'dark') => {
+  nativeTheme.themeSource = source
+  return nativeTheme.shouldUseDarkColors
+})
 
 ipcMain.handle('deck:pick', async () => {
   const result = await dialog.showOpenDialog({

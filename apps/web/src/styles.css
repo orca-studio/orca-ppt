@@ -1,11 +1,10 @@
-/* token 层。主题、密度、动效归 app 所有 —— 不引 UI 框架的默认皮。 */
+/*
+ * token 层。主题、密度、动效归 app 所有 —— 不引 UI 框架的默认皮。
+ *
+ * 颜色**只在这里**定义。组件里写死一个色值,换主题时它就不会跟着变 —— 这是深浅两套皮
+ * 最常见的烂法。
+ */
 :root {
-  --bg: #0b0b0c;
-  --panel: #131315;
-  --line: #232327;
-  --text: #e8e8ea;
-  --muted: #8a8a92;
-  --accent: #4ade80;
   --pane-left: 260px;
   --pane-right: 360px;
   font-family:
@@ -14,6 +13,49 @@
     'Segoe UI',
     system-ui,
     sans-serif;
+  color-scheme: light dark;
+}
+
+/* 浅色是默认值。 */
+:root,
+:root[data-theme='light'] {
+  --bg: #f5f5f7;
+  --panel: #ffffff;
+  --line: #d8d8dd;
+  --text: #1c1c1e;
+  --muted: #6e6e76;
+  --accent: #16a34a;
+  --danger: #dc2626;
+  /* 画布衬底:稿子浮在上面像一个对象放在台面上,而不是陷进一片黑里 */
+  --stage: #e6e6ea;
+  --stage-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
+}
+
+/* 跟随系统。用户在应用里显式选过就走 [data-theme],不再受系统影响。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0b0b0c;
+    --panel: #131315;
+    --line: #232327;
+    --text: #e8e8ea;
+    --muted: #8a8a92;
+    --accent: #4ade80;
+    --danger: #f87171;
+    --stage: #0f0f11;
+    --stage-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0b0b0c;
+  --panel: #131315;
+  --line: #232327;
+  --text: #e8e8ea;
+  --muted: #8a8a92;
+  --accent: #4ade80;
+  --danger: #f87171;
+  --stage: #0f0f11;
+  --stage-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
 }
 
 * {
@@ -26,10 +68,87 @@ body {
   color: var(--text);
 }
 
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+}
+
 .shell {
   display: grid;
   grid-template-columns: var(--pane-left) 1fr var(--pane-right);
-  height: 100vh;
+  min-height: 0;
+}
+
+/*
+ * 顶栏。标题栏是藏起来的,所以这条同时是窗口的拖动区 —— 不给拖动区窗口挪不动。
+ * macOS 的红绿灯浮在左上角,要给它让出位置。
+ */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+:root[data-platform='darwin'] .toolbar {
+  padding-left: 82px;
+}
+
+.toolbar button {
+  -webkit-app-region: no-drag;
+}
+
+.toolbar-title {
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.toolbar-actions button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toolbar-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.toolbar-actions button:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.toolbar-play {
+  font-variant-numeric: tabular-nums;
+}
+
+.toolbar-agent {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.toolbar-agent[data-live='true'] {
+  color: var(--accent);
 }
 
 .pane {
@@ -43,10 +162,6 @@ body {
   border-right: 0;
 }
 
-/*
- * 标题栏藏起来了,窗口就得靠这条来拖 —— 不给可拖区域的话,窗口根本挪不动。
- * 里面要是放了按钮,记得给它 `-webkit-app-region: no-drag`,否则点不动。
- */
 .pane-head {
   padding: 12px 16px;
   border-bottom: 1px solid var(--line);
@@ -54,19 +169,7 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  -webkit-app-region: drag;
   user-select: none;
-}
-
-.pane-head button,
-.pane-head input,
-.pane-head a {
-  -webkit-app-region: no-drag;
-}
-
-/* macOS 的红绿灯浮在窗口左上角,第一栏的标题要给它让出位置。 */
-:root[data-platform='darwin'] .pane:first-child .pane-head {
-  padding-left: 78px;
 }
 
 .pane-body {
@@ -77,28 +180,48 @@ body {
   line-height: 1.7;
 }
 
-/* 中间是放映画布。deck 在这里真的在跑,不是截图 —— 16:9 是它唯一的形状。 */
+/*
+ * 中间是放映画布。deck 在这里真的在跑,不是截图 —— 16:9 是它唯一的形状。
+ *
+ * 衬底用中性灰不用纯黑:稿子本身常常是深色的,黑底上它读起来像「加载失败」;
+ * 中性底上它是**一个对象放在台面上**。Keynote 就是这么处理的。
+ */
 .stage {
   flex: 1;
   display: grid;
   grid-template-rows: 1fr auto;
-  place-items: center;
-  background: #000;
-  padding: 24px;
+  background: var(--stage);
+  padding: 20px;
   min-height: 0;
 }
 
+.stage-canvas {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  /* 给下面的 cqw / cqh 一个参照 */
+  container-type: size;
+}
+
+/*
+ * 「放得下的最大的 16:9」。
+ *
+ * 宽度取「容器宽」和「容器高换算出的宽」里小的那个,高度由 aspect-ratio 推出来。
+ * 不能写成 `height:100%` + `max-width:100%` —— 那样两个方向都是确定值,
+ * aspect-ratio 直接被忽略,画面会被拉变形(实测 779×713)。
+ */
 .stage-frame {
-  width: 100%;
-  max-width: calc((100vh - 180px) * 16 / 9);
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  height: auto;
   aspect-ratio: 16 / 9;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   display: grid;
   place-items: center;
   color: var(--muted);
   text-align: center;
   padding: 24px;
+  box-shadow: var(--stage-shadow);
+  background: var(--panel);
 }
 
 /* 真在跑的那一版:guest 自己填满,不留内边距,否则稿子的 1920×1080 会被挤变形。 */
@@ -118,8 +241,8 @@ body {
   position: absolute;
   inset: auto 0 0 0;
   padding: 8px 12px;
-  background: #7f1d1d;
-  color: #fee2e2;
+  background: var(--danger);
+  color: var(--panel);
   font-size: 12px;
 }
 
@@ -190,7 +313,7 @@ body {
 }
 
 .picker-error {
-  color: #f87171;
+  color: var(--danger);
   margin: 0;
 }
 
@@ -217,7 +340,7 @@ code {
 }
 
 .dot[data-off='true'] {
-  color: #f87171;
+  color: var(--danger);
 }
 
 /* 对话栏 */
@@ -264,7 +387,7 @@ code {
 }
 
 .thread-item[data-kind='error'] .thread-text {
-  color: #f87171;
+  color: var(--danger);
 }
 
 /* 挂在输入框上、还没发出去的锚 */
@@ -426,7 +549,7 @@ code {
 }
 
 [data-status='failed'] .rail-dot {
-  background: #f87171;
+  background: var(--danger);
 }
 
 @keyframes pulse {
@@ -479,7 +602,7 @@ code {
   margin: 2px 0 6px 14px;
   padding-left: 14px;
   font-size: 11px;
-  color: #f87171;
+  color: var(--danger);
 }
 
 /* 授权 */
@@ -528,8 +651,8 @@ code {
 }
 
 .permission-actions .deny:hover {
-  border-color: #f87171;
-  color: #f87171;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* 待办栏 */
@@ -676,7 +799,7 @@ code {
   object-fit: cover;
   border-radius: 2px;
   flex: none;
-  background: #000;
+  background: var(--bg);
 }
 
 .filmstrip-thumb--empty {
@@ -686,4 +809,37 @@ code {
 
 .filmstrip button {
   align-items: center;
+}
+
+/* 左栏是纯导航,给缩略图更多宽度 */
+.pane--nav .pane-body {
+  padding: 12px;
+}
+
+.pane--nav .filmstrip button {
+  gap: 12px;
+  padding: 6px;
+}
+
+.pane--nav .filmstrip-thumb {
+  width: 104px;
+}
+
+.pane--nav .filmstrip-title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+/* 阶段栏搬到右栏之后,不再需要自己撑一块 */
+.queue .rail {
+  padding: 16px 16px 12px;
+  margin-bottom: 0;
+}
+
+.queue {
+  grid-template-rows: auto auto 1fr;
 }

@@ -107,6 +107,19 @@ export const requests = {
     result: z.object({ path: z.string() }),
   },
   /**
+   * 全屏放映。稿子好不好只有放映能回答 —— 这是这个产品里最该有的一个动作。
+   *
+   * 走协议而不是界面自己开窗:agent 说「放给我看」也该能触发(那条不变量)。
+   */
+  'deck.present': {
+    params: z.object({
+      deckId: z.string(),
+      /** 从第几页开始。不给就从当前这一页。 */
+      slide: z.number().int().nonnegative().optional(),
+    }),
+    result: z.object({}),
+  },
+  /**
    * 给每一页出一张缩略图。没有图的「胶片」不叫胶片。
    *
    * 和 `deck.capture` 一样要绕到壳那边,但**不能驱动可见画布** —— 那样用户会看着它
@@ -210,6 +223,17 @@ export const pushes = {
     requestId: z.string(),
     slide: z.number().int().nonnegative().optional(),
   }),
+  /** 请壳开一个全屏窗口放映。只有壳做得到。 */
+  'present.request': z.object({
+    deckId: z.string(),
+    previewUrl: z.string(),
+    slide: z.number().int().nonnegative(),
+  }),
+  /**
+   * agent 刚通过 MCP 调了一次工具。界面据此显示「agent 在线」—— 比不管三七二十一
+   * 都提示「还没连上?」诚实。
+   */
+  'mcp.activity': z.object({ tool: z.string(), at: z.number() }),
   /** 请壳离屏渲一份缩略图。壳渲完调 `thumbnails.result` 交回来。 */
   'thumbnails.request': z.object({
     deckId: z.string(),

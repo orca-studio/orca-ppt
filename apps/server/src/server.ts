@@ -98,7 +98,11 @@ export async function startServer(
   }
 
   // MCP 和界面走同一个进程、同一个端口:工具调的就是界面调的那批方法。
-  const mcp = new McpEndpoint((method, params) => dispatch(method, params) as never)
+  const mcp = new McpEndpoint(
+    (method, params) => dispatch(method, params) as never,
+    // agent 动了一下,界面就该看得见 —— 比不管三七二十一都提示「还没连上?」诚实。
+    (tool) => bus.broadcast('mcp.activity', { tool, at: Date.now() }),
+  )
 
   const http = createHttpServer((req, res) => {
     void (async () => {
@@ -243,6 +247,19 @@ export async function startServer(
       case 'capture.result': {
         const params = parseParams('capture.result', raw)
         captures.settle(params.requestId, { value: params.path, error: params.error })
+        return {}
+      }
+      case 'deck.present': {
+        const params = parseParams('deck.present', raw)
+        const opened = await openDeck(deckPathOf(params.deckId))
+        const previewUrl = mountPreview(opened)
+        if (!previewUrl) throw new Error('成品还没出来,没有东西可放映')
+
+        bus.broadcast('present.request', {
+          deckId: params.deckId,
+          previewUrl,
+          slide: params.slide ?? 0,
+        })
         return {}
       }
       case 'deck.thumbnails': {

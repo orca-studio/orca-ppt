@@ -214,6 +214,24 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         ),
     },
     {
+      name: 'present',
+      config: {
+        title: '全屏放映',
+        description:
+          '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见 —— 截图看不出。',
+        inputSchema: {
+          slide: z.number().int().nonnegative().optional().describe('从第几页开始,从 0 数起'),
+        },
+      },
+      run: async (args) => {
+        await call('deck.present', {
+          deckId: await active.get(call),
+          ...(args.slide === undefined ? {} : { slide: Number(args.slide) }),
+        })
+        return text('已经全屏放映起来了。用户按 Esc 退出。')
+      },
+    },
+    {
       name: 'capture_slide',
       config: {
         title: '截一张画布的图',

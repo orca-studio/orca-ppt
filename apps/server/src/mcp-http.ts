@@ -17,7 +17,11 @@ export class McpEndpoint {
   /** 跨请求活着的只有「当前是哪份 deck」。其余每个请求自成一体。 */
   readonly #active = new ActiveDeck()
 
-  constructor(private readonly call: ProtocolCaller) {}
+  constructor(
+    private readonly call: ProtocolCaller,
+    /** 每次工具被调都报一声,界面据此显示 agent 在线。 */
+    private readonly onActivity: (tool: string) => void = () => {},
+  ) {}
 
   /** 处理一个请求。不是 /mcp 就返回 false,交回给调用方。 */
   async handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
