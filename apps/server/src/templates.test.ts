@@ -10,7 +10,9 @@ async function fakeSkill() {
   await mkdir(join(root, 'templates'), { recursive: true })
   await writeFile(
     join(root, 'templates/starter.html'),
-    '<link href="{{ROOT}}/runtime/tokens.css"><script src="{{ROOT}}/runtime/engine.js"></script>',
+    '<head><title>{{TITLE}}</title>' +
+      '<link href="{{ROOT}}/runtime/tokens.css"></head>' +
+      '<p>{{TITLE}}</p><script src="{{ROOT}}/runtime/engine.js"></script>',
   )
 
   const example = join(root, 'examples', 'forest-timeline')
@@ -150,5 +152,44 @@ describe('instantiate 在软链路径下', () => {
     expect(resolve(await realpath(targetDir), href)).toBe(
       join(await realpath(skillPath), 'runtime/tokens.css'),
     )
+  })
+})
+
+describe('空白模板配主题', () => {
+  it('主题接在 tokens.css 后面 —— 顺序反了就被盖回缺省值', async () => {
+    const skill = await fakeSkill()
+    const target = join(await mkdtemp(join(tmpdir(), 'deck-')), 'new')
+    await instantiate({
+      skillPath: skill,
+      templateId: 'template:starter.html',
+      targetDir: target,
+      theme: 'editorial-forest',
+      title: '山野咖啡',
+    })
+    const html = await readFile(join(target, 'deck.html'), 'utf8')
+    const tokensAt = html.indexOf('runtime/tokens.css')
+    const themeAt = html.indexOf('runtime/themes/editorial-forest.css')
+    expect(themeAt).toBeGreaterThan(tokensAt)
+  })
+
+  it('替掉 {{TITLE}} —— 不替的话新稿子上就写着「{{TITLE}}」', async () => {
+    const skill = await fakeSkill()
+    const target = join(await mkdtemp(join(tmpdir(), 'deck-')), 'new')
+    await instantiate({
+      skillPath: skill,
+      templateId: 'template:starter.html',
+      targetDir: target,
+      title: '山野咖啡',
+    })
+    const html = await readFile(join(target, 'deck.html'), 'utf8')
+    expect(html).toContain('山野咖啡')
+    expect(html).not.toContain('{{TITLE}}')
+  })
+
+  it('不配主题就不挂 —— 不猜一个给人', async () => {
+    const skill = await fakeSkill()
+    const target = join(await mkdtemp(join(tmpdir(), 'deck-')), 'new')
+    await instantiate({ skillPath: skill, templateId: 'template:starter.html', targetDir: target })
+    expect(await readFile(join(target, 'deck.html'), 'utf8')).not.toContain('runtime/themes/')
   })
 })

@@ -12,17 +12,30 @@ import { join, relative, sep } from 'node:path'
  * runtime),重写一次相对前缀就行。不重写的话,稿子一挪位置就全白。
  */
 
+/**
+ * 版式族 —— 选择器按它分组。**人挑模板时先问的是「这是哪一类稿子」,不是「它叫什么」**,
+ * 一长条平铺的示例没法回答这个问题。
+ *
+ * 标记写在稿子的 `<html data-layout>` 上,从起始文件复制出来就自然带着,不靠写稿的人
+ * 记得填(见 skill 的 templates/starter.html)。
+ */
+export type DeckLayout = 'standard' | 'story' | 'bento'
+
 export interface DeckTemplate {
   id: string
   kind: 'template' | 'example'
   title: string
   /** 缩略图的绝对路径。空白模板没有。 */
   thumbnail?: string
+  /** 读不出标记时不猜 —— 归到「其他」总比归错一类强。 */
+  layout?: DeckLayout
 }
 
-const BLANKS: Array<{ file: string; title: string }> = [
-  { file: 'starter.html', title: '汇报稿' },
-  { file: 'story-starter.html', title: '故事稿' },
+const LAYOUTS = new Set<string>(['standard', 'story', 'bento'])
+
+const BLANKS: Array<{ file: string; title: string; layout: DeckLayout }> = [
+  { file: 'starter.html', title: '汇报稿', layout: 'standard' },
+  { file: 'story-starter.html', title: '故事稿', layout: 'story' },
 ]
 
 export async function listTemplates(skillPath: string | undefined): Promise<DeckTemplate[]> {
@@ -32,7 +45,12 @@ export async function listTemplates(skillPath: string | undefined): Promise<Deck
   for (const blank of BLANKS) {
     try {
       await stat(join(skillPath, 'templates', blank.file))
-      blanks.push({ id: `template:${blank.file}`, kind: 'template', title: blank.title })
+      blanks.push({
+        id: `template:${blank.file}`,
+        kind: 'template',
+        title: blank.title,
+        layout: blank.layout,
+      })
     } catch {
       // skill 里没有这份模板
     }
@@ -67,14 +85,27 @@ async function listExamples(skillPath: string): Promise<DeckTemplate[]> {
       () => true,
       () => false,
     )
+    // **没缩略图的不进选择器。** skill 的 examples/ 里混着开发中的工作稿,它们没录过
+    // 视频所以没有缩略图 —— 在选择器里就是一张白卡片,人看不出自己在挑什么。
+    if (!hasThumb) continue
+
+    const layout = layoutOf(html)
     examples.push({
       id: `example:${name}`,
       kind: 'example',
       title: titleOf(html) ?? name,
-      ...(hasThumb ? { thumbnail: thumb } : {}),
+      thumbnail: thumb,
+      ...(layout ? { layout } : {}),
     })
   }
   return examples
+}
+
+/** 版式族标记。读不出来就不猜 —— 归错一类比不归类更糟。 */
+function layoutOf(html: string): DeckLayout | undefined {
+  const match = html.match(/<html[^>]*\bdata-layout="([a-z0-9-]+)"/i)
+  const value = match?.[1]
+  return value && LAYOUTS.has(value) ? (value as DeckLayout) : undefined
 }
 
 /** 稿子的 `<title>`,取 `·` 之前那一段 —— 后面挂的是主题名和版式,列表里太长。 */
@@ -111,8 +142,12 @@ export async function instantiate(options: {
   skillPath: string
   templateId: string
   targetDir: string
+  /** 空白模板要配一个主题 —— 起始文件本身不带主题,不配的话新稿子是没有样子的。 */
+  theme?: string
+  /** 稿子的名字,替掉起始文件里的 `{{TITLE}}`。 */
+  title?: string
 }): Promise<string> {
-  const { skillPath, templateId, targetDir } = options
+  const { skillPath, templateId, targetDir, theme, title } = options
   const [kind, name] = splitId(templateId)
   await mkdir(join(targetDir, '.deck'), { recursive: true })
 
@@ -130,7 +165,10 @@ export async function instantiate(options: {
 
   if (kind === 'template') {
     const source = await readFile(join(skillPath, 'templates', name), 'utf8')
-    await writeFile(entry, source.split('{{ROOT}}').join(toSkill))
+    let html = source.split('{{ROOT}}').join(toSkill)
+    if (title) html = html.split('{{TITLE}}').join(title)
+    if (theme) html = withTheme(html, toSkill, theme)
+    await writeFile(entry, html)
     return entry
   }
 
@@ -148,6 +186,18 @@ export async function instantiate(options: {
   const html = await readFile(join(dir, 'index.html'), 'utf8')
   await writeFile(entry, rewriteRoot(html, toSkill))
   return entry
+}
+
+/**
+ * 把主题挂上去 —— **接在 tokens.css 后面**,顺序是有意义的:主题覆盖 tokens 的缺省值,
+ * 反过来挂就被盖回去了,新稿子看上去就像没选主题。
+ */
+function withTheme(html: string, toSkill: string, theme: string): string {
+  const link = `  <link rel="stylesheet" href="${toSkill}/runtime/themes/${theme}.css">`
+  const anchor = html.match(/^.*runtime\/tokens\.css.*$/m)?.[0]
+  // 起始文件里没有 tokens.css 就挂在 </head> 前 —— 至少别把主题丢了。
+  if (!anchor) return html.replace('</head>', `${link}\n</head>`)
+  return html.replace(anchor, `${anchor}\n${link}`)
 }
 
 /** 示例都住在 `examples/<名字>/`,所以它们引 skill 的前缀固定是 `../../`。 */

@@ -1,5 +1,6 @@
 import type { Anchor, InspectAnchor } from '@orca-ppt/contracts'
 import type { PickedAnchor } from './Stage.js'
+import { assetUrl } from './assets.js'
 
 /**
  * guest 算出来的锚 + 宿主截的图 → 一条能挂进待办队列的锚。
@@ -17,7 +18,11 @@ export function toAnchor(picked: PickedAnchor, note: string, crop?: string): Anc
   return { kind: 'element', ...anchor }
 }
 
-/** 裁切图在界面上预览用的地址。只在本机成立,不进协议。 */
+/**
+ * 裁切图在界面上预览用的地址。只在本机成立,不进协议。
+ *
+ * 走本地 server 而不是 `file://` —— dev 下界面是 http 页面,加载不了 file:// 子资源。
+ */
 export function cropUrl(crop: string | undefined): string | undefined {
-  return crop ? `file://${crop}` : undefined
+  return assetUrl(crop)
 }

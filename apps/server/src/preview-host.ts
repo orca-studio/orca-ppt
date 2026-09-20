@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { realpath, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { resolve, sep } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { contentTypeFor, resolveWithinRoots, type PreviewPlan } from './preview.js'
 
 /**
@@ -17,6 +17,11 @@ export class PreviewHost {
   readonly #byEntry = new Map<string, { token: string; urlPath: string }>()
   /** 所有 deck 都能读的目录,目前只有 skill(稿子的依赖都在里面)。 */
   readonly #allowRoots: string[] = []
+  /**
+   * 额外放行的**单个文件**。缩略图和裁切图是壳渲好之后交回来的,散在应用自己的数据
+   * 目录里 —— 放行整个目录太宽,只认 server 自己经手过的那几个路径。
+   */
+  readonly #allowFiles = new Set<string>()
 
   /**
    * 放行一个目录。**要 realpath**:deck 路径是 realpath 过的,allow root 不跟着解析的话,
@@ -32,6 +37,23 @@ export class PreviewHost {
       resolved = resolve(root)
     }
     if (!this.#allowRoots.includes(resolved)) this.#allowRoots.push(resolved)
+  }
+
+  /**
+   * 放行一个具体文件,给 `/asset` 用。
+   *
+   * 为什么要有这条路:界面在 dev 下是从 `http://localhost:5273` 加载的,而 Chromium
+   * 不允许 http 页面加载 `file://` 子资源 —— 缩略图会全裂。打包版页面本身是 file://
+   * 所以看不出来,这是个只在 dev 下发作的差异,正好最容易被当成"图没生成"。
+   */
+  allowFile(path: string | undefined): void {
+    if (!path) return
+    const target = resolve(path)
+    this.#allowFiles.add(target)
+    // realpath 也存一份:壳给的路径和解析后的未必是同一个字符串。
+    void realpath(target)
+      .then((real) => this.#allowFiles.add(real))
+      .catch(() => {})
   }
 
   /**
@@ -58,8 +80,11 @@ export class PreviewHost {
     if (plan) this.#byEntry.delete(plan.entryFile)
   }
 
-  /** 处理一个请求。不是预览请求就返回 false,交回给调用方。 */
+  /** 处理一个请求。不是预览/资源请求就返回 false,交回给调用方。 */
   async handle(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+    const asset = (req.url ?? '').match(/^\/asset(\/.*)$/)
+    if (asset?.[1]) return this.#serveAsset(req, res, asset[1])
+
     const match = (req.url ?? '').match(/^\/p\/([A-Za-z0-9_-]+)(\/.*)?$/)
     if (!match?.[1]) return false
 
@@ -100,6 +125,79 @@ export class PreviewHost {
         'content-type': contentTypeFor(real),
         'content-length': info.size,
         // 稿子在改,画布要看到最新的那一版。
+        'cache-control': 'no-store',
+      })
+      if (req.method === 'HEAD') {
+        res.end()
+        return true
+      }
+      createReadStream(real).pipe(res)
+    } catch {
+      res.writeHead(404).end()
+    }
+    return true
+  }
+
+  /**
+   * 界面要显示的一张本地图:缩略图、裁切图,或者 skill 里示例自带的那张。
+   *
+   * **先 realpath 再比,不先按字面比**:allow root 是 realpath 过的,而界面拿到的路径
+   * 未必是(macOS 的 /var → /private/var 就是),字面比会把自家的文件判成越界。
+   * 这个坑在这个仓库里已经踩过三次了 —— deck 根、allow root、模板实例化各一次。
+   */
+  async #serveAsset(req: IncomingMessage, res: ServerResponse, urlPath: string): Promise<boolean> {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.writeHead(405, { allow: 'GET, HEAD' }).end()
+      return true
+    }
+
+    let decoded: string
+    try {
+      decoded = decodeURIComponent(urlPath.split('?')[0] ?? '')
+    } catch {
+      res.writeHead(400).end()
+      return true
+    }
+    if (decoded.includes('\0') || !decoded.startsWith('/')) {
+      res.writeHead(400).end()
+      return true
+    }
+
+    // `..` 在这里就被 resolve 吃掉了,越界的会落到放行范围之外。
+    const target = resolve(decoded)
+    const real = await realpath(target).catch(() => undefined)
+    // 文件不在时 realpath 会失败,那就解析它所在的目录 —— 否则「不存在」会被误判成
+    // 「越界」,排查时分不清是路径写错了还是权限拦了。
+    const probe =
+      real ??
+      (await realpath(dirname(target))
+        .then((dir) => join(dir, basename(target)))
+        .catch(() => target))
+
+    const allowed =
+      this.#allowFiles.has(probe) ||
+      this.#allowFiles.has(target) ||
+      this.#allowRoots.some((root) => within(root, probe))
+    if (!allowed) {
+      res.writeHead(403).end()
+      return true
+    }
+    // 放行了但文件不在 —— 是 404,不是 403。分不清的话排查起来全是猜。
+    if (!real) {
+      res.writeHead(404).end()
+      return true
+    }
+
+    try {
+      const info = await stat(real)
+      if (!info.isFile()) {
+        res.writeHead(404).end()
+        return true
+      }
+      res.writeHead(200, {
+        'content-type': contentTypeFor(real),
+        'content-length': info.size,
+        // 稿子一改缩略图就重渲,同名不同内容,不能缓存。
         'cache-control': 'no-store',
       })
       if (req.method === 'HEAD') {

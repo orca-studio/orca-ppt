@@ -1211,6 +1211,92 @@ code {
   white-space: nowrap;
 }
 
+.gallery-head-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 版式是第二个、很小的选择 —— 它决定结构,不决定长什么样,所以不占版面。 */
+.gallery-layout {
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.gallery-note {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* 主题卡比示例卡大一档:它是这一屏的主角,而且要看清字形才能比。 */
+.gallery-grid--themes {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.gallery-scene {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+  /* 两行封顶 —— 场景长短不一,卡片不能跟着高低不齐。 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: -2px;
+}
+
+/* 示例是参考,不是起点 —— 默认收起来。 */
+.gallery-examples {
+  margin-top: 36px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+.gallery-examples > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.gallery-examples > summary::-webkit-details-marker {
+  display: none;
+}
+
+.gallery-examples > summary::after {
+  content: '›';
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+
+.gallery-examples[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.gallery-examples > summary em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.gallery-examples > section {
+  margin-top: 20px;
+}
+
 .gallery > footer {
   position: sticky;
   bottom: 0;

@@ -125,6 +125,23 @@ describe('agent 活动', () => {
     expect(activity[1]!.error).toBeUndefined()
   })
 
+  it('改字带上刚写进去的文字 —— 界面靠它在画布上点亮那一处', async () => {
+    await openedDeck('<div class="slides"><section><p>走过的四站。</p></section></div>')
+    await mcp('tools/call', {
+      name: 'edit_text',
+      arguments: { slide: 0, old_text: '走过的四站。', new_text: '四站,一年' },
+    })
+    await settle()
+    expect(activity[1]).toMatchObject({ kind: 'write', hint: '四站,一年' })
+  })
+
+  it('读操作不带线索 —— 没有哪一处可点', async () => {
+    await openedDeck('<div class="slides"><section><p>一</p></section></div>')
+    await mcp('tools/call', { name: 'show_slide', arguments: { index: 0 } })
+    await settle()
+    expect(activity[0]!.hint).toBeUndefined()
+  })
+
   it('工具拒绝了就报没办成 —— 报成功是不诚实的', async () => {
     await openedDeck('<div class="slides"><section><p>现在的文字</p></section></div>')
     await mcp('tools/call', {

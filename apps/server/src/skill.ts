@@ -1,4 +1,4 @@
-import { readFile, readdir } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
@@ -35,9 +35,28 @@ export async function resolveSkillPath(env = process.env): Promise<string | unde
 }
 
 export interface Catalog {
-  themes: Array<{ name: string; title: string }>
+  themes: Theme[]
   layouts: string[]
   skillPath?: string
+}
+
+/**
+ * 一个主题。
+ *
+ * **主题就是场景** —— 用这个产品的人都带着自己的场合来:年度复盘、对外路演、内部分享。
+ * 所以卡上要写它适合什么场合,不能只写它长什么样;光看颜色人挑不出来。
+ */
+export interface Theme {
+  name: string
+  title: string
+  /** 适合什么场合。写在主题文件开头的「场景：」那行。 */
+  scene?: string
+  /**
+   * 样张的绝对路径 —— **每个主题一张,内容完全一样**,只有设计不同(见 skill 的
+   * scripts/theme-samples.mjs)。没有样张的主题不进选择器:一张白卡片,人看不出
+   * 自己在挑什么。
+   */
+  sample?: string
 }
 
 /** 主题和版式是**选**出来的,不是聊出来的。 */
@@ -49,21 +68,29 @@ export async function readCatalog(skillPath: string | undefined): Promise<Catalo
   return { themes, layouts, skillPath }
 }
 
-async function readThemes(dir: string): Promise<Array<{ name: string; title: string }>> {
+async function readThemes(dir: string): Promise<Theme[]> {
   const names = await readNames(dir, '.css')
-  return Promise.all(
-    names.map(async (name) => ({ name, title: await themeTitle(join(dir, `${name}.css`), name) })),
-  )
+  return Promise.all(names.map((name) => readTheme(dir, name)))
 }
 
-/** 主题文件开头那行注释里写着人读的名字,比文件名好看。 */
-async function themeTitle(file: string, fallback: string): Promise<string> {
-  try {
-    const head = (await readFile(file, 'utf8')).slice(0, 400)
-    const match = head.match(/主题[:：]\s*([^\n(（]+)/)
-    return match?.[1]?.trim() || fallback
-  } catch {
-    return fallback
+async function readTheme(dir: string, name: string): Promise<Theme> {
+  const head = await readFile(join(dir, `${name}.css`), 'utf8').then(
+    (text) => text.slice(0, 600),
+    () => '',
+  )
+  const sample = join(dir, 'samples', `${name}.jpg`)
+  const hasSample = await stat(sample).then(
+    () => true,
+    () => false,
+  )
+  return {
+    name,
+    // 主题文件开头那行注释里写着人读的名字,比文件名好看。
+    title: head.match(/主题[:：]\s*([^\n(（]+)/)?.[1]?.trim() || name,
+    ...(head.match(/场景[:：]\s*([^\n]+)/)?.[1]?.trim()
+      ? { scene: head.match(/场景[:：]\s*([^\n]+)/)![1]!.trim() }
+      : {}),
+    ...(hasSample ? { sample } : {}),
   }
 }
 

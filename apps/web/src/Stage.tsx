@@ -38,7 +38,17 @@ export interface StageHandle {
   next(): void
   /** guest 的 webContents id —— 主进程按它找到 guest 去截图。 */
   guestId(): number | undefined
+  /**
+   * 把某段文字所在的元素点亮一下。改完的**下一次加载完成后**才点 ——
+   * 写盘会触发重载,这会儿点亮的是马上就要被换掉的那个 DOM。
+   */
+  spotlight(text: string): void
+  /** 等画布加载完。重载途中截图会截到空白,得等它。 */
+  whenReady(timeoutMs?: number): Promise<boolean>
 }
+
+/** 攒着的点亮过期时间。隔太久再闪一下,人根本对不上是哪次改动。 */
+const SPOTLIGHT_TTL_MS = 8_000
 
 /** guest 里改完的一处文字。服务端靠 `oldText` 在源码里定位,不靠选择器。 */
 export interface TextEdit {
@@ -71,6 +81,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const restoreTo = useRef<number | undefined>(undefined)
+  /** 等着点亮的那段文字 —— 攒到下一次加载完成。 */
+  const pendingSpotlight = useRef<{ text: string; at: number } | undefined>(undefined)
+  /** 画布正在加载吗。重载途中截图会截到空白。 */
+  const loading = useRef(false)
+  const waiters = useRef<Array<() => void>>([])
   // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
   const onTextEditRef = useRef(onTextEdit)
   onTextEditRef.current = onTextEdit
@@ -103,6 +118,10 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         .catch(() => {})
     }
 
+    const onStartLoading = () => {
+      loading.current = true
+    }
+
     const onLoad = () => {
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
       void view.executeJavaScript(`${inspectScript};${autoplayScript};${editScript}`).then(() => {
@@ -110,7 +129,19 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         restoreTo.current = undefined
         if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
         watchEdits()
+
+        // 攒着的那处点亮,现在才有意义 —— DOM 是新的了。太旧的就算了,
+        // 隔了半天再闪一下,人根本对不上是哪次改动。
+        const wanted = pendingSpotlight.current
+        pendingSpotlight.current = undefined
+        if (wanted && Date.now() - wanted.at < SPOTLIGHT_TTL_MS) {
+          void view
+            .executeJavaScript(`window.__orcaEdit.spotlight(${JSON.stringify(wanted.text)})`)
+            .catch(() => {})
+        }
       })
+      loading.current = false
+      for (const resume of waiters.current.splice(0)) resume()
       setReady(true)
       setError(undefined)
     }
@@ -120,9 +151,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       const detail = event as Event & { errorDescription?: string }
       setError(detail.errorDescription || '加载失败')
     }
+    view.addEventListener('did-start-loading', onStartLoading)
     view.addEventListener('dom-ready', onLoad)
     view.addEventListener('did-fail-load', onFail)
     return () => {
+      view.removeEventListener('did-start-loading', onStartLoading)
       view.removeEventListener('dom-ready', onLoad)
       view.removeEventListener('did-fail-load', onFail)
     }
@@ -171,6 +204,24 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           return undefined
         }
       },
+      spotlight: (text: string) => {
+        // 一律攒到下一次加载完成:改文字必然引发重载,现在点亮的是马上要被换掉的 DOM。
+        pendingSpotlight.current = { text, at: Date.now() }
+      },
+      whenReady: (timeoutMs = 4_000) =>
+        new Promise<boolean>((resolve) => {
+          if (!loading.current) return resolve(true)
+          const timer = setTimeout(() => {
+            // 超时也照样往下走:截一张可能不完美的,好过让 agent 干等。
+            waiters.current = waiters.current.filter((entry) => entry !== resume)
+            resolve(false)
+          }, timeoutMs)
+          const resume = () => {
+            clearTimeout(timer)
+            resolve(true)
+          }
+          waiters.current.push(resume)
+        }),
     }),
     [],
   )

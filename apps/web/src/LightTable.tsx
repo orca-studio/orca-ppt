@@ -4,6 +4,7 @@
  * 一份稿子读起来顺不顺,很多时候要退后一步看整体 —— 放映一页一页翻看不出节奏。
  * 缩略图本来就渲好了,这里只是换个排法。
  */
+import { assetUrl } from './assets.js'
 export interface LightTableProps {
   count: number
   current: number
@@ -22,7 +23,7 @@ export function LightTable({ count, current, thumbs, onPick }: LightTableProps) 
           onClick={() => onPick(index)}
         >
           {thumbs[index] ? (
-            <img src={`file://${thumbs[index]}`} alt="" />
+            <img src={assetUrl(thumbs[index])} alt="" />
           ) : (
             <span className="lighttable-blank" />
           )}

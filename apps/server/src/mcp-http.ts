@@ -23,6 +23,7 @@ export interface McpActivity {
   label: string
   slides: number[]
   at: number
+  hint?: string
   error?: string
 }
 

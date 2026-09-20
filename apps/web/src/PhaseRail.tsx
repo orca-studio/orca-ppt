@@ -2,9 +2,14 @@ import { useState } from 'react'
 import type { DeckPhase, PhaseStatus } from '@orca-ppt/contracts'
 
 /**
- * 阶段栏。每个阶段的产物都看得见、跑得动、改完能重跑 —— 让模型一口气从一句话写到成品,
- * 中间那些判断(版式为什么选它、转场为什么用这个手法)就永远看不见也改不动,
- * 而那些判断恰恰是稿子好不好的全部。
+ * 阶段栏 —— **只读的状态**:这份稿子走到哪一步了、哪一条没过。
+ *
+ * 原来每行挂着「跑」,意思是「跟 agent 说该做这一步」。那是 MCP 之前的权宜:
+ * 那时候没有别的办法让 agent 知道人想干什么。现在 agent 自己会调 `phase_prompt`,
+ * 人要它做什么直接说就行,按钮就成了多余的一层转述。
+ *
+ * 展开仍然给出这一步的完整做法 —— 读得懂就能自己做,也能整段带去别处,
+ * 这对一个先给人用的产品是有意义的;「替我去通知 agent」没有。
  */
 
 export interface PhaseRow {
@@ -33,7 +38,6 @@ const HINT: Record<DeckPhase, string> = {
 
 export interface PhaseRailProps {
   rows: PhaseRow[]
-  onRun: (phase: DeckPhase) => void
   onOpenArtifact: (phase: DeckPhase) => void
   /**
    * 取这一步的完整做法。
@@ -44,11 +48,8 @@ export interface PhaseRailProps {
   onLoadPrompt: (phase: DeckPhase) => Promise<string>
 }
 
-/**
- * 阶段栏。默认折叠 —— 稿子已经出来了的时候,这一栏没什么可干的,摆开只会把真正常用的
- * 「挂待办」压下去,还摆五个「跑」像是在请你重做一遍。
- */
-export function PhaseRail({ rows, onRun, onOpenArtifact, onLoadPrompt }: PhaseRailProps) {
+/** 默认折叠 —— 稿子已经出来了的时候,这一栏只是背景信息,摆开会盖掉画布旁边的地方。 */
+export function PhaseRail({ rows, onOpenArtifact, onLoadPrompt }: PhaseRailProps) {
   const [expanded, setExpanded] = useState<DeckPhase | undefined>()
   const [prompt, setPrompt] = useState<string | undefined>()
 
@@ -92,9 +93,6 @@ export function PhaseRail({ rows, onRun, onOpenArtifact, onLoadPrompt }: PhaseRa
                   看产物
                 </button>
               )}
-              <button type="button" className="rail-run" onClick={() => onRun(row.phase)}>
-                {row.status === 'idle' ? '跑' : '重跑'}
-              </button>
             </div>
 
             {expanded === row.phase && (
@@ -121,7 +119,7 @@ export function PhaseRail({ rows, onRun, onOpenArtifact, onLoadPrompt }: PhaseRa
         ))}
       </ol>
       <p className="muted rail-note">
-        点「跑」等于跟 agent 说该做这一步。改完某个产物重跑它,下游的会一起作废。
+        点阶段名看这一步该怎么做。要 agent 去做,直接跟它说 —— 它自己读得到这些。
       </p>
     </details>
   )

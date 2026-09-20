@@ -81,6 +81,8 @@ export interface ToolActivity {
   kind: 'read' | 'write'
   label: string
   slides: number[]
+  /** 刚写进去的那段文字。界面拿它在画布上把那一处点亮。 */
+  hint?: string
 }
 
 export interface ToolSpec {
@@ -179,7 +181,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'edit_text',
       activity: (args) => {
         const slides = slideArg(args)
-        return { kind: 'write', label: `改${nth(slides)}的文字`, slides }
+        return {
+          kind: 'write',
+          label: `改${nth(slides)}的文字`,
+          slides,
+          ...(typeof args.new_text === 'string' ? { hint: args.new_text } : {}),
+        }
       },
       config: {
         title: '换掉一句话',

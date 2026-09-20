@@ -3,7 +3,7 @@ import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contrac
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
-import { Gallery } from './Gallery.js'
+import { Gallery, type Theme } from './Gallery.js'
 import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
@@ -12,6 +12,7 @@ import { Stage, type StageHandle, type TextEdit } from './Stage.js'
 import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
+import { assetUrl, useAssetOrigin } from './assets.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
 type Template = RequestResult<'catalog.templates'>['templates'][number]
@@ -36,6 +37,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
+  const [themes, setThemes] = useState<Theme[]>([])
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [creating, setCreating] = useState(false)
@@ -62,6 +64,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [])
 
   useEffect(() => {
+    // 图片和 WebSocket 连同一个端口 —— 先告诉 assets 去哪儿取。
+    useAssetOrigin(serverUrl)
     const next = new Transport(serverUrl)
     transport.current = next
     next.onStateChange = setState
@@ -110,7 +114,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
     })
 
-    next.subscribe('mcp.activity', (data) => setAgent((prev) => reduce(prev, data)))
+    next.subscribe('mcp.activity', (data) => {
+      setAgent((prev) => reduce(prev, data))
+      // agent 改完一处,画布上那一处要自己闪一下 —— 页胶片只说得出「哪一页」,
+      // 一页上有十几个元素。Stage 会攒到重载完成后再点,那时 DOM 才是新的。
+      if (data.phase === 'done' && data.kind === 'write' && data.hint && !data.error) {
+        stage.current?.spotlight(data.hint)
+      }
+    })
 
     next.subscribe('autoplay.changed', (data) => {
       setAutoplay(data.on)
@@ -147,6 +158,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('capture.request', (data) => {
       void (async () => {
         try {
+          // 画布可能正在重载(改完文字必然触发一次),这会儿截会截到空白。
+          await stage.current?.whenReady()
           const path = await window.orca?.captureCanvas?.({ guestId: stage.current?.guestId() })
           await next.request('capture.result', {
             requestId: data.requestId,
@@ -185,6 +198,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
       .request('catalog.templates', {})
       .then((result) => setTemplates(result.templates))
       .catch(() => setTemplates([]))
+
+    // 主题是选择器的主角 —— 主题就是场景,人带着自己的场合来。
+    void next
+      .request('catalog.list', {})
+      .then((result) => setThemes(result.themes))
+      .catch(() => setThemes([]))
 
     const initial = window.orca?.initialDeck
     if (initial) void openWith(next, initial)
@@ -293,7 +312,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   /** 选了模板就建、就打开 —— 中间不该再让人挑一次目录。 */
   const create = useCallback(
-    async (template: Template, title: string) => {
+    async (template: Template, title: string, theme?: string) => {
       const active = transport.current
       if (!active) return
       // 放哪儿:让人挑一次父目录。deck 是磁盘上的目录,得由他决定放在哪。
@@ -307,6 +326,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
           parentDir,
           title,
           from: template.id,
+          ...(theme ? { theme } : {}),
         })
         await openWith(active, made.path)
       } catch (cause) {
@@ -451,10 +471,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
     return (
       <div className="app app--gallery">
         <Gallery
+          themes={themes}
           templates={templates}
           busy={creating}
           error={error}
-          onCreate={(template, title) => void create(template, title)}
+          onCreate={(template, title, theme) => void create(template, title, theme)}
           onOpen={() => void pickDeck(open)}
         />
       </div>
@@ -498,7 +519,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       */}
                       {layout.nav === 'thumbs' ? (
                         thumbs[index] ? (
-                          <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
+                          <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
                         ) : (
                           <span className="filmstrip-thumb filmstrip-thumb--empty" />
                         )
@@ -587,12 +608,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
           <header className="pane-head">检视</header>
           {deck ? (
             <div className="queue">
+              {/*
+                只有一个按钮。原来旁边还有个「想说什么」输入框和一条待办队列 ——
+                那是「人挂待办、agent 来取」那套模型的东西,那个环节已经不存在了:
+                人本来就在跟 agent 说话,点一下只是**指给它看**,话在对话里说。
+              */}
               <div className="queue-pick">
-                <input
-                  value={note}
-                  placeholder="想说什么(可以空着)"
-                  onChange={(event) => setNote(event.target.value)}
-                />
                 <button
                   type="button"
                   className="pick"
@@ -607,11 +628,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
                   {picking ? '点画布上的元素,Esc 取消' : '在画布上点一处'}
                 </button>
               </div>
-              <Pending requests={requests} crops={crops} onRemove={removeRequest} />
-              {/* 阶段排在挂待办**后面**:稿子做出来之后,常用的是前者 */}
+              <Pending requests={requests} crops={crops} />
+              {/* 阶段是背景信息,排在动作后面 */}
               <PhaseRail
                 rows={deck.phases}
-                onRun={requestPhase}
                 onOpenArtifact={(phase) => void openArtifact(phase)}
                 onLoadPrompt={loadPrompt}
               />

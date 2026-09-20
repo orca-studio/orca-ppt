@@ -75,6 +75,8 @@ export const requests = {
       parentDir: z.string(),
       title: z.string(),
       from: z.string().optional(),
+      /** 空白模板配哪个主题。起始文件本身不带主题,不配的话新稿子没有样子。 */
+      theme: z.string().optional(),
     }),
     result: z.object({ path: z.string() }),
   },
@@ -89,6 +91,11 @@ export const requests = {
           title: z.string(),
           /** 缩略图的绝对路径。skill 自己就给示例生成了 thumb.jpg,不用我们再渲。 */
           thumbnail: z.string().optional(),
+          /**
+           * 版式族,选择器按它分组 —— 人挑模板时先问的是「这是哪一类稿子」。
+           * 读不出标记时缺省,界面归到「其他」,不猜。
+           */
+          layout: z.enum(['standard', 'story', 'bento']).optional(),
         }),
       ),
     }),
@@ -207,7 +214,19 @@ export const requests = {
   'catalog.list': {
     params: z.object({}),
     result: z.object({
-      themes: z.array(z.object({ name: z.string(), title: z.string() })),
+      themes: z.array(
+        z.object({
+          name: z.string(),
+          title: z.string(),
+          /**
+           * 适合什么场合。**主题就是场景** —— 用这个产品的人都带着自己的场合来,
+           * 光看颜色挑不出来。
+           */
+          scene: z.string().optional(),
+          /** 样张的绝对路径。每个主题一张,内容完全一样,只有设计不同。 */
+          sample: z.string().optional(),
+        }),
+      ),
       layouts: z.array(z.string()),
       skillPath: z.string().optional(),
     }),
@@ -318,6 +337,11 @@ export const pushes = {
     /** 涉及哪几页。空数组表示说不准是哪一页(比如截当前这页)。 */
     slides: z.array(z.number().int().nonnegative()),
     at: z.number(),
+    /**
+     * 定位用的线索:刚写进去的那段文字。界面拿它在画布上把那一处点亮 ——
+     * 页胶片只说得出「哪一页」,一页上有十几个元素。
+     */
+    hint: z.string().optional(),
     /** 只在 `done` 上出现。工具自己拒绝(比如改不了那段文字)也算。 */
     error: z.string().optional(),
   }),

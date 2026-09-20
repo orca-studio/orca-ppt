@@ -220,6 +220,8 @@ export async function startServer(
             skillPath: catalog.skillPath,
             templateId: params.from,
             targetDir: path,
+            title: params.title,
+            ...(params.theme ? { theme: params.theme } : {}),
           })
         } else {
           await mkdir(join(path, '.deck'), { recursive: true })
@@ -290,6 +292,8 @@ export async function startServer(
       }
       case 'capture.result': {
         const params = parseParams('capture.result', raw)
+        // 界面待会儿要显示它,放行这一个文件 —— 见 PreviewHost.allowFile。
+        previews.allowFile(params.path)
         captures.settle(params.requestId, { value: params.path, error: params.error })
         return {}
       }
@@ -327,6 +331,7 @@ export async function startServer(
       }
       case 'thumbnails.result': {
         const params = parseParams('thumbnails.result', raw)
+        for (const path of params.paths ?? []) previews.allowFile(path ?? undefined)
         thumbnails.settle(params.requestId, { value: params.paths, error: params.error })
         return {}
       }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cropUrl, toAnchor } from './anchors.js'
 import type { PickedAnchor } from './Stage.js'
+import { useAssetOrigin } from './assets.js'
 
 const picked: PickedAnchor = {
   slide: 3,
@@ -33,7 +34,8 @@ describe('toAnchor', () => {
 
 describe('cropUrl', () => {
   it('本机预览地址', () => {
-    expect(cropUrl('/a/b.png')).toBe('file:///a/b.png')
+    useAssetOrigin('ws://127.0.0.1:6722')
+    expect(cropUrl('/a/b.png')).toBe('http://127.0.0.1:6722/asset/a/b.png')
     expect(cropUrl(undefined)).toBeUndefined()
   })
 })
