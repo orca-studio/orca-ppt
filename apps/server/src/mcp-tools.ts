@@ -134,6 +134,29 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'edit_text',
+      config: {
+        title: '换掉一句话',
+        description:
+          '在源文件里把某一页的一段文字精确换成新的,标签和属性一个不动 —— 改文案用它,比你自己编辑 HTML 稳,不会误伤 data-id / data-carry 这些转场靠的属性。`old_text` 要和页面上现在那段字**一模一样**。找不到、或者这一页里有好几处一样的,它会拒绝并告诉你为什么,那时候再自己动手。',
+        inputSchema: {
+          slide: z.number().int().nonnegative().describe('页号,从 0 数起'),
+          old_text: z.string().describe('现在那段文字,要一模一样'),
+          new_text: z.string().describe('换成什么'),
+        },
+      },
+      run: async (args) => {
+        const result = await call('deck.editText', {
+          deckId: await active.get(call),
+          slide: Number(args.slide),
+          oldText: String(args.old_text),
+          newText: String(args.new_text),
+        })
+        if (!result.ok) return text(`没改:${result.reason}`)
+        return text(`第 ${Number(args.slide) + 1} 页改好了。`)
+      },
+    },
+    {
       name: 'user_selection',
       config: {
         title: '用户正指着什么',

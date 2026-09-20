@@ -102,7 +102,7 @@ export function countTopLevelSections(html: string): number {
 }
 
 /** 每一页在 HTML 里的那一段。 */
-function sliceSections(html: string): string[] {
+export function sliceSections(html: string): string[] {
   // class 可以不带引号、可以带单引号、也可以和别的类名并存 —— 这些都是合法 HTML,
   // 只认 `class="slides"` 一种写法会在别人写的稿子上静默数出 0 页。
   const slides = findSlidesContainer(html)

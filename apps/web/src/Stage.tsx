@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { InspectAnchor } from '@orca-ppt/contracts'
 import autoplayScript from './guest/autoplay.guest.js?raw'
+import editScript from './guest/edit.guest.js?raw'
 import inspectScript from './guest/inspect.guest.js?raw'
 
 /**
@@ -39,6 +40,13 @@ export interface StageHandle {
   guestId(): number | undefined
 }
 
+/** guest 里改完的一处文字。服务端靠 `oldText` 在源码里定位,不靠选择器。 */
+export interface TextEdit {
+  slide: number
+  oldText: string
+  newText: string
+}
+
 export interface StageProps {
   previewUrl: string
   slideCount: number
@@ -48,27 +56,60 @@ export interface StageProps {
   /** 重新挂载时回到这一页 —— 从看片台切回来不该跳回第一页。 */
   initialSlide: number
   onSlideChange: (index: number) => void
+  /**
+   * 人双击改完了一处文字。返回被拒的理由(没被拒就返回 undefined)——
+   * 拒绝的理由要摆回他刚才双击的地方,不能默默吞掉。
+   */
+  onTextEdit: (edit: TextEdit) => Promise<string | undefined>
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, slideCount, initialSlide, autoplay, onToggleAutoplay, onSlideChange },
+  { previewUrl, slideCount, initialSlide, autoplay, onToggleAutoplay, onSlideChange, onTextEdit },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const restoreTo = useRef<number | undefined>(undefined)
+  // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
+  const onTextEditRef = useRef(onTextEdit)
+  onTextEditRef.current = onTextEdit
 
   useEffect(() => {
     const view = ref.current
     if (!view) return
 
+    /**
+     * 守候就地编辑。一次只等一处:拿到就写盘,写完再等下一处 —— 两处改动挤在一起的话,
+     * 服务端按旧文字定位就分不清先后了。
+     *
+     * 这一轮会在下一次加载时被 guest 那边的重复注入解掉(arm 的 Promise 解成 null)。
+     */
+    const watchEdits = () => {
+      void view
+        .executeJavaScript('window.__orcaEdit.arm()')
+        .then(async (result) => {
+          const edit = result as TextEdit | null
+          if (!edit) return
+          const reason = await onTextEditRef.current(edit)
+          if (reason) {
+            void view
+              .executeJavaScript(`window.__orcaEdit.notify(${JSON.stringify(reason)})`)
+              .catch(() => {})
+          }
+        })
+        .then(watchEdits)
+        // guest 没了就别再守了,不然重载时会空转。
+        .catch(() => {})
+    }
+
     const onLoad = () => {
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
-      void view.executeJavaScript(`${inspectScript};${autoplayScript}`).then(() => {
+      void view.executeJavaScript(`${inspectScript};${autoplayScript};${editScript}`).then(() => {
         const slide = restoreTo.current ?? initialSlide
         restoreTo.current = undefined
         if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
+        watchEdits()
       })
       setReady(true)
       setError(undefined)
@@ -181,7 +222,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         </div>
       </div>
       <div className="stage-meta">
-        <span>{slideCount} 页 · 方向键翻页</span>
+        <span>{slideCount} 页 · 方向键翻页 · 双击改字</span>
         <button type="button" data-on={autoplay} onClick={onToggleAutoplay}>
           {autoplay ? '自动播放中' : '自动播放'}
         </button>

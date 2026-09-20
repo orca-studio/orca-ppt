@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
@@ -128,6 +128,47 @@ describe('deck.showSlide', () => {
 
   it('没打开的 deck 不能跳页', async () => {
     expect((await call('deck.showSlide', { deckId: '/nope', index: 0 })).ok).toBe(false)
+  })
+})
+
+describe('deck.editText', () => {
+  const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
+
+  it('把改动落到磁盘上的源文件,标签属性一个不动', async () => {
+    const { dir, id } = await builtDeck(
+      deck('<section><p data-carry="t" class="t-h1">走过的四站。</p></section>'),
+    )
+    const response = await call('deck.editText', {
+      deckId: id,
+      slide: 0,
+      oldText: '走过的四站。',
+      newText: '四站,一年',
+    })
+    expect(response.data).toEqual({ ok: true })
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toContain(
+      '<p data-carry="t" class="t-h1">四站,一年</p>',
+    )
+  })
+
+  it('旧文字对不上就拒绝并给人话 —— 多半是 agent 刚写过', async () => {
+    const { dir, id } = await builtDeck(deck('<section><p>现在的文字</p></section>'))
+    const before = await readFile(join(dir, 'deck.html'), 'utf8')
+    const response = await call('deck.editText', {
+      deckId: id,
+      slide: 0,
+      oldText: '旧的文字',
+      newText: 'x',
+    })
+    expect(response.data.ok).toBe(false)
+    expect(response.data.reason).toContain('找不到')
+    // 拒绝就是一个字都不写。
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(before)
+  })
+
+  it('没打开的 deck 改不了', async () => {
+    expect(
+      (await call('deck.editText', { deckId: '/nope', slide: 0, oldText: 'a', newText: 'b' })).ok,
+    ).toBe(false)
   })
 })
 

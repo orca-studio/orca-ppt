@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
@@ -14,6 +14,7 @@ import {
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
+import { applyTextEdit } from './edit.js'
 import { McpEndpoint } from './mcp-http.js'
 import { findEntryName, openDeck, type OpenedDeck } from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
@@ -231,6 +232,25 @@ export async function startServer(
         deckPathOf(params.deckId)
         bus.broadcast('deck.slide', { deckId: params.deckId, index: params.index })
         return {}
+      }
+      case 'deck.editText': {
+        const params = parseParams('deck.editText', raw)
+        const root = deckPathOf(params.deckId)
+        const name = await findEntryName(root)
+        if (!name) return { ok: false, reason: '这份稿子还没有出稿文件' }
+
+        const file = join(root, name)
+        // 每次都重读磁盘:agent 可能刚写过。旧文字对不上时下面会拒绝,这正是我们要的。
+        const html = await readFile(file, 'utf8')
+        const result = applyTextEdit(html, {
+          slide: params.slide,
+          oldText: params.oldText,
+          newText: params.newText,
+        })
+        if (!result.ok) return { ok: false, reason: result.reason }
+        if (result.html !== html) await writeFile(file, result.html, 'utf8')
+        // 不用在这儿广播:文件一变,看稿子的 watcher 自己会推 deck.changed。
+        return { ok: true }
       }
       case 'artifact.path': {
         const params = parseParams('artifact.path', raw)

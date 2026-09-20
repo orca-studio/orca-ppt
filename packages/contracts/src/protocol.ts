@@ -98,6 +98,23 @@ export const requests = {
     params: z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),
     result: z.object({}),
   },
+  /**
+   * 就地改一处文字。界面双击文字走它,agent 想精确换掉一句话也走它。
+   *
+   * **只换文字,一个标签一个属性都不动**。用 `oldText` 在那一页的源码里定位,不是
+   * 靠选择器 —— 服务端没有 DOM,而 guest 里的 DOM 也不等于源文件(reveal 会克隆节点)。
+   * 找不到或者有好几处一样的就拒绝,`reason` 给人话。不猜着改:静默毁掉一个
+   * `data-carry` 会让转场哑掉,而且要等到放映才发现。
+   */
+  'deck.editText': {
+    params: z.object({
+      deckId: z.string(),
+      slide: z.number().int().nonnegative(),
+      oldText: z.string(),
+      newText: z.string(),
+    }),
+    result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
+  },
   /** 某个阶段产物的绝对路径。界面拿它交给系统编辑器,agent 拿它去读写。 */
   'artifact.path': {
     params: z.object({ deckId: z.string(), phase: DeckPhase }),

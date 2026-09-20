@@ -8,7 +8,7 @@ import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
-import { Stage, type StageHandle } from './Stage.js'
+import { Stage, type StageHandle, type TextEdit } from './Stage.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 
@@ -322,6 +322,23 @@ export function App({ serverUrl }: { serverUrl: string }) {
       .then(() => stage.current?.next())
   }, [])
 
+  /**
+   * 人在画布上双击改完了一段文字。服务端在源文件里精确换掉那一段,只换文字。
+   * 改不了的时候要把理由还回 guest —— 沉默比拒绝更难受。
+   */
+  const editText = useCallback(async (edit: TextEdit): Promise<string | undefined> => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return '还没打开稿子'
+    try {
+      const result = await active.request('deck.editText', { deckId: current.deck.id, ...edit })
+      // 写盘之后 watcher 会推 deck.changed,画布自己重载 —— 这儿不用再动它。
+      return result.ok ? undefined : result.reason
+    } catch (error) {
+      return error instanceof Error ? error.message : '没改成'
+    }
+  }, [])
+
   /** 指着一次转场说「这儿不对」—— 产生一条转场锚,和画布上点元素同一个去处。 */
   const flagTransition = useCallback(
     (from: number, to: number) => {
@@ -505,6 +522,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
               autoplay={autoplay}
               onToggleAutoplay={toggleAutoplay}
               onSlideChange={onSlideChange}
+              onTextEdit={editText}
             />
           ) : (
             <div className="stage">
