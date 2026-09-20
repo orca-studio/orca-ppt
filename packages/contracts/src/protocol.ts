@@ -219,10 +219,14 @@ export const requests = {
           name: z.string(),
           title: z.string(),
           /**
-           * 适合什么场合。**主题就是场景** —— 用这个产品的人都带着自己的场合来,
-           * 光看颜色挑不出来。
+           * 适合什么场合、是什么调子。**主题就是场景** —— 用这个产品的人都带着自己的
+           * 场合来,光看颜色挑不出来。
+           *
+           * 是标签不是一句话:一个主题会同时落在好几个标签下,主题多起来之后这就是
+           * 筛选条的数据。存成散文就永远过滤不了。
            */
-          scene: z.string().optional(),
+          scenes: z.array(z.string()),
+          styles: z.array(z.string()),
           /** 样张的绝对路径。每个主题一张,内容完全一样,只有设计不同。 */
           sample: z.string().optional(),
         }),

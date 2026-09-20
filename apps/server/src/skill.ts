@@ -49,14 +49,36 @@ export interface Catalog {
 export interface Theme {
   name: string
   title: string
-  /** 适合什么场合。写在主题文件开头的「场景：」那行。 */
-  scene?: string
+  /**
+   * 适合什么场合、是什么调子。写在主题文件开头的「场景：」「风格：」两行。
+   *
+   * **存成标签而不是一句话**:一个主题会同时落在好几个标签下(「高对比」在两个主题里,
+   * 「衬线」在三个),主题多起来之后这就是筛选条的数据。存成散文就永远过滤不了,
+   * 而现在多写这一步几乎不要钱 —— Keynote 的侧边栏正是这么长出来的:它的主题名就是
+   * 「场景(风格)」,一套命名同时生出两个轴,所以一个主题会出现在好几处。
+   */
+  scenes: string[]
+  styles: string[]
   /**
    * 样张的绝对路径 —— **每个主题一张,内容完全一样**,只有设计不同(见 skill 的
    * scripts/theme-samples.mjs)。没有样张的主题不进选择器:一张白卡片,人看不出
    * 自己在挑什么。
    */
   sample?: string
+}
+
+/**
+ * 主题文件头里的一行标签。`场景：产品发布 / 方案提案` → `['产品发布', '方案提案']`。
+ *
+ * 分隔符收得宽一点(`/ 、· ,` 都认):这行是人手写的,为一个顿号漏掉半行标签不值得。
+ */
+export function tags(head: string, field: string): string[] {
+  const line = head.match(new RegExp(`${field}[:：]\\s*([^\\n]+)`))?.[1]
+  if (!line) return []
+  return line
+    .split(/[/、·,，]/)
+    .map((part) => part.replace(/^\s*\*\s*/, '').trim())
+    .filter(Boolean)
 }
 
 /** 主题和版式是**选**出来的,不是聊出来的。 */
@@ -87,9 +109,8 @@ async function readTheme(dir: string, name: string): Promise<Theme> {
     name,
     // 主题文件开头那行注释里写着人读的名字,比文件名好看。
     title: head.match(/主题[:：]\s*([^\n(（]+)/)?.[1]?.trim() || name,
-    ...(head.match(/场景[:：]\s*([^\n]+)/)?.[1]?.trim()
-      ? { scene: head.match(/场景[:：]\s*([^\n]+)/)![1]!.trim() }
-      : {}),
+    scenes: tags(head, '场景'),
+    styles: tags(head, '风格'),
     ...(hasSample ? { sample } : {}),
   }
 }

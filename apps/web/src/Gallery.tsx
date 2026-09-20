@@ -110,7 +110,17 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
             >
               <img src={assetUrl(item.sample)} alt="" />
               <span className="gallery-title">{item.title}</span>
-              {item.scene && <span className="gallery-scene">{item.scene}</span>}
+              {/*
+                场景在前、风格在后,两组分开摆。它们是标签不是一句话 —— 主题多起来
+                之后同一个标签会横跨好几个主题(「高对比」「衬线」现在就是),那时候
+                这排字直接变成筛选条,不用回头改数据。
+              */}
+              {item.scenes.length > 0 && (
+                <span className="gallery-scene">{item.scenes.join(' · ')}</span>
+              )}
+              {item.styles.length > 0 && (
+                <span className="gallery-style">{item.styles.join(' · ')}</span>
+              )}
             </button>
           ))}
         </div>
