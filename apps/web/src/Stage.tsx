@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { InspectAnchor } from '@orca-ppt/contracts'
+import autoplayScript from './guest/autoplay.guest.js?raw'
 import inspectScript from './guest/inspect.guest.js?raw'
 
 /**
@@ -25,6 +26,10 @@ export interface StageHandle {
   /** 进入取锚状态。用户点下给出锚,Esc 取消给出 null。 */
   pick(): Promise<PickedAnchor | null>
   cancelPick(): void
+  /** 自动播放:按每页的 data-hold 依次往后翻。 */
+  autoplay(on: boolean): void
+  /** guest 那边还在播吗。它会自己停(放完、或者人在画布里动手),得问它才知道。 */
+  autoplayRunning(): Promise<boolean>
   /** 稿子变了,重载并回到原来那一页。 */
   reload(slide: number): void
   goto(slide: number): void
@@ -55,7 +60,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
 
     const onLoad = () => {
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
-      void view.executeJavaScript(inspectScript).then(() => {
+      void view.executeJavaScript(`${inspectScript};${autoplayScript}`).then(() => {
         const slide = restoreTo.current ?? initialSlide
         restoreTo.current = undefined
         if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
@@ -88,6 +93,17 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       cancelPick: () => {
         void ref.current?.executeJavaScript('window.__orcaInspect.disarm()').catch(() => {})
+      },
+      autoplay: (on: boolean) => {
+        void ref.current
+          ?.executeJavaScript(`window.__orcaAutoplay?.${on ? 'start' : 'stop'}()`)
+          .catch(() => {})
+      },
+      autoplayRunning: async () => {
+        const running = await ref.current
+          ?.executeJavaScript('!!window.__orcaAutoplay?.running()')
+          .catch(() => false)
+        return Boolean(running)
       },
       reload: (slide: number) => {
         restoreTo.current = slide
@@ -131,8 +147,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       if (!call) return
 
       event.preventDefault()
+      // 人自己翻页就别再自动播了 —— 跟他抢翻页是最烦的。
       void ref.current
-        ?.executeJavaScript(`${call}; Reveal.getIndices().h`)
+        ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${call}; Reveal.getIndices().h`)
         .then((index) => onSlideChange(Number(index)))
     }
 

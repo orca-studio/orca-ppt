@@ -232,6 +232,20 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'autoplay',
+      config: {
+        title: '自动播放',
+        description:
+          '让画布按每页声明的停留时长自动往后翻,用户不用一直按方向键。说「自动放一遍」「让它自己走」时调它。用户一动键盘鼠标就会停。',
+        inputSchema: { on: z.boolean().describe('开还是关') },
+      },
+      run: async (args) => {
+        const on = args.on !== false
+        await call('deck.autoplay', { deckId: await active.get(call), on })
+        return text(on ? '开始自动播放了。' : '停了。')
+      },
+    },
+    {
       name: 'capture_slide',
       config: {
         title: '截一张画布的图',

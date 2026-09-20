@@ -28,6 +28,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
+  const [autoplay, setAutoplay] = useState(false)
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
@@ -94,6 +95,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
 
     next.subscribe('mcp.activity', (data) => setAgentSeenAt(data.at))
+
+    next.subscribe('autoplay.changed', (data) => {
+      setAutoplay(data.on)
+      stage.current?.autoplay(data.on)
+    })
 
     // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
@@ -250,6 +256,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void window.orca?.setCanPresent?.(Boolean(deck?.previewUrl))
   }, [deck?.previewUrl])
 
+  const toggleAutoplay = useCallback(() => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return
+    // 走协议:agent 说「自动放一遍」走的是同一条路。
+    void active.request('deck.autoplay', { deckId: current.deck.id, on: !autoplay })
+  }, [autoplay])
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -277,6 +291,23 @@ export function App({ serverUrl }: { serverUrl: string }) {
     slideRef.current = index
   }, [])
 
+  /**
+   * guest 是「在不在播」的唯一真相:它会自己停(放完最后一页、或者人在画布里动了手),
+   * 而它没法反过来通知我们。所以开着的时候问它一下。
+   *
+   * 宿主这边不再自己判断「人动手了」—— 两套互不知情的停止条件,必然对不上:
+   * 实测过 guest 已经停了而按钮还亮着,以及反过来。
+   */
+  useEffect(() => {
+    if (!autoplay) return
+    const timer = setInterval(() => {
+      void stage.current?.autoplayRunning().then((running) => {
+        if (!running) setAutoplay(false)
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [autoplay])
+
   return (
     <div className="app">
       <Toolbar
@@ -284,6 +315,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
         layout={layout}
         onLayoutChange={changeLayout}
         canPresent={Boolean(deck?.previewUrl)}
+        autoplay={autoplay}
+        onToggleAutoplay={toggleAutoplay}
         agentSeenAt={agentSeenAt}
         onOpen={() => void pickDeck(open)}
         onPresent={present}
@@ -307,13 +340,19 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       onClick={() => goto(index)}
                     >
                       <span className="filmstrip-no">{index + 1}</span>
-                      {layout.nav === 'thumbs' &&
-                        (thumbs[index] ? (
+                      {/*
+                        导航器只有图,大纲只有字。标题在缩略图里本来就看得清,
+                        旁边再写一遍是重复,还挤掉图的宽度。
+                      */}
+                      {layout.nav === 'thumbs' ? (
+                        thumbs[index] ? (
                           <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
                         ) : (
                           <span className="filmstrip-thumb filmstrip-thumb--empty" />
-                        ))}
-                      <span className="filmstrip-title">{titleOf(index)}</span>
+                        )
+                      ) : (
+                        <span className="filmstrip-title">{titleOf(index)}</span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -330,7 +369,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
               count={deck.slideCount}
               current={slide}
               thumbs={thumbs}
-              titleOf={titleOf}
               onPick={(index) => {
                 goto(index)
                 changeLayout({ lightTable: false })

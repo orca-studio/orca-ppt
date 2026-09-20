@@ -852,7 +852,8 @@ code {
 }
 
 .pane--nav .filmstrip-thumb {
-  width: 104px;
+  width: auto;
+  flex: 1;
 }
 
 .pane--nav .filmstrip-title {
@@ -1048,14 +1049,12 @@ code {
 }
 
 .lighttable-caption {
-  display: flex;
-  gap: 8px;
   font-size: 12px;
-  overflow: hidden;
-}
-
-.lighttable-caption .lighttable-no {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  flex: none;
+}
+
+.toolbar-auto[data-on='true'] {
+  background: var(--accent);
+  color: var(--panel);
 }

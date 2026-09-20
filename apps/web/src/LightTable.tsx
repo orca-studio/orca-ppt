@@ -8,11 +8,10 @@ export interface LightTableProps {
   count: number
   current: number
   thumbs: Array<string | null>
-  titleOf: (index: number) => string
   onPick: (index: number) => void
 }
 
-export function LightTable({ count, current, thumbs, titleOf, onPick }: LightTableProps) {
+export function LightTable({ count, current, thumbs, onPick }: LightTableProps) {
   return (
     <div className="lighttable">
       {Array.from({ length: count }, (_, index) => (
@@ -27,10 +26,8 @@ export function LightTable({ count, current, thumbs, titleOf, onPick }: LightTab
           ) : (
             <span className="lighttable-blank" />
           )}
-          <span className="lighttable-caption">
-            <span className="lighttable-no">{index + 1}</span>
-            {titleOf(index)}
-          </span>
+          {/* 图够大,标题在图里读得出来 —— 只留页号。 */}
+          <span className="lighttable-caption">{index + 1}</span>
         </button>
       ))}
     </div>

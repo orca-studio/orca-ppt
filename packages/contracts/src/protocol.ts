@@ -120,6 +120,16 @@ export const requests = {
     result: z.object({}),
   },
   /**
+   * 自动播放:按每页自己声明的 `data-hold` 依次往后翻。
+   *
+   * 放在观看端而不是稿子里 —— 自动播放是看的人的选择,不是稿子的属性;同一份稿子在
+   * 浏览器里打开仍然是手动翻页。
+   */
+  'deck.autoplay': {
+    params: z.object({ deckId: z.string(), on: z.boolean() }),
+    result: z.object({}),
+  },
+  /**
    * 给每一页出一张缩略图。没有图的「胶片」不叫胶片。
    *
    * 和 `deck.capture` 一样要绕到壳那边,但**不能驱动可见画布** —— 那样用户会看着它
@@ -223,6 +233,8 @@ export const pushes = {
     requestId: z.string(),
     slide: z.number().int().nonnegative().optional(),
   }),
+  /** 自动播放开关变了。画布和放映窗口都跟着。 */
+  'autoplay.changed': z.object({ deckId: z.string(), on: z.boolean() }),
   /** 请壳开一个全屏窗口放映。只有壳做得到。 */
   'present.request': z.object({
     deckId: z.string(),

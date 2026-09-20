@@ -14,6 +14,8 @@ export interface ToolbarProps {
   layout: Layout
   onLayoutChange: (next: Partial<Layout>) => void
   canPresent: boolean
+  autoplay: boolean
+  onToggleAutoplay: () => void
   /** agent 最近一次调 MCP 工具的时刻,没有就是从没调过。 */
   agentSeenAt: number | undefined
   onOpen: () => void
@@ -25,6 +27,8 @@ export function Toolbar({
   layout,
   onLayoutChange,
   canPresent,
+  autoplay,
+  onToggleAutoplay,
   agentSeenAt,
   onOpen,
   onPresent,
@@ -72,6 +76,16 @@ export function Toolbar({
           aria-label="全屏放映"
         >
           ▶
+        </button>
+        <button
+          type="button"
+          className="toolbar-auto"
+          data-on={autoplay}
+          onClick={onToggleAutoplay}
+          disabled={!canPresent}
+          title="自动播放:按每页声明的停留时长往后翻,一动键鼠就停"
+        >
+          {autoplay ? '自动播放中' : '自动播放'}
         </button>
         <button type="button" onClick={onOpen}>
           打开…

@@ -262,6 +262,12 @@ export async function startServer(
         })
         return {}
       }
+      case 'deck.autoplay': {
+        const params = parseParams('deck.autoplay', raw)
+        deckPathOf(params.deckId)
+        bus.broadcast('autoplay.changed', { deckId: params.deckId, on: params.on })
+        return {}
+      }
       case 'deck.thumbnails': {
         const params = parseParams('deck.thumbnails', raw)
         const opened = await openDeck(deckPathOf(params.deckId))

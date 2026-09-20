@@ -14,7 +14,7 @@ declare global {
       selectorFor(element: Element): string
       armed(): boolean
     }
-    Reveal?: { getScale(): number; getIndices(): { h: number } }
+    Reveal?: any
   }
 }
 
