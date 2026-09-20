@@ -20,7 +20,7 @@ export class ServerSupervisor {
       let buffer = ''
       child.stdout?.on('data', (chunk: Buffer) => {
         buffer += chunk.toString()
-        const match = buffer.match(/orca-pptcode server listening (\d+)/)
+        const match = buffer.match(/orca-ppt server listening (\d+)/)
         if (!match?.[1]) return
         clearTimeout(timer)
         resolve(Number(match[1]))

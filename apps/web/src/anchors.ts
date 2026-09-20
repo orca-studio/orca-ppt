@@ -1,4 +1,4 @@
-import type { Anchor, InspectAnchor } from '@orca-pptcode/contracts'
+import type { Anchor, InspectAnchor } from '@orca-ppt/contracts'
 import type { PickedAnchor } from './Stage.js'
 
 /**

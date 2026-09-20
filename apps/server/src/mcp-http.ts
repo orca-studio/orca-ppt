@@ -9,7 +9,7 @@ import { ActiveDeck, buildTools, type ProtocolCaller } from './mcp-tools.js'
  * 为什么是 HTTP 不是 stdio:stdio 要在 agent 的配置里写一条指向本仓 dist 的路径
  * (打包之后就废了),还要多起一个进程、再想办法告诉它端口。HTTP 只要一行:
  *
- *   claude mcp add --transport http orca-pptcode http://127.0.0.1:6722/mcp
+ *   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
  *
  * 代价是应用必须开着 —— 但本来就必须开着,画布在它里面。
  */
@@ -25,7 +25,7 @@ export class McpEndpoint {
 
     // 无状态范式:**每个请求新建一套** server + transport。
     // 复用同一个 transport 会让它把响应发到上一个请求的 res 上 —— 第二个请求就静默空回。
-    const server = new McpServer({ name: 'orca-pptcode', version: '0.1.0' })
+    const server = new McpServer({ name: 'orca-ppt', version: '0.1.0' })
     for (const tool of buildTools(this.call, this.#active)) {
       server.registerTool(
         tool.name,

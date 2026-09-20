@@ -10,7 +10,7 @@ import {
   type RequestMethod,
   type ResponseEnvelope,
   parseParams,
-} from '@orca-pptcode/contracts'
+} from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { CaptureBroker } from './capture.js'
 import { DeckWatcher } from './deck-watch.js'

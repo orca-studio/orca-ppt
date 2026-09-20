@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { DeckPhase, PendingRequest, RequestResult } from '@orca-pptcode/contracts'
+import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'

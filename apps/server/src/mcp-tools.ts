@@ -4,8 +4,8 @@ import type {
   RequestMethod,
   RequestParams,
   RequestResult,
-} from '@orca-pptcode/contracts'
-import { phaseOrder } from '@orca-pptcode/contracts'
+} from '@orca-ppt/contracts'
+import { phaseOrder } from '@orca-ppt/contracts'
 import { z } from 'zod'
 
 /**

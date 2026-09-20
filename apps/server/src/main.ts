@@ -7,11 +7,11 @@ import { startServer } from './server.js'
 const DEFAULT_PORT = 6722
 
 const server = await startServer({
-  port: process.env.ORCA_PPTCODE_PORT ? Number(process.env.ORCA_PPTCODE_PORT) : DEFAULT_PORT,
+  port: process.env.ORCA_PPT_PORT ? Number(process.env.ORCA_PPT_PORT) : DEFAULT_PORT,
 })
 
 // 桌面壳读这一行拿端口。格式别改。
-process.stdout.write(`orca-pptcode server listening ${server.port}\n`)
+process.stdout.write(`orca-ppt server listening ${server.port}\n`)
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {

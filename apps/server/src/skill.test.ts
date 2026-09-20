@@ -22,12 +22,12 @@ async function fakeSkill() {
 describe('resolveSkillPath', () => {
   it('认 SKILL.md —— 目录长得像不算数', async () => {
     const dir = await fakeSkill()
-    expect(await resolveSkillPath({ ORCA_PPTCODE_SKILL: dir })).toBe(dir)
+    expect(await resolveSkillPath({ ORCA_PPT_SKILL: dir })).toBe(dir)
   })
 
   it('指过去的路径不是 skill 就往下找,而不是硬用', async () => {
     const empty = await mkdtemp(join(tmpdir(), 'notskill-'))
-    const resolved = await resolveSkillPath({ ORCA_PPTCODE_SKILL: empty })
+    const resolved = await resolveSkillPath({ ORCA_PPT_SKILL: empty })
     expect(resolved).not.toBe(empty)
   })
 })

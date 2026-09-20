@@ -1,4 +1,4 @@
-import type { DeckPhase } from '@orca-pptcode/contracts'
+import type { DeckPhase } from '@orca-ppt/contracts'
 import { artifactPath } from './phases.js'
 
 /**

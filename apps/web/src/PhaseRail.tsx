@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { DeckPhase, PhaseStatus } from '@orca-pptcode/contracts'
+import type { DeckPhase, PhaseStatus } from '@orca-ppt/contracts'
 
 /**
  * 阶段栏。每个阶段的产物都看得见、跑得动、改完能重跑 —— 让模型一口气从一句话写到成品,

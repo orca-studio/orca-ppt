@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path'
  * 不用固定端口的理由:端口被占时要么起不来,要么静默换一个然后 MCP 连到别人家去。
  */
 export function portFilePath(env = process.env): string {
-  return env.ORCA_PPTCODE_PORT_FILE ?? join(homedir(), '.orca-pptcode', 'port')
+  return env.ORCA_PPT_PORT_FILE ?? join(homedir(), '.orca-ppt', 'port')
 }
 
 export async function writePortFile(port: number, env = process.env): Promise<void> {
@@ -24,8 +24,8 @@ export async function clearPortFile(env = process.env): Promise<void> {
 
 /** 读端口。环境变量优先 —— 同时跑两个实例时用它指定。 */
 export async function readPort(env = process.env): Promise<number | undefined> {
-  if (env.ORCA_PPTCODE_PORT) {
-    const explicit = Number(env.ORCA_PPTCODE_PORT)
+  if (env.ORCA_PPT_PORT) {
+    const explicit = Number(env.ORCA_PPT_PORT)
     return Number.isInteger(explicit) && explicit > 0 ? explicit : undefined
   }
   try {

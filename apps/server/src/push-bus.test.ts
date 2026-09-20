@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PushEnvelope } from '@orca-pptcode/contracts'
+import type { PushEnvelope } from '@orca-ppt/contracts'
 import { PushBus } from './push-bus.js'
 
 describe('PushBus', () => {

@@ -8,7 +8,7 @@ declare global {
     orca?: {
       serverPort?: number
       platform?: string
-      /** 开发时通过 ORCA_PPTCODE_DECK 指定,启动就打开这份稿子。 */
+      /** 开发时通过 ORCA_PPT_DECK 指定,启动就打开这份稿子。 */
       initialDeck?: string
       /** 渲染层不碰文件系统 —— 壳弹目录选择器,只把路径交回来。 */
       pickDeck?: () => Promise<string | undefined>

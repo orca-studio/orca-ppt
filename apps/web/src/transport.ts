@@ -5,7 +5,7 @@ import type {
   RequestMethod,
   RequestParams,
   RequestResult,
-} from '@orca-pptcode/contracts'
+} from '@orca-ppt/contracts'
 
 export type TransportState = 'connecting' | 'open' | 'reconnecting' | 'closed'
 

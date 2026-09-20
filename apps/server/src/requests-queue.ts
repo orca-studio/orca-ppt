@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { Anchor, DeckPhase, PendingRequest } from '@orca-pptcode/contracts'
+import type { Anchor, DeckPhase, PendingRequest } from '@orca-ppt/contracts'
 
 /**
  * 待办队列。人在界面上做了一件需要 agent 干活的事(取一处锚、点一个阶段的「跑」),

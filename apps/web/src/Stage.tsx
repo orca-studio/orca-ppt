@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
-import type { InspectAnchor } from '@orca-pptcode/contracts'
+import type { InspectAnchor } from '@orca-ppt/contracts'
 import inspectScript from './guest/inspect.guest.js?raw'
 
 /**

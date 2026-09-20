@@ -1,7 +1,7 @@
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
-import { Slide, Transition } from '@orca-pptcode/contracts'
-import type { DeckSummary } from '@orca-pptcode/contracts'
+import { Slide, Transition } from '@orca-ppt/contracts'
+import type { DeckSummary } from '@orca-ppt/contracts'
 import { z } from 'zod'
 
 /**

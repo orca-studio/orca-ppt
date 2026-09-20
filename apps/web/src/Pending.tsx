@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { PendingRequest } from '@orca-pptcode/contracts'
+import type { PendingRequest } from '@orca-ppt/contracts'
 
 /**
  * 待办队列。人在界面上取的锚、点的「跑」,都挂在这儿等 agent 来拉。
@@ -56,7 +56,7 @@ export function Pending({
 /** agent 还没连上时得有地方看到怎么连。一行命令,点一下就复制。 */
 function Install({ url }: { url: string }) {
   const [copied, setCopied] = useState(false)
-  const command = `claude mcp add --transport http orca-pptcode ${url}`
+  const command = `claude mcp add --transport http orca-ppt ${url}`
 
   return (
     <div className="install">

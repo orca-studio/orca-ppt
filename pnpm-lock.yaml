@@ -44,7 +44,7 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@orca-pptcode/contracts':
+      '@orca-ppt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
 
@@ -53,13 +53,13 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@4.6.5)
-      '@orca-pptcode/contracts':
+      '@orca-ppt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@orca-pptcode/deck-agent':
+      '@orca-ppt/deck-agent':
         specifier: workspace:*
         version: link:../../packages/deck-agent
-      '@orca-pptcode/proc':
+      '@orca-ppt/proc':
         specifier: workspace:*
         version: link:../../packages/proc
       ws:
@@ -71,7 +71,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@orca-pptcode/contracts':
+      '@orca-ppt/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       react:
@@ -89,7 +89,7 @@ importers:
 
   packages/deck-agent:
     dependencies:
-      '@orca-pptcode/contracts':
+      '@orca-ppt/contracts':
         specifier: workspace:*
         version: link:../contracts
       zod:

@@ -18,7 +18,7 @@ describe('ServerSupervisor', () => {
     // 分两次写,顺便验证跨 chunk 的那一行也能拼出来。
     await writeFile(
       entry,
-      "process.stdout.write('noise\\norca-pptcode server ');" +
+      "process.stdout.write('noise\\norca-ppt server ');" +
         "setTimeout(() => process.stdout.write('listening 7331\\n'), 10);" +
         'setTimeout(() => {}, 1000)',
     )

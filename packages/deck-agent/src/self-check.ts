@@ -1,4 +1,4 @@
-import type { Technique } from '@orca-pptcode/contracts'
+import type { Technique } from '@orca-ppt/contracts'
 
 /**
  * 录完自动跑的确定性检查。对应 Design Mode 的 render → critique → revise,

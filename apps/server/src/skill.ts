@@ -12,8 +12,8 @@ const DEFAULT_LOCATIONS = [
 ]
 
 export async function resolveSkillPath(env = process.env): Promise<string | undefined> {
-  const candidates = env.ORCA_PPTCODE_SKILL
-    ? [env.ORCA_PPTCODE_SKILL, ...DEFAULT_LOCATIONS]
+  const candidates = env.ORCA_PPT_SKILL
+    ? [env.ORCA_PPT_SKILL, ...DEFAULT_LOCATIONS]
     : DEFAULT_LOCATIONS
 
   for (const candidate of candidates) {

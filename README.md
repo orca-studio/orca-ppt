@@ -1,4 +1,4 @@
-# orca-pptcode
+# orca-ppt
 
 > 演示稿的眼睛和手。你的 agent 通过 MCP 连进来。
 
@@ -17,7 +17,7 @@
 
 ```bash
 # 应用开着的时候,MCP 就挂在这儿
-claude mcp add --transport http orca-pptcode http://127.0.0.1:6722/mcp
+claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
 ```
 
 agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的做法、跑产物校验,
@@ -27,7 +27,7 @@ agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的
 
 ```bash
 # 开发时直接开一份稿子
-ORCA_PPTCODE_DECK=~/ghq/github.com/zhenwusw/orca-transition-skill/examples/forest-timeline pnpm dev
+ORCA_PPT_DECK=~/ghq/github.com/zhenwusw/orca-transition-skill/examples/forest-timeline pnpm dev
 ```
 
 ## 为什么

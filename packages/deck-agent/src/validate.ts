@@ -1,4 +1,4 @@
-import { Brief, DeckPhase, Slide, Technique, Transition } from '@orca-pptcode/contracts'
+import { Brief, DeckPhase, Slide, Technique, Transition } from '@orca-ppt/contracts'
 import { z } from 'zod'
 import { validateOutline } from './phases.js'
 

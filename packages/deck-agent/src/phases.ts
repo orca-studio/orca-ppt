@@ -1,4 +1,4 @@
-import { artifactPath, phaseOrder, type DeckPhase, type Slide } from '@orca-pptcode/contracts'
+import { artifactPath, phaseOrder, type DeckPhase, type Slide } from '@orca-ppt/contracts'
 
 export { artifactPath, phaseOrder }
 

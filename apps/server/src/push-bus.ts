@@ -1,4 +1,4 @@
-import type { PushChannel, PushData, PushEnvelope } from '@orca-pptcode/contracts'
+import type { PushChannel, PushData, PushEnvelope } from '@orca-ppt/contracts'
 
 /**
  * push 信封带**每连接**单调递增的 sequence。客户端据此发现丢帧并重同步 ——

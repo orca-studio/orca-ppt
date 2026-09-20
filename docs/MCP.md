@@ -1,6 +1,6 @@
 # MCP
 
-orca-pptcode 不驱动模型。**用户已经有 agent 了,让它连进来。**
+orca-ppt 不驱动模型。**用户已经有 agent 了,让它连进来。**
 
 ## 为什么
 
@@ -86,14 +86,14 @@ MCP 没有可靠的「把消息推进用户对话」的原语。notification 能
 应用开着的时候,MCP 就挂在 `http://127.0.0.1:6722/mcp` 上。
 
 ```bash
-claude mcp add --transport http orca-pptcode http://127.0.0.1:6722/mcp
-codex mcp add orca-pptcode --url http://127.0.0.1:6722/mcp
+claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
+codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp
 ```
 
 Cursor 手动加进 `~/.cursor/mcp.json`:
 
 ```jsonc
-{ "mcpServers": { "orca-pptcode": { "type": "http", "url": "http://127.0.0.1:6722/mcp" } } }
+{ "mcpServers": { "orca-ppt": { "type": "http", "url": "http://127.0.0.1:6722/mcp" } } }
 ```
 
 应用里待办栏的底部有「复制连接命令」。
@@ -102,7 +102,7 @@ Cursor 手动加进 `~/.cursor/mcp.json`:
 (打包之后就废了),还要多起一个进程、再想办法告诉它连哪个端口。HTTP 只要一行,而且
 MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法,不经过第二条连接。
 
-**端口是固定的**(`ORCA_PPTCODE_PORT` 可覆盖)。安装命令里写死了这个 URL,端口一变命令
+**端口是固定的**(`ORCA_PPT_PORT` 可覆盖)。安装命令里写死了这个 URL,端口一变命令
 就失效,所以不能用随机端口。被占了就如实失败 —— 多半是已经开着一个实例,那正是我们想要
 的。
 

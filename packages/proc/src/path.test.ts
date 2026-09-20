@@ -20,6 +20,6 @@ describe('desktopSafePath', () => {
 
 describe('resolveExecutable', () => {
   it('找不到就返回 undefined,不抛', () => {
-    expect(resolveExecutable('orca-pptcode-nonexistent-binary')).toBeUndefined()
+    expect(resolveExecutable('orca-ppt-nonexistent-binary')).toBeUndefined()
   })
 })

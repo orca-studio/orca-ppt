@@ -31,7 +31,7 @@ async function createWindow(): Promise<void> {
       additionalArguments: [
         `--orca-server-port=${port}`,
         // 开发时直接开一份稿子,省掉每次点目录选择器。也是 M1 的自动化验证入口。
-        ...(process.env.ORCA_PPTCODE_DECK ? [`--orca-deck=${process.env.ORCA_PPTCODE_DECK}`] : []),
+        ...(process.env.ORCA_PPT_DECK ? [`--orca-deck=${process.env.ORCA_PPT_DECK}`] : []),
       ],
     },
   })
@@ -44,7 +44,7 @@ async function createWindow(): Promise<void> {
     return { action: 'deny' }
   })
 
-  const devServer = process.env.ORCA_PPTCODE_DEV_SERVER
+  const devServer = process.env.ORCA_PPT_DEV_SERVER
   await (devServer
     ? window.loadURL(devServer)
     : window.loadFile(join(here, '../../web/dist/index.html')))

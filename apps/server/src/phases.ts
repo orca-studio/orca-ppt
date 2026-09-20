@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { DeckPhase, PhaseReport } from '@orca-pptcode/contracts'
-import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-pptcode/deck-agent'
+import type { DeckPhase, PhaseReport } from '@orca-ppt/contracts'
+import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-ppt/deck-agent'
 
 /**
  * 阶段状态与闸门。server 拥有状态、持久化、恢复;**品味在 deck-agent** —— 提示词和

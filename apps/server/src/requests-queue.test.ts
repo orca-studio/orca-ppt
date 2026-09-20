@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Anchor } from '@orca-pptcode/contracts'
+import type { Anchor } from '@orca-ppt/contracts'
 import { RequestQueue } from './requests-queue.js'
 
 const anchor: Anchor = {

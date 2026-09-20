@@ -6,14 +6,14 @@ import { clearPortFile, readPort, writePortFile } from './port-file.js'
 
 async function env() {
   const dir = await mkdtemp(join(tmpdir(), 'port-'))
-  return { ORCA_PPTCODE_PORT_FILE: join(dir, 'nested', 'port') }
+  return { ORCA_PPT_PORT_FILE: join(dir, 'nested', 'port') }
 }
 
 describe('端口文件', () => {
   it('写了就读得回来,父目录自己建', async () => {
     const e = await env()
     await writePortFile(7331, e)
-    expect(await readFile(e.ORCA_PPTCODE_PORT_FILE, 'utf8')).toBe('7331')
+    expect(await readFile(e.ORCA_PPT_PORT_FILE, 'utf8')).toBe('7331')
     expect(await readPort(e)).toBe(7331)
   })
 
@@ -24,13 +24,13 @@ describe('端口文件', () => {
   it('环境变量优先 —— 同时跑两个实例时用它指定', async () => {
     const e = await env()
     await writePortFile(7331, e)
-    expect(await readPort({ ...e, ORCA_PPTCODE_PORT: '7999' })).toBe(7999)
+    expect(await readPort({ ...e, ORCA_PPT_PORT: '7999' })).toBe(7999)
   })
 
   it('文件里是垃圾就当没有,不返回 NaN', async () => {
     const e = await env()
     await writePortFile(7331, e)
-    await writeFile(e.ORCA_PPTCODE_PORT_FILE, '不是数字')
+    await writeFile(e.ORCA_PPT_PORT_FILE, '不是数字')
     expect(await readPort(e)).toBeUndefined()
   })
 

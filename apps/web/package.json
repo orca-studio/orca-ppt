@@ -1,5 +1,5 @@
 {
-  "name": "@orca-pptcode/web",
+  "name": "@orca-ppt/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -8,7 +8,7 @@
     "dev": "vite"
   },
   "dependencies": {
-    "@orca-pptcode/contracts": "workspace:*",
+    "@orca-ppt/contracts": "workspace:*",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   }

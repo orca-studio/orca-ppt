@@ -1,5 +1,5 @@
 {
-  "name": "@orca-pptcode/deck-agent",
+  "name": "@orca-ppt/deck-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "build": "tsc -b"
   },
   "dependencies": {
-    "@orca-pptcode/contracts": "workspace:*",
+    "@orca-ppt/contracts": "workspace:*",
     "zod": "^4.6.5"
   }
 }
