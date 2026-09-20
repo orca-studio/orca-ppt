@@ -69,6 +69,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     next.subscribe('requests.changed', (data) => setRequests(data.requests))
 
+    // agent 开了一份稿子,窗口跟着开。已经开着这份就不动 —— 免得把当前页跳回第一页。
+    next.subscribe('deck.opened', (data) => {
+      if (deckRef.current?.deck.id === data.deckId) return
+      void openWith(next, data.path)
+    })
+
     next.subscribe('phase.changed', (data) => {
       setDeck((current) => {
         if (!current || current.deck.id !== data.deckId) return current

@@ -118,7 +118,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           deck: opened.deck,
           slideCount: opened.slideCount,
           phases: opened.phases,
-          previewing: Boolean(opened.previewUrl),
+          // 有没有成品可放。不等于「窗口此刻正放着它」—— 别让模型误读。
+          hasBuild: Boolean(opened.previewUrl),
         })
       },
     },

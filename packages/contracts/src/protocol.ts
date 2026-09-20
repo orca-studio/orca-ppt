@@ -256,6 +256,14 @@ export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>
 
 export const pushes = {
   /** deck 文件变了,画布该热更新了。previewUrl 变了也走这条(成品第一次出现时)。 */
+  /**
+   * 有人开了一份稿子 —— 可能是 agent。**界面要跟着开**:agent 是代替人执行的,
+   * 它开了稿子而人的窗口还停在原地,后面一切都对不上(画布没加载,截图就超时)。
+   *
+   * 只带路径,不带整份数据:界面收到后走自己那套完整的打开流程(缩略图、待办队列
+   * 都要跟着),把打开这件事复制一份到推送里迟早会漏东西。
+   */
+  'deck.opened': z.object({ deckId: z.string(), path: z.string() }),
   'deck.changed': z.object({
     deckId: z.string(),
     slides: z.array(Slide),

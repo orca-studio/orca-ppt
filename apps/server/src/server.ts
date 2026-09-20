@@ -195,6 +195,9 @@ export async function startServer(
 
         openDecks.set(opened.deck.id, opened.deck.path)
         watcher.watch(opened.deck.id, opened.deck.path)
+        // 界面要跟着开。agent 开了稿子而人的窗口还停在原地的话,画布没加载,
+        // 它接着调 capture_slide 就只会等到超时。
+        bus.broadcast('deck.opened', { deckId: opened.deck.id, path: opened.deck.path })
 
         return {
           deck: opened.deck,

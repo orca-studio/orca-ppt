@@ -72,6 +72,22 @@ async function openedDeck(html: string) {
 /** 推送是异步广播的,等它落地。 */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 60))
 
+describe('agent 开稿子', () => {
+  it('推 deck.opened,界面跟着开 —— 不然画布没加载,它接着截图只会等到超时', async () => {
+    const opened: any[] = []
+    socket.on('message', (raw: Buffer) => {
+      const message = JSON.parse(raw.toString())
+      if (message.channel === 'deck.opened') opened.push(message.data)
+    })
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(join(dir, 'deck.html'), '<div class="slides"><section>1</section></div>')
+    await call('deck.open', { path: dir })
+    await settle()
+    expect(opened).toHaveLength(1)
+    expect(opened[0].path).toContain('deck-')
+  })
+})
+
 describe('agent 活动', () => {
   it('一次工具调用推两条:跑之前和跑之后', async () => {
     await openedDeck('<div class="slides"><section><p>一</p></section></div>')
