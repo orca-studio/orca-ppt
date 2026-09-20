@@ -28,22 +28,39 @@ const HINT: Record<DeckPhase, string> = {
   outline: '先有内容再挑版式',
   plan: '先写两页的关系,再选手法',
   build: '按前面四份产物写出成品',
-  review: '录制并自检(M5)',
+  review: '暂不做 —— 自己放一遍看',
 }
 
 export interface PhaseRailProps {
   rows: PhaseRow[]
-  /** 点「跑」不直接驱动谁 —— 挂进待办队列,等 agent 来拉。 */
   onRun: (phase: DeckPhase) => void
   onOpenArtifact: (phase: DeckPhase) => void
+  /**
+   * 取这一步的完整做法。
+   *
+   * 展开给人看,不只给 agent —— 一个没有 agent 就什么都不做的按钮,在一个先给人用的
+   * 产品里是坏的。读得懂就能自己做,也能整段带去别处。
+   */
+  onLoadPrompt: (phase: DeckPhase) => Promise<string>
 }
 
 /**
  * 阶段栏。默认折叠 —— 稿子已经出来了的时候,这一栏没什么可干的,摆开只会把真正常用的
  * 「挂待办」压下去,还摆五个「跑」像是在请你重做一遍。
  */
-export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
+export function PhaseRail({ rows, onRun, onOpenArtifact, onLoadPrompt }: PhaseRailProps) {
   const [expanded, setExpanded] = useState<DeckPhase | undefined>()
+  const [prompt, setPrompt] = useState<string | undefined>()
+
+  const toggle = (phase: DeckPhase) => {
+    if (expanded === phase) {
+      setExpanded(undefined)
+      return
+    }
+    setExpanded(phase)
+    setPrompt(undefined)
+    void onLoadPrompt(phase).then(setPrompt)
+  }
   // 自检阶段还没实现,先不摆一个按下去没反应的按钮。
   const visible = rows.filter((row) => row.phase !== 'review')
 
@@ -63,11 +80,7 @@ export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
           <li key={row.phase} data-status={row.status}>
             <div className="rail-row">
               <span className="rail-dot" />
-              <button
-                type="button"
-                className="rail-name"
-                onClick={() => setExpanded(expanded === row.phase ? undefined : row.phase)}
-              >
+              <button type="button" className="rail-name" onClick={() => toggle(row.phase)}>
                 {LABEL[row.phase]}
               </button>
               {row.status === 'done' && (
@@ -84,7 +97,19 @@ export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
               </button>
             </div>
 
-            {expanded === row.phase && <p className="rail-hint">{HINT[row.phase]}</p>}
+            {expanded === row.phase && (
+              <div className="rail-how">
+                <p className="rail-hint">{HINT[row.phase]}</p>
+                <pre>{prompt ?? '读取中…'}</pre>
+                <button
+                  type="button"
+                  onClick={() => void navigator.clipboard.writeText(prompt ?? '')}
+                  disabled={!prompt}
+                >
+                  拷贝这一步的做法
+                </button>
+              </div>
+            )}
             {row.issues.length > 0 && (
               <ul className="rail-issues">
                 {row.issues.map((issue) => (
@@ -95,7 +120,9 @@ export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
           </li>
         ))}
       </ol>
-      <p className="muted rail-note">改完某个产物重跑它,下游的会一起作废。</p>
+      <p className="muted rail-note">
+        点「跑」等于跟 agent 说该做这一步。改完某个产物重跑它,下游的会一起作废。
+      </p>
     </details>
   )
 }

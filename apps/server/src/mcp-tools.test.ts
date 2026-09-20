@@ -81,14 +81,14 @@ describe('MCP 工具', () => {
     expect(result.content[0]!.text).toContain('第 4 页')
   })
 
-  it('take_requests 把锚翻译成模型一眼看懂的样子', async () => {
+  it('user_selection 把锚翻译成模型一眼看懂的样子', async () => {
     const { client } = fakeClient({
       'deck.open': { deck: { id: '/d' }, phases: [], previewUrl: '' },
       'requests.take': { requests: [anchorRequest] },
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('take_requests')!.run({})).content[0]!.text
+    const out = (await map.get('user_selection')!.run({})).content[0]!.text
 
     expect(out).toContain('第 4 页')
     expect(out).toContain('(180, 220)')
@@ -97,14 +97,14 @@ describe('MCP 工具', () => {
     expect(out).toContain('/data/anchors/a.png')
   })
 
-  it('队列空时说清楚是空的,不返回一个空数组让模型猜', async () => {
+  it('没指着任何地方时说清楚,不返回一个空数组让模型猜', async () => {
     const { client } = fakeClient({
       'deck.open': { deck: { id: '/d' }, phases: [], previewUrl: '' },
       'requests.take': { requests: [] },
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    expect((await map.get('take_requests')!.run({})).content[0]!.text).toContain('队列是空的')
+    expect((await map.get('user_selection')!.run({})).content[0]!.text).toContain('没指着任何地方')
   })
 
   it('转场锚说的是两页之间', async () => {
@@ -123,7 +123,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('take_requests')!.run({})).content[0]!.text
+    const out = (await map.get('user_selection')!.run({})).content[0]!.text
     expect(out).toContain('第 3 页 → 第 4 页')
   })
 

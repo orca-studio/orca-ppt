@@ -2,10 +2,13 @@ import { useState } from 'react'
 import type { PendingRequest } from '@orca-ppt/contracts'
 
 /**
- * 待办队列。人在界面上取的锚、点的「跑」,都挂在这儿等 agent 来拉。
+ * 当前指着什么。
  *
- * MCP 没有可靠的「把消息推进用户对话」的原语,所以方向是反的 —— 与其假装能推,
- * 不如把「去跟 agent 说一声」明写在界面上。
+ * **不是一个「待办队列」** —— 人本来就是在跟 agent 说话,点一下只是**指给它看**,
+ * 「挂进队列等它来取」这个环节在用户脑子里不存在,写在界面上只会让人以为还要做点什么。
+ *
+ * 底下的机制确实是拉不是推(MCP 没有把消息推进对话的原语),但那是管道的事,
+ * 不该漏到界面上来。
  */
 export function Pending({
   requests,
@@ -25,7 +28,10 @@ export function Pending({
   if (requests.length === 0) {
     return (
       <div className="pending pending-empty">
-        <p className="muted">挂在这儿等 agent 来取 —— 跟它说一声「看我刚点的那处」。</p>
+        <p className="muted">
+          在画布上点一处,看清它在 1920×1080 版面里的位置。让 agent 代你改的时候,
+          它读得到你指的是哪儿。
+        </p>
         {!agentSeen && <Install url={mcpUrl} />}
       </div>
     )
@@ -33,10 +39,7 @@ export function Pending({
 
   return (
     <div className="pending">
-      <header>
-        已挂 {requests.length} 件 · 跟 agent 说一声
-        <code>take_requests</code>
-      </header>
+      <header>选中 {requests.length} 处</header>
       <ul>
         {requests.map((request) => (
           <li key={request.id}>
@@ -62,7 +65,7 @@ function Install({ url }: { url: string }) {
 
   return (
     <div className="install">
-      <span>还没连上 agent?</span>
+      <span>让 agent 代你操作:</span>
       <button
         type="button"
         onClick={() => {

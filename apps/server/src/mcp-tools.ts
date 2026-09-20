@@ -134,23 +134,25 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
-      name: 'take_requests',
+      name: 'user_selection',
       config: {
-        title: '取走用户挂起的待办',
+        title: '用户正指着什么',
         description:
-          '用户在界面上点中的元素(带页号、CSS 选择器、1920×1080 设计坐标和一张裁切图)和他点了「跑」的阶段,都挂在这里。用户说「看我刚点的那处」「按我圈的地方改」时调它。取完队列清空。',
+          '用户在界面上点中的地方 —— 带页号、**相对那一页的** CSS 选择器、1920×1080 设计坐标,和一张带上下文的裁切图。他说「这儿太挤」「按我圈的地方改」「刚点的那处」时调它,不用猜他指的是哪儿。也包括他点了「跑」的阶段。读完就清空。',
       },
       run: async () => {
         const taken = await call('requests.take', { deckId: await active.get(call) })
-        if (taken.requests.length === 0) return text('队列是空的 —— 用户还没在界面上挂东西。')
+        if (taken.requests.length === 0) {
+          return text('用户现在没指着任何地方 —— 直接按他说的做,或者问他指哪儿。')
+        }
         return json(taken.requests.map(describeRequest))
       },
     },
     {
-      name: 'peek_requests',
+      name: 'peek_selection',
       config: {
-        title: '看一眼待办但不取走',
-        description: '和 take_requests 一样,但不清空队列。',
+        title: '看一眼用户指着什么但不清空',
+        description: '和 user_selection 一样,但读完不清空。',
       },
       run: async () => {
         const pending = await call('requests.list', { deckId: await active.get(call) })

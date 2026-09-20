@@ -340,6 +340,20 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   toggleAutoplayRef.current = toggleAutoplay
 
+  /** 这一步该怎么做。上游不合规时 server 会拒绝并说清卡在哪 —— 那也是人要看的。 */
+  const loadPrompt = useCallback(async (phase: DeckPhase) => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return ''
+    const result = await active.request('phase.prompt', {
+      deckId: current.deck.id,
+      phase,
+      request: '',
+    })
+    if (result.prompt) return result.prompt
+    return `这一步还不能开始,卡在「${result.blockedBy}」:\n${result.issues.map((i) => `· ${i}`).join('\n')}`
+  }, [])
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -521,7 +535,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
         </section>
 
         <section className="pane">
-          <header className="pane-head">制作</header>
+          <header className="pane-head">检视</header>
           {deck ? (
             <div className="queue">
               <div className="queue-pick">
@@ -556,6 +570,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 rows={deck.phases}
                 onRun={requestPhase}
                 onOpenArtifact={(phase) => void openArtifact(phase)}
+                onLoadPrompt={loadPrompt}
               />
             </div>
           ) : (

@@ -1382,3 +1382,41 @@ code {
 .status-agent[data-live='true'] {
   color: var(--accent);
 }
+
+/* 展开一个阶段:这一步该怎么做,人读得懂也带得走 */
+.rail-how {
+  margin: 2px 0 8px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.rail-how pre {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+.rail-how button {
+  justify-self: start;
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rail-how button:hover:not(:disabled) {
+  background: var(--control-hover);
+}
