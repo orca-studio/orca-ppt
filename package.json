@@ -7,7 +7,7 @@
     "node": ">=22.18.0"
   },
   "scripts": {
-    "dev": "node tools/dev.mjs",
+    "dev": "node tools/brand-dev-electron.mjs && node tools/dev.mjs",
     "build": "pnpm -r build",
     "typecheck": "tsc -b",
     "test": "vitest run",

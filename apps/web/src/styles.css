@@ -29,6 +29,10 @@
   /* 画布衬底:稿子浮在上面像一个对象放在台面上,而不是陷进一片黑里 */
   --stage: #e6e6ea;
   --stage-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
+  /* 控件填充。macOS 的按钮是柔和填充 + 胶囊,不是 1px 描边的方角矩形。 */
+  --control: rgb(0 0 0 / 0.06);
+  --control-hover: rgb(0 0 0 / 0.11);
+  --control-on: rgb(0 0 0 / 0.16);
 }
 
 /* 跟随系统。用户在应用里显式选过就走 [data-theme],不再受系统影响。 */
@@ -43,6 +47,9 @@
     --danger: #f87171;
     --stage: #0f0f11;
     --stage-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
+    --control: rgb(255 255 255 / 0.08);
+    --control-hover: rgb(255 255 255 / 0.14);
+    --control-on: rgb(255 255 255 / 0.2);
   }
 }
 
@@ -56,6 +63,9 @@
   --danger: #f87171;
   --stage: #0f0f11;
   --stage-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
+  --control: rgb(255 255 255 / 0.08);
+  --control-hover: rgb(255 255 255 / 0.14);
+  --control-on: rgb(255 255 255 / 0.2);
 }
 
 * {
@@ -118,28 +128,42 @@ body {
   gap: 8px;
 }
 
+/* 胶囊。无边框 + 柔和填充,和 macOS 的工具栏一致。 */
 .toolbar-actions button {
-  padding: 5px 12px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: transparent;
+  height: 28px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
   color: var(--text);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition: background 0.12s ease;
 }
 
 .toolbar-actions button:hover:not(:disabled) {
-  border-color: var(--accent);
+  background: var(--control-hover);
+}
+
+.toolbar-actions button:active:not(:disabled) {
+  background: var(--control-on);
 }
 
 .toolbar-actions button:disabled {
   color: var(--muted);
   cursor: default;
+  opacity: 0.55;
 }
 
+/* 播放是圆的 —— Keynote 就是一个圆里放 ▶,没有文字。 */
 .toolbar-play {
-  font-variant-numeric: tabular-nums;
+  width: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .toolbar-agent {
@@ -267,7 +291,7 @@ body {
   gap: 10px;
   padding: 8px 10px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 10px;
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -293,23 +317,29 @@ body {
   gap: 12px;
 }
 
-.picker-button,
 .picker input {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--text);
   font: inherit;
 }
 
 .picker-button {
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
   cursor: pointer;
 }
 
 .picker-button:hover {
-  border-color: var(--accent);
+  background: var(--control-hover);
 }
 
 .picker-error {
@@ -405,7 +435,7 @@ code {
   align-items: center;
   padding: 6px 8px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 8px;
   background: var(--panel);
   font-size: 12px;
 }
@@ -440,9 +470,9 @@ code {
 
 .pick {
   width: 100%;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border: 1px dashed var(--line);
-  border-radius: 4px;
+  border-radius: 999px;
   background: transparent;
   color: var(--muted);
   font: inherit;
@@ -450,7 +480,7 @@ code {
   cursor: pointer;
 }
 
-.pick:hover {
+.pick:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--text);
 }
@@ -637,9 +667,9 @@ code {
 .permission-actions button {
   flex: 1;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
   color: var(--text);
   font: inherit;
   font-size: 12px;
@@ -647,7 +677,7 @@ code {
 }
 
 .permission-actions button:hover {
-  border-color: var(--accent);
+  background: var(--control-hover);
 }
 
 .permission-actions .deny:hover {
@@ -671,9 +701,9 @@ code {
 }
 
 .queue-pick input {
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 999px;
   background: var(--panel);
   color: var(--text);
   font: inherit;
@@ -766,10 +796,10 @@ code {
 
 .install button {
   justify-self: start;
-  padding: 4px 8px;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: transparent;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
   color: var(--text);
   font: inherit;
   font-size: 11px;
@@ -777,7 +807,7 @@ code {
 }
 
 .install button:hover {
-  border-color: var(--accent);
+  background: var(--control-hover);
 }
 
 .install code {
@@ -842,4 +872,42 @@ code {
 
 .queue {
   grid-template-rows: auto auto 1fr;
+}
+
+/* 左栏收起:列宽归零,内容裁掉。过渡让它看起来是「滑进去」而不是「闪没」。 */
+.shell[data-nav='closed'] {
+  grid-template-columns: 0 1fr var(--pane-right);
+}
+
+.shell[data-nav='closed'] .pane--nav {
+  border-right: 0;
+  overflow: hidden;
+}
+
+.shell {
+  transition: grid-template-columns 0.18s ease;
+}
+
+/* 侧栏开关:圆的,和 macOS 一致 */
+.toolbar-nav {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: none;
+}
+
+.toolbar-nav:hover {
+  background: var(--control);
+  color: var(--text);
+}
+
+.toolbar-nav[data-on='true'] {
+  background: var(--control);
+  color: var(--text);
 }

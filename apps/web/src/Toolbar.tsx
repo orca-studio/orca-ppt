@@ -9,6 +9,8 @@ import { applyTheme, nextTheme, readTheme, THEME_LABEL, type ThemeSource } from 
  */
 export interface ToolbarProps {
   title: string | undefined
+  navOpen: boolean
+  onToggleNav: () => void
   canPresent: boolean
   /** agent 最近一次调 MCP 工具的时刻,没有就是从没调过。 */
   agentSeenAt: number | undefined
@@ -16,12 +18,30 @@ export interface ToolbarProps {
   onPresent: () => void
 }
 
-export function Toolbar({ title, canPresent, agentSeenAt, onOpen, onPresent }: ToolbarProps) {
+export function Toolbar({
+  title,
+  navOpen,
+  onToggleNav,
+  canPresent,
+  agentSeenAt,
+  onOpen,
+  onPresent,
+}: ToolbarProps) {
   const live = useAgentLive(agentSeenAt)
   const [theme, setTheme] = useState<ThemeSource>(readTheme)
 
   return (
     <header className="toolbar">
+      <button
+        type="button"
+        className="toolbar-nav"
+        data-on={navOpen}
+        onClick={onToggleNav}
+        title={navOpen ? '隐藏页胶片(⌃⌘S)' : '显示页胶片(⌃⌘S)'}
+        aria-label="页胶片"
+      >
+        <SidebarIcon />
+      </button>
       <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
 
       <div className="toolbar-actions">
@@ -31,8 +51,9 @@ export function Toolbar({ title, canPresent, agentSeenAt, onOpen, onPresent }: T
           onClick={onPresent}
           disabled={!canPresent}
           title={canPresent ? '全屏放映(Esc 退出)' : '成品还没出来'}
+          aria-label="全屏放映"
         >
-          ▶ 播放
+          ▶
         </button>
         <button type="button" onClick={onOpen}>
           打开…
@@ -75,4 +96,23 @@ function useAgentLive(seenAt: number | undefined): boolean {
   }, [seenAt])
 
   return Boolean(seenAt && now - seenAt < LIVE_MS)
+}
+
+/** 和 macOS 侧栏开关一个意思:一个方框,左边那一竖是侧栏。 */
+function SidebarIcon() {
+  return (
+    <svg width="15" height="13" viewBox="0 0 15 13" aria-hidden="true">
+      <rect
+        x="0.75"
+        y="0.75"
+        width="13.5"
+        height="11.5"
+        rx="2.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+      />
+      <line x1="5.4" y1="0.75" x2="5.4" y2="12.25" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
 }

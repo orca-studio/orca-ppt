@@ -3,6 +3,7 @@ import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contrac
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
+import { readNavOpen, writeNavOpen } from './layout.js'
 import { Stage, type StageHandle } from './Stage.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
@@ -14,6 +15,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const stage = useRef<StageHandle>(null)
   const slideRef = useRef(0)
   const deckRef = useRef<OpenedDeck | undefined>(undefined)
+  // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
+  const presentRef = useRef<() => void>(() => {})
+  const toggleNavRef = useRef<() => void>(() => {})
 
   const [state, setState] = useState<TransportState>('closed')
   const [deck, setDeck] = useState<OpenedDeck | undefined>()
@@ -23,6 +27,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
+  const [navOpen, setNavOpen] = useState(readNavOpen)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -140,6 +145,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
       stage.current?.goto(data.index)
     })
 
+    // 菜单里的动作。它和顶栏按钮走同一条路 —— 菜单只是另一个触发器。
+    window.orca?.onMenuAction?.((action) => {
+      if (action === 'open') void pickDeck(open)
+      else if (action === 'present') presentRef.current()
+      else if (action === 'toggle-nav') toggleNavRef.current()
+    })
+
     const initial = window.orca?.initialDeck
     if (initial) void openWith(next, initial)
   }, [serverUrl, openWith])
@@ -212,6 +224,21 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void active.request('deck.present', { deckId: current.deck.id, slide: slideRef.current })
   }, [])
 
+  const toggleNav = useCallback(() => {
+    setNavOpen((open) => {
+      writeNavOpen(!open)
+      return !open
+    })
+  }, [])
+
+  presentRef.current = present
+  toggleNavRef.current = toggleNav
+
+  // 菜单里「全屏放映」灰不灰,跟着有没有成品走。
+  useEffect(() => {
+    void window.orca?.setCanPresent?.(Boolean(deck?.previewUrl))
+  }, [deck?.previewUrl])
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -237,12 +264,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
     <div className="app">
       <Toolbar
         title={deck?.deck.title}
+        navOpen={navOpen}
+        onToggleNav={toggleNav}
         canPresent={Boolean(deck?.previewUrl)}
         agentSeenAt={agentSeenAt}
         onOpen={() => void pickDeck(open)}
         onPresent={present}
       />
-      <div className="shell">
+      <div className="shell" data-nav={navOpen ? 'open' : 'closed'}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
           <div className="pane-body">

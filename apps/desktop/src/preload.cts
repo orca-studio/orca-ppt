@@ -31,4 +31,9 @@ electron.contextBridge.exposeInMainWorld('orca', {
   present: (input: unknown): Promise<boolean> => electron.ipcRenderer.invoke('deck:present', input),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>
     electron.ipcRenderer.invoke('app:theme', source),
+  onMenuAction: (handler: (action: string) => void): void => {
+    electron.ipcRenderer.on('menu:action', (_event, action: string) => handler(action))
+  },
+  setCanPresent: (canPresent: boolean): Promise<void> =>
+    electron.ipcRenderer.invoke('app:can-present', canPresent),
 })

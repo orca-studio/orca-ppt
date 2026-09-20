@@ -2,12 +2,45 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { BrowserWindow, app, dialog, ipcMain, nativeTheme, shell, webContents } from 'electron'
+import {
+  BrowserWindow,
+  Menu,
+  app,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  shell,
+  webContents,
+} from 'electron'
 import { paddedRect, type Rect } from './anchor-crop.js'
+import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
+
+/**
+ * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
+ * 取自这里,设晚了就还是 Electron。
+ */
+const APP_NAME = 'OrcaPPT'
+app.setName(APP_NAME)
 
 const here = dirname(fileURLToPath(import.meta.url))
 const supervisor = new ServerSupervisor()
+const isMac = process.platform === 'darwin'
+
+/** 工作台窗口。菜单动作永远发给它,不管当前焦点在哪。 */
+let workbench: BrowserWindow | undefined
+
+/** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
+function applyMenu(canPresent: boolean): void {
+  const send = (action: MenuAction) => {
+    // 不能用 getFocusedWindow():从菜单栏点的时候应用常常不是聚焦状态,
+    // 那样返回 null,动作被静默丢掉。放映窗口在前面时同理。
+    workbench?.webContents.send('menu:action', action)
+  }
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(buildMenuTemplate({ appName: APP_NAME, isMac, canPresent, send })),
+  )
+}
 
 async function createWindow(): Promise<void> {
   const port = await supervisor.start(join(here, '../../server/dist/main.js'))
@@ -16,7 +49,7 @@ async function createWindow(): Promise<void> {
     width: 1440,
     height: 900,
     backgroundColor: '#0b0b0c',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
     webPreferences: {
       // Electron 偏弱的安全默认值在壳里补齐。渲染层永远不 spawn 进程、不碰文件系统、
       // 不读凭证 —— 需要这些就加一个协议方法。
@@ -34,6 +67,11 @@ async function createWindow(): Promise<void> {
         ...(process.env.ORCA_PPT_DECK ? [`--orca-deck=${process.env.ORCA_PPT_DECK}`] : []),
       ],
     },
+  })
+
+  workbench = window
+  window.on('closed', () => {
+    if (workbench === window) workbench = undefined
   })
 
   hardenWebviews(window)
@@ -251,9 +289,18 @@ ipcMain.handle('deck:pick', async () => {
   return result.canceled ? undefined : result.filePaths[0]
 })
 
-app.whenReady().then(createWindow)
+// 有没有打开的稿子决定「全屏放映」灰不灰,渲染层打开后会报一声。
+ipcMain.handle('app:can-present', (_event, canPresent: boolean) => {
+  applyMenu(Boolean(canPresent))
+})
+
+app.whenReady().then(() => {
+  applyMenu(false)
+  app.setAboutPanelOptions({ applicationName: APP_NAME, applicationVersion: app.getVersion() })
+  return createWindow()
+})
 app.on('window-all-closed', () => {
   supervisor.stop()
-  if (process.platform !== 'darwin') app.quit()
+  if (!isMac) app.quit()
 })
 app.on('before-quit', () => supervisor.stop())
