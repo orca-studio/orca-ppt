@@ -1,0 +1,20 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/contracts"
+    },
+    {
+      "path": "packages/proc"
+    },
+    {
+      "path": "packages/deck-agent"
+    },
+    {
+      "path": "apps/server"
+    },
+    {
+      "path": "apps/desktop"
+    }
+  ]
+}

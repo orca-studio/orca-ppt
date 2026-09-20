@@ -1,0 +1,271 @@
+import type {
+  DeckPhase,
+  PendingRequest,
+  RequestMethod,
+  RequestParams,
+  RequestResult,
+} from '@orca-pptcode/contracts'
+import { phaseOrder } from '@orca-pptcode/contracts'
+import { z } from 'zod'
+
+/**
+ * MCP 工具直接调 server 自己的协议方法 —— 它就住在 server 进程里,没有中间的连接。
+ * 这也是那条不变量的落实:工具能做的就是界面能做的,同一批方法。
+ */
+export type ProtocolCaller = <M extends RequestMethod>(
+  method: M,
+  params: RequestParams<M>,
+) => Promise<RequestResult<M>>
+
+/**
+ * MCP 工具。分两类,分界线是**要不要 agent 干活**:
+ *
+ * - 看与控:直接调、立刻生效,对应界面上的一个动作(反过来也成立)。
+ * - 要 agent 干活的:人在界面上挂进待办队列,agent 用 take_requests 取走。
+ */
+
+/**
+ * 当前这份 deck。工具签名里不带 deckId —— 人面前就开着一份,让模型猜路径只会猜错。
+ *
+ * 没显式 open_deck 过的话,回退到**应用里正开着的**那一份:正常情况下人早就把 deck
+ * 打开了,再逼 agent 开一次纯属多余,而且它多半会猜错路径。
+ */
+export class ActiveDeck {
+  #id: string | undefined
+
+  set(id: string): void {
+    this.#id = id
+  }
+
+  async get(call: ProtocolCaller): Promise<string> {
+    if (this.#id) return this.#id
+
+    const { decks } = await call('deck.list', {})
+    if (decks.length === 1 && decks[0]) {
+      this.#id = decks[0].id
+      return this.#id
+    }
+    if (decks.length === 0) {
+      throw new Error('应用里还没打开 deck —— 让用户打开一份,或者用 open_deck 指定路径')
+    }
+    throw new Error(
+      `应用里开着好几份 deck,用 open_deck 指定是哪一份:${decks.map((d) => d.path).join('、')}`,
+    )
+  }
+}
+
+const Phase = z.enum(phaseOrder as [DeckPhase, ...DeckPhase[]])
+
+type Text = { content: Array<{ type: 'text'; text: string }> }
+const text = (value: string): Text => ({ content: [{ type: 'text', text: value }] })
+const json = (value: unknown): Text => text(JSON.stringify(value, null, 2))
+
+export interface ToolSpec {
+  name: string
+  config: { title: string; description: string; inputSchema?: z.ZodRawShape }
+  run: (args: Record<string, unknown>) => Promise<Text>
+}
+
+export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[] {
+  return [
+    {
+      name: 'open_deck',
+      config: {
+        title: '打开 deck',
+        description:
+          '打开一个 deck 目录并在界面上放映它。认 deck.html 和 index.html;成品还没做出来的目录也能打开。返回页数、各阶段状态和放映地址。',
+        inputSchema: { path: z.string().describe('deck 目录的绝对路径') },
+      },
+      run: async (args) => {
+        const opened = await call('deck.open', { path: String(args.path) })
+        active.set(opened.deck.id)
+        return json({
+          deck: opened.deck,
+          slideCount: opened.slideCount,
+          phases: opened.phases,
+          previewing: Boolean(opened.previewUrl),
+        })
+      },
+    },
+    {
+      name: 'create_deck',
+      config: {
+        title: '新建 deck',
+        description: '在一个目录下建一份空 deck。建完还要 open_deck 才会在界面上打开。',
+        inputSchema: {
+          parentDir: z.string().describe('放在哪个目录下'),
+          title: z.string().describe('deck 名字,会成为目录名'),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('deck.create', {
+            parentDir: String(args.parentDir),
+            title: String(args.title),
+          }),
+        ),
+    },
+    {
+      name: 'deck_status',
+      config: {
+        title: '看当前 deck 的状态',
+        description:
+          '当前打开的 deck 有几页、每一页的主角和版式、转场计划、各阶段跑到哪了。改完稿子想确认结果就调它。',
+      },
+      run: async () => {
+        const status = await call('phase.check', { deckId: await active.get(call) })
+        return json(status)
+      },
+    },
+    {
+      name: 'show_slide',
+      config: {
+        title: '让画布跳到第几页',
+        description:
+          '界面上的放映画布跳到指定页(从 0 数起)。跟用户讨论某一页时先调它 —— 他看到的和你说的才是同一页。',
+        inputSchema: { index: z.number().int().nonnegative().describe('页号,从 0 数起') },
+      },
+      run: async (args) => {
+        await call('deck.showSlide', {
+          deckId: await active.get(call),
+          index: Number(args.index),
+        })
+        return text(`画布已跳到第 ${Number(args.index) + 1} 页`)
+      },
+    },
+    {
+      name: 'take_requests',
+      config: {
+        title: '取走用户挂起的待办',
+        description:
+          '用户在界面上点中的元素(带页号、CSS 选择器、1920×1080 设计坐标和一张裁切图)和他点了「跑」的阶段,都挂在这里。用户说「看我刚点的那处」「按我圈的地方改」时调它。取完队列清空。',
+      },
+      run: async () => {
+        const taken = await call('requests.take', { deckId: await active.get(call) })
+        if (taken.requests.length === 0) return text('队列是空的 —— 用户还没在界面上挂东西。')
+        return json(taken.requests.map(describeRequest))
+      },
+    },
+    {
+      name: 'peek_requests',
+      config: {
+        title: '看一眼待办但不取走',
+        description: '和 take_requests 一样,但不清空队列。',
+      },
+      run: async () => {
+        const pending = await call('requests.list', { deckId: await active.get(call) })
+        return json(pending.requests.map(describeRequest))
+      },
+    },
+    {
+      name: 'phase_prompt',
+      config: {
+        title: '取一个阶段的做法',
+        description:
+          '拿到某个阶段该怎么做的完整说明(定题 brief → 选主题 theme → 列页面 outline → 写转场 plan → 出稿 build)。上游产物不合规时**直接拒绝**并说清是哪一条 —— 闸门在这儿,别绕过去。',
+        inputSchema: {
+          phase: Phase.describe('阶段'),
+          request: z.string().optional().describe('用户那句话,只有 brief 阶段要'),
+        },
+      },
+      run: async (args) => {
+        const result = await call('phase.prompt', {
+          deckId: await active.get(call),
+          phase: args.phase as DeckPhase,
+          ...(args.request ? { request: String(args.request) } : {}),
+        })
+        if (!result.prompt) {
+          return text(
+            `这个阶段还不能开始,卡在「${result.blockedBy}」:\n${result.issues.map((i) => `- ${i}`).join('\n')}`,
+          )
+        }
+        return text(result.prompt)
+      },
+    },
+    {
+      name: 'check_phase',
+      config: {
+        title: '校验阶段产物',
+        description:
+          '对磁盘上的阶段产物跑确定性检查(版式理由写没写、格子凑不凑得满、转场是不是相邻两页、匹配剪辑有没有锚……)。写完一个阶段就调它,别等到出稿才发现。',
+        inputSchema: { phase: Phase.optional().describe('不给就查全部') },
+      },
+      run: async (args) =>
+        json(
+          await call('phase.check', {
+            deckId: await active.get(call),
+            ...(args.phase ? { phase: args.phase as DeckPhase } : {}),
+          }),
+        ),
+    },
+    {
+      name: 'artifact_path',
+      config: {
+        title: '拿阶段产物的路径',
+        description: '某个阶段的产物文件在磁盘上的绝对路径,用来读写它。',
+        inputSchema: { phase: Phase.describe('阶段') },
+      },
+      run: async (args) =>
+        json(
+          await call('artifact.path', {
+            deckId: await active.get(call),
+            phase: args.phase as DeckPhase,
+          }),
+        ),
+    },
+    {
+      name: 'capture_slide',
+      config: {
+        title: '截一张画布的图',
+        description:
+          '把放映画布上的某一页截下来,返回图片路径,你自己读它看效果。**改完一定要看一眼** —— 稿子好不好只有放映能回答,光读 HTML 看不出挤不挤、对不对得上。不给页号就截当前这一页。',
+        inputSchema: {
+          slide: z.number().int().nonnegative().optional().describe('页号,从 0 数起'),
+        },
+      },
+      run: async (args) => {
+        const deckId = await active.get(call)
+        if (args.slide !== undefined) {
+          await call('deck.showSlide', { deckId, index: Number(args.slide) })
+          // 转场要放完才是那一页最终的样子。
+          await new Promise((resolve) => setTimeout(resolve, 1400))
+        }
+        const shot = await call('deck.capture', {
+          deckId,
+          ...(args.slide === undefined ? {} : { slide: Number(args.slide) }),
+        })
+        return text(`截好了:${shot.path}\n用你的读文件工具打开它看。`)
+      },
+    },
+    {
+      name: 'list_themes',
+      config: {
+        title: '列出现成主题和版式',
+        description:
+          '来自 orca-transition-skill 的主题和版式目录。选主题阶段先从这里挑,不合适再新建 —— 颜色只能来自主题文件,不要在稿子里改颜色。',
+      },
+      run: async () => json(await call('catalog.list', {})),
+    },
+  ]
+}
+
+/** 锚要让模型一眼看懂:页号从 1 数起,坐标说清是哪个坐标系。 */
+function describeRequest(request: PendingRequest): unknown {
+  if (request.kind === 'phase') return { 要跑的阶段: request.phase }
+
+  const anchor = request.anchor
+  if (anchor.kind === 'transition') {
+    return {
+      用户指的是: `第 ${anchor.from + 1} 页 → 第 ${anchor.to + 1} 页的转场`,
+      他说: anchor.note,
+    }
+  }
+  return {
+    用户指的是: `第 ${anchor.slide + 1} 页的元素`,
+    选择器: anchor.selector,
+    位置: `1920×1080 画面的 (${anchor.box.x}, ${anchor.box.y}),尺寸 ${anchor.box.w}×${anchor.box.h}`,
+    ...(anchor.text ? { 当前文本: anchor.text } : {}),
+    ...(anchor.crop ? { 裁切图: anchor.crop } : {}),
+    他说: anchor.note,
+  }
+}

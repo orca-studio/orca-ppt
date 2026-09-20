@@ -1,0 +1,19 @@
+{
+  "name": "@orca-pptcode/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc -b",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@orca-pptcode/contracts": "workspace:*",
+    "@orca-pptcode/deck-agent": "workspace:*",
+    "@orca-pptcode/proc": "workspace:*",
+    "ws": "^8.18.3",
+    "zod": "^4.1.5",
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
+}

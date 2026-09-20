@@ -1,0 +1,35 @@
+import { spawn } from 'node:child_process'
+
+/**
+ * 开发时三个进程:server、Vite、Electron。server 由 Electron 壳自己拉起(和发布版
+ * 同一条路径,避免开发和发布两套启动逻辑),这里只管 Vite 和 Electron。
+ */
+const PORT = process.env.ORCA_PPTCODE_DEV_PORT ?? '5273'
+
+const children = []
+function run(command, args, env = {}) {
+  const child = spawn(command, args, {
+    stdio: 'inherit',
+    shell: false,
+    env: { ...process.env, ...env },
+  })
+  children.push(child)
+  child.on('exit', (code) => {
+    if (code !== 0) stop(code ?? 1)
+  })
+  return child
+}
+
+function stop(code = 0) {
+  for (const child of children) child.kill()
+  process.exit(code)
+}
+
+process.on('SIGINT', () => stop(0))
+
+run('pnpm', ['--filter', '@orca-pptcode/web', 'dev', '--port', PORT, '--strictPort'])
+run('pnpm', ['-r', '--filter', '!@orca-pptcode/web', 'build']).on('exit', () => {
+  run('pnpm', ['--filter', '@orca-pptcode/desktop', 'start'], {
+    ORCA_PPTCODE_DEV_SERVER: `http://127.0.0.1:${PORT}`,
+  })
+})

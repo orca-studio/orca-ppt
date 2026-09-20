@@ -1,0 +1,15 @@
+{
+  "name": "@orca-pptcode/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@orca-pptcode/contracts": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}

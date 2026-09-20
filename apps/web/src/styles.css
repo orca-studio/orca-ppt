@@ -1,0 +1,665 @@
+/* token 层。主题、密度、动效归 app 所有 —— 不引 UI 框架的默认皮。 */
+:root {
+  --bg: #0b0b0c;
+  --panel: #131315;
+  --line: #232327;
+  --text: #e8e8ea;
+  --muted: #8a8a92;
+  --accent: #4ade80;
+  --pane-left: 260px;
+  --pane-right: 360px;
+  font-family:
+    ui-sans-serif,
+    -apple-system,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--pane-left) 1fr var(--pane-right);
+  height: 100vh;
+}
+
+.pane {
+  min-width: 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.pane:last-child {
+  border-right: 0;
+}
+
+/*
+ * 标题栏藏起来了,窗口就得靠这条来拖 —— 不给可拖区域的话,窗口根本挪不动。
+ * 里面要是放了按钮,记得给它 `-webkit-app-region: no-drag`,否则点不动。
+ */
+.pane-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.pane-head button,
+.pane-head input,
+.pane-head a {
+  -webkit-app-region: no-drag;
+}
+
+/* macOS 的红绿灯浮在窗口左上角,第一栏的标题要给它让出位置。 */
+:root[data-platform='darwin'] .pane:first-child .pane-head {
+  padding-left: 78px;
+}
+
+.pane-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* 中间是放映画布。deck 在这里真的在跑,不是截图 —— 16:9 是它唯一的形状。 */
+.stage {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  place-items: center;
+  background: #000;
+  padding: 24px;
+  min-height: 0;
+}
+
+.stage-frame {
+  width: 100%;
+  max-width: calc((100vh - 180px) * 16 / 9);
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px;
+}
+
+/* 真在跑的那一版:guest 自己填满,不留内边距,否则稿子的 1920×1080 会被挤变形。 */
+.stage-frame--live {
+  padding: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.stage-frame--live webview {
+  width: 100%;
+  height: 100%;
+  display: inline-flex;
+}
+
+.stage-error {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 8px 12px;
+  background: #7f1d1d;
+  color: #fee2e2;
+  font-size: 12px;
+}
+
+.stage-meta {
+  padding-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.filmstrip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.filmstrip button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filmstrip button:hover {
+  background: var(--panel);
+}
+
+.filmstrip button[data-current='true'] {
+  border-color: var(--accent);
+}
+
+.filmstrip-no {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.5em;
+}
+
+.picker {
+  display: grid;
+  gap: 12px;
+}
+
+.picker-button,
+.picker input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+}
+
+.picker-button {
+  cursor: pointer;
+}
+
+.picker-button:hover {
+  border-color: var(--accent);
+}
+
+.picker-error {
+  color: #f87171;
+  margin: 0;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+code {
+  color: var(--text);
+}
+
+.status {
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 16px;
+}
+
+.dot {
+  color: var(--accent);
+}
+
+.dot[data-off='true'] {
+  color: #f87171;
+}
+
+/* 对话栏 */
+.composer {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 1fr auto auto auto;
+  min-height: 0;
+}
+
+.thread {
+  overflow: auto;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.thread-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.thread-kind {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+  min-width: 2em;
+}
+
+.thread-item[data-kind='reasoning'] .thread-text,
+.thread-busy {
+  color: var(--muted);
+}
+
+.thread-item[data-kind='command'] .thread-text,
+.thread-item[data-kind='file_change'] .thread-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.thread-item[data-kind='error'] .thread-text {
+  color: #f87171;
+}
+
+/* 挂在输入框上、还没发出去的锚 */
+.anchors {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.anchors li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: 12px;
+}
+
+.anchors img {
+  width: 56px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex: none;
+}
+
+.anchors span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.anchors button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.composer-controls {
+  padding: 0 16px 8px;
+}
+
+.pick {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pick:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.pick[data-picking='true'] {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.composer textarea {
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 12px 16px;
+  min-height: 80px;
+  resize: none;
+  outline: none;
+}
+
+/* 阶段栏 */
+.rail {
+  display: grid;
+  gap: 8px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rail-request {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 8px;
+  min-height: 56px;
+  resize: vertical;
+  outline: none;
+}
+
+.rail-runall {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rail-runall:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.rail-runall:disabled {
+  color: var(--muted);
+  cursor: default;
+}
+
+.rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.rail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+
+[data-status='running'] .rail-dot {
+  background: var(--accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+[data-status='done'] .rail-dot {
+  background: var(--accent);
+}
+
+[data-status='failed'] .rail-dot {
+  background: #f87171;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.rail-name {
+  flex: 1;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.rail-link,
+.rail-run {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.rail-link:hover,
+.rail-run:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.rail-run:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.rail-hint,
+.rail-note {
+  font-size: 11px;
+  margin: 0 0 4px 14px;
+  color: var(--muted);
+}
+
+.rail-issues {
+  margin: 2px 0 6px 14px;
+  padding-left: 14px;
+  font-size: 11px;
+  color: #f87171;
+}
+
+/* 授权 */
+.permission {
+  margin: 12px 16px 0;
+  padding: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--panel);
+  display: grid;
+  gap: 8px;
+}
+
+.permission-tool {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.permission-summary {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.permission-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.permission-actions button {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.permission-actions button:hover {
+  border-color: var(--accent);
+}
+
+.permission-actions .deny:hover {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+/* 待办栏 */
+.queue {
+  flex: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.queue-pick {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+}
+
+.queue-pick input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.pending {
+  overflow: auto;
+  padding: 16px;
+  font-size: 12px;
+}
+
+.pending-empty p {
+  margin: 0 0 8px;
+  line-height: 1.7;
+}
+
+.pending header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.pending header code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.pending ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.pending li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.pending img {
+  width: 56px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex: none;
+}
+
+.pending li span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending li button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.pick:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* agent 还没连上时,怎么连要看得见 */
+.install {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.install button {
+  justify-self: start;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.install button:hover {
+  border-color: var(--accent);
+}
+
+.install code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  word-break: break-all;
+  color: var(--muted);
+}

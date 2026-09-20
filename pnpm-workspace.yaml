@@ -1,0 +1,10 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# 允许跑安装脚本的包。这张表要短、要有理由 —— 每一条都是我们放任它在开发机和 CI 上
+# 执行代码。
+allowBuilds:
+  esbuild: true
+  # 下载当前平台的 Electron 二进制。没有它桌面壳装得上但起不来。
+  electron: true
