@@ -125,3 +125,33 @@ describe('instantiate', () => {
     expect(resolved).toContain(await realpath(real))
   })
 })
+
+describe('配色', () => {
+  it('配色接在主题后面 —— 顺序反了那 8 个颜色就被主题盖回去了', async () => {
+    const skill = await fakeSkill()
+    const dir = await target()
+    await instantiate({
+      skillPath: skill,
+      templateId: 'template:starter.html',
+      targetDir: dir,
+      theme: 'editorial-forest',
+      palette: 'forest',
+    })
+    const html = await readFile(join(dir, 'deck.html'), 'utf8')
+    expect(html.indexOf('palettes/forest.css')).toBeGreaterThan(
+      html.indexOf('themes/editorial-forest.css'),
+    )
+  })
+
+  it('只给主题不给配色也能建 —— 但那是一份没有颜色的稿子', async () => {
+    const skill = await fakeSkill()
+    const dir = await target()
+    await instantiate({
+      skillPath: skill,
+      templateId: 'template:starter.html',
+      targetDir: dir,
+      theme: 'editorial-forest',
+    })
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).not.toContain('palettes/')
+  })
+})

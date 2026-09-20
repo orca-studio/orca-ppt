@@ -239,6 +239,14 @@ export const requests = {
           tags: z.array(z.string()),
           /** 样张的绝对路径。每个主题一张,内容完全一样,只有设计不同。 */
           sample: z.string().optional(),
+          /**
+           * 这个主题默认配哪套配色。
+           *
+           * **主题文件里已经没有颜色了** —— 颜色在 `runtime/palettes/<配色>.css`,
+           * 主题只管字体/字阶/圆角/新增类。所以新建稿子时服务端必须按这个把配色一起链上,
+           * 不然建出来的稿子是没有颜色的。界面上暂时不给选配色。
+           */
+          palette: z.string().optional(),
         }),
       ),
       /**

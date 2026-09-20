@@ -74,6 +74,13 @@ export interface Theme {
    * 自己在挑什么。
    */
   sample?: string
+  /**
+   * 这个主题默认配哪套配色。
+   *
+   * **主题文件里已经没有颜色了** —— 颜色在 `runtime/palettes/` 里,主题只管字体、
+   * 字阶、圆角、新增类。所以新建稿子时必须按这个把配色一起链上,不然建出来是没颜色的。
+   */
+  palette?: string
 }
 
 /** 主题和版式是**选**出来的,不是聊出来的。 */
@@ -144,6 +151,7 @@ async function readTheme(
   )
   const { kept, unknown } = keepKnown(tagLine(head, '标签'), vocabulary)
   const summary = head.match(/一句话[:：]\s*([^\n]+)/)?.[1]?.trim()
+  const palette = head.match(/默认配色[:：]\s*([a-z0-9-]+)/)?.[1]
 
   return {
     theme: {
@@ -153,6 +161,7 @@ async function readTheme(
       ...(summary ? { summary } : {}),
       tags: kept,
       ...(hasSample ? { sample } : {}),
+      ...(palette ? { palette } : {}),
     },
     unknown,
   }

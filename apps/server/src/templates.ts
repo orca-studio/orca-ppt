@@ -63,10 +63,12 @@ export async function instantiate(options: {
   targetDir: string
   /** 空白模板要配一个主题 —— 起始文件本身不带主题,不配的话新稿子是没有样子的。 */
   theme?: string
+  /** 配色。**引在主题之后**,它只定义那 8 个颜色变量,盖掉主题里的同名值。 */
+  palette?: string
   /** 稿子的名字,替掉起始文件里的 `{{TITLE}}`。 */
   title?: string
 }): Promise<string> {
-  const { skillPath, templateId, targetDir, theme, title } = options
+  const { skillPath, templateId, targetDir, theme, palette, title } = options
   const [kind, name] = splitId(templateId)
   if (kind !== 'template') throw new Error(`只能从空白起始文件新建,不认识:${templateId}`)
   await mkdir(join(targetDir, '.deck'), { recursive: true })
@@ -87,6 +89,8 @@ export async function instantiate(options: {
   let html = source.split('{{ROOT}}').join(toSkill)
   if (title) html = html.split('{{TITLE}}').join(title)
   if (theme) html = withTheme(html, toSkill, theme)
+  // 配色必须排在主题后面 —— 顺序反了,那 8 个颜色就被主题盖回去了。
+  if (palette) html = withLink(html, `${toSkill}/runtime/palettes/${palette}.css`)
   await writeFile(entry, html)
   return entry
 }
@@ -96,11 +100,17 @@ export async function instantiate(options: {
  * 反过来挂就被盖回去了,新稿子看上去就像没选主题。
  */
 function withTheme(html: string, toSkill: string, theme: string): string {
-  const link = `  <link rel="stylesheet" href="${toSkill}/runtime/themes/${theme}.css">`
-  const anchor = html.match(/^.*runtime\/tokens\.css.*$/m)?.[0]
-  // 起始文件里没有 tokens.css 就挂在 </head> 前 —— 至少别把主题丢了。
-  if (!anchor) return html.replace('</head>', `${link}\n</head>`)
-  return html.replace(anchor, `${anchor}\n${link}`)
+  return withLink(html, `${toSkill}/runtime/themes/${theme}.css`)
+}
+
+/** 把一条样式表接在**最后一条 link 后面** —— 层叠顺序就是引入顺序。 */
+function withLink(html: string, href: string): string {
+  const link = `  <link rel="stylesheet" href="${href}">`
+  const links = [...html.matchAll(/^.*<link[^>]*rel="stylesheet"[^>]*>.*$/gm)]
+  const last = links[links.length - 1]?.[0]
+  // 起始文件里一条 link 都没有就挂在 </head> 前 —— 至少别把它丢了。
+  if (!last) return html.replace('</head>', `${link}\n</head>`)
+  return html.replace(last, `${last}\n${link}`)
 }
 
 function splitId(id: string): ['template' | 'example', string] {

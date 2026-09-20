@@ -118,3 +118,20 @@ describe('标签', () => {
     expect(catalog.themes[0]?.tags).toEqual(['whatever'])
   })
 })
+
+describe('主题的默认配色', () => {
+  it('读出来 —— 主题里没有颜色,建稿子时要按它把配色一起链上', async () => {
+    const dir = await fakeSkill()
+    await writeFile(
+      join(dir, 'runtime/themes/x.css'),
+      ['/* 主题：X', ' * 默认配色：forest', ' */'].join('\n'),
+    )
+    const catalog = await readCatalog(dir)
+    expect(catalog.themes.find((t) => t.name === 'x')?.palette).toBe('forest')
+  })
+
+  it('没写就没有 —— 不猜一个', async () => {
+    const catalog = await readCatalog(await fakeSkill())
+    expect(catalog.themes.every((t) => t.palette === undefined)).toBe(true)
+  })
+})

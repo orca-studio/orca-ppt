@@ -106,6 +106,11 @@ export async function startServer(
     return opened
   }
 
+  /** 这个主题默认配哪套配色。主题里没有颜色,不链配色建出来的稿子是白的。 */
+  function paletteFor(theme: string | undefined): string | undefined {
+    return theme ? catalog.themes.find((item) => item.name === theme)?.palette : undefined
+  }
+
   function mountPreview(opened: OpenedDeck): string {
     if (!opened.entryFile) return ''
     const plan = planPreview(opened.deck.path, opened.entryFile)
@@ -243,6 +248,8 @@ export async function startServer(
             targetDir: path,
             title: params.title,
             ...(params.theme ? { theme: params.theme } : {}),
+            // 主题文件里没有颜色,配色得一起链上 —— 不然建出来的稿子是没颜色的。
+            ...(paletteFor(params.theme) ? { palette: paletteFor(params.theme)! } : {}),
           })
         } else {
           await mkdir(join(path, '.deck'), { recursive: true })
