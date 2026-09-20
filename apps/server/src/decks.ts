@@ -31,6 +31,8 @@ export interface OpenedDeck {
   html?: string
   /** 稿子里真实的页数。没有 outline.json 时,放映和翻页要靠它。 */
   slideCount: number
+  /** 每一页的标题,从稿子里读出来的。没有 outline.json 时页胶片靠它。 */
+  slideTitles: Array<string | null>
 }
 
 export async function openDeck(path: string): Promise<OpenedDeck> {
@@ -62,7 +64,21 @@ export async function openDeck(path: string): Promise<OpenedDeck> {
     transitions,
     ...(found ? { entryFile: found.file, html: found.html } : {}),
     slideCount: found ? countTopLevelSections(found.html) : 0,
+    slideTitles: found ? readSlideTitles(found.html) : [],
   }
+}
+
+/** 这份 deck 的成品叫什么。skill 做出来的叫 index.html,我们自己建的叫 deck.html。 */
+export async function findEntryName(root: string): Promise<string | undefined> {
+  for (const name of ENTRY_NAMES) {
+    try {
+      await stat(join(root, name))
+      return name
+    } catch {
+      // 下一个候选
+    }
+  }
+  return undefined
 }
 
 async function findEntry(root: string): Promise<{ file: string; html: string } | undefined> {
@@ -82,22 +98,86 @@ async function findEntry(root: string): Promise<{ file: string; html: string } |
  * 不该各算一页。所以要数嵌套深度,不能直接数 `<section` 的个数。
  */
 export function countTopLevelSections(html: string): number {
+  return sliceSections(html).length
+}
+
+/** 每一页在 HTML 里的那一段。 */
+function sliceSections(html: string): string[] {
   // class 可以不带引号、可以带单引号、也可以和别的类名并存 —— 这些都是合法 HTML,
   // 只认 `class="slides"` 一种写法会在别人写的稿子上静默数出 0 页。
   const slides = findSlidesContainer(html)
-  if (slides === -1) return 0
+  if (slides === -1) return []
 
-  let count = 0
+  const rest = html.slice(slides)
+  const starts: number[] = []
   let depth = 0
-  for (const match of html.slice(slides).matchAll(/<(\/?)section\b/g)) {
+  for (const match of rest.matchAll(/<(\/?)section\b/g)) {
     if (match[1]) {
       depth -= 1
       continue
     }
-    if (depth === 0) count += 1
+    if (depth === 0) starts.push(match.index)
     depth += 1
   }
-  return count
+  return starts.map((start, i) => rest.slice(start, starts[i + 1] ?? rest.length))
+}
+
+/**
+ * 每一页的标题,直接从稿子里读。
+ *
+ * 为什么不等 outline.json:skill 做出来的稿子根本没有那个文件,而页胶片上一排
+ * 「1 —」「2 —」等于什么都没说。页数我们本来就是从 HTML 数出来的,标题同理,
+ * 纯确定性的,不用麻烦模型。
+ *
+ * 优先级:`t-h1` 在 `t-display` 前面 —— 有些页用 `t-display` 放的是章节号(「01」),
+ * 标题在 `t-h1` 上;只有封面这类没有 `t-h1` 的页才轮到 `t-display`。
+ */
+const TITLE_CLASSES = ['t-h1', 't-display', 't-h2'] as const
+
+export function readSlideTitles(html: string): Array<string | null> {
+  return sliceSections(html).map((section) => titleOf(section))
+}
+
+function titleOf(section: string): string | null {
+  for (const className of TITLE_CLASSES) {
+    const text = firstTextByClass(section, className)
+    if (text) return text
+  }
+  for (const tag of ['h1', 'h2']) {
+    const match = section.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))
+    const text = match?.[1] && plainText(match[1])
+    if (text) return text
+  }
+  return null
+}
+
+function firstTextByClass(section: string, className: string): string | null {
+  // 类名要整词匹配:t-h1 不能撞上 t-h10,也要能从 "t-h1 t-on-surface" 里认出来。
+  const opening = new RegExp(
+    `<([a-z][a-z0-9]*)\\b[^>]*class\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))[^>]*>`,
+    'gi',
+  )
+  for (const match of section.matchAll(opening)) {
+    const classes = (match[2] ?? match[3] ?? match[4] ?? '').split(/\s+/)
+    if (!classes.includes(className)) continue
+
+    const tag = match[1]
+    const from = match.index + match[0].length
+    const close = section.indexOf(`</${tag}`, from)
+    const text = plainText(section.slice(from, close === -1 ? undefined : close))
+    if (text) return text
+  }
+  return null
+}
+
+/** 去标签、合并空白、截断 —— 页胶片一行放不下长句。 */
+function plainText(html: string): string {
+  const text = html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text.length > 40 ? `${text.slice(0, 40)}…` : text
 }
 
 /** `class` 里含 `slides` 这个类的那个元素在哪。 */

@@ -129,6 +129,65 @@ ipcMain.handle('deck:capture-full', async (_event, input: { guestId: number }) =
   return file
 })
 
+/**
+ * 每页渲一张缩略图。
+ *
+ * **不碰可见画布** —— 驱动它把每页翻一遍,用户会看着它闪。所以开一个隐藏窗口离屏渲,
+ * 渲完就关。
+ *
+ * 用稿子自己的录制接口(`?capture` + `__capture.go/seek`)定位,不用「跳页 + 睡一会儿」:
+ * 转场是 GSAP 驱动的,睡固定毫秒会截到还没画完的上一页 —— 实测就是整排错位一格。
+ * `go(i)` 返回这次转场的时长,`seek(transition)` 正好落在转场结束的稳定态。
+ */
+ipcMain.handle(
+  'deck:thumbnails',
+  async (_event, input: { previewUrl: string; slideCount: number }) => {
+    if (input.slideCount === 0) return []
+
+    const offscreen = new BrowserWindow({
+      show: false,
+      width: 960,
+      height: 540,
+      webPreferences: { sandbox: true, contextIsolation: true },
+    })
+
+    try {
+      await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
+      const ready = await offscreen.webContents.executeJavaScript(
+        'new Promise(r => { const t = setInterval(() => { if (window.__capture) { clearInterval(t); r(true) } }, 50); setTimeout(() => { clearInterval(t); r(false) }, 8000) })',
+      )
+      if (!ready) return []
+      await offscreen.webContents.executeJavaScript('document.fonts.ready')
+
+      const dir = join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
+      await mkdir(dir, { recursive: true })
+
+      const paths: Array<string | null> = []
+      for (let index = 0; index < input.slideCount; index += 1) {
+        try {
+          await offscreen.webContents.executeJavaScript(
+            `(async () => { const { transition } = await window.__capture.go(${index}); await window.__capture.seek(transition); })()`,
+          )
+          const image = await offscreen.webContents.capturePage()
+          if (image.isEmpty()) {
+            paths.push(null)
+            continue
+          }
+          const file = join(dir, `${index}.png`)
+          await writeFile(file, image.resize({ width: 320 }).toPNG())
+          paths.push(file)
+        } catch {
+          // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了
+          paths.push(null)
+        }
+      }
+      return paths
+    } finally {
+      offscreen.destroy()
+    }
+  },
+)
+
 ipcMain.handle('deck:pick', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],

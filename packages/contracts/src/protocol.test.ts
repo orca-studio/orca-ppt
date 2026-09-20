@@ -59,6 +59,7 @@ describe('protocol', () => {
       deckId: 'd1',
       slides: [],
       slideCount: 4,
+      slideTitles: [null, null, null, null],
       previewUrl: 'http://127.0.0.1:1/p/x/deck.html',
     })
     expect(data.previewUrl).toContain('127.0.0.1')

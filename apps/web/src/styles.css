@@ -663,3 +663,27 @@ code {
   word-break: break-all;
   color: var(--muted);
 }
+
+.filmstrip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filmstrip-thumb {
+  width: 64px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 2px;
+  flex: none;
+  background: #000;
+}
+
+.filmstrip-thumb--empty {
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.filmstrip button {
+  align-items: center;
+}

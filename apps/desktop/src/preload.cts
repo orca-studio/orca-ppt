@@ -26,4 +26,6 @@ electron.contextBridge.exposeInMainWorld('orca', {
     electron.ipcRenderer.invoke('deck:open-file', path),
   captureCanvas: (input: unknown): Promise<string | undefined> =>
     electron.ipcRenderer.invoke('deck:capture-full', input),
+  renderThumbnails: (input: unknown): Promise<Array<string | null>> =>
+    electron.ipcRenderer.invoke('deck:thumbnails', input),
 })

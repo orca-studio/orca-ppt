@@ -46,6 +46,14 @@ export const requests = {
        */
       slideCount: z.number().int().nonnegative(),
       /**
+       * 每一页的标题,从稿子的 HTML 里读出来的。
+       *
+       * 和 `slides[].subject` 的区别:那个是 outline 阶段**定**下来的主角,是决定;
+       * 这个只是从成品里认出来的标签,用来在没有 outline 时让页胶片说得出话。
+       * 两者都有时以 outline 为准。
+       */
+      slideTitles: z.array(z.string().nullable()),
+      /**
        * 各阶段现在是什么状态。**从磁盘上的产物推出来** —— deck 是用户的目录,不是我们的
        * 私有状态,重开一次、换台机器、用别的工具改过,状态都得对。
        */
@@ -97,6 +105,25 @@ export const requests = {
       slide: z.number().int().nonnegative().optional(),
     }),
     result: z.object({ path: z.string() }),
+  },
+  /**
+   * 给每一页出一张缩略图。没有图的「胶片」不叫胶片。
+   *
+   * 和 `deck.capture` 一样要绕到壳那边,但**不能驱动可见画布** —— 那样用户会看着它
+   * 把每一页翻一遍。壳用一个隐藏窗口离屏渲。
+   */
+  'deck.thumbnails': {
+    params: z.object({ deckId: z.string() }),
+    result: z.object({ paths: z.array(z.string().nullable()) }),
+  },
+  /** 壳把缩略图交回来。只有壳会调。 */
+  'thumbnails.result': {
+    params: z.object({
+      requestId: z.string(),
+      paths: z.array(z.string().nullable()).optional(),
+      error: z.string().optional(),
+    }),
+    result: z.object({}),
   },
   /** 壳把截好的图交回来。只有壳会调。 */
   'capture.result': {
@@ -164,6 +191,7 @@ export const pushes = {
     deckId: z.string(),
     slides: z.array(Slide),
     slideCount: z.number().int().nonnegative(),
+    slideTitles: z.array(z.string().nullable()),
     previewUrl: z.string(),
   }),
   'transition.changed': z.object({ deckId: z.string(), transitions: z.array(Transition) }),
@@ -181,6 +209,13 @@ export const pushes = {
     deckId: z.string(),
     requestId: z.string(),
     slide: z.number().int().nonnegative().optional(),
+  }),
+  /** 请壳离屏渲一份缩略图。壳渲完调 `thumbnails.result` 交回来。 */
+  'thumbnails.request': z.object({
+    deckId: z.string(),
+    requestId: z.string(),
+    previewUrl: z.string(),
+    slideCount: z.number().int().nonnegative(),
   }),
   /** 有人要求跳页 —— 可能是 agent。画布跟着走。 */
   'deck.slide': z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),

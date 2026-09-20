@@ -8,9 +8,21 @@ describe('PushBus', () => {
     const a: PushEnvelope[] = []
     const b: PushEnvelope[] = []
     bus.attach('a', (e) => a.push(e))
-    bus.broadcast('deck.changed', { deckId: 'd', slides: [], slideCount: 0, previewUrl: '' })
+    bus.broadcast('deck.changed', {
+      deckId: 'd',
+      slides: [],
+      slideCount: 0,
+      slideTitles: [],
+      previewUrl: '',
+    })
     bus.attach('b', (e) => b.push(e))
-    bus.broadcast('deck.changed', { deckId: 'd', slides: [], slideCount: 0, previewUrl: '' })
+    bus.broadcast('deck.changed', {
+      deckId: 'd',
+      slides: [],
+      slideCount: 0,
+      slideTitles: [],
+      previewUrl: '',
+    })
 
     expect(a.map((e) => e.sequence)).toEqual([0, 1])
     expect(b.map((e) => e.sequence)).toEqual([0])
@@ -21,7 +33,13 @@ describe('PushBus', () => {
     const received: PushEnvelope[] = []
     bus.attach('a', (e) => received.push(e))
     bus.detach('a')
-    bus.broadcast('deck.changed', { deckId: 'd', slides: [], slideCount: 0, previewUrl: '' })
+    bus.broadcast('deck.changed', {
+      deckId: 'd',
+      slides: [],
+      slideCount: 0,
+      slideTitles: [],
+      previewUrl: '',
+    })
     expect(received).toHaveLength(0)
     expect(bus.connectionCount).toBe(0)
   })

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DeckPhase, PhaseReport } from '@orca-ppt/contracts'
 import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-ppt/deck-agent'
+import { findEntryName } from './decks.js'
 
 /**
  * 阶段状态与闸门。server 拥有状态、持久化、恢复;**品味在 deck-agent** —— 提示词和
@@ -41,8 +42,14 @@ async function checkArtifact(
 
   if (phase === 'build' || phase === 'review') {
     // 成品不是 JSON,只确认它真的写出来了。
+    //
+    // 不能只认 `deck.html`:skill 做出来的稿子叫 `index.html`,而 openDeck 两个都认。
+    // 两边不一致的话,一份**已经做完的**稿子打开后出稿阶段仍然是灰的,还摆一个「跑」
+    // 按钮请你重做一遍。
+    const built = phase === 'build' ? await findEntryName(deckPath) : undefined
+    const target = built ? join(deckPath, built) : path
     try {
-      await readFile(path, 'utf8')
+      await readFile(target, 'utf8')
       return { ok: true, issues: [], missing: false }
     } catch {
       return options.requireBuild

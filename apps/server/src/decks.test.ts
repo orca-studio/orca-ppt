@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countTopLevelSections } from './decks.js'
+import { countTopLevelSections, readSlideTitles } from './decks.js'
 
 describe('countTopLevelSections', () => {
   it('数 .slides 的直接子 section', () => {
@@ -41,5 +41,65 @@ describe('countTopLevelSections', () => {
   it('section 上带属性也认得', () => {
     const html = `<div class="slides"><section data-auto-animate data-hold="2.5">1</section></div>`
     expect(countTopLevelSections(html)).toBe(1)
+  })
+})
+
+describe('readSlideTitles', () => {
+  const wrap = (sections: string) => `<div class="slides">${sections}</div>`
+
+  it('t-h1 排在 t-display 前面 —— 有的页用 t-display 放的是章节号', () => {
+    const html = wrap(
+      '<section><p class="t-display t-on-surface">01</p><p class="t-h1">The quarter.</p></section>',
+    )
+    expect(readSlideTitles(html)).toEqual(['The quarter.'])
+  })
+
+  it('没有 t-h1 时才用 t-display —— 封面就是这种', () => {
+    expect(readSlideTitles(wrap('<section><p class="t-display">THANK YOU</p></section>'))).toEqual([
+      'THANK YOU',
+    ])
+  })
+
+  it('类名整词匹配:t-h1 不撞 t-h10,也能从多类名里认出来', () => {
+    expect(readSlideTitles(wrap('<section><p class="t-h10">不是标题</p></section>'))).toEqual([
+      null,
+    ])
+    expect(
+      readSlideTitles(wrap('<section><p class="lead t-h1 dark">是标题</p></section>')),
+    ).toEqual(['是标题'])
+  })
+
+  it('元素里的标签去掉 —— Four<br>Stops 是一个标题', () => {
+    expect(readSlideTitles(wrap('<section><p class="t-h1">Four<br>Stops</p></section>'))).toEqual([
+      'Four Stops',
+    ])
+  })
+
+  it('退到 h1 / h2', () => {
+    expect(readSlideTitles(wrap('<section><h2>普通标题</h2></section>'))).toEqual(['普通标题'])
+  })
+
+  it('实在没有就给 null,不编一个出来', () => {
+    expect(readSlideTitles(wrap('<section><div class="s-dot"></div></section>'))).toEqual([null])
+  })
+
+  it('长句截断 —— 页胶片一行放不下', () => {
+    const long = '很长的标题'.repeat(20)
+    const title = readSlideTitles(wrap(`<section><p class="t-h1">${long}</p></section>`))[0]!
+    expect(title.length).toBeLessThanOrEqual(41)
+    expect(title.endsWith('…')).toBe(true)
+  })
+
+  it('每页一条,和页数对得上;嵌套子页不各算一条', () => {
+    const html = wrap(
+      '<section><p class="t-h1">一</p></section>' +
+        '<section><section><p class="t-h1">二a</p></section></section>',
+    )
+    expect(readSlideTitles(html)).toHaveLength(2)
+    expect(countTopLevelSections(html)).toBe(2)
+  })
+
+  it('不是 reveal 稿就是空的', () => {
+    expect(readSlideTitles('<p>hi</p>')).toEqual([])
   })
 })

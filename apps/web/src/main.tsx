@@ -18,6 +18,11 @@ declare global {
         box: { x: number; y: number; w: number; h: number }
         viewport: { w: number; h: number }
       }) => Promise<string | undefined>
+      /** 离屏渲每一页的缩略图。不碰可见画布。 */
+      renderThumbnails?: (input: {
+        previewUrl: string
+        slideCount: number
+      }) => Promise<Array<string | null>>
       /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
       openFile?: (path: string) => Promise<string | undefined>
       /** 截整张画布 —— agent 靠它自己看一眼做出来的东西。 */

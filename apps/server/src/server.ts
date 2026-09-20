@@ -12,10 +12,10 @@ import {
   parseParams,
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
-import { CaptureBroker } from './capture.js'
+import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
 import { McpEndpoint } from './mcp-http.js'
-import { openDeck, type OpenedDeck } from './decks.js'
+import { findEntryName, openDeck, type OpenedDeck } from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
 import { planPreview } from './preview.js'
 import { PreviewHost } from './preview-host.js'
@@ -52,7 +52,14 @@ export async function startServer(
   for (const root of options.allowRoots ?? []) await previews.allow(root)
   const openDecks = new Map<string, string>()
 
-  const captures = new CaptureBroker((payload) => bus.broadcast('capture.request', payload))
+  const captures = new Roundtrip<string, { slide?: number }>((payload) =>
+    bus.broadcast('capture.request', payload),
+  )
+  // 一份稿子每页渲一张,比单张截图慢得多,给足时间。
+  const thumbnails = new Roundtrip<
+    Array<string | null>,
+    { previewUrl: string; slideCount: number }
+  >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
 
   const queue = new RequestQueue((deckId, pending) =>
     bus.broadcast('requests.changed', { deckId, requests: pending }),
@@ -73,6 +80,7 @@ export async function startServer(
       deckId,
       slides: opened.slides,
       slideCount: opened.slideCount,
+      slideTitles: opened.slideTitles,
       // 成品第一次出现时 previewUrl 才有值,界面靠这条把画布接上。
       previewUrl: mountPreview(opened),
     })
@@ -123,7 +131,10 @@ export async function startServer(
     socket.on('close', () => {
       bus.detach(connectionId)
       // 界面走了就没人能截图了,挂着的别让 agent 干等。
-      if (bus.connectionCount === 0) captures.failAll('界面断开了')
+      if (bus.connectionCount === 0) {
+        captures.failAll('界面断开了')
+        thumbnails.failAll('界面断开了')
+      }
     })
   })
 
@@ -179,6 +190,7 @@ export async function startServer(
           slides: opened.slides,
           transitions: opened.transitions,
           slideCount: opened.slideCount,
+          slideTitles: opened.slideTitles,
           phases: await readPhaseStatus(opened.deck.path),
           previewUrl: mountPreview(opened),
         }
@@ -197,7 +209,14 @@ export async function startServer(
       }
       case 'artifact.path': {
         const params = parseParams('artifact.path', raw)
-        return { path: join(deckPathOf(params.deckId), artifactPath[params.phase]) }
+        const root = deckPathOf(params.deckId)
+        // 出稿的产物是这份 deck 实际的入口文件(可能叫 index.html)。还没出稿时
+        // 给出它将来会落在哪。
+        const name =
+          params.phase === 'build'
+            ? ((await findEntryName(root)) ?? artifactPath.build)
+            : artifactPath[params.phase]
+        return { path: join(root, name) }
       }
       case 'phase.prompt': {
         const params = parseParams('phase.prompt', raw)
@@ -215,11 +234,33 @@ export async function startServer(
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)
         deckPathOf(params.deckId)
-        return { path: await captures.request(params.deckId, params.slide) }
+        return {
+          path: await captures.request(params.deckId, {
+            ...(params.slide === undefined ? {} : { slide: params.slide }),
+          }),
+        }
       }
       case 'capture.result': {
         const params = parseParams('capture.result', raw)
-        captures.settle(params.requestId, params)
+        captures.settle(params.requestId, { value: params.path, error: params.error })
+        return {}
+      }
+      case 'deck.thumbnails': {
+        const params = parseParams('deck.thumbnails', raw)
+        const opened = await openDeck(deckPathOf(params.deckId))
+        const previewUrl = mountPreview(opened)
+        if (!previewUrl) return { paths: [] }
+
+        return {
+          paths: await thumbnails.request(params.deckId, {
+            previewUrl,
+            slideCount: opened.slideCount,
+          }),
+        }
+      }
+      case 'thumbnails.result': {
+        const params = parseParams('thumbnails.result', raw)
+        thumbnails.settle(params.requestId, { value: params.paths, error: params.error })
         return {}
       }
       case 'catalog.list': {

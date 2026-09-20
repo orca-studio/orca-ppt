@@ -20,6 +20,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [error, setError] = useState<string | undefined>()
   const [requests, setRequests] = useState<PendingRequest[]>([])
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
+  const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -33,6 +34,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setSlide(0)
       slideRef.current = 0
       setRequests((await via.request('requests.list', { deckId: opened.deck.id })).requests)
+      void refreshThumbs(via, opened.deck.id)
     } catch (cause) {
       setDeck(undefined)
       deckRef.current = undefined
@@ -72,6 +74,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
           ...current,
           slides: data.slides,
           slideCount: data.slideCount,
+          slideTitles: data.slideTitles,
           previewUrl: data.previewUrl,
         }
         deckRef.current = merged
@@ -80,6 +83,27 @@ export function App({ serverUrl }: { serverUrl: string }) {
       // previewUrl 没变就只是内容变了,重载并回到原来那一页;
       // 从空变成有值说明成品刚出现,Stage 这时才第一次挂上,不用我们管。
       if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
+    })
+
+    // 缩略图也只有壳渲得了(隐藏窗口,不碰可见画布)。
+    next.subscribe('thumbnails.request', (data) => {
+      void (async () => {
+        try {
+          const paths = await window.orca?.renderThumbnails?.({
+            previewUrl: data.previewUrl,
+            slideCount: data.slideCount,
+          })
+          await next.request('thumbnails.result', {
+            requestId: data.requestId,
+            ...(paths ? { paths } : { error: '这个客户端渲不了缩略图' }),
+          })
+        } catch (cause) {
+          await next.request('thumbnails.result', {
+            requestId: data.requestId,
+            error: cause instanceof Error ? cause.message : String(cause),
+          })
+        }
+      })()
     })
 
     // agent 要自己看一眼做出来的东西 —— 只有壳截得了图。
@@ -110,6 +134,16 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const initial = window.orca?.initialDeck
     if (initial) void openWith(next, initial)
   }, [serverUrl, openWith])
+
+  /** 页胶片的缩略图。渲不出来就留空 —— 页号和标题仍然在。 */
+  const refreshThumbs = useCallback(async (via: Transport, deckId: string) => {
+    if (!window.orca?.renderThumbnails) return
+    try {
+      setThumbs((await via.request('deck.thumbnails', { deckId })).paths)
+    } catch {
+      setThumbs([])
+    }
+  }, [])
 
   const open = useCallback(
     (path: string) => (transport.current ? openWith(transport.current, path) : undefined),
@@ -200,7 +234,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 <li key={index}>
                   <button type="button" data-current={index === slide} onClick={() => goto(index)}>
                     <span className="filmstrip-no">{index + 1}</span>
-                    {deck.slides[index]?.subject ?? '—'}
+                    {thumbs[index] ? (
+                      <img className="filmstrip-thumb" src={`file://${thumbs[index]}`} alt="" />
+                    ) : (
+                      <span className="filmstrip-thumb filmstrip-thumb--empty" />
+                    )}
+                    <span className="filmstrip-title">
+                      {deck.slides[index]?.subject ?? deck.slideTitles[index] ?? '—'}
+                    </span>
                   </button>
                 </li>
               ))}
