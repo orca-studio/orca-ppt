@@ -13,6 +13,7 @@ describe('PushBus', () => {
       slides: [],
       slideCount: 0,
       slideTitles: [],
+      pageTypes: [],
       previewUrl: '',
     })
     bus.attach('b', (e) => b.push(e))
@@ -21,6 +22,7 @@ describe('PushBus', () => {
       slides: [],
       slideCount: 0,
       slideTitles: [],
+      pageTypes: [],
       previewUrl: '',
     })
 
@@ -38,6 +40,7 @@ describe('PushBus', () => {
       slides: [],
       slideCount: 0,
       slideTitles: [],
+      pageTypes: [],
       previewUrl: '',
     })
     expect(received).toHaveLength(0)

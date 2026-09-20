@@ -24,7 +24,13 @@ import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
-import { readCatalog, readVocabulary, resolveSkillPath, type Catalog } from './skill.js'
+import {
+  readCatalog,
+  readPageTypes,
+  readVocabulary,
+  resolveSkillPath,
+  type Catalog,
+} from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
 import { readTransitionPlan } from './transitions.js'
 
@@ -85,6 +91,7 @@ export async function startServer(
       slides: opened.slides,
       slideCount: opened.slideCount,
       slideTitles: opened.slideTitles,
+      pageTypes: opened.pageTypes,
       // 成品第一次出现时 previewUrl 才有值,界面靠这条把画布接上。
       previewUrl: mountPreview(opened),
     })
@@ -160,6 +167,7 @@ export async function startServer(
   const catalog: Catalog = await readCatalog(await resolveSkillPath())
   // 词表读一次就够 —— 它跟着 skill 的文件走,和 catalog 一样。
   const vocabulary = catalog.skillPath ? readVocabulary(catalog.skillPath) : Promise.resolve([])
+  const pageTypes = catalog.skillPath ? readPageTypes(catalog.skillPath) : Promise.resolve([])
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
@@ -216,6 +224,7 @@ export async function startServer(
           transitions: opened.transitions,
           slideCount: opened.slideCount,
           slideTitles: opened.slideTitles,
+          pageTypes: opened.pageTypes,
           transitionPlan: readTransitionPlan(opened),
           phases: await readPhaseStatus(opened.deck.path),
           previewUrl: mountPreview(opened),
@@ -360,7 +369,12 @@ export async function startServer(
          *
          * 也因此它必须**每次请求现算**:catalog 是启动时读一次就缓存的(跟着文件走)。
          */
-        return { ...catalog, tags: await vocabulary, recent: await readRecentThemes() }
+        return {
+          ...catalog,
+          tags: await vocabulary,
+          pages: await pageTypes,
+          recent: await readRecentThemes(),
+        }
       }
       case 'requests.add': {
         const params = parseParams('requests.add', raw)

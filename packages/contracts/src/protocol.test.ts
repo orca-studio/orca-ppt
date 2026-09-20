@@ -60,8 +60,11 @@ describe('protocol', () => {
       slides: [],
       slideCount: 4,
       slideTitles: [null, null, null, null],
+      pageTypes: ['cover', null, null, 'closing'],
       previewUrl: 'http://127.0.0.1:1/p/x/deck.html',
     })
     expect(data.previewUrl).toContain('127.0.0.1')
+    // 没标类型的页是 null,不是空串 —— 「没标」和「标成了空」是两回事。
+    expect(data.pageTypes).toEqual(['cover', null, null, 'closing'])
   })
 })

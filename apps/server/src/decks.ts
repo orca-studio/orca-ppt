@@ -33,6 +33,8 @@ export interface OpenedDeck {
   slideCount: number
   /** 每一页的标题,从稿子里读出来的。没有 outline.json 时页胶片靠它。 */
   slideTitles: Array<string | null>
+  /** 每一页声明的页面类型(`<section data-page>`)。没标的是 null —— 不猜。 */
+  pageTypes: Array<string | null>
 }
 
 export async function openDeck(path: string): Promise<OpenedDeck> {
@@ -65,6 +67,7 @@ export async function openDeck(path: string): Promise<OpenedDeck> {
     ...(found ? { entryFile: found.file, html: found.html } : {}),
     slideCount: found ? countTopLevelSections(found.html) : 0,
     slideTitles: found ? readSlideTitles(found.html) : [],
+    pageTypes: found ? readPageTypes(found.html) : [],
   }
 }
 
@@ -136,6 +139,18 @@ const TITLE_CLASSES = ['t-h1', 't-display', 't-h2'] as const
 
 export function readSlideTitles(html: string): Array<string | null> {
   return sliceSections(html).map((section) => titleOf(section))
+}
+
+/**
+ * 每一页声明的页面类型(`<section data-page="data">`)。没标的给 null。
+ *
+ * **不猜**:认不准的页在 skill 那边就是留空的,这儿再推一个出来只会把「没标」和
+ * 「标错」混成一团 —— 而标错会同时误导校验、agent 和转场规划。
+ */
+export function readPageTypes(html: string): Array<string | null> {
+  return sliceSections(html).map(
+    (section) => section.match(/<section\b[^>]*\bdata-page="([a-z0-9-]+)"/i)?.[1] ?? null,
+  )
 }
 
 function titleOf(section: string): string | null {

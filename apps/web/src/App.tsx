@@ -43,6 +43,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [recent, setRecent] = useState<string[]>([])
   /** 标签 id → 显示名。词表在 skill 里,界面只管显示。 */
   const [tagLabels, setTagLabels] = useState<Record<string, string>>({})
+  /** 页面类型 id → 显示名。和标签一样:文件里写 id,界面显示 label。 */
+  const [pageLabels, setPageLabels] = useState<Record<string, string>>({})
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [creating, setCreating] = useState(false)
@@ -211,6 +213,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
         setThemes(result.themes)
         setRecent(result.recent)
         setTagLabels(Object.fromEntries(result.tags.map((tag) => [tag.id, tag.label])))
+        setPageLabels(Object.fromEntries(result.pages.map((page) => [page.id, page.label])))
         // 标签不能自由决定:拼错的、没挂标签的都在这儿,不默默放过。
         if (result.tagIssues.length > 0) console.warn('标签有问题:', result.tagIssues)
       })
@@ -662,6 +665,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
               note={deck.transitionPlan.find((row) => row.from === slide)}
               phases={deck.phases}
               themeTitle={themeTitle}
+              pageType={
+                deck.pageTypes[slide]
+                  ? (pageLabels[deck.pageTypes[slide]] ?? deck.pageTypes[slide] ?? undefined)
+                  : undefined
+              }
               onReplay={() => replay(slide)}
               onFlag={() => flagTransition(slide, slide + 1)}
               onOpenArtifact={(phase) => void openArtifact(phase)}

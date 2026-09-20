@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countTopLevelSections, readSlideTitles } from './decks.js'
+import { countTopLevelSections, readPageTypes, readSlideTitles } from './decks.js'
 
 describe('countTopLevelSections', () => {
   it('数 .slides 的直接子 section', () => {
@@ -101,5 +101,36 @@ describe('readSlideTitles', () => {
 
   it('不是 reveal 稿就是空的', () => {
     expect(readSlideTitles('<p>hi</p>')).toEqual([])
+  })
+})
+
+describe('readPageTypes', () => {
+  it('读出每一页声明的类型', () => {
+    const html =
+      '<div class="slides">' +
+      '<section data-page="cover"><p>封面</p></section>' +
+      '<section data-auto-animate data-page="bars"><p>图</p></section>' +
+      '</div>'
+    expect(readPageTypes(html)).toEqual(['cover', 'bars'])
+  })
+
+  it('没标的是 null —— 不猜。标错会同时误导校验、agent 和转场规划', () => {
+    const html =
+      '<div class="slides"><section data-page="cover">1</section><section>2</section></div>'
+    expect(readPageTypes(html)).toEqual(['cover', null])
+  })
+
+  it('只认 section 上的 —— 页内元素带同名属性不算', () => {
+    const html = '<div class="slides"><section><p data-page="cover">x</p></section></div>'
+    expect(readPageTypes(html)).toEqual([null])
+  })
+
+  it('页数和页胶片对得上 —— 嵌套子页不算一页', () => {
+    const html =
+      '<div class="slides">' +
+      '<section data-page="cover">1</section>' +
+      '<section><section data-page="list">2a</section></section>' +
+      '</div>'
+    expect(readPageTypes(html)).toHaveLength(2)
   })
 })

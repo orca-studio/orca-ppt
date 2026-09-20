@@ -33,6 +33,14 @@ export interface InspectorProps {
   phases: PhaseRow[]
   /** 主题的人读名字。稿子没配主题时没有。 */
   themeTitle: string | undefined
+  /**
+   * 这一页声明的页面类型,已经换成人读的名字。没标的是 undefined。
+   *
+   * **只显示,不提供菜单。** 本产品的人不摆页面,他说话 —— 类型是 agent 按内容挑的。
+   * 摆在这儿是为了让人**发现它不对**(「这页明明是对比,怎么标成列表」),
+   * 而不是让他自己来选。
+   */
+  pageType: string | undefined
   onReplay: () => void
   onFlag: () => void
   onOpenArtifact: (phase: DeckPhase) => void
@@ -66,11 +74,13 @@ export function Inspector(props: InspectorProps) {
   )
 }
 
-function SlideScope({ slide, slideCount, title, info }: InspectorProps) {
+function SlideScope({ slide, slideCount, title, pageType, info }: InspectorProps) {
   return (
     <>
       <Row label="页号" value={`第 ${slide + 1} / ${slideCount} 页`} />
       <Row label="标题" value={title} />
+      {/* 没标就说没标 —— 别推一个出来:标错会同时误导校验、agent 和转场规划。 */}
+      <Row label="类型" value={pageType ?? '没标 data-page'} />
       {/* 没写就如实说「没写」—— 编一个默认值会让人以为稿子里有这一行。 */}
       <Row label="停留" value={info?.hold ? `${info.hold} 秒` : '没写 data-hold'} />
       <Row label="转场时长" value={info?.duration ? `${info.duration} 秒` : '用默认'} />

@@ -100,6 +100,25 @@ export async function readCatalog(skillPath: string | undefined): Promise<Catalo
   }
 }
 
+/** 页面类型词表(`runtime/pages.json`)。读不到就当空。 */
+export async function readPageTypes(
+  skillPath: string,
+): Promise<Array<{ id: string; label: string }>> {
+  try {
+    const json: unknown = JSON.parse(await readFile(join(skillPath, 'runtime/pages.json'), 'utf8'))
+    const pages = (json as Record<string, unknown>)?.pages
+    if (!Array.isArray(pages)) return []
+    return pages.flatMap((entry) => {
+      if (!entry || typeof entry !== 'object') return []
+      const { id, label } = entry as Record<string, unknown>
+      if (typeof id !== 'string' || !id) return []
+      return [{ id, label: typeof label === 'string' && label ? label : id }]
+    })
+  } catch {
+    return []
+  }
+}
+
 /** 词表。读不到就当空 —— 校验是为了发现错别字,不是为了在缺文件时把标签清空。 */
 export async function readVocabulary(skillPath: string): Promise<Vocabulary> {
   try {

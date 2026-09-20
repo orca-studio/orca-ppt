@@ -64,6 +64,14 @@ export const requests = {
        */
       slideTitles: z.array(z.string().nullable()),
       /**
+       * 每一页声明的页面类型(`<section data-page>`),没标的是 null。
+       *
+       * **不是给人选的菜单** —— 本产品的人不摆页面,他说话。它的用处是:界面显示
+       * 这一页是什么(好让人发现它不对)、agent 能指代它、校验能按规范核它的坐标、
+       * 转场规划能推理角色位置对不对得上。
+       */
+      pageTypes: z.array(z.string().nullable()),
+      /**
        * 各阶段现在是什么状态。**从磁盘上的产物推出来** —— deck 是用户的目录,不是我们的
        * 私有状态,重开一次、换台机器、用别的工具改过,状态都得对。
        */
@@ -241,6 +249,8 @@ export const requests = {
       recent: z.array(z.string()),
       /** 词表本身。界面显示 label,文件里写的是 id。 */
       tags: z.array(z.object({ id: z.string(), label: z.string(), icon: z.string().optional() })),
+      /** 页面类型词表。同样 id 进文件、label 上界面。 */
+      pages: z.array(z.object({ id: z.string(), label: z.string() })),
       /**
        * 标签有毛病的条目,一条一句人话:拼错的、以及**一个标签都没挂的**。
        * 上新一份模板必须挑一个标签 —— 词表靠这份报告执行,不靠文档。
@@ -307,6 +317,7 @@ export const pushes = {
     slides: z.array(Slide),
     slideCount: z.number().int().nonnegative(),
     slideTitles: z.array(z.string().nullable()),
+    pageTypes: z.array(z.string().nullable()),
     previewUrl: z.string(),
   }),
   'transition.changed': z.object({
