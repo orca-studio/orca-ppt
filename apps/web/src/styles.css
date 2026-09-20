@@ -159,11 +159,14 @@ body {
 /* 播放是圆的 —— Keynote 就是一个圆里放 ▶,没有文字。 */
 .toolbar-play {
   width: 28px;
+  height: 28px;
   padding: 0;
   display: grid;
   place-items: center;
-  font-size: 11px;
-  line-height: 1;
+  /* 圆按钮要写死 border-radius:50%,999px 在等宽等高时也对,但写 50% 更不容易被
+     后面的规则改宽之后变成胶囊 */
+  border-radius: 50%;
+  line-height: 0;
 }
 
 .toolbar-agent {
@@ -873,14 +876,48 @@ code {
   line-height: 1.4;
 }
 
-/* 阶段栏搬到右栏之后,不再需要自己撑一块 */
-.queue .rail {
-  padding: 16px 16px 12px;
-  margin-bottom: 0;
+/* 右栏:取锚在上(常用),待办中间,阶段折在最下面 */
+.queue {
+  grid-template-rows: auto 1fr auto;
 }
 
-.queue {
-  grid-template-rows: auto auto 1fr;
+.queue .rail {
+  padding: 12px 16px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 0;
+  gap: 6px;
+}
+
+.rail > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.rail > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rail > summary::before {
+  content: '›';
+  display: inline-block;
+  transition: transform 0.12s ease;
+}
+
+.rail[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.rail > summary em {
+  margin-left: auto;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 左栏三档:导航器(缩略图)、大纲(只有标题,更窄)、收起。 */
@@ -1308,4 +1345,40 @@ code {
 
 .tlink-actions button:hover {
   background: var(--control-hover);
+}
+
+/* 画布底下那行:页数提示 + 自动播放(放映方式归这儿,不占工具栏) */
+.stage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.stage-meta button {
+  padding: 3px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.stage-meta button:hover {
+  background: var(--control-hover);
+}
+
+.stage-meta button[data-on='true'] {
+  background: var(--accent);
+  color: var(--panel);
+}
+
+.status-agent {
+  margin-left: auto;
+}
+
+.status-agent[data-live='true'] {
+  color: var(--accent);
 }

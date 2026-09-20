@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Layout } from './layout.js'
-import { ThemeButton } from './ThemeButton.js'
 import { ViewMenu } from './ViewMenu.js'
 
 /**
- * 顶栏。全局动作都在这儿 —— 在这之前整个应用一个全局动作都没有,三个栏头只是三个标签,
- * 所以它读起来像个调试面板而不是工作台。
+ * 顶栏。只放**动作**,而且只放主要的那个。
+ *
+ * 自动播放归「放映」菜单和画布底下那行(它是放映方式,不是全局动作);打开是 ⌘O,
+ * 菜单里有;主题是偏好,归「显示 > 外观」;agent 状态是状态,归底部状态栏。
+ * 都摆在这儿的话,唯一真正的动作(播放)就淹了。
  *
  * 标题栏是藏起来的(macOS hiddenInset),这条同时是窗口的拖动区。
  */
@@ -14,37 +16,22 @@ export interface ToolbarProps {
   layout: Layout
   onLayoutChange: (next: Partial<Layout>) => void
   canPresent: boolean
-  autoplay: boolean
-  onToggleAutoplay: () => void
-  /** agent 最近一次调 MCP 工具的时刻,没有就是从没调过。 */
-  agentSeenAt: number | undefined
-  onOpen: () => void
   onPresent: () => void
 }
 
-export function Toolbar({
-  title,
-  layout,
-  onLayoutChange,
-  canPresent,
-  autoplay,
-  onToggleAutoplay,
-  agentSeenAt,
-  onOpen,
-  onPresent,
-}: ToolbarProps) {
-  const live = useAgentLive(agentSeenAt)
+export function Toolbar({ title, layout, onLayoutChange, canPresent, onPresent }: ToolbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const viewRef = useRef<HTMLDivElement>(null)
 
   return (
     <header className="toolbar">
-      <div className="toolbar-view">
+      <div className="toolbar-view" ref={viewRef}>
         <button
           type="button"
           className="toolbar-nav"
           data-on={menuOpen || layout.nav !== 'off'}
           onClick={() => setMenuOpen((open) => !open)}
-          title="视图"
+          title={menuOpen ? undefined : '视图'}
           aria-label="视图"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
@@ -54,6 +41,7 @@ export function Toolbar({
         {menuOpen && (
           <ViewMenu
             layout={layout}
+            containerRef={viewRef}
             onChange={(next) => {
               onLayoutChange(next)
               // 选完就关,和 Keynote 一致 —— 开着会挡住刚切出来的视图。
@@ -63,6 +51,7 @@ export function Toolbar({
           />
         )}
       </div>
+
       <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
 
       <div className="toolbar-actions">
@@ -71,52 +60,23 @@ export function Toolbar({
           className="toolbar-play"
           onClick={onPresent}
           disabled={!canPresent}
-          title={canPresent ? '全屏放映(Esc 退出)' : '成品还没出来'}
+          title={canPresent ? '全屏放映(⌥⌘P,Esc 退出)' : '成品还没出来'}
           aria-label="全屏放映"
         >
-          ▶
+          <PlayIcon />
         </button>
-        <button
-          type="button"
-          className="toolbar-auto"
-          data-on={autoplay}
-          onClick={onToggleAutoplay}
-          disabled={!canPresent}
-          title="自动播放:按每页声明的停留时长往后翻,一动键鼠就停"
-        >
-          {autoplay ? '自动播放中' : '自动播放'}
-        </button>
-        <button type="button" onClick={onOpen}>
-          打开…
-        </button>
-        <ThemeButton />
       </div>
-
-      <span className="toolbar-agent" data-live={live}>
-        {live ? 'agent 在线' : 'agent 未连'}
-      </span>
     </header>
   )
 }
 
-/**
- * agent「在线」的判定:最近 60 秒内调过工具。
- *
- * MCP 是无状态 HTTP,没有连接可言 —— 唯一诚实的信号就是「它刚刚动过」。
- * 不这么判的话只能不管三七二十一都提示「还没连上?」,那是猜。
- */
-const LIVE_MS = 60_000
-
-function useAgentLive(seenAt: number | undefined): boolean {
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    if (!seenAt) return
-    const timer = setInterval(() => setNow(Date.now()), 5_000)
-    return () => clearInterval(timer)
-  }, [seenAt])
-
-  return Boolean(seenAt && now - seenAt < LIVE_MS)
+/** 用 SVG 不用「▶」:那个字符的字形本身偏右偏上,怎么摆都不在圆心上。 */
+function PlayIcon() {
+  return (
+    <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">
+      <path d="M1 1.2 L8 5 L1 8.8 Z" fill="currentColor" />
+    </svg>
+  )
 }
 
 /** 和 macOS 侧栏开关一个意思:一个方框,左边那一竖是侧栏。 */

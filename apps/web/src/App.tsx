@@ -6,6 +6,7 @@ import { PhaseRail } from './PhaseRail.js'
 import { Gallery } from './Gallery.js'
 import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
+import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type StageHandle } from './Stage.js'
 import { Toolbar } from './Toolbar.js'
@@ -22,6 +23,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
   const presentRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
+  const toggleAutoplayRef = useRef<() => void>(() => {})
 
   const [state, setState] = useState<TransportState>('closed')
   const [deck, setDeck] = useState<OpenedDeck | undefined>()
@@ -33,6 +35,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
   const [autoplay, setAutoplay] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
+  const [theme, setThemeState] = useState<ThemeSource>(readTheme)
+  const [now, setNow] = useState(() => Date.now())
   const [creating, setCreating] = useState(false)
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [picking, setPicking] = useState(false)
@@ -162,6 +166,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (action === 'open') void pickDeck(open)
       else if (action === 'present') presentRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
+      else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
+      else if (action.startsWith('theme:')) {
+        const next = action.slice('theme:'.length) as ThemeSource
+        applyTheme(next)
+        setThemeState(next)
+      }
     })
 
     void next
@@ -261,10 +271,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
   presentRef.current = present
   toggleNavRef.current = toggleNav
 
-  // 菜单里「全屏放映」灰不灰,跟着有没有成品走。
+  // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
-    void window.orca?.setCanPresent?.(Boolean(deck?.previewUrl))
-  }, [deck?.previewUrl])
+    void window.orca?.setMenuState?.({ canPresent: Boolean(deck?.previewUrl), theme })
+  }, [deck?.previewUrl, theme])
 
   const toggleAutoplay = useCallback(() => {
     const active = transport.current
@@ -328,6 +338,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
     [note],
   )
 
+  toggleAutoplayRef.current = toggleAutoplay
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -343,6 +355,18 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const { path } = await active.request('artifact.path', { deckId: current.deck.id, phase })
     void window.orca?.openFile?.(path)
   }, [])
+
+  /**
+   * agent「在线」的判定:最近 60 秒内调过工具。
+   *
+   * MCP 是无状态 HTTP,没有连接可言 —— 唯一诚实的信号就是「它刚刚动过」。
+   */
+  useEffect(() => {
+    if (!agentSeenAt) return
+    const timer = setInterval(() => setNow(Date.now()), 5_000)
+    return () => clearInterval(timer)
+  }, [agentSeenAt])
+  const agentLive = Boolean(agentSeenAt && now - agentSeenAt < 60_000)
 
   /** 一页显示什么文字。outline 的 subject 是定下来的决定,优先于从稿子认出来的标签。 */
   const titleOf = useCallback(
@@ -396,10 +420,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
         layout={layout}
         onLayoutChange={changeLayout}
         canPresent={Boolean(deck?.previewUrl)}
-        autoplay={autoplay}
-        onToggleAutoplay={toggleAutoplay}
-        agentSeenAt={agentSeenAt}
-        onOpen={() => void pickDeck(open)}
         onPresent={present}
       />
       <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
@@ -468,6 +488,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
               previewUrl={deck.previewUrl}
               slideCount={deck.slideCount}
               initialSlide={slide}
+              autoplay={autoplay}
+              onToggleAutoplay={toggleAutoplay}
               onSlideChange={onSlideChange}
             />
           ) : (
@@ -491,6 +513,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 第 {slide + 1} / {deck.slideCount} 页
               </span>
             )}
+            {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
+            <span className="status-agent" data-live={agentLive}>
+              {agentLive ? 'agent 在线' : 'agent 未连'}
+            </span>
           </footer>
         </section>
 
@@ -498,11 +524,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
           <header className="pane-head">制作</header>
           {deck ? (
             <div className="queue">
-              <PhaseRail
-                rows={deck.phases}
-                onRun={requestPhase}
-                onOpenArtifact={(phase) => void openArtifact(phase)}
-              />
               <div className="queue-pick">
                 <input
                   value={note}
@@ -527,7 +548,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 requests={requests}
                 crops={crops}
                 mcpUrl={serverUrl.replace(/^ws:/, 'http:') + '/mcp'}
+                agentSeen={Boolean(agentSeenAt)}
                 onRemove={removeRequest}
+              />
+              {/* 阶段排在挂待办**后面**:稿子做出来之后,常用的是前者 */}
+              <PhaseRail
+                rows={deck.phases}
+                onRun={requestPhase}
+                onOpenArtifact={(phase) => void openArtifact(phase)}
               />
             </div>
           ) : (

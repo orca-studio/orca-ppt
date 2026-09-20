@@ -21,8 +21,8 @@ declare global {
       }) => Promise<string | undefined>
       /** 菜单里的动作。菜单只是另一个触发器,走的是同一条协议方法。 */
       onMenuAction?: (handler: (action: string) => void) => void
-      /** 有没有稿子决定菜单里「全屏放映」灰不灰。 */
-      setCanPresent?: (canPresent: boolean) => Promise<void>
+      /** 菜单里的启用状态和勾选,跟着界面走。 */
+      setMenuState?: (state: { canPresent: boolean; theme: string }) => Promise<void>
       /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
       setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
       /** 全屏放映。稿子好不好只有放映能回答。 */

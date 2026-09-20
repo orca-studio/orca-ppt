@@ -34,6 +34,6 @@ electron.contextBridge.exposeInMainWorld('orca', {
   onMenuAction: (handler: (action: string) => void): void => {
     electron.ipcRenderer.on('menu:action', (_event, action: string) => handler(action))
   },
-  setCanPresent: (canPresent: boolean): Promise<void> =>
-    electron.ipcRenderer.invoke('app:can-present', canPresent),
+  setMenuState: (state: unknown): Promise<void> =>
+    electron.ipcRenderer.invoke('app:menu-state', state),
 })

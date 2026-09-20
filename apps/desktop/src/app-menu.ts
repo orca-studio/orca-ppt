@@ -8,18 +8,27 @@ import type { MenuItemConstructorOptions } from 'electron'
  *
  * 菜单只是**另一个触发器**:它发出的动作和顶栏按钮走同一条协议方法,不另开一条路。
  */
-export type MenuAction = 'open' | 'present' | 'toggle-nav'
+export type MenuAction =
+  | 'open'
+  | 'present'
+  | 'toggle-nav'
+  | 'toggle-autoplay'
+  | 'theme:system'
+  | 'theme:light'
+  | 'theme:dark'
 
 export interface MenuOptions {
   appName: string
   isMac: boolean
   /** 没有打开的稿子时,放映应该是灰的。 */
   canPresent: boolean
+  /** 当前主题,用来打勾。 */
+  theme: 'system' | 'light' | 'dark'
   send: (action: MenuAction) => void
 }
 
 export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { appName, isMac, canPresent, send } = options
+  const { appName, isMac, canPresent, theme, send } = options
 
   const appMenu: MenuItemConstructorOptions[] = isMac
     ? [
@@ -71,6 +80,13 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
           enabled: canPresent,
           click: () => send('present'),
         },
+        {
+          // 自动播放是放映方式,不是全局动作 —— 所以在这儿,不在工具栏
+          label: '自动播放',
+          accelerator: 'CmdOrCtrl+Alt+A',
+          enabled: canPresent,
+          click: () => send('toggle-autoplay'),
+        },
       ],
     },
     {
@@ -81,6 +97,31 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
           label: '显示/隐藏页胶片',
           accelerator: 'Control+Cmd+S',
           click: () => send('toggle-nav'),
+        },
+        { type: 'separator' },
+        {
+          // 主题是偏好不是动作,所以在菜单里,不在工具栏
+          label: '外观',
+          submenu: [
+            {
+              label: '跟随系统',
+              type: 'radio',
+              checked: theme === 'system',
+              click: () => send('theme:system'),
+            },
+            {
+              label: '浅色',
+              type: 'radio',
+              checked: theme === 'light',
+              click: () => send('theme:light'),
+            },
+            {
+              label: '深色',
+              type: 'radio',
+              checked: theme === 'dark',
+              click: () => send('theme:dark'),
+            },
+          ],
         },
       ],
     },

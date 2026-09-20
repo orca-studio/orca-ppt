@@ -2,7 +2,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 
 const build = (over: Partial<Parameters<typeof buildMenuTemplate>[0]> = {}) =>
-  buildMenuTemplate({ appName: 'OrcaPPT', isMac: true, canPresent: true, send: vi.fn(), ...over })
+  buildMenuTemplate({
+    appName: 'OrcaPPT',
+    isMac: true,
+    canPresent: true,
+    theme: 'system',
+    send: vi.fn(),
+    ...over,
+  })
 
 const labels = (template: ReturnType<typeof buildMenuTemplate>) =>
   template.map((item) => item.label)
@@ -41,10 +48,20 @@ describe('应用菜单', () => {
     expect(sent).toEqual(['open', 'present'])
   })
 
-  it('没有稿子时放映是灰的', () => {
+  it('没有稿子时放映和自动播放都是灰的', () => {
     const present = build({ canPresent: false }).find((item) => item.label === '放映')!
       .submenu as Array<{ enabled?: boolean }>
-    expect(present[0]!.enabled).toBe(false)
+    expect(present.map((item) => item.enabled)).toEqual([false, false])
+  })
+
+  it('主题在菜单里,当前那一项打勾 —— 偏好不该占工具栏', () => {
+    const view = build({ theme: 'dark' }).find((item) => item.label === '显示')!.submenu as Array<{
+      label?: string
+      submenu?: Array<{ label?: string; checked?: boolean }>
+    }>
+    const appearance = view.find((item) => item.label === '外观')!.submenu!
+    expect(appearance.map((item) => item.label)).toEqual(['跟随系统', '浅色', '深色'])
+    expect(appearance.find((item) => item.checked)?.label).toBe('深色')
   })
 
   it('快捷键写的是 CmdOrCtrl,不写死一个平台', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, type RefObject } from 'react'
 import type { Layout, NavMode } from './layout.js'
 
 /**
@@ -9,6 +9,13 @@ import type { Layout, NavMode } from './layout.js'
  */
 export interface ViewMenuProps {
   layout: Layout
+  /**
+   * 菜单**和触发按钮**所在的那个容器。
+   *
+   * 只认菜单自己的话,点按钮会先被「点外面」关掉、再被按钮的 onClick 打开,
+   * 净效果是这个开关失灵 —— 实测过。按钮得算在「里面」。
+   */
+  containerRef: RefObject<HTMLElement | null>
   onChange: (next: Partial<Layout>) => void
   onClose: () => void
 }
@@ -19,13 +26,11 @@ const NAV_ITEMS: Array<{ mode: NavMode; label: string; hint: string }> = [
   { mode: 'off', label: '仅幻灯片', hint: '收起左栏' },
 ]
 
-export function ViewMenu({ layout, onChange, onClose }: ViewMenuProps) {
-  const ref = useRef<HTMLDivElement>(null)
-
+export function ViewMenu({ layout, containerRef, onChange, onClose }: ViewMenuProps) {
   // 点到别处、按 Esc 都要关掉 —— 一个关不掉的浮层比没有还烦。
   useEffect(() => {
     const onPointerDown = (event: PointerEvent) => {
-      if (!ref.current?.contains(event.target as Node)) onClose()
+      if (!containerRef.current?.contains(event.target as Node)) onClose()
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -37,10 +42,10 @@ export function ViewMenu({ layout, onChange, onClose }: ViewMenuProps) {
       document.removeEventListener('pointerdown', onPointerDown, true)
       document.removeEventListener('keydown', onKeyDown, true)
     }
-  }, [onClose])
+  }, [containerRef, onClose])
 
   return (
-    <div className="viewmenu" ref={ref} role="menu">
+    <div className="viewmenu" role="menu">
       {NAV_ITEMS.map((item) => (
         <button
           key={item.mode}

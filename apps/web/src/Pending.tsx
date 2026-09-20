@@ -11,20 +11,22 @@ export function Pending({
   requests,
   crops,
   mcpUrl,
+  agentSeen,
   onRemove,
 }: {
   requests: PendingRequest[]
   /** 锚的裁切图,按 request id 索引 —— 图只在本机预览用,不进协议。 */
   crops: Map<string, string>
   mcpUrl: string
+  /** agent 来取过东西吗。没有才提示怎么连 —— 连上之后那行就是噪音。 */
+  agentSeen: boolean
   onRemove: (id: string) => void
 }) {
   if (requests.length === 0) {
     return (
       <div className="pending pending-empty">
-        <p>在画布上点一处,或者点某个阶段的「跑」。</p>
-        <p className="muted">挂在这儿等你的 agent 来取 —— 跟它说一声「看我刚点的那处」。</p>
-        <Install url={mcpUrl} />
+        <p className="muted">挂在这儿等 agent 来取 —— 跟它说一声「看我刚点的那处」。</p>
+        {!agentSeen && <Install url={mcpUrl} />}
       </div>
     )
   }
@@ -48,7 +50,7 @@ export function Pending({
           </li>
         ))}
       </ul>
-      <Install url={mcpUrl} />
+      {!agentSeen && <Install url={mcpUrl} />}
     </div>
   )
 }
@@ -60,7 +62,7 @@ function Install({ url }: { url: string }) {
 
   return (
     <div className="install">
-      <span>agent 还没连上?</span>
+      <span>还没连上 agent?</span>
       <button
         type="button"
         onClick={() => {

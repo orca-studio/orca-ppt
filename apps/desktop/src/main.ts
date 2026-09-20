@@ -31,14 +31,14 @@ const isMac = process.platform === 'darwin'
 let workbench: BrowserWindow | undefined
 
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
-function applyMenu(canPresent: boolean): void {
+function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }): void {
   const send = (action: MenuAction) => {
     // 不能用 getFocusedWindow():从菜单栏点的时候应用常常不是聚焦状态,
     // 那样返回 null,动作被静默丢掉。放映窗口在前面时同理。
     workbench?.webContents.send('menu:action', action)
   }
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate(buildMenuTemplate({ appName: APP_NAME, isMac, canPresent, send })),
+    Menu.buildFromTemplate(buildMenuTemplate({ appName: APP_NAME, isMac, ...state, send })),
   )
 }
 
@@ -289,13 +289,16 @@ ipcMain.handle('deck:pick', async () => {
   return result.canceled ? undefined : result.filePaths[0]
 })
 
-// 有没有打开的稿子决定「全屏放映」灰不灰,渲染层打开后会报一声。
-ipcMain.handle('app:can-present', (_event, canPresent: boolean) => {
-  applyMenu(Boolean(canPresent))
-})
+/** 菜单里的启用状态和勾选跟着界面走,渲染层变了就报一声。 */
+ipcMain.handle(
+  'app:menu-state',
+  (_event, state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }) => {
+    applyMenu(state)
+  },
+)
 
 app.whenReady().then(() => {
-  applyMenu(false)
+  applyMenu({ canPresent: false, theme: 'system' })
   app.setAboutPanelOptions({ applicationName: APP_NAME, applicationVersion: app.getVersion() })
   return createWindow()
 })

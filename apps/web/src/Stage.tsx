@@ -42,13 +42,16 @@ export interface StageHandle {
 export interface StageProps {
   previewUrl: string
   slideCount: number
+  /** 自动播放是**放映方式**,归这儿 —— 工具栏放的是全局动作。 */
+  autoplay: boolean
+  onToggleAutoplay: () => void
   /** 重新挂载时回到这一页 —— 从看片台切回来不该跳回第一页。 */
   initialSlide: number
   onSlideChange: (index: number) => void
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, slideCount, initialSlide, onSlideChange },
+  { previewUrl, slideCount, initialSlide, autoplay, onToggleAutoplay, onSlideChange },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -177,7 +180,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           {error && <div className="stage-error">{error}</div>}
         </div>
       </div>
-      <div className="stage-meta">{slideCount} 页 · 方向键翻页</div>
+      <div className="stage-meta">
+        <span>{slideCount} 页 · 方向键翻页</span>
+        <button type="button" data-on={autoplay} onClick={onToggleAutoplay}>
+          {autoplay ? '自动播放中' : '自动播放'}
+        </button>
+      </div>
     </div>
   )
 })

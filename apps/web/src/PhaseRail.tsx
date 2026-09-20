@@ -38,13 +38,26 @@ export interface PhaseRailProps {
   onOpenArtifact: (phase: DeckPhase) => void
 }
 
+/**
+ * 阶段栏。默认折叠 —— 稿子已经出来了的时候,这一栏没什么可干的,摆开只会把真正常用的
+ * 「挂待办」压下去,还摆五个「跑」像是在请你重做一遍。
+ */
 export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
   const [expanded, setExpanded] = useState<DeckPhase | undefined>()
   // 自检阶段还没实现,先不摆一个按下去没反应的按钮。
   const visible = rows.filter((row) => row.phase !== 'review')
 
+  const done = rows.filter((row) => row.status === 'done').length
+  const total = visible.length
+
   return (
-    <div className="rail">
+    <details className="rail" open={done < total}>
+      <summary>
+        阶段
+        <em>
+          {done}/{total}
+        </em>
+      </summary>
       <ol className="rail-list">
         {visible.map((row) => (
           <li key={row.phase} data-status={row.status}>
@@ -82,9 +95,7 @@ export function PhaseRail({ rows, onRun, onOpenArtifact }: PhaseRailProps) {
           </li>
         ))}
       </ol>
-      <p className="muted rail-note">
-        点「跑」挂进待办,跟 agent 说一声它就来取。改完产物重跑它,下游的会一起作废。
-      </p>
-    </div>
+      <p className="muted rail-note">改完某个产物重跑它,下游的会一起作废。</p>
+    </details>
   )
 }
