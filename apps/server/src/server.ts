@@ -15,6 +15,7 @@ import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyTextEdit } from './edit.js'
+import { noteThemeUsed, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
 import { findEntryName, openDeck, type OpenedDeck } from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
@@ -23,7 +24,7 @@ import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
-import { readCatalog, resolveSkillPath, type Catalog } from './skill.js'
+import { readCatalog, resolveSkillPath, withDerivedTags, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
 import { readTransitionPlan } from './transitions.js'
 
@@ -195,6 +196,14 @@ export async function startServer(
 
         openDecks.set(opened.deck.id, opened.deck.path)
         watcher.watch(opened.deck.id, opened.deck.path)
+        // 记一笔「最近用过这个主题」—— 选择器上最有用的那个标签(派生的,见 recent.ts)。
+        // 读不出主题或者写不进去都不管:少一个标签,不值得让打开稿子这件事失败。
+        if (opened.entryFile) {
+          void readFile(opened.entryFile, 'utf8')
+            .then((html) => themeOf(html))
+            .then((theme) => (theme ? noteThemeUsed(theme) : undefined))
+            .catch(() => {})
+        }
         // 界面要跟着开。agent 开了稿子而人的窗口还停在原地的话,画布没加载,
         // 它接着调 capture_slide 就只会等到超时。
         bus.broadcast('deck.opened', { deckId: opened.deck.id, path: opened.deck.path })
@@ -337,7 +346,8 @@ export async function startServer(
       }
       case 'catalog.list': {
         parseParams('catalog.list', raw)
-        return catalog
+        // 派生标签现算 —— catalog 本身是缓存的(跟着文件走),这一层跟着状态走。
+        return { ...catalog, themes: await withDerivedTags(catalog.themes) }
       }
       case 'requests.add': {
         const params = parseParams('requests.add', raw)

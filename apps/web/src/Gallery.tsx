@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { assetUrl } from './assets.js'
-import { groupTemplates, type Template } from './gallery-groups.js'
+import { facetsOf, withTag, type Template } from './facets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
 
@@ -27,14 +27,20 @@ export interface GalleryProps {
   onOpen: () => void
 }
 
-/** 版式:先只有这两种模式。Bento 是汇报稿里的一种页型,不是并列的模式。 */
-const LAYOUTS: Array<{ key: string; title: string; hint: string }> = [
+/**
+ * 模式。这个轴恰好互斥(两个起始文件),所以做成一个下拉 —— 互斥不等于它是分类:
+ * 它只是这个轴上恰好只有一个值。页型(Bento、时间线)是叠加的,走另一条路。
+ */
+const MODES: Array<{ key: string; title: string; hint: string }> = [
   { key: 'standard', title: '汇报稿', hint: '工作汇报、产品介绍、数据复盘' },
   { key: 'story', title: '故事稿', hint: '一页一张照片,讲演变' },
 ]
 
+/** 主题里想提到最前的标签。「最近使用」是派生的 —— 下次挑哪个,最强的预测是上次挑了哪个。 */
+const THEME_ORDER = ['最近使用']
+
 export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: GalleryProps) {
-  const [layout, setLayout] = useState('standard')
+  const [mode, setMode] = useState('standard')
   const [theme, setTheme] = useState<string | undefined>()
   const [example, setExample] = useState<Template | undefined>()
   const [title, setTitle] = useState('')
@@ -42,9 +48,22 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
 
   // **没样张的主题不显示** —— 一张白卡片,人看不出自己在挑什么。新主题做好样张自然出现。
   const shown = useMemo(() => themes.filter((item) => item.sample), [themes])
-  const groups = useMemo(() => groupTemplates(templates), [templates])
 
-  const blank = templates.find((item) => item.kind === 'template' && item.layout === layout)
+  /**
+   * 主题按「最近使用」提到最前,其余按原顺序 —— 这一个派生标签就够了。五个主题不需要
+   * 筛选条:五个东西摆成一排就够,套一层分类是虚胖。
+   */
+  const ordered = useMemo(() => {
+    const recent = withTag(shown, 'use', '最近使用')
+    return [...recent, ...shown.filter((item) => !recent.includes(item))]
+  }, [shown])
+
+  // 示例按**页型**铺开:一份稿子有几种页型就出现几次。这是分面,不是分类。
+  const examples = useMemo(() => templates.filter((item) => item.kind === 'example'), [templates])
+  const pageFacets = useMemo(() => facetsOf(examples, 'page'), [examples])
+  const untagged = useMemo(() => examples.filter((item) => item.tags.page.length === 0), [examples])
+
+  const blank = templates.find((item) => item.kind === 'template' && item.tags.mode.includes(mode))
   const picked = example ?? (theme ? blank : undefined)
   const pickedName = example?.title ?? themes.find((t) => t.name === theme)?.title ?? ''
 
@@ -78,11 +97,11 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
           {/* 版式是第二个、很小的选择:它决定稿子的结构,不决定长什么样。 */}
           <select
             className="gallery-layout"
-            value={layout}
-            onChange={(event) => setLayout(event.target.value)}
-            aria-label="版式"
+            value={mode}
+            onChange={(event) => setMode(event.target.value)}
+            aria-label="模式"
           >
-            {LAYOUTS.map((item) => (
+            {MODES.map((item) => (
               <option key={item.key} value={item.key}>
                 {item.title}
               </option>
@@ -95,10 +114,10 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
       </header>
 
       <div className="gallery-body">
-        <p className="gallery-note">{LAYOUTS.find((item) => item.key === layout)?.hint}</p>
+        <p className="gallery-note">{MODES.find((item) => item.key === mode)?.hint}</p>
 
         <div className="gallery-grid gallery-grid--themes">
-          {shown.map((item) => (
+          {ordered.map((item) => (
             <button
               key={item.name}
               type="button"
@@ -115,6 +134,10 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
                 之后同一个标签会横跨好几个主题(「高对比」「衬线」现在就是),那时候
                 这排字直接变成筛选条,不用回头改数据。
               */}
+              {/* 派生标签摆在最前,和声明的标签一视同仁 —— 它们是同一套东西。 */}
+              {item.tags.use.length > 0 && (
+                <span className="gallery-use">{item.tags.use.join(' · ')}</span>
+              )}
               {item.tags.scene.length > 0 && (
                 <span className="gallery-scene">{item.tags.scene.join(' · ')}</span>
               )}
@@ -125,35 +148,37 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
           ))}
         </div>
 
-        {groups.length > 0 && (
+        {examples.length > 0 && (
           <details className="gallery-examples" open={browsing}>
             <summary onClick={() => setBrowsing((on) => !on)}>
               示例
               <em>看看别人怎么用的</em>
             </summary>
-            {groups.map((group) => (
-              <section key={group.key}>
-                <h2>
-                  {group.title}
-                  <em>{group.hint}</em>
-                </h2>
+            {/*
+              按页型铺开,一份稿子有几种页型就出现几次 —— 这是**分面**不是分类。
+              没标页型的收在最后一组,不丢也不硬塞进某一类。
+            */}
+            {[
+              ...pageFacets,
+              ...(untagged.length > 0 ? [{ value: '其他', items: untagged }] : []),
+            ].map((facet) => (
+              <section key={facet.value}>
+                <h2>{facet.value}</h2>
                 <div className="gallery-grid">
-                  {group.items
-                    .filter((item) => item.kind === 'example')
-                    .map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        data-picked={example?.id === item.id}
-                        onClick={() => {
-                          setExample(item)
-                          setTheme(undefined)
-                        }}
-                      >
-                        <img src={assetUrl(item.thumbnail)} alt="" />
-                        <span className="gallery-title">{item.title}</span>
-                      </button>
-                    ))}
+                  {facet.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      data-picked={example?.id === item.id}
+                      onClick={() => {
+                        setExample(item)
+                        setTheme(undefined)
+                      }}
+                    >
+                      <img src={assetUrl(item.thumbnail)} alt="" />
+                      <span className="gallery-title">{item.title}</span>
+                    </button>
+                  ))}
                 </div>
               </section>
             ))}

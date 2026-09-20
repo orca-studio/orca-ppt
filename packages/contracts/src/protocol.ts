@@ -92,10 +92,14 @@ export const requests = {
           /** 缩略图的绝对路径。skill 自己就给示例生成了 thumb.jpg,不用我们再渲。 */
           thumbnail: z.string().optional(),
           /**
-           * 版式族,选择器按它分组 —— 人挑模板时先问的是「这是哪一类稿子」。
-           * 读不出标记时缺省,界面归到「其他」,不猜。
+           * 这份稿子带的标签。**是标签不是分类**:`mode` 恰好互斥(两个起始文件),
+           * `page` 是叠加的 —— 一份汇报稿可以既有 bento 页、又有时间线页,
+           * 它该同时出现在这几处。塞进互斥的枚举就只能挑一个,信息当场丢掉。
            */
-          layout: z.enum(['standard', 'story', 'bento']).optional(),
+          tags: z.object({
+            mode: z.array(z.string()),
+            page: z.array(z.string()),
+          }),
         }),
       ),
     }),
@@ -227,10 +231,16 @@ export const requests = {
            * 轴是可枚举的;轴本身仍然具名,因为界面对两个轴的处理不一样。
            */
           tags: z.object({
-            /** 什么场合用它。 */
+            /** 什么场合用它。**声明的** —— 写在主题文件头里。 */
             scene: z.array(z.string()),
-            /** 什么调子。 */
+            /** 什么调子。**声明的**。 */
             style: z.array(z.string()),
+            /**
+             * 怎么用过它,目前只有「最近使用」。**派生的** —— 从文件之外的状态算出来,
+             * 同一个主题今天带、下个月就不带了。分类表长不出这种东西:它不是内容的
+             * 属性,是使用的属性。
+             */
+            use: z.array(z.string()),
           }),
           /** 样张的绝对路径。每个主题一张,内容完全一样,只有设计不同。 */
           sample: z.string().optional(),

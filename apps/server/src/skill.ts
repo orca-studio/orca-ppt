@@ -1,6 +1,8 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { readRecentThemes } from './recent.js'
+import { tagLine, type TagSet } from './tags.js'
 
 /**
  * 规范、主题、版式、录制脚本都从 skill 目录读,不抄进本仓 —— skill 更新产品跟着更新,
@@ -46,11 +48,19 @@ export interface Catalog {
  * **主题就是场景** —— 用这个产品的人都带着自己的场合来:年度复盘、对外路演、内部分享。
  * 所以卡上要写它适合什么场合,不能只写它长什么样;光看颜色人挑不出来。
  */
-export interface ThemeTags {
-  /** 什么场合用它:年度复盘、对外路演、内部分享。 */
+export interface ThemeTags extends TagSet {
+  /** 什么场合用它:年度复盘、对外路演、内部分享。**声明的** —— 写在主题文件头里。 */
   scene: string[]
-  /** 什么调子:沉静、高对比、衬线。 */
+  /** 什么调子:沉静、高对比、衬线。**声明的**。 */
   style: string[]
+  /**
+   * 怎么用过它。目前只有「最近使用」。**派生的** —— 从文件之外的状态算出来,
+   * 同一个主题今天带、下个月就不带了。
+   *
+   * 分类表长不出这种东西:它不是内容的属性,是使用的属性。标签系统天然容得下,
+   * 而且这是选择器上最有用的一个标签 —— 下次挑哪个,最强的预测是上次挑了哪个。
+   */
+  use: string[]
 }
 
 export interface Theme {
@@ -82,21 +92,14 @@ export interface Theme {
   sample?: string
 }
 
-/**
- * 主题文件头里的一行标签。`场景：产品发布 / 方案提案` → `['产品发布', '方案提案']`。
- *
- * 分隔符收得宽一点(`/ 、· ,` 都认):这行是人手写的,为一个顿号漏掉半行标签不值得。
- */
-export function tagLine(head: string, field: string): string[] {
-  const line = head.match(new RegExp(`${field}[:：]\\s*([^\\n]+)`))?.[1]
-  if (!line) return []
-  return line
-    .split(/[/、·,，]/)
-    .map((part) => part.replace(/^\s*\*\s*/, '').trim())
-    .filter(Boolean)
-}
-
 /** 主题和版式是**选**出来的,不是聊出来的。 */
+/**
+ * 读出 catalog。**只读声明的标签** —— 派生的不在这儿算,见 `withDerivedTags`。
+ *
+ * 为什么分开:catalog 在启动时读一次就缓存了(它跟着文件走,文件不动它就不动),
+ * 而派生标签跟着**状态**走,缓存它等于取消它 —— 「最近使用」永远停在应用启动那一刻。
+ * 这个错犯过一次,别再犯。
+ */
 export async function readCatalog(skillPath: string | undefined): Promise<Catalog> {
   if (!skillPath) return { themes: [], layouts: [] }
 
@@ -108,6 +111,19 @@ export async function readCatalog(skillPath: string | undefined): Promise<Catalo
 async function readThemes(dir: string): Promise<Theme[]> {
   const names = await readNames(dir, '.css')
   return Promise.all(names.map((name) => readTheme(dir, name)))
+}
+
+/**
+ * 把派生的标签盖上去。**每次请求现算** —— 它跟着状态走,不跟着文件走。
+ *
+ * 不改原对象:catalog 是缓存的,写进去就把「这一刻的状态」永久焊在缓存里了。
+ */
+export async function withDerivedTags(themes: Theme[], env = process.env): Promise<Theme[]> {
+  const recent = await readRecentThemes(env)
+  return themes.map((theme) => ({
+    ...theme,
+    tags: { ...theme.tags, use: recent.includes(theme.name) ? ['最近使用'] : [] },
+  }))
 }
 
 async function readTheme(dir: string, name: string): Promise<Theme> {
@@ -124,7 +140,12 @@ async function readTheme(dir: string, name: string): Promise<Theme> {
     name,
     // 主题文件开头那行注释里写着人读的名字,比文件名好看。
     title: head.match(/主题[:：]\s*([^\n(（]+)/)?.[1]?.trim() || name,
-    tags: { scene: tagLine(head, '场景'), style: tagLine(head, '风格') },
+    tags: {
+      scene: tagLine(head, '场景'),
+      style: tagLine(head, '风格'),
+      // 派生的标签这儿一律给空,由 withDerivedTags 每次请求时盖上。
+      use: [],
+    },
     ...(hasSample ? { sample } : {}),
   }
 }

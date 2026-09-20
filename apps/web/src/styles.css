@@ -1261,6 +1261,14 @@ code {
   color: var(--muted);
 }
 
+/* 派生标签:和声明的标签同一套东西,只是来源不同,所以只用颜色区分,不另做一种形状。 */
+.gallery-use {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--accent);
+  margin-top: -3px;
+}
+
 /* 示例是参考,不是起点 —— 默认收起来。 */
 .gallery-examples {
   margin-top: 36px;

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readCatalog, resolveSkillPath, tagLine } from './skill.js'
+import { readCatalog, resolveSkillPath, withDerivedTags } from './skill.js'
 
 async function fakeSkill() {
   const dir = await mkdtemp(join(tmpdir(), 'skill-'))
@@ -40,11 +40,12 @@ describe('readCatalog', () => {
     const catalog = await readCatalog(await fakeSkill())
     expect(catalog.themes).toEqual([
       // 没写标签的主题给空数组,不编一个
-      { name: 'clearing', title: 'clearing', tags: { scene: [], style: [] } },
+      // use 是派生的:没用过就是空,它不写在文件里
+      { name: 'clearing', title: 'clearing', tags: { scene: [], style: [], use: [] } },
       {
         name: 'editorial-forest',
         title: 'Editorial Forest',
-        tags: { scene: ['年度复盘', '研究汇报'], style: ['沉静', '衬线'] },
+        tags: { scene: ['年度复盘', '研究汇报'], style: ['沉静', '衬线'], use: [] },
       },
     ])
     expect(catalog.layouts).toEqual(['bento'])
@@ -60,42 +61,6 @@ describe('readCatalog', () => {
   })
 })
 
-describe('tagLine', () => {
-  const head = `/* 主题：Editorial Forest（取自别处）
- * 场景：年度复盘 / 研究汇报
- * 风格：沉静 · 衬线 · 读物感
- * 在 tokens.css 之后引入。*/`
-
-  it('一行拆成一组标签', () => {
-    expect(tagLine(head, '场景')).toEqual(['年度复盘', '研究汇报'])
-    expect(tagLine(head, '风格')).toEqual(['沉静', '衬线', '读物感'])
-  })
-
-  it('几种分隔符都认 —— 这行是人手写的,为一个顿号漏掉半行不值得', () => {
-    expect(tagLine(' * 场景：路演、年鉴,复盘 / 分享', '场景')).toEqual([
-      '路演',
-      '年鉴',
-      '复盘',
-      '分享',
-    ])
-  })
-
-  it('没有这一行就是空,不报错也不编一个', () => {
-    expect(tagLine('/* 主题：无标签 */', '场景')).toEqual([])
-  })
-
-  it('全角冒号和半角冒号都认', () => {
-    expect(tagLine(' * 风格: 明快', '风格')).toEqual(['明快'])
-  })
-
-  it('注释的星号不会混进标签里', () => {
-    expect(tagLine(' * 场景：产品发布 / 方案提案\n * 风格：明快', '场景')).toEqual([
-      '产品发布',
-      '方案提案',
-    ])
-  })
-})
-
 describe('主题样张', () => {
   it('有样张就带上路径', async () => {
     const dir = await fakeSkill()
@@ -108,5 +73,38 @@ describe('主题样张', () => {
   it('没样张就不带 —— 界面据此不显示它,一张白卡片人看不出在挑什么', async () => {
     const catalog = await readCatalog(await fakeSkill())
     expect(catalog.themes.every((t) => t.sample === undefined)).toBe(true)
+  })
+})
+
+describe('派生标签:最近使用', () => {
+  it('用过的主题带上「最近使用」—— 它不写在文件里,是从使用记录算出来的', async () => {
+    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
+    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
+
+    const catalog = await readCatalog(await fakeSkill())
+    const themes = await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: recent })
+    expect(themes.find((t) => t.name === 'clearing')?.tags.use).toEqual(['最近使用'])
+    expect(themes.find((t) => t.name === 'editorial-forest')?.tags.use).toEqual([])
+  })
+
+  it('没有使用记录时一个都不带,不编一个', async () => {
+    const catalog = await readCatalog(await fakeSkill())
+    const themes = await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: '/nope.json' })
+    expect(themes.every((t) => t.tags.use.length === 0)).toBe(true)
+  })
+
+  it('**不在 readCatalog 里算** —— catalog 是缓存的,派生标签缓存了就等于取消了', async () => {
+    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
+    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
+    const catalog = await readCatalog(await fakeSkill())
+    expect(catalog.themes.every((t) => t.tags.use.length === 0)).toBe(true)
+  })
+
+  it('不改原对象 —— 写进去就把这一刻的状态焊在缓存里了', async () => {
+    const recent = join(await mkdtemp(join(tmpdir(), 'orca-recent-')), 'recent.json')
+    await writeFile(recent, JSON.stringify(['clearing']), 'utf8')
+    const catalog = await readCatalog(await fakeSkill())
+    await withDerivedTags(catalog.themes, { ORCA_PPT_RECENT_FILE: recent })
+    expect(catalog.themes.every((t) => t.tags.use.length === 0)).toBe(true)
   })
 })

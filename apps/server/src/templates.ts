@@ -1,5 +1,6 @@
 import { copyFile, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
+import { tagAttr, type TagSet } from './tags.js'
 
 /**
  * 新建稿子从哪儿起头。两类,都来自 skill:
@@ -13,13 +14,21 @@ import { join, relative, sep } from 'node:path'
  */
 
 /**
- * 版式族 —— 选择器按它分组。**人挑模板时先问的是「这是哪一类稿子」,不是「它叫什么」**,
- * 一长条平铺的示例没法回答这个问题。
+ * 一份稿子带的标签。**是标签不是分类** —— 见 tags.ts。
  *
- * 标记写在稿子的 `<html data-layout>` 上,从起始文件复制出来就自然带着,不靠写稿的人
- * 记得填(见 skill 的 templates/starter.html)。
+ * - `mode` 是真互斥的:SKILL.md 的「两种模式」,对应两个起始文件,一份稿子只能是一种。
+ *   互斥不等于要做成分类系统 —— 它只是这个轴上恰好只有一个值。
+ * - `page` 是叠加的:一份汇报稿可以既有 bento 页、又有时间线页。
+ *   **Bento 曾经被我当成和汇报稿并列的第三种模式,那是错的** —— 它是汇报稿里的一种
+ *   页型,塞进互斥的枚举就只能挑一个,信息当场丢掉。
+ *
+ * 都写在稿子的 `<html>` 上(`data-layout` / `data-tags`),从起始文件复制出来就带着,
+ * 不靠写稿的人记得填。
  */
-export type DeckLayout = 'standard' | 'story' | 'bento'
+export interface DeckTags extends TagSet {
+  mode: string[]
+  page: string[]
+}
 
 export interface DeckTemplate {
   id: string
@@ -27,15 +36,15 @@ export interface DeckTemplate {
   title: string
   /** 缩略图的绝对路径。空白模板没有。 */
   thumbnail?: string
-  /** 读不出标记时不猜 —— 归到「其他」总比归错一类强。 */
-  layout?: DeckLayout
+  tags: DeckTags
 }
 
-const LAYOUTS = new Set<string>(['standard', 'story', 'bento'])
+/** 模式只有这两种,对应两个起始文件。认不出来的不猜。 */
+const MODES = new Set(['standard', 'story'])
 
-const BLANKS: Array<{ file: string; title: string; layout: DeckLayout }> = [
-  { file: 'starter.html', title: '汇报稿', layout: 'standard' },
-  { file: 'story-starter.html', title: '故事稿', layout: 'story' },
+const BLANKS: Array<{ file: string; title: string; mode: string }> = [
+  { file: 'starter.html', title: '汇报稿', mode: 'standard' },
+  { file: 'story-starter.html', title: '故事稿', mode: 'story' },
 ]
 
 export async function listTemplates(skillPath: string | undefined): Promise<DeckTemplate[]> {
@@ -49,7 +58,7 @@ export async function listTemplates(skillPath: string | undefined): Promise<Deck
         id: `template:${blank.file}`,
         kind: 'template',
         title: blank.title,
-        layout: blank.layout,
+        tags: { mode: [blank.mode], page: [] },
       })
     } catch {
       // skill 里没有这份模板
@@ -89,23 +98,24 @@ async function listExamples(skillPath: string): Promise<DeckTemplate[]> {
     // 视频所以没有缩略图 —— 在选择器里就是一张白卡片,人看不出自己在挑什么。
     if (!hasThumb) continue
 
-    const layout = layoutOf(html)
     examples.push({
       id: `example:${name}`,
       kind: 'example',
       title: titleOf(html) ?? name,
       thumbnail: thumb,
-      ...(layout ? { layout } : {}),
+      tags: tagsOf(html),
     })
   }
   return examples
 }
 
-/** 版式族标记。读不出来就不猜 —— 归错一类比不归类更糟。 */
-function layoutOf(html: string): DeckLayout | undefined {
-  const match = html.match(/<html[^>]*\bdata-layout="([a-z0-9-]+)"/i)
-  const value = match?.[1]
-  return value && LAYOUTS.has(value) ? (value as DeckLayout) : undefined
+/** 稿子自己声明的标签。读不出来就是空 —— 不猜,归错一个标签比没有标签更糟。 */
+function tagsOf(html: string): DeckTags {
+  const mode = html.match(/<html[^>]*\bdata-layout="([a-z0-9-]+)"/i)?.[1]
+  return {
+    mode: mode && MODES.has(mode) ? [mode] : [],
+    page: tagAttr(html),
+  }
 }
 
 /** 稿子的 `<title>`,取 `·` 之前那一段 —— 后面挂的是主题名和版式,列表里太长。 */
