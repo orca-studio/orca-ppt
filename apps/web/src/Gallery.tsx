@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { assetUrl } from './assets.js'
-import { sectionsOf, type Template } from './facets.js'
+import { sectionsOf } from './facets.js'
 
-export type Catalog = RequestResult<'catalog.list'>
-export type Theme = Catalog['themes'][number]
+export type Theme = RequestResult<'catalog.list'>['themes'][number]
+export type Template = RequestResult<'catalog.templates'>['templates'][number]
 
 /**
  * 没有打开稿子时的首屏:选个起头。
@@ -28,7 +28,7 @@ export interface GalleryProps {
   busy: boolean
   error: string | undefined
   /** 从空白起始文件 + 一个主题新建。 */
-  onCreate: (template: Template, title: string, theme?: string) => void
+  onCreate: (template: Template, title: string, theme: string) => void
   onOpen: () => void
 }
 
@@ -53,9 +53,7 @@ export function Gallery({
 }: GalleryProps) {
   const [mode, setMode] = useState('standard')
   const [theme, setTheme] = useState<string | undefined>()
-  const [example, setExample] = useState<Template | undefined>()
   const [title, setTitle] = useState('')
-  const [browsing, setBrowsing] = useState(false)
 
   // **没样张的主题不显示** —— 一张白卡片,人看不出自己在挑什么。新主题做好样张自然出现。
   const shown = useMemo(() => themes.filter((item) => item.sample), [themes])
@@ -78,21 +76,15 @@ export function Gallery({
     [shown, recent, tagLabel],
   )
 
-  // 示例按**页型**铺开:一份稿子有几种页型就出现几次。这是分面,不是分类。
-  const examples = useMemo(() => templates.filter((item) => item.kind === 'example'), [templates])
-  const exampleSections = useMemo(
-    () => sectionsOf(examples, { fallback: '全部示例', label: tagLabel }),
-    [examples, tagLabel],
-  )
-
-  const blank = templates.find((item) => item.kind === 'template' && item.mode === mode)
-  const picked = example ?? (theme ? blank : undefined)
-  const pickedName = example?.title ?? themes.find((t) => t.name === theme)?.title ?? ''
+  const blank = templates.find((item) => item.mode === mode)
+  const picked = theme ? blank : undefined
+  const pickedName = themes.find((item) => item.name === theme)?.title ?? ''
 
   const create = () => {
     if (!picked) return
     // 没起名就用选中的那个名字,不拦着人往下走
-    onCreate(picked, title.trim() || pickedName, example ? undefined : theme)
+    if (!theme) return
+    onCreate(picked, title.trim() || pickedName, theme)
   }
 
   if (themes.length === 0 && templates.length === 0) {
@@ -146,11 +138,8 @@ export function Gallery({
                 <button
                   key={item.name}
                   type="button"
-                  data-picked={theme === item.name && !example}
-                  onClick={() => {
-                    setTheme(item.name)
-                    setExample(undefined)
-                  }}
+                  data-picked={theme === item.name}
+                  onClick={() => setTheme(item.name)}
                 >
                   <img src={assetUrl(item.sample)} alt="" />
                   <span className="gallery-title">{item.title}</span>
@@ -163,40 +152,6 @@ export function Gallery({
             </div>
           </section>
         ))}
-
-        {examples.length > 0 && (
-          <details className="gallery-examples" open={browsing}>
-            <summary onClick={() => setBrowsing((on) => !on)}>
-              示例
-              <em>看看别人怎么用的</em>
-            </summary>
-            {/*
-              按页型铺开,一份稿子有几种页型就出现几次 —— 这是**分面**不是分类。
-              没标页型的收在最后一组,不丢也不硬塞进某一类。
-            */}
-            {exampleSections.map((section) => (
-              <section key={section.title}>
-                <h2>{section.title}</h2>
-                <div className="gallery-grid">
-                  {section.items.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      data-picked={example?.id === item.id}
-                      onClick={() => {
-                        setExample(item)
-                        setTheme(undefined)
-                      }}
-                    >
-                      <img src={assetUrl(item.thumbnail)} alt="" />
-                      <span className="gallery-title">{item.title}</span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </details>
-        )}
       </div>
 
       {picked && (

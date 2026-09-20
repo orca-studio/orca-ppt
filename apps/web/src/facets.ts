@@ -1,7 +1,3 @@
-import type { RequestResult } from '@orca-ppt/contracts'
-
-export type Template = RequestResult<'catalog.templates'>['templates'][number]
-
 /**
  * 按标签铺成一列分区 —— **不是分类**。
  *

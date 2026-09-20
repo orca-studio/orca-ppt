@@ -251,9 +251,7 @@ export async function startServer(
       }
       case 'catalog.templates': {
         parseParams('catalog.templates', raw)
-        return {
-          templates: await listTemplates(catalog.skillPath, await vocabulary),
-        }
+        return { templates: await listTemplates(catalog.skillPath) }
       }
       case 'deck.showSlide': {
         const params = parseParams('deck.showSlide', raw)

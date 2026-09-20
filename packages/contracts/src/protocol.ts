@@ -93,21 +93,21 @@ export const requests = {
     }),
     result: z.object({ path: z.string() }),
   },
-  /** 新建时能从哪儿起头:skill 的空白模板和示例。 */
+  /**
+   * 新建时能从哪儿起头。**只有 skill 的空白起始文件**(汇报稿、故事稿)。
+   *
+   * 不列 `examples/`:那些是 skill 自己按**转场手法**命名的技术参考和回归用例,
+   * 不是按场景组织的模板。skill 只向产品提供三样:主题样张、空白起始文件、规范。
+   */
   'catalog.templates': {
     params: z.object({}),
     result: z.object({
       templates: z.array(
         z.object({
           id: z.string(),
-          kind: z.enum(['template', 'example']),
           title: z.string(),
-          /** 缩略图的绝对路径。skill 自己就给示例生成了 thumb.jpg,不用我们再渲。 */
-          thumbnail: z.string().optional(),
-          /** 汇报稿还是故事稿。两个起始文件,一份稿子只能是一种 —— 这是模式,不是标签。 */
-          mode: z.string().optional(),
-          /** 标签。**从词表里挑,不能自由决定**。 */
-          tags: z.array(z.string()),
+          /** 汇报稿还是故事稿。 */
+          mode: z.string(),
         }),
       ),
     }),

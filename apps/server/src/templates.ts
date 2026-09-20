@@ -1,28 +1,30 @@
-import { copyFile, mkdir, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
 import { join, relative, sep } from 'node:path'
-import { keepKnown, tagAttr, type Vocabulary } from './tags.js'
 
 /**
- * 新建稿子从哪儿起头。两类,都来自 skill:
+ * 新建稿子从哪儿起头。**只有 skill 的空白起始文件** —— 汇报稿和故事稿两份。
  *
- * - **空白模板** `templates/*.html`:汇报稿和故事稿的起始文件,里面是 `{{ROOT}}` 占位符。
- * - **示例** `examples/*`:能直接放映的成稿,每份都带 `thumb.jpg`(skill 自己生成的),
- *   所以缩略图是现成的,不用我们再渲一轮。
+ * **不读 `examples/`。** 那些是 skill 自己的东西:按**转场手法**命名的技术参考和回归
+ * 用例(`_tests/` 里是 match-cut、swap-text、zoom-through,`spec-wall` 是「整页视频 +
+ * 镂空聚焦」的能力演示,`compare-v1-v2.mp4` 是它改版前后的对比)。SKILL.md 让 agent
+ * 写页面时从 `templates/starter.html` 起头,**从来没让它从示例起头**。
  *
- * 两类都能复制到任何地方 —— 它们引到 deck 目录之外的只有 skill 自己(reveal、gsap、
+ * 「从示例开始建稿」是当初为了填满选择器发明的,skill 和它的工作流从没要求过。
+ * 代价一路都在:技术演示得被硬打上「商业/创意」这种场景标签、开发中的工作稿混进选择器、
+ * 页面类型认不准 —— 因为它们本来就不是按场景组织的东西。
+ *
+ * 所以 skill 只向产品提供三样:**主题样张、空白起始文件、规范**(给坐标校验用)。
+ * agent 要参考示例就直接读文件,它有文件工具。
+ *
+ * 起始文件能复制到任何地方 —— 它引到 deck 目录之外的只有 skill 自己(reveal、gsap、
  * runtime),重写一次相对前缀就行。不重写的话,稿子一挪位置就全白。
  */
 
 export interface DeckTemplate {
   id: string
-  kind: 'template' | 'example'
   title: string
-  /** 缩略图的绝对路径。空白模板没有。 */
-  thumbnail?: string
-  /** 汇报稿还是故事稿。两个起始文件,一份稿子只能是一种 —— 这是模式,不是标签。 */
-  mode?: string
-  /** 标签。**从 skill 的 `runtime/tags.json` 里挑,不能自由决定**(见 tags.ts)。 */
-  tags: string[]
+  /** 汇报稿还是故事稿。两个起始文件,一份稿子只能是一种。 */
+  mode: string
 }
 
 /** 模式只有这两种,对应两个起始文件。认不出来的不猜。 */
@@ -33,106 +35,22 @@ const BLANKS: Array<{ file: string; title: string; mode: string }> = [
   { file: 'story-starter.html', title: '故事稿', mode: 'story' },
 ]
 
-export async function listTemplates(
-  skillPath: string | undefined,
-  vocabulary: Vocabulary = [],
-): Promise<DeckTemplate[]> {
+export async function listTemplates(skillPath: string | undefined): Promise<DeckTemplate[]> {
   if (!skillPath) return []
 
   const blanks: DeckTemplate[] = []
   for (const blank of BLANKS) {
     try {
       await stat(join(skillPath, 'templates', blank.file))
-      blanks.push({
-        id: `template:${blank.file}`,
-        kind: 'template',
-        title: blank.title,
-        mode: blank.mode,
-        // 空白起始文件不带标签 —— 它还不是任何一类稿子,主题才决定那个。
-        tags: [],
-      })
+      blanks.push({ id: `template:${blank.file}`, title: blank.title, mode: blank.mode })
     } catch {
       // skill 里没有这份模板
     }
   }
-
-  return [...blanks, ...(await listExamples(skillPath, vocabulary))]
-}
-
-async function listExamples(skillPath: string, vocabulary: Vocabulary): Promise<DeckTemplate[]> {
-  const root = join(skillPath, 'examples')
-  let names: string[]
-  try {
-    names = await readdir(root)
-  } catch {
-    return []
-  }
-
-  const examples: DeckTemplate[] = []
-  for (const name of names.sort()) {
-    // `_assets`、`_tests` 这类内部目录不是示例
-    if (name.startsWith('_') || name.startsWith('.')) continue
-    const dir = join(root, name)
-    let html: string
-    try {
-      html = await readFile(join(dir, 'index.html'), 'utf8')
-    } catch {
-      continue
-    }
-
-    const thumb = join(dir, 'thumb.jpg')
-    const hasThumb = await stat(thumb).then(
-      () => true,
-      () => false,
-    )
-    // **没缩略图的不进选择器。** skill 的 examples/ 里混着开发中的工作稿,它们没录过
-    // 视频所以没有缩略图 —— 在选择器里就是一张白卡片,人看不出自己在挑什么。
-    if (!hasThumb) continue
-
-    examples.push({
-      id: `example:${name}`,
-      kind: 'example',
-      title: titleOf(html) ?? name,
-      thumbnail: thumb,
-      ...tagsOf(html, vocabulary),
-    })
-  }
-  return examples
-}
-
-/** 稿子自己声明的模式和标签。读不出来就是空 —— 不猜,归错一个标签比没有标签更糟。 */
-function tagsOf(html: string, vocabulary: Vocabulary): { mode?: string; tags: string[] } {
-  const mode = html.match(/<html[^>]*\bdata-layout="([a-z0-9-]+)"/i)?.[1]
-  return {
-    ...(mode && MODES.has(mode) ? { mode } : {}),
-    tags: keepKnown(tagAttr(html), vocabulary).kept,
-  }
-}
-
-/** 稿子的 `<title>`,取 `·` 之前那一段 —— 后面挂的是主题名和版式,列表里太长。 */
-function titleOf(html: string): string | undefined {
-  const match = html.match(/<title>([\s\S]*?)<\/title>/i)
-  const full = match?.[1]?.replace(/\s+/g, ' ').trim()
-  return full ? decodeEntities((full.split('·')[0] ?? full).trim()) : undefined
-}
-
-/** `<title>` 里是转义过的。不解码的话列表里会出现「Studio &amp; Salon」。 */
-const ENTITIES: Record<string, string> = {
-  '&amp;': '&',
-  '&lt;': '<',
-  '&gt;': '>',
-  '&quot;': '"',
-  '&#39;': "'",
-  '&nbsp;': ' ',
-}
-
-export function decodeEntities(text: string): string {
-  return text.replace(/&(?:amp|lt|gt|quot|nbsp|#39);/g, (entity) => ENTITIES[entity] ?? entity)
+  return blanks
 }
 
 /** 录制产物和缩略图不该跟着复制到新稿子里。 */
-const SKIP = new Set(['index.mp4', 'thumb.jpg', 'deck.mp4'])
-
 /**
  * 按模板建出一份新稿子,返回入口文件路径。
  *
@@ -150,6 +68,7 @@ export async function instantiate(options: {
 }): Promise<string> {
   const { skillPath, templateId, targetDir, theme, title } = options
   const [kind, name] = splitId(templateId)
+  if (kind !== 'template') throw new Error(`只能从空白起始文件新建,不认识:${templateId}`)
   await mkdir(join(targetDir, '.deck'), { recursive: true })
 
   /*
@@ -164,28 +83,11 @@ export async function instantiate(options: {
   const toSkill = relative(realTarget, realSkill).split(sep).join('/')
   const entry = join(targetDir, 'deck.html')
 
-  if (kind === 'template') {
-    const source = await readFile(join(skillPath, 'templates', name), 'utf8')
-    let html = source.split('{{ROOT}}').join(toSkill)
-    if (title) html = html.split('{{TITLE}}').join(title)
-    if (theme) html = withTheme(html, toSkill, theme)
-    await writeFile(entry, html)
-    return entry
-  }
-
-  const dir = join(skillPath, 'examples', name)
-  for (const file of await readdir(dir, { withFileTypes: true })) {
-    if (SKIP.has(file.name)) continue
-    if (file.isDirectory()) {
-      await copyDir(join(dir, file.name), join(targetDir, file.name))
-      continue
-    }
-    if (file.name === 'index.html') continue
-    await copyFile(join(dir, file.name), join(targetDir, file.name))
-  }
-
-  const html = await readFile(join(dir, 'index.html'), 'utf8')
-  await writeFile(entry, rewriteRoot(html, toSkill))
+  const source = await readFile(join(skillPath, 'templates', name), 'utf8')
+  let html = source.split('{{ROOT}}').join(toSkill)
+  if (title) html = html.split('{{TITLE}}').join(title)
+  if (theme) html = withTheme(html, toSkill, theme)
+  await writeFile(entry, html)
   return entry
 }
 
@@ -201,22 +103,9 @@ function withTheme(html: string, toSkill: string, theme: string): string {
   return html.replace(anchor, `${anchor}\n${link}`)
 }
 
-/** 示例都住在 `examples/<名字>/`,所以它们引 skill 的前缀固定是 `../../`。 */
-export function rewriteRoot(html: string, toSkill: string): string {
-  return html.replace(/(["'])\.\.\/\.\.\//g, `$1${toSkill}/`)
-}
-
 function splitId(id: string): ['template' | 'example', string] {
   const at = id.indexOf(':')
   const kind = id.slice(0, at)
   if (kind !== 'template' && kind !== 'example') throw new Error(`不认识的模板:${id}`)
   return [kind, id.slice(at + 1)]
-}
-
-async function copyDir(from: string, to: string): Promise<void> {
-  await mkdir(to, { recursive: true })
-  for (const entry of await readdir(from, { withFileTypes: true })) {
-    if (entry.isDirectory()) await copyDir(join(from, entry.name), join(to, entry.name))
-    else await copyFile(join(from, entry.name), join(to, entry.name))
-  }
 }
