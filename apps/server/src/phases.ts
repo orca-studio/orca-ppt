@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DeckPhase, PhaseReport } from '@orca-ppt/contracts'
 import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-ppt/deck-agent'
-import { findEntryName } from './decks.js'
+import { findEntryName, readPageTypes } from './decks.js'
+import { checkDeck } from './spec-check.js'
 
 /**
  * 阶段状态与闸门。server 拥有状态、持久化、恢复;**品味在 deck-agent** —— 提示词和
@@ -49,8 +50,23 @@ async function checkArtifact(
     const built = phase === 'build' ? await findEntryName(deckPath) : undefined
     const target = built ? join(deckPath, built) : path
     try {
-      await readFile(target, 'utf8')
-      return { ok: true, issues: [], missing: false }
+      const html = await readFile(target, 'utf8')
+      /*
+       * 出稿之后按规范核一遍坐标。
+       *
+       * 规范里那些数字不是审美偏好,是**转场的前提**:时间线的节点必须落在
+       * 120/560/1000/1440,因为 Bento 的四列也是这一套,两页之间才接得上。摆歪了
+       * 不会报错,要放映到那一下才发现 —— 那时候已经在给人看了。
+       *
+       * 只在 build 阶段核:review 阶段读的是同一份稿子,核两遍只会把同一条问题说两次。
+       */
+      const issues =
+        phase === 'build'
+          ? checkDeck(html, readPageTypes(html)).map(
+              (issue) => `第 ${issue.slide + 1} 页:${issue.message}`,
+            )
+          : []
+      return { ok: issues.length === 0, issues, missing: false }
     } catch {
       return options.requireBuild
         ? { ok: false, issues: [`没有写出 ${artifactPath[phase]}`], missing: false }
