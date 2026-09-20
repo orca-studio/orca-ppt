@@ -20,6 +20,20 @@ describe('countTopLevelSections', () => {
     expect(countTopLevelSections(html)).toBe(1)
   })
 
+  it.each([
+    ['双引号', '<div class="slides">'],
+    ['单引号', "<div class='slides'>"],
+    ['不带引号', '<div class=slides>'],
+    ['和别的类名并存', '<div class="deck slides dark">'],
+    ['class 前后有空格', '<div class = "slides">'],
+  ])('%s 都认得 —— 都是合法 HTML,只认一种写法会静默数出 0 页', (_name, open) => {
+    expect(countTopLevelSections(`${open}<section>1</section><section>2</section></div>`)).toBe(2)
+  })
+
+  it('类名只是包含 slides 不算(slideshow)', () => {
+    expect(countTopLevelSections('<div class="slideshow"><section>1</section></div>')).toBe(0)
+  })
+
   it('不是 reveal 稿就返回 0', () => {
     expect(countTopLevelSections('<html><body>hi</body></html>')).toBe(0)
   })

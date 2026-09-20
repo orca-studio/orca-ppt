@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
+import { toUrlPath } from './preview.js'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
 import { startServer, type OrcaServer } from './server.js'
@@ -9,8 +10,11 @@ import { startServer, type OrcaServer } from './server.js'
 let server: OrcaServer
 let socket: WebSocket
 let pushes: any[]
+/** 每个用例可以在 startServer 之前往里塞允许目录(假 skill)。 */
+let allowRoots: string[]
 
 beforeEach(async () => {
+  allowRoots = []
   server = await startServer()
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
@@ -228,38 +232,69 @@ describe('放映画布的 loopback 服务', () => {
     return { root, deck }
   }
 
-  it('服务根倒推到 skill 根,稿子里的 ../../ 能解析出来', async () => {
-    const { deck } = await skillLayout()
+  it('稿子里的 ../../ 原样解析到 skill —— 没有改写过 HTML', async () => {
+    const { root, deck } = await skillLayout()
+    await restartWithSkill(root)
+
     const opened = await call('deck.open', { path: deck })
     expect(opened.ok).toBe(true)
+    expect((await fetch(opened.data.previewUrl)).status).toBe(200)
 
-    const page = await fetch(opened.data.previewUrl)
-    expect(page.status).toBe(200)
-
-    // 稿子里的相对引用,原样解析 —— 没有改写过 HTML
     const css = await fetch(new URL('../../runtime/tokens.css', opened.data.previewUrl))
     expect(css.status).toBe(200)
     expect(await css.text()).toContain('--accent')
   })
 
+  it('深引用一样解析得到 —— deck 和 skill 隔得远时正是这种路径', async () => {
+    const { root } = await skillLayout()
+    const far = await mkdtemp(join(tmpdir(), 'far-'))
+    const deck = join(far, 'a', 'b', 'c', 'deck')
+    await mkdir(deck, { recursive: true })
+
+    const toSkill = relative(deck, root).split(sep).join('/')
+    await writeFile(
+      join(deck, 'deck.html'),
+      `<link rel="stylesheet" href="${toSkill}/runtime/tokens.css">
+       <div class="slides"><section>1</section></div>`,
+    )
+    await restartWithSkill(root)
+
+    const opened = await call('deck.open', { path: deck })
+    const css = await fetch(new URL(`${toSkill}/runtime/tokens.css`, opened.data.previewUrl))
+    expect(css.status).toBe(200)
+    expect(await css.text()).toContain('--accent')
+  })
+
+  it('deck 和 skill 之外的东西一律 403 —— 这不是通用文件服务', async () => {
+    const { root, deck } = await skillLayout()
+    await writeFile(join(root, '..', 'outside.txt'), '不该被服务出去').catch(() => {})
+    await restartWithSkill(root)
+
+    const opened = await call('deck.open', { path: deck })
+    const base = new URL(opened.data.previewUrl)
+    const mount = base.pathname.split('/').slice(0, 3).join('/')
+    expect(await rawRequest(server.port, `${mount}/etc/passwd`)).toBe(403)
+  })
+
   // fetch 会按 URL 规范把 `../` 和 `%2e%2e` 都消掉,请求根本到不了我们这儿。
   // 要验服务端自己的判断,只能自己拼请求行。
-  it('穿越到服务根之外一律拒绝', async () => {
-    const { deck } = await skillLayout()
+  it('穿越到允许目录之外一律拒绝', async () => {
+    const { root, deck } = await skillLayout()
+    await restartWithSkill(root)
     const opened = await call('deck.open', { path: deck })
     const mount = new URL(opened.data.previewUrl).pathname.split('/').slice(0, 3).join('/')
 
     for (const suffix of [
-      '/../../../../etc/passwd',
-      '/%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd',
-      '/../examples/forest-timeline/../../../etc/passwd',
+      `${toUrlPath(deck)}/../../../../etc/passwd`,
+      `${toUrlPath(deck)}/%2e%2e/%2e%2e/%2e%2e/%2e%2e/etc/passwd`,
     ]) {
       expect(await rawRequest(server.port, mount + suffix)).toBe(403)
     }
   })
 
   it('只读:GET/HEAD 之外拒绝', async () => {
-    const { deck } = await skillLayout()
+    const { root, deck } = await skillLayout()
+    await restartWithSkill(root)
     const opened = await call('deck.open', { path: deck })
     expect((await fetch(opened.data.previewUrl, { method: 'POST' })).status).toBe(405)
   })
@@ -289,5 +324,20 @@ function rawRequest(port: number, path: string): Promise<number> {
     socket.on('data', (chunk) => (buffer += chunk.toString()))
     socket.on('end', () => resolve(Number(buffer.split(' ')[1])))
     socket.on('error', reject)
+  })
+}
+
+/** 换一台把假 skill 列进允许目录的 server —— allow root 是启动时定的。 */
+async function restartWithSkill(skillRoot: string): Promise<void> {
+  socket.close()
+  await server.close()
+  allowRoots = [skillRoot]
+  server = await startServer({ allowRoots })
+  socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
+  await new Promise((done) => socket.once('open', done))
+  pushes = []
+  socket.on('message', (raw: Buffer) => {
+    const message = JSON.parse(raw.toString())
+    if (message.channel) pushes.push(message)
   })
 }

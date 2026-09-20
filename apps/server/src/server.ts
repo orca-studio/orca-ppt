@@ -37,9 +37,19 @@ export interface OrcaServer {
   close(): Promise<void>
 }
 
-export async function startServer(options: { port?: number } = {}): Promise<OrcaServer> {
+export async function startServer(
+  options: {
+    port?: number
+    /**
+     * 除 deck 目录之外还允许服务的目录。生产里就是 skill;测试用它注入一个假的。
+     * 允许目录之外的引用一律 403 —— 这不是一个通用文件服务。
+     */
+    allowRoots?: string[]
+  } = {},
+): Promise<OrcaServer> {
   const bus = new PushBus()
   const previews = new PreviewHost()
+  for (const root of options.allowRoots ?? []) await previews.allow(root)
   const openDecks = new Map<string, string>()
 
   const captures = new CaptureBroker((payload) => bus.broadcast('capture.request', payload))
@@ -74,8 +84,8 @@ export async function startServer(options: { port?: number } = {}): Promise<Orca
   }
 
   function mountPreview(opened: OpenedDeck): string {
-    if (!opened.entryFile || !opened.html) return ''
-    const plan = planPreview(opened.deck.path, opened.entryFile, opened.html)
+    if (!opened.entryFile) return ''
+    const plan = planPreview(opened.deck.path, opened.entryFile)
     return `http://127.0.0.1:${port}${previews.mount(plan).urlPath}`
   }
 
@@ -125,6 +135,9 @@ export async function startServer(options: { port?: number } = {}): Promise<Orca
 
   // skill 在哪一次解析,之后一直用。找不到也要能起来 —— 提示词里会如实说明。
   const catalog: Catalog = await readCatalog(await resolveSkillPath())
+  // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
+  // 把 skill 目录列进 allow root,那些请求就还能服务到。
+  await previews.allow(catalog.skillPath)
 
   function deckPathOf(deckId: string): string {
     const path = openDecks.get(deckId)

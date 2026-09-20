@@ -82,7 +82,9 @@ async function findEntry(root: string): Promise<{ file: string; html: string } |
  * 不该各算一页。所以要数嵌套深度,不能直接数 `<section` 的个数。
  */
 export function countTopLevelSections(html: string): number {
-  const slides = html.indexOf('class="slides"')
+  // class 可以不带引号、可以带单引号、也可以和别的类名并存 —— 这些都是合法 HTML,
+  // 只认 `class="slides"` 一种写法会在别人写的稿子上静默数出 0 页。
+  const slides = findSlidesContainer(html)
   if (slides === -1) return 0
 
   let count = 0
@@ -96,6 +98,15 @@ export function countTopLevelSections(html: string): number {
     depth += 1
   }
   return count
+}
+
+/** `class` 里含 `slides` 这个类的那个元素在哪。 */
+function findSlidesContainer(html: string): number {
+  for (const match of html.matchAll(/class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
+    const value = match[1] ?? match[2] ?? match[3] ?? ''
+    if (value.split(/\s+/).includes('slides')) return match.index
+  }
+  return -1
 }
 
 /** 产物缺席是正常情况(阶段还没跑到),不是错误。格式不对才是错误。 */

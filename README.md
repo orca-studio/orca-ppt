@@ -53,7 +53,7 @@ pnpm test
 | [Vision](./docs/VISION.md)             | 要解决什么,不做什么                   |
 | [Architecture](./docs/ARCHITECTURE.md) | 系统形状与决策(含否掉了什么)          |
 | [Deck Mode](./docs/DECK-MODE.md)       | 垂直闭环:阶段、产物契约、检视锚、自检 |
-| [Providers](./docs/PROVIDERS.md)       | 适配器模型与引擎矩阵                  |
+| [MCP](./docs/MCP.md)                   | 工具表、方向、怎么接进你的 agent      |
 | [Roadmap](./docs/ROADMAP.md)           | 里程碑与验收                          |
 | [AGENTS.md](./AGENTS.md)               | 在这个仓里干活的规矩                  |
 

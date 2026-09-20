@@ -64,6 +64,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     // 稿子在磁盘上变了 —— 不管是 agent 改的还是用户自己在编辑器里改的,画布都跟着走。
     next.subscribe('deck.changed', (data) => {
+      // 先抓更新前的值:setDeck 是异步的,更新里写 ref 再比较会比到新值。
+      const previousUrl = deckRef.current?.previewUrl
       setDeck((current) => {
         if (!current || current.deck.id !== data.deckId) return current
         const merged = {
@@ -75,8 +77,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
         deckRef.current = merged
         return merged
       })
-      // previewUrl 没变就只是内容变了,重载即可;变了说明成品刚出现,Stage 会自己挂上。
-      if (data.previewUrl === deckRef.current?.previewUrl) stage.current?.reload(slideRef.current)
+      // previewUrl 没变就只是内容变了,重载并回到原来那一页;
+      // 从空变成有值说明成品刚出现,Stage 这时才第一次挂上,不用我们管。
+      if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
     })
 
     // agent 要自己看一眼做出来的东西 —— 只有壳截得了图。

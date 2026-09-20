@@ -1,98 +1,65 @@
-import { homedir } from 'node:os'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { resolve, sep } from 'node:path'
 
 /**
  * 放映画布要在 loopback 上服务一份 deck。麻烦在于:skill 做出来的稿子引的是
  * `../../node_modules/reveal.js/dist/reveal.js` 和 `../../runtime/tokens.css` ——
  * **资源在 deck 目录之外**。只服务 deck 目录的话,页面能打开但没有 reveal 和主题。
  *
- * 所以这里按稿子**实际**逃逸的层数倒推服务根,而不是改写用户的 HTML。改写是另一条路,
- * 但那样画布里跑的就不是用户交付的那份文件了,「所见即所得」立刻不成立。
+ * 做法:**挂载路径直接镜像绝对文件路径**,`/p/<token>` + `/Users/…/deck.html`。
+ * 这样 URL 里的层数和磁盘上的层数一一对应,稿子里的相对引用在浏览器里解析出来的结果,
+ * 和它在磁盘上指向的东西完全一致 —— 不管它往上跳两层还是七层。
+ *
+ * 不改写稿子里的路径:改写了,画布里跑的就不是用户交付的那份文件,「所见即所得」立刻
+ * 不成立,而且改写里的一个小错会是隐形的。
+ *
+ * 之前试过「按逃逸层数倒推一个公共服务根」,对 deck 和 skill 隔得远的情况是错的:
+ * 服务根爬不到那么上面(爬上去就等于把家目录挂出去),深引用于是落在挂载路径内部,
+ * 全部 404。层数对齐没有这个问题。
  */
 
 export interface PreviewPlan {
-  /** HTTP 文档根。 */
-  serveRoot: string
   /** 入口文件的绝对路径。 */
   entryFile: string
-  /** 入口文件在文档根下的 URL 路径。 */
+  /** 这份 deck 允许读的目录(deck 自己)。skill 由 PreviewHost 全局放行。 */
+  root: string
+  /** 入口文件在挂载下的 URL 路径 —— 就是它的绝对路径。 */
   urlPath: string
-  escapeDepth: number
 }
 
-/** 逃逸层数的上限。超过这个数说明稿子的引用方式不对,而不是我们该往上服务更多目录。 */
-const MAX_ESCAPE_DEPTH = 4
+export function planPreview(deckDir: string, entryFile: string): PreviewPlan {
+  return {
+    entryFile: resolve(entryFile),
+    root: resolve(deckDir),
+    urlPath: toUrlPath(resolve(entryFile)),
+  }
+}
+
+/** 绝对文件路径 → URL 路径。Windows 的盘符当作第一段。 */
+export function toUrlPath(absolute: string): string {
+  const normalized = absolute.split(sep).join('/')
+  return normalized.startsWith('/') ? normalized : '/' + normalized
+}
 
 /**
- * 稿子引用的相对路径里,最多往上跳几层。
+ * URL 路径 → 磁盘路径,并确认它落在允许的目录里。
  *
- * 绝对 URL(https:、//、data:、以 / 开头)不参与 —— 它们不落在本地文件系统上。
- * 主题 CSS 里的字体是 Google Fonts 的 https 链接,所以 CSS 不会再往上逃逸一层。
+ * 越界一律拒绝。允许的只有这份 deck 的目录和 skill 目录 —— 这不是一个通用文件服务。
  */
-export function maxEscapeDepth(html: string): number {
-  let depth = 0
-  const references = html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"|url\(\s*["']?([^"')]+)/g)
-  for (const match of references) {
-    const raw = match[1] ?? match[2]
-    if (!raw) continue
-    if (/^(?:[a-z]+:|\/\/|\/|#|data:)/i.test(raw)) continue
-
-    let climbed = 0
-    for (const segment of raw.split('/')) {
-      if (segment === '..') climbed += 1
-      else break
-    }
-    depth = Math.max(depth, climbed)
-  }
-  return depth
-}
-
-/**
- * 服务根不能是家目录或更上层 —— 那等于把整个家目录挂在 loopback 上。
- * 真撞上了就如实报错,不要偷偷降级到一个跑不起来的根。
- */
-export function isUnsafeServeRoot(root: string): boolean {
-  const resolved = resolve(root)
-  const home = resolve(homedir())
-  if (resolved === home || home.startsWith(resolved + sep) || resolved === sep) return true
-  return resolved.split(sep).filter(Boolean).length < 2
-}
-
-export function planPreview(deckDir: string, entryFile: string, html: string): PreviewPlan {
-  const depth = maxEscapeDepth(html)
-  if (depth > MAX_ESCAPE_DEPTH) {
-    throw new Error(`稿子往上引用了 ${depth} 层,超过上限 ${MAX_ESCAPE_DEPTH} —— 检查一下引用路径`)
-  }
-
-  let serveRoot = resolve(deckDir)
-  for (let i = 0; i < depth; i += 1) serveRoot = dirname(serveRoot)
-
-  if (isUnsafeServeRoot(serveRoot)) {
-    throw new Error(
-      `这份稿子的资源要服务到 ${serveRoot},范围太大 —— 把 deck 放进一个工程目录再打开`,
-    )
-  }
-
-  const urlPath = '/' + relative(serveRoot, entryFile).split(sep).join('/')
-  return { serveRoot, entryFile, urlPath, escapeDepth: depth }
-}
-
-/**
- * URL 路径 → 磁盘路径。越界一律拒绝:解码后仍要落在文档根内部,
- * 符号链接也要在解析之后再检一次(调用方负责 realpath)。
- */
-export function resolveWithinRoot(serveRoot: string, urlPath: string): string | undefined {
+export function resolveWithinRoots(roots: string[], urlPath: string): string | undefined {
   let decoded: string
   try {
     decoded = decodeURIComponent(urlPath.split('?')[0] ?? '')
   } catch {
     return undefined
   }
-  if (decoded.includes('\0')) return undefined
+  if (decoded.includes('\0') || !decoded.startsWith('/')) return undefined
 
-  const root = resolve(serveRoot)
-  const target = resolve(join(root, '.' + (decoded.startsWith('/') ? decoded : '/' + decoded)))
-  return target === root || target.startsWith(root + sep) ? target : undefined
+  const target = resolve(decoded)
+  for (const root of roots) {
+    const resolvedRoot = resolve(root)
+    if (target === resolvedRoot || target.startsWith(resolvedRoot + sep)) return target
+  }
+  return undefined
 }
 
 const CONTENT_TYPES: Record<string, string> = {
