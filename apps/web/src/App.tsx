@@ -558,13 +558,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                   {picking ? '点画布上的元素,Esc 取消' : '在画布上点一处'}
                 </button>
               </div>
-              <Pending
-                requests={requests}
-                crops={crops}
-                mcpUrl={serverUrl.replace(/^ws:/, 'http:') + '/mcp'}
-                agentSeen={Boolean(agentSeenAt)}
-                onRemove={removeRequest}
-              />
+              <Pending requests={requests} crops={crops} onRemove={removeRequest} />
               {/* 阶段排在挂待办**后面**:稿子做出来之后,常用的是前者 */}
               <PhaseRail
                 rows={deck.phases}

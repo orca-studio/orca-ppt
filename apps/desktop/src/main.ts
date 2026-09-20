@@ -6,6 +6,7 @@ import {
   BrowserWindow,
   Menu,
   app,
+  clipboard,
   dialog,
   ipcMain,
   nativeTheme,
@@ -33,6 +34,11 @@ let workbench: BrowserWindow | undefined
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
 function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }): void {
   const send = (action: MenuAction) => {
+    // 连接说明是壳自己的对话框,不用绕一圈去渲染层
+    if (action === 'connect-agent') {
+      void showConnectAgent()
+      return
+    }
     // 不能用 getFocusedWindow():从菜单栏点的时候应用常常不是聚焦状态,
     // 那样返回 null,动作被静默丢掉。放映窗口在前面时同理。
     workbench?.webContents.send('menu:action', action)
@@ -44,6 +50,7 @@ function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'da
 
 async function createWindow(): Promise<void> {
   const port = await supervisor.start(join(here, '../../server/dist/main.js'))
+  serverPort = port
 
   const window = new BrowserWindow({
     width: 1440,
@@ -280,6 +287,24 @@ ipcMain.handle('app:theme', (_event, source: 'system' | 'light' | 'dark') => {
   nativeTheme.themeSource = source
   return nativeTheme.shouldUseDarkColors
 })
+
+/** server 起在哪个端口,连接说明要用。 */
+let serverPort = 0
+
+/** 「帮助 > 连接 agent…」:给出一行命令,点一下就拷走。 */
+async function showConnectAgent(): Promise<void> {
+  const url = `http://127.0.0.1:${serverPort}/mcp`
+  const command = `claude mcp add --transport http orca-ppt ${url}`
+  const result = await dialog.showMessageBox({
+    type: 'info',
+    message: '让 agent 代你操作',
+    detail: `${APP_NAME} 开着的时候,MCP 挂在\n${url}\n\nClaude Code:\n${command}\n\nCodex:\ncodex mcp add orca-ppt --url ${url}`,
+    buttons: ['拷贝 Claude Code 的命令', '好'],
+    defaultId: 0,
+    cancelId: 1,
+  })
+  if (result.response === 0) clipboard.writeText(command)
+}
 
 ipcMain.handle('deck:pick', async () => {
   const result = await dialog.showOpenDialog({

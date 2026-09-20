@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { PendingRequest } from '@orca-ppt/contracts'
 
 /**
@@ -7,35 +6,20 @@ import type { PendingRequest } from '@orca-ppt/contracts'
  * **不是一个「待办队列」** —— 人本来就是在跟 agent 说话,点一下只是**指给它看**,
  * 「挂进队列等它来取」这个环节在用户脑子里不存在,写在界面上只会让人以为还要做点什么。
  *
- * 底下的机制确实是拉不是推(MCP 没有把消息推进对话的原语),但那是管道的事,
- * 不该漏到界面上来。
+ * 空的时候什么都不显示:上面那个按钮已经写着「在画布上点一处」,再解释一遍是重复。
+ * 怎么连 agent 属于设置,在「帮助 > 连接 agent…」里,不常驻在工作面板上。
  */
 export function Pending({
   requests,
   crops,
-  mcpUrl,
-  agentSeen,
   onRemove,
 }: {
   requests: PendingRequest[]
   /** 锚的裁切图,按 request id 索引 —— 图只在本机预览用,不进协议。 */
   crops: Map<string, string>
-  mcpUrl: string
-  /** agent 来取过东西吗。没有才提示怎么连 —— 连上之后那行就是噪音。 */
-  agentSeen: boolean
   onRemove: (id: string) => void
 }) {
-  if (requests.length === 0) {
-    return (
-      <div className="pending pending-empty">
-        <p className="muted">
-          在画布上点一处,看清它在 1920×1080 版面里的位置。让 agent 代你改的时候,
-          它读得到你指的是哪儿。
-        </p>
-        {!agentSeen && <Install url={mcpUrl} />}
-      </div>
-    )
-  }
+  if (requests.length === 0) return null
 
   return (
     <div className="pending">
@@ -53,31 +37,6 @@ export function Pending({
           </li>
         ))}
       </ul>
-      {!agentSeen && <Install url={mcpUrl} />}
-    </div>
-  )
-}
-
-/** agent 还没连上时得有地方看到怎么连。一行命令,点一下就复制。 */
-function Install({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
-  const command = `claude mcp add --transport http orca-ppt ${url}`
-
-  return (
-    <div className="install">
-      <span>让 agent 代你操作:</span>
-      <button
-        type="button"
-        onClick={() => {
-          void navigator.clipboard.writeText(command).then(() => {
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1500)
-          })
-        }}
-      >
-        {copied ? '已复制' : '复制连接命令'}
-      </button>
-      <code>{url}</code>
     </div>
   )
 }

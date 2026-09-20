@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
-import { ThemeButton } from './ThemeButton.js'
 
 type Template = RequestResult<'catalog.templates'>['templates'][number]
 
@@ -38,7 +37,6 @@ export function Gallery({ templates, busy, error, onCreate, onOpen }: GalleryPro
         <button type="button" onClick={onOpen}>
           打开已有的…
         </button>
-        <ThemeButton />
       </header>
 
       {templates.length === 0 ? (

@@ -16,6 +16,7 @@ export type MenuAction =
   | 'theme:system'
   | 'theme:light'
   | 'theme:dark'
+  | 'connect-agent'
 
 export interface MenuOptions {
   appName: string
@@ -122,6 +123,16 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
               click: () => send('theme:dark'),
             },
           ],
+        },
+      ],
+    },
+    {
+      label: '帮助',
+      submenu: [
+        {
+          // 怎么连 agent 是**设置**,不该常驻在工作面板上
+          label: '连接 agent…',
+          click: () => send('connect-agent'),
         },
       ],
     },

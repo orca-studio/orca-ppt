@@ -71,3 +71,22 @@ describe('应用菜单', () => {
     expect(file[0]!.accelerator).toBe('CmdOrCtrl+O')
   })
 })
+
+describe('帮助', () => {
+  it('连接 agent 在菜单里 —— 那是设置,不该常驻在工作面板上', () => {
+    const sent: string[] = []
+    const template = buildMenuTemplate({
+      appName: 'OrcaPPT',
+      isMac: true,
+      canPresent: true,
+      theme: 'system',
+      send: (action) => sent.push(action),
+    })
+    const help = template.find((item) => item.label === '帮助')!.submenu as Array<{
+      label?: string
+      click?: () => void
+    }>
+    help[0]!.click!()
+    expect(sent).toEqual(['connect-agent'])
+  })
+})
