@@ -107,8 +107,8 @@ export async function startServer(
   // MCP 和界面走同一个进程、同一个端口:工具调的就是界面调的那批方法。
   const mcp = new McpEndpoint(
     (method, params) => dispatch(method, params) as never,
-    // agent 动了一下,界面就该看得见 —— 比不管三七二十一都提示「还没连上?」诚实。
-    (tool) => bus.broadcast('mcp.activity', { tool, at: Date.now() }),
+    // agent 动了一下,界面就该看得见 —— 它是代替人执行的,做的事不该比人做的更隐蔽。
+    (activity) => bus.broadcast('mcp.activity', activity),
   )
 
   const http = createHttpServer((req, res) => {

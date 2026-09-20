@@ -9,6 +9,7 @@ import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type StageHandle, type TextEdit } from './Stage.js'
+import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 
@@ -32,7 +33,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [requests, setRequests] = useState<PendingRequest[]>([])
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
-  const [agentSeenAt, setAgentSeenAt] = useState<number | undefined>()
+  const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([])
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
@@ -103,7 +104,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
     })
 
-    next.subscribe('mcp.activity', (data) => setAgentSeenAt(data.at))
+    next.subscribe('mcp.activity', (data) => setAgent((prev) => reduce(prev, data)))
 
     next.subscribe('autoplay.changed', (data) => {
       setAutoplay(data.on)
@@ -388,16 +389,26 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [])
 
   /**
-   * agent「在线」的判定:最近 60 秒内调过工具。
+   * 高亮到点要自己灭 —— 时间自己会走,不能等下一条推送才过期,否则 agent 一停,
+   * 最后那圈高亮就永远亮着。
    *
-   * MCP 是无状态 HTTP,没有连接可言 —— 唯一诚实的信号就是「它刚刚动过」。
+   * 只在有东西亮着时才走这个计时器,闲着的时候一帧都不跑。
    */
+  const agentBusy = agent.touched.size > 0 || Boolean(agent.running) || Boolean(agent.failed)
   useEffect(() => {
-    if (!agentSeenAt) return
-    const timer = setInterval(() => setNow(Date.now()), 5_000)
+    if (!agentBusy) return
+    // 250ms:够让一次退场看着是"淡出"而不是"跳掉",又不至于每帧都在算。
+    const timer = setInterval(() => {
+      const at = Date.now()
+      setNow(at)
+      setAgent((prev) => prune(prev, at))
+    }, 250)
     return () => clearInterval(timer)
-  }, [agentSeenAt])
-  const agentLive = Boolean(agentSeenAt && now - agentSeenAt < 60_000)
+  }, [agentBusy])
+
+  // agent 在不在,只能看它最近动没动 —— MCP 是无状态 HTTP,没有连接可查。
+  const agentLive = isLive(agent, now)
+  const agentCaption = caption(agent)
 
   /** 一页显示什么文字。outline 的 subject 是定下来的决定,优先于从稿子认出来的标签。 */
   const titleOf = useCallback(
@@ -469,6 +480,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
                     <button
                       type="button"
                       data-current={index === slide}
+                      // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
+                      // 写是「这儿被改了」,后者更要紧,也留得更久。
+                      data-agent={agent.touched.get(index)?.kind}
                       onClick={() => goto(index)}
                     >
                       <span className="filmstrip-no">{index + 1}</span>
@@ -546,8 +560,19 @@ export function App({ serverUrl }: { serverUrl: string }) {
               </span>
             )}
             {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
-            <span className="status-agent" data-live={agentLive}>
-              {agentLive ? 'agent 在线' : 'agent 未连'}
+            <span className="status-right">
+              {/*
+                agent 正在做什么,就写在它的状态旁边 —— 这是这块最要紧的信息:
+                画布自己翻了页、文字自己变了,人得当场知道是谁干的。
+              */}
+              {agentCaption && (
+                <span className="status-agent-doing" data-tone={agentCaption.tone}>
+                  {agentCaption.text}
+                </span>
+              )}
+              <span className="status-agent" data-live={agentLive}>
+                {agentLive ? 'agent 在线' : 'agent 未连'}
+              </span>
             </span>
           </footer>
         </section>

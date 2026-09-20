@@ -56,20 +56,55 @@ export class ActiveDeck {
 
 const Phase = z.enum(phaseOrder as [DeckPhase, ...DeckPhase[]])
 
-type Text = { content: Array<{ type: 'text'; text: string }> }
+/**
+ * `isError` 是 MCP 自己的字段:工具跑到了,但这件事没办成。
+ *
+ * 用它而不是 throw:理由要原样交到 agent 手里(「这一页里有好几处一样的文字」比
+ * 一个异常有用得多),同时界面也认得出这次没办成 —— 报成功是不诚实的。
+ */
+type Text = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
 const text = (value: string): Text => ({ content: [{ type: 'text', text: value }] })
+const refuse = (value: string): Text => ({
+  content: [{ type: 'text', text: value }],
+  isError: true,
+})
 const json = (value: unknown): Text => text(JSON.stringify(value, null, 2))
+
+/**
+ * 这次调用在界面上该显示成什么。**agent 是代替人执行的,那它做的事就该和人做的一样
+ * 看得见** —— 画布自己翻页、文字自己变了,人不该只能干看着猜。
+ *
+ * `slides` 空数组表示说不准是哪一页(比如截"当前这页",页号在画布那边)。
+ */
+export interface ToolActivity {
+  /** 动没动磁盘上的稿子。写过的地方高亮留得久一点,让人看清改了哪儿。 */
+  kind: 'read' | 'write'
+  label: string
+  slides: number[]
+}
 
 export interface ToolSpec {
   name: string
   config: { title: string; description: string; inputSchema?: z.ZodRawShape }
   run: (args: Record<string, unknown>) => Promise<Text>
+  /** 不给就按「读、说不准哪一页、拿标题当说明」处理。 */
+  activity?: (args: Record<string, unknown>) => ToolActivity
 }
+
+/** 参数里的页号。拿不到就返回空数组 —— 宁可不高亮,也别高亮错的那页。 */
+function slideArg(args: Record<string, unknown>, key = 'slide'): number[] {
+  const value = args[key]
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? [value] : []
+}
+
+const nth = (slides: number[]) =>
+  slides[0] === undefined ? '当前这一页' : `第 ${slides[0] + 1} 页`
 
 export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[] {
   return [
     {
       name: 'open_deck',
+      activity: () => ({ kind: 'read', label: '打开稿子', slides: [] }),
       config: {
         title: '打开 deck',
         description:
@@ -89,6 +124,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'create_deck',
+      activity: () => ({ kind: 'write', label: '新建稿子', slides: [] }),
       config: {
         title: '新建 deck',
         description: '在一个目录下建一份空 deck。建完还要 open_deck 才会在界面上打开。',
@@ -107,6 +143,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'deck_status',
+      activity: () => ({ kind: 'read', label: '看稿子的状态', slides: [] }),
       config: {
         title: '看当前 deck 的状态',
         description:
@@ -119,6 +156,10 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'show_slide',
+      activity: (args) => {
+        const slides = slideArg(args, 'index')
+        return { kind: 'read', label: `让你看${nth(slides)}`, slides }
+      },
       config: {
         title: '让画布跳到第几页',
         description:
@@ -135,6 +176,10 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'edit_text',
+      activity: (args) => {
+        const slides = slideArg(args)
+        return { kind: 'write', label: `改${nth(slides)}的文字`, slides }
+      },
       config: {
         title: '换掉一句话',
         description:
@@ -152,12 +197,13 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           oldText: String(args.old_text),
           newText: String(args.new_text),
         })
-        if (!result.ok) return text(`没改:${result.reason}`)
+        if (!result.ok) return refuse(`没改:${result.reason}`)
         return text(`第 ${Number(args.slide) + 1} 页改好了。`)
       },
     },
     {
       name: 'user_selection',
+      activity: () => ({ kind: 'read', label: '取你指的地方', slides: [] }),
       config: {
         title: '用户正指着什么',
         description:
@@ -173,6 +219,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'peek_selection',
+      activity: () => ({ kind: 'read', label: '看你指的地方', slides: [] }),
       config: {
         title: '看一眼用户指着什么但不清空',
         description: '和 user_selection 一样,但读完不清空。',
@@ -184,6 +231,11 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'phase_prompt',
+      activity: (args) => ({
+        kind: 'read',
+        label: `取「${String(args.phase ?? '')}」阶段的做法`,
+        slides: [],
+      }),
       config: {
         title: '取一个阶段的做法',
         description:
@@ -209,6 +261,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'check_phase',
+      activity: () => ({ kind: 'read', label: '校验各阶段', slides: [] }),
       config: {
         title: '校验阶段产物',
         description:
@@ -225,6 +278,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'artifact_path',
+      activity: () => ({ kind: 'read', label: '找产物路径', slides: [] }),
       config: {
         title: '拿阶段产物的路径',
         description: '某个阶段的产物文件在磁盘上的绝对路径,用来读写它。',
@@ -240,6 +294,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'present',
+      activity: (args) => ({ kind: 'read', label: '开始放映', slides: slideArg(args, 'from') }),
       config: {
         title: '全屏放映',
         description:
@@ -258,6 +313,11 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'autoplay',
+      activity: (args) => ({
+        kind: 'read',
+        label: args.on === false ? '停掉自动播放' : '开始自动播放',
+        slides: [],
+      }),
       config: {
         title: '自动播放',
         description:
@@ -272,6 +332,10 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'capture_slide',
+      activity: (args) => {
+        const slides = slideArg(args)
+        return { kind: 'read', label: `在看${nth(slides)}`, slides }
+      },
       config: {
         title: '截一张画布的图',
         description:
@@ -296,6 +360,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'list_themes',
+      activity: () => ({ kind: 'read', label: '看现成主题', slides: [] }),
       config: {
         title: '列出现成主题和版式',
         description:

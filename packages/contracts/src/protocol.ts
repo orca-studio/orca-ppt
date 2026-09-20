@@ -292,10 +292,27 @@ export const pushes = {
     slide: z.number().int().nonnegative(),
   }),
   /**
-   * agent 刚通过 MCP 调了一次工具。界面据此显示「agent 在线」—— 比不管三七二十一
-   * 都提示「还没连上?」诚实。
+   * agent 通过 MCP 动了一下。**agent 代替人执行,那它做的事就该和人做的一样看得见** ——
+   * 否则画布自己翻页、文字自己变了,人只能干看着猜。
+   *
+   * 每次工具调用推两条:`start` 在工具跑**之前**,`done` 在之后。读也要先announce ——
+   * `capture_slide` 会把画布跳到另一页,不先说一声的话人是懵的。
    */
-  'mcp.activity': z.object({ tool: z.string(), at: z.number() }),
+  'mcp.activity': z.object({
+    /** 一次调用的 id,start 和 done 靠它配对。 */
+    id: z.string(),
+    tool: z.string(),
+    /** 动没动磁盘上的稿子。写过的地方高亮要留得久一点,让人看清改了哪儿。 */
+    kind: z.enum(['read', 'write']),
+    phase: z.enum(['start', 'done']),
+    /** 人话,直接显示:「让你看第 4 页」「改第 3 页的文字」。 */
+    label: z.string(),
+    /** 涉及哪几页。空数组表示说不准是哪一页(比如截当前这页)。 */
+    slides: z.array(z.number().int().nonnegative()),
+    at: z.number(),
+    /** 只在 `done` 上出现。工具自己拒绝(比如改不了那段文字)也算。 */
+    error: z.string().optional(),
+  }),
   /** 请壳离屏渲一份缩略图。壳渲完调 `thumbnails.result` 交回来。 */
   'thumbnails.request': z.object({
     deckId: z.string(),

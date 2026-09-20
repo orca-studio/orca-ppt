@@ -26,6 +26,8 @@
   --muted: #6e6e76;
   --accent: #16a34a;
   --danger: #dc2626;
+  /* agent 动过的地方。和 --accent 分开 —— 绿色已经是「当前这一页」的意思了。 */
+  --agent: #6366f1;
   /* 画布衬底:稿子浮在上面像一个对象放在台面上,而不是陷进一片黑里 */
   --stage: #e6e6ea;
   --stage-shadow: 0 8px 28px rgb(0 0 0 / 0.16);
@@ -61,6 +63,7 @@
   --muted: #8a8a92;
   --accent: #4ade80;
   --danger: #f87171;
+  --agent: #a5b4fc;
   --stage: #0f0f11;
   --stage-shadow: 0 8px 32px rgb(0 0 0 / 0.5);
   --control: rgb(255 255 255 / 0.08);
@@ -305,6 +308,9 @@ body {
   color: var(--text);
   font: inherit;
   cursor: pointer;
+  transition:
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
 }
 
 .filmstrip button:hover {
@@ -1375,12 +1381,76 @@ code {
   color: var(--panel);
 }
 
-.status-agent {
+.status-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* agent 那行字长短不一,右对齐的话整块会来回抖。固定右端,往左生长。 */
+  min-width: 0;
 }
 
 .status-agent[data-live='true'] {
   color: var(--accent);
+}
+
+/* agent 此刻在做什么。没动静时这个元素根本不存在 —— 常驻一行字会变成背景噪音。 */
+.status-agent-doing {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-agent-doing[data-tone='busy'] {
+  color: var(--agent);
+}
+
+.status-agent-doing[data-tone='busy']::before {
+  content: '●';
+  margin-right: 6px;
+  animation: agent-pulse 1.1s ease-in-out infinite;
+}
+
+.status-agent-doing[data-tone='failed'] {
+  color: var(--danger);
+}
+
+@keyframes agent-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/*
+ * agent 碰过的页。读和写分开:
+ *   读 —— 一圈淡边,「它正在看这儿」,看完就过去了;
+ *   写 —— 实边加一层底色,「这儿被改了」,人得有时间把视线移过去看清。
+ *
+ * 退场靠 transition:状态一过期 data-agent 就没了,颜色自己淡回去,不用写退场动画。
+ */
+.filmstrip button[data-agent] {
+  position: relative;
+}
+
+.filmstrip button[data-agent='read'] {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--agent) 40%, transparent);
+}
+
+.filmstrip button[data-agent='write'] {
+  box-shadow: 0 0 0 2px var(--agent);
+  background: color-mix(in oklab, var(--agent) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filmstrip button[data-agent='write'] {
+    animation: agent-wrote 0.45s ease;
+  }
+}
+
+@keyframes agent-wrote {
+  from {
+    box-shadow: 0 0 0 7px color-mix(in oklab, var(--agent) 30%, transparent);
+  }
 }
 
 /* 展开一个阶段:这一步该怎么做,人读得懂也带得走 */
