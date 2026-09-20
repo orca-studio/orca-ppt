@@ -33,6 +33,8 @@ export interface StageHandle {
   /** 稿子变了,重载并回到原来那一页。 */
   reload(slide: number): void
   goto(slide: number): void
+  /** 往后翻一页 —— 只有往后翻才播转场。 */
+  next(): void
   /** guest 的 webContents id —— 主进程按它找到 guest 去截图。 */
   guestId(): number | undefined
 }
@@ -111,6 +113,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       goto: (slide: number) => {
         void ref.current?.executeJavaScript(`Reveal.slide(${slide})`).catch(() => {})
+      },
+      next: () => {
+        void ref.current
+          ?.executeJavaScript('window.__orcaAutoplay?.stop(); Reveal.next()')
+          .catch(() => {})
       },
       guestId: () => {
         try {

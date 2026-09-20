@@ -4,6 +4,7 @@ import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
 import { Gallery } from './Gallery.js'
+import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type StageHandle } from './Stage.js'
@@ -300,6 +301,33 @@ export function App({ serverUrl }: { serverUrl: string }) {
     [openWith],
   )
 
+  /** 重放一次翻页:先跳回上一页,再往后翻一次 —— 往后翻才播转场。 */
+  const replay = useCallback((from: number) => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return
+    void active
+      .request('deck.showSlide', { deckId: current.deck.id, index: from })
+      .then(() => new Promise((resolve) => setTimeout(resolve, 260)))
+      .then(() => stage.current?.next())
+  }, [])
+
+  /** 指着一次转场说「这儿不对」—— 产生一条转场锚,和画布上点元素同一个去处。 */
+  const flagTransition = useCallback(
+    (from: number, to: number) => {
+      const active = transport.current
+      const current = deckRef.current
+      if (!active || !current) return
+      void active.request('requests.add', {
+        deckId: current.deck.id,
+        kind: 'anchor',
+        anchor: { kind: 'transition', from, to, note },
+      })
+      setNote('')
+    },
+    [note],
+  )
+
   const goto = useCallback((index: number) => {
     const active = transport.current
     const current = deckRef.current
@@ -407,6 +435,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
                         <span className="filmstrip-title">{titleOf(index)}</span>
                       )}
                     </button>
+                    {index < deck.slideCount - 1 && (
+                      <TransitionLink
+                        note={deck.transitionPlan.find((t) => t.from === index)}
+                        onReplay={() => replay(index)}
+                        onFlag={() => flagTransition(index, index + 1)}
+                      />
+                    )}
                   </li>
                 ))}
               </ol>

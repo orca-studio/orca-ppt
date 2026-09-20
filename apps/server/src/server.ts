@@ -24,6 +24,7 @@ import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, resolveSkillPath, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
+import { readTransitionPlan } from './transitions.js'
 
 /**
  * 本地 server 拥有全部状态。界面和 MCP server 都是它的薄客户端 —— 界面不 spawn 进程、
@@ -85,7 +86,11 @@ export async function startServer(
       // 成品第一次出现时 previewUrl 才有值,界面靠这条把画布接上。
       previewUrl: mountPreview(opened),
     })
-    bus.broadcast('transition.changed', { deckId, transitions: opened.transitions })
+    bus.broadcast('transition.changed', {
+      deckId,
+      transitions: opened.transitions,
+      plan: readTransitionPlan(opened),
+    })
     for (const report of await readPhaseStatus(path)) {
       bus.broadcast('phase.changed', { deckId, ...report })
     }
@@ -196,6 +201,7 @@ export async function startServer(
           transitions: opened.transitions,
           slideCount: opened.slideCount,
           slideTitles: opened.slideTitles,
+          transitionPlan: readTransitionPlan(opened),
           phases: await readPhaseStatus(opened.deck.path),
           previewUrl: mountPreview(opened),
         }

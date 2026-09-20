@@ -281,6 +281,12 @@ body {
   margin: 0;
   padding: 0;
   display: grid;
+  /*
+   * 必须写 minmax(0, 1fr):grid 列默认是 auto = max-content,会被缩略图的**固有宽度**
+   * (我们渲的是 320px)撑开,整条胶片溢出到栏外。列不给 minmax(0, …) 就不肯缩到
+   * 内容以下 —— 和 flex 项要 min-width:0 是同一类坑。
+   */
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
 }
 
@@ -852,8 +858,10 @@ code {
 }
 
 .pane--nav .filmstrip-thumb {
+  /* flex 项默认不肯缩到内容以下,不给 min-width:0 就会把图顶出栏外 */
   width: auto;
   flex: 1;
+  min-width: 0;
 }
 
 .pane--nav .filmstrip-title {
@@ -1242,4 +1250,62 @@ code {
 
 .gallery > header button + button {
   margin-left: 0;
+}
+
+/* 两张缩略图之间的那一道:这次翻页怎么接上的 */
+.tlink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 2px 26px;
+  padding: 2px 0;
+  font-size: 11px;
+  color: var(--muted);
+  min-height: 18px;
+}
+
+/* 没写计划的那几次翻页留一道空隙,不留的话上下两张图会贴在一起 */
+.tlink--none {
+  min-height: 10px;
+}
+
+.tlink-technique {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tlink-technique::before {
+  content: '↓ ';
+  opacity: 0.6;
+}
+
+.tlink-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tlink:hover .tlink-actions {
+  opacity: 1;
+}
+
+.tlink-actions button {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tlink-actions button:hover {
+  background: var(--control-hover);
 }

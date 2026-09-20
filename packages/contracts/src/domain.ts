@@ -60,6 +60,24 @@ export const Transition = z.object({
 export type Transition = z.infer<typeof Transition>
 
 /**
+ * 稿子里记着的一次转场,给时间轴显示用。
+ *
+ * 和 `Transition` 的区别:那个是 plan 阶段**定**下来的,手法取自枚举;这个是给人看的 ——
+ * 手法按稿子里写的原话。skill 做出来的稿子把计划写在 HTML 注释里,里面的手法是自然语言
+ * (「整页推近」「推近式匹配剪辑」「遮挡 + 形态变换」),八项枚举装不下,硬塞会失真。
+ */
+export const TransitionNote = z.object({
+  from: z.number().int().nonnegative(),
+  to: z.number().int().nonnegative(),
+  /** 两页之间是什么关系。时间轴上最该被看见的就是这句 —— 画面只告诉你发生了什么。 */
+  relation: z.string(),
+  technique: z.string(),
+  /** 承接运动的元素,原样照抄。 */
+  anchor: z.string().optional(),
+})
+export type TransitionNote = z.infer<typeof TransitionNote>
+
+/**
  * 检视锚 —— 本产品的核心数据结构。用户在放映画布上点中一个元素时生成,
  * 随消息一起进 thread,让 agent 拿到坐标而不是形容词。
  */

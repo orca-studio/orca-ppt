@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Anchor, DeckPhase, DeckSummary, Slide, Transition } from './domain.js'
+import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } from './domain.js'
 
 /**
  * 线上协议。两个方向、每个载荷都在边界上校验 —— 这个包是唯一真相,改协议就是改这里,
@@ -38,6 +38,11 @@ export const requests = {
       deck: DeckSummary,
       slides: z.array(Slide),
       transitions: z.array(Transition),
+      /**
+       * 每次翻页一条,给时间轴用。来自 `.deck/plan.json`,没有就从稿子的 HTML 注释里
+       * 解析 —— 不然打开任何一份现成稿子,时间轴都是空的。
+       */
+      transitionPlan: z.array(TransitionNote),
       /** 放映画布要加载的 loopback 地址。成品还没出来时为空。 */
       previewUrl: z.string(),
       /**
@@ -241,7 +246,11 @@ export const pushes = {
     slideTitles: z.array(z.string().nullable()),
     previewUrl: z.string(),
   }),
-  'transition.changed': z.object({ deckId: z.string(), transitions: z.array(Transition) }),
+  'transition.changed': z.object({
+    deckId: z.string(),
+    transitions: z.array(Transition),
+    plan: z.array(TransitionNote),
+  }),
   /** 阶段状态变了。产物本身用 artifact.path 去读,这里只报状态。 */
   'phase.changed': z.object({
     deckId: z.string(),
