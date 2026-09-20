@@ -58,6 +58,25 @@ export function withTag<T extends { tags: Record<string, string[]> }>(
 }
 
 /**
+ * 铺成一列分区。**标签是分区,不是卡片上的一条属性** ——
+ * 这是分面模型最容易做丢的一点:分区意味着同一个条目会在下面的分区里**再出现一次**
+ * (Keynote 里「启动(简易)」在「最近使用」和「商业」各有一份)。做成属性就只能出现
+ * 一次,重复出现这件事本身就没了,而那正是分面区别于分类的地方。
+ *
+ * `axes` 按顺序产生分区;`fallback` 是兜底那一区(带上全部条目),它保证每个条目至少
+ * 露一次 —— 标签再怎么不全,人也不该找不到东西。
+ */
+export function sectionsOf<T extends { tags: Record<string, string[]> }>(
+  items: T[],
+  axes: string[],
+  fallback?: string,
+): Array<{ value: string; items: T[] }> {
+  const sections = axes.flatMap((axis) => facetsOf(items, axis))
+  if (fallback && items.length > 0) sections.push({ value: fallback, items })
+  return sections
+}
+
+/**
  * 某个轴上出现过的全部标签。**这就是筛选条的数据** —— 有什么标签由条目自己决定,
  * 不用另外维护一张表。有了新标签,筛选条自己就长出来了。
  */

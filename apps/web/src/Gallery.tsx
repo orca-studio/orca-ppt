@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { assetUrl } from './assets.js'
-import { facetsOf, withTag, type Template } from './facets.js'
+import { facetsOf, sectionsOf, type Template } from './facets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
 
@@ -36,8 +36,17 @@ const MODES: Array<{ key: string; title: string; hint: string }> = [
   { key: 'story', title: '故事稿', hint: '一页一张照片,讲演变' },
 ]
 
-/** 主题里想提到最前的标签。「最近使用」是派生的 —— 下次挑哪个,最强的预测是上次挑了哪个。 */
-const THEME_ORDER = ['最近使用']
+/**
+ * 主题按哪些轴分区。目前只有 `use`(现在只产出「最近使用」)。
+ *
+ * **标签是分区,不是卡片上的一条属性** —— 分区意味着同一张卡会在下面的兜底区里再出现
+ * 一次,这正是分面区别于分类的地方。做成卡片上一行小字就只能出现一次,重复出现这件事
+ * 本身就没了。
+ *
+ * 场景标签今天每个主题各不相同(五个主题五个场景),拿来分区就是五个各一张卡的区,
+ * 是虚胖;风格标签有重叠(「衬线」三个、「高对比」两个),等主题多起来再加进这里。
+ */
+const THEME_AXES = ['use']
 
 export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: GalleryProps) {
   const [mode, setMode] = useState('standard')
@@ -49,14 +58,7 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
   // **没样张的主题不显示** —— 一张白卡片,人看不出自己在挑什么。新主题做好样张自然出现。
   const shown = useMemo(() => themes.filter((item) => item.sample), [themes])
 
-  /**
-   * 主题按「最近使用」提到最前,其余按原顺序 —— 这一个派生标签就够了。五个主题不需要
-   * 筛选条:五个东西摆成一排就够,套一层分类是虚胖。
-   */
-  const ordered = useMemo(() => {
-    const recent = withTag(shown, 'use', '最近使用')
-    return [...recent, ...shown.filter((item) => !recent.includes(item))]
-  }, [shown])
+  const themeSections = useMemo(() => sectionsOf(shown, THEME_AXES, '全部主题'), [shown])
 
   // 示例按**页型**铺开:一份稿子有几种页型就出现几次。这是分面,不是分类。
   const examples = useMemo(() => templates.filter((item) => item.kind === 'example'), [templates])
@@ -116,37 +118,33 @@ export function Gallery({ themes, templates, busy, error, onCreate, onOpen }: Ga
       <div className="gallery-body">
         <p className="gallery-note">{MODES.find((item) => item.key === mode)?.hint}</p>
 
-        <div className="gallery-grid gallery-grid--themes">
-          {ordered.map((item) => (
-            <button
-              key={item.name}
-              type="button"
-              data-picked={theme === item.name && !example}
-              onClick={() => {
-                setTheme(item.name)
-                setExample(undefined)
-              }}
-            >
-              <img src={assetUrl(item.sample)} alt="" />
-              <span className="gallery-title">{item.title}</span>
-              {/*
-                场景在前、风格在后,两组分开摆。它们是标签不是一句话 —— 主题多起来
-                之后同一个标签会横跨好几个主题(「高对比」「衬线」现在就是),那时候
-                这排字直接变成筛选条,不用回头改数据。
-              */}
-              {/* 派生标签摆在最前,和声明的标签一视同仁 —— 它们是同一套东西。 */}
-              {item.tags.use.length > 0 && (
-                <span className="gallery-use">{item.tags.use.join(' · ')}</span>
-              )}
-              {item.tags.scene.length > 0 && (
-                <span className="gallery-scene">{item.tags.scene.join(' · ')}</span>
-              )}
-              {item.tags.style.length > 0 && (
-                <span className="gallery-style">{item.tags.style.join(' · ')}</span>
-              )}
-            </button>
-          ))}
-        </div>
+        {themeSections.map((section) => (
+          <section key={section.value} className="gallery-themes">
+            <h2>{section.value}</h2>
+            <div className="gallery-grid gallery-grid--themes">
+              {section.items.map((item) => (
+                <button
+                  key={item.name}
+                  type="button"
+                  data-picked={theme === item.name && !example}
+                  onClick={() => {
+                    setTheme(item.name)
+                    setExample(undefined)
+                  }}
+                >
+                  <img src={assetUrl(item.sample)} alt="" />
+                  <span className="gallery-title">{item.title}</span>
+                  {item.tags.scene.length > 0 && (
+                    <span className="gallery-scene">{item.tags.scene.join(' · ')}</span>
+                  )}
+                  {item.tags.style.length > 0 && (
+                    <span className="gallery-style">{item.tags.style.join(' · ')}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
 
         {examples.length > 0 && (
           <details className="gallery-examples" open={browsing}>

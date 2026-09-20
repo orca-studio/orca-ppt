@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { axisValues, facetsOf, withTag } from './facets.js'
+import { axisValues, facetsOf, sectionsOf, withTag } from './facets.js'
 
 const deck = (id: string, mode: string[], page: string[] = []) => ({ id, tags: { mode, page } })
 
@@ -53,5 +53,40 @@ describe('axisValues', () => {
   it('收齐某个轴上出现过的标签 —— 这就是筛选条,有了新标签自己就长出来', () => {
     const items = [deck('a', [], ['bento', '时间线']), deck('b', [], ['bento'])]
     expect(axisValues(items, 'page')).toEqual(['bento', '时间线'])
+  })
+})
+
+describe('sectionsOf', () => {
+  const theme = (name: string, use: string[] = [], style: string[] = []) => ({
+    name,
+    tags: { use, style },
+  })
+
+  it('同一个条目在分区里再出现一次 —— 这正是分面区别于分类的地方', () => {
+    const items = [theme('a', ['最近使用']), theme('b')]
+    const sections = sectionsOf(items, ['use'], '全部主题')
+    expect(sections.map((s) => s.value)).toEqual(['最近使用', '全部主题'])
+    expect(sections[0]!.items.map((i) => i.name)).toEqual(['a'])
+    // a 在「全部主题」里又出现一次
+    expect(sections[1]!.items.map((i) => i.name)).toEqual(['a', 'b'])
+  })
+
+  it('没人带那个轴时不留一条空分区', () => {
+    const sections = sectionsOf([theme('a')], ['use'], '全部主题')
+    expect(sections.map((s) => s.value)).toEqual(['全部主题'])
+  })
+
+  it('多个轴按顺序各自产生分区', () => {
+    const items = [theme('a', ['最近使用'], ['衬线']), theme('b', [], ['衬线'])]
+    expect(sectionsOf(items, ['use', 'style']).map((s) => s.value)).toEqual(['最近使用', '衬线'])
+  })
+
+  it('兜底分区保证每个条目至少露一次 —— 标签再不全,人也不该找不到东西', () => {
+    const sections = sectionsOf([theme('a'), theme('b')], ['use'], '全部主题')
+    expect(sections[0]!.items).toHaveLength(2)
+  })
+
+  it('一个条目都没有时不留兜底分区', () => {
+    expect(sectionsOf([], ['use'], '全部主题')).toEqual([])
   })
 })
