@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { DeckPhase, PhaseStatus } from '@orca-ppt/contracts'
+import { Button } from './ui/Button.js'
 
 /**
  * 阶段栏 —— **只读的状态**:这份稿子走到哪一步了、哪一条没过。
@@ -85,13 +86,9 @@ export function PhaseRail({ rows, onOpenArtifact, onLoadPrompt }: PhaseRailProps
                 {LABEL[row.phase]}
               </button>
               {row.status === 'done' && (
-                <button
-                  type="button"
-                  className="rail-link"
-                  onClick={() => onOpenArtifact(row.phase)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => onOpenArtifact(row.phase)}>
                   看产物
-                </button>
+                </Button>
               )}
             </div>
 
@@ -99,13 +96,13 @@ export function PhaseRail({ rows, onOpenArtifact, onLoadPrompt }: PhaseRailProps
               <div className="rail-how">
                 <p className="rail-hint">{HINT[row.phase]}</p>
                 <pre>{prompt ?? '读取中…'}</pre>
-                <button
-                  type="button"
+                <Button
+                  size="sm"
                   onClick={() => void navigator.clipboard.writeText(prompt ?? '')}
                   disabled={!prompt}
                 >
                   拷贝这一步的做法
-                </button>
+                </Button>
               </div>
             )}
             {row.issues.length > 0 && (

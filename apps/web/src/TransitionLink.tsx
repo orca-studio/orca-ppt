@@ -1,4 +1,5 @@
 import type { TransitionNote } from '@orca-ppt/contracts'
+import { Button } from './ui/Button.js'
 
 /**
  * 两张缩略图之间的那一道:这次翻页是怎么接上的。
@@ -23,12 +24,12 @@ export function TransitionLink({ note, onReplay, onFlag }: TransitionLinkProps) 
     <div className="tlink" title={note.relation}>
       <span className="tlink-technique">{note.technique}</span>
       <span className="tlink-actions">
-        <button type="button" onClick={onReplay} title="重放这次翻页">
+        <Button size="xs" icon onClick={onReplay} title="重放这次翻页" aria-label="重放这次翻页">
           ▶
-        </button>
-        <button type="button" onClick={onFlag} title="这儿不对 —— 挂进待办">
+        </Button>
+        <Button size="xs" icon onClick={onFlag} title="这儿不对 —— 挂进待办" aria-label="这儿不对">
           ⚑
-        </button>
+        </Button>
       </span>
     </div>
   )

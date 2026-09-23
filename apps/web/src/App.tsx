@@ -13,6 +13,7 @@ import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.
 import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
+import { Button } from './ui/Button.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
@@ -604,7 +605,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
             <Stage
               ref={stage}
               previewUrl={deck.previewUrl}
-              slideCount={deck.slideCount}
               initialSlide={slide}
               autoplay={autoplay}
               onToggleAutoplay={toggleAutoplay}
@@ -622,37 +622,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
               </div>
             </div>
           )}
-          <footer className="status">
-            <span className="dot" data-off={state !== 'open'}>
-              ●
-            </span>
-            <span>{state}</span>
-            {deck && (
-              <span>
-                第 {slide + 1} / {deck.slideCount} 页
-              </span>
-            )}
-            {/*
-              「已指给 agent · …」是刚发生了什么,归状态栏 —— 那个动作本身在工具栏上,
-              它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
-            */}
-            <Pending requests={requests} crops={crops} />
-            {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
-            <span className="status-right">
-              {/*
-                agent 正在做什么,就写在它的状态旁边 —— 这是这块最要紧的信息:
-                画布自己翻了页、文字自己变了,人得当场知道是谁干的。
-              */}
-              {agentCaption && (
-                <span className="status-agent-doing" data-tone={agentCaption.tone}>
-                  {agentCaption.text}
-                </span>
-              )}
-              <span className="status-agent" data-live={agentLive}>
-                {agentLive ? 'agent 在线' : 'agent 未连'}
-              </span>
-            </span>
-          </footer>
         </section>
 
         <section className="pane">
@@ -680,8 +649,52 @@ export function App({ serverUrl }: { serverUrl: string }) {
           )}
         </section>
       </div>
+
+      {/*
+        状态栏横跨整个窗口。只横在中间一栏下面的话,它读起来像画布的一部分,
+        而它说的是整个应用的事:连没连上、agent 在不在、刚指了哪儿。
+      */}
+      <footer className="status">
+        {/* 连着的时候只亮一个点;断了才说话 —— 常驻「open」这种词是内部状态漏到界面上。 */}
+        <span className="dot" data-off={state !== 'open'} title={TRANSPORT_LABEL[state]}>
+          ●
+        </span>
+        {state !== 'open' && <span>{TRANSPORT_LABEL[state]}</span>}
+        {deck && (
+          <span>
+            第 {slide + 1} / {deck.slideCount} 页
+          </span>
+        )}
+        {/*
+          「已指给 agent · …」是刚发生了什么,归状态栏 —— 那个动作本身在工具栏上,
+          它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
+        */}
+        <Pending requests={requests} crops={crops} />
+        {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
+        <span className="status-right">
+          {/*
+            agent 正在做什么,就写在它的状态旁边 —— 这是这块最要紧的信息:
+            画布自己翻了页、文字自己变了,人得当场知道是谁干的。
+          */}
+          {agentCaption && (
+            <span className="status-agent-doing" data-tone={agentCaption.tone}>
+              {agentCaption.text}
+            </span>
+          )}
+          <span className="status-agent" data-live={agentLive}>
+            {agentLive ? 'agent 在线' : 'agent 未连'}
+          </span>
+        </span>
+      </footer>
     </div>
   )
+}
+
+const TRANSPORT_LABEL: Record<TransportState, string> = {
+  connecting: '正在连本地服务…',
+  open: '本地服务已连上',
+  reconnecting: '和本地服务断开了,重连中…',
+  closed: '没连上本地服务',
 }
 
 async function pickDeck(open: (path: string) => unknown): Promise<void> {
@@ -705,9 +718,7 @@ function DeckPicker({
   return (
     <div className="picker">
       {canPick ? (
-        <button type="button" className="picker-button" onClick={onPick}>
-          打开 deck 目录…
-        </button>
+        <Button onClick={onPick}>打开 deck 目录…</Button>
       ) : (
         // 浏览器里跑 `pnpm dev` 时没有壳,直接贴路径。
         <form

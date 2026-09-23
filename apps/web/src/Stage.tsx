@@ -3,6 +3,7 @@ import type { InspectAnchor } from '@orca-ppt/contracts'
 import autoplayScript from './guest/autoplay.guest.js?raw'
 import editScript from './guest/edit.guest.js?raw'
 import inspectScript from './guest/inspect.guest.js?raw'
+import { Button } from './ui/Button.js'
 
 /**
  * 放映画布。deck 跑在一个 Electron `<webview>` guest 里,不是 iframe ——
@@ -71,7 +72,6 @@ export interface TextEdit {
 
 export interface StageProps {
   previewUrl: string
-  slideCount: number
   /** 自动播放是**放映方式**,归这儿 —— 工具栏放的是全局动作。 */
   autoplay: boolean
   onToggleAutoplay: () => void
@@ -86,7 +86,7 @@ export interface StageProps {
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, slideCount, initialSlide, autoplay, onToggleAutoplay, onSlideChange, onTextEdit },
+  { previewUrl, initialSlide, autoplay, onToggleAutoplay, onSlideChange, onTextEdit },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -292,12 +292,16 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           />
           {error && <div className="stage-error">{error}</div>}
         </div>
-      </div>
-      <div className="stage-meta">
-        <span>{slideCount} 页 · 方向键翻页 · 双击改字</span>
-        <button type="button" data-on={autoplay} onClick={onToggleAutoplay}>
-          {autoplay ? '自动播放中' : '自动播放'}
-        </button>
+        {/*
+          贴在稿子正下方,不沉到画布底:离稿子两百像素的一行字读起来不属于任何东西。
+          页数不写 —— 状态栏已经有「第几 / 共几页」。
+        */}
+        <div className="stage-meta">
+          <span>方向键翻页 · 双击改字</span>
+          <Button size="sm" on={autoplay} aria-pressed={autoplay} onClick={onToggleAutoplay}>
+            {autoplay ? '自动播放中' : '自动播放'}
+          </Button>
+        </div>
       </div>
     </div>
   )

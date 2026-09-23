@@ -1,12 +1,13 @@
 import { useRef, useState } from 'react'
 import type { Layout } from './layout.js'
 import { ViewMenu } from './ViewMenu.js'
+import { Button } from './ui/Button.js'
 
 /**
  * 顶栏。只放**动作**。
  *
  * 「指给 agent 看」摆在这儿,是因为它是一个**动作**,不是一个作用域 —— 右栏按
- * 作用域组织(页/转场/稿子),把一个动作塞进去,人找不到它该归哪一档。
+ * 作用域组织(转场/页/稿子),把一个动作塞进去,人找不到它该归哪一档。
  *
  * 自动播放归「放映」菜单和画布底下那行(它是放映方式,不是全局动作);打开是 ⌘O,
  * 菜单里有;主题是偏好,归「显示 > 外观」;agent 状态是状态,归底部状态栏。
@@ -42,10 +43,10 @@ export function Toolbar({
   return (
     <header className="toolbar">
       <div className="toolbar-view" ref={viewRef}>
-        <button
-          type="button"
-          className="toolbar-nav"
-          data-on={menuOpen || layout.nav !== 'off'}
+        <Button
+          variant="ghost"
+          icon
+          on={menuOpen || layout.nav !== 'off'}
           onClick={() => setMenuOpen((open) => !open)}
           title={menuOpen ? undefined : '视图'}
           aria-label="视图"
@@ -53,7 +54,7 @@ export function Toolbar({
           aria-expanded={menuOpen}
         >
           <SidebarIcon />
-        </button>
+        </Button>
         {menuOpen && (
           <ViewMenu
             layout={layout}
@@ -71,27 +72,27 @@ export function Toolbar({
       <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
 
       <div className="toolbar-actions">
-        <button
-          type="button"
-          className="toolbar-pick"
-          data-on={picking}
+        {/* 指给 agent 看是次要动作:和播放一样是圆钮,开着的时候才上强调色。 */}
+        <Button
+          icon
+          on={picking}
+          aria-pressed={picking}
           onClick={onPick}
           disabled={!canPick}
           title={picking ? '点画布上的元素,Esc 取消' : '指给 agent 看:点画布上一处'}
           aria-label="指给 agent 看"
         >
           <TargetIcon />
-        </button>
-        <button
-          type="button"
-          className="toolbar-play"
+        </Button>
+        <Button
+          icon
           onClick={onPresent}
           disabled={!canPresent}
           title={canPresent ? '全屏放映(⌥⌘P,Esc 退出)' : '成品还没出来'}
           aria-label="全屏放映"
         >
           <PlayIcon />
-        </button>
+        </Button>
       </div>
     </header>
   )

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { BrandMark } from './BrandMark.js'
+import { Button, buttonClass } from './ui/Button.js'
 import { assetUrl } from './assets.js'
 import { sectionsOf } from './facets.js'
 
@@ -96,9 +97,7 @@ export function Gallery({
             <BrandMark size={36} />
             新建演示稿
           </h1>
-          <button type="button" onClick={onOpen}>
-            打开已有的…
-          </button>
+          <Button onClick={onOpen}>打开已有的…</Button>
         </header>
         <p className="gallery-empty">
           找不到 orca-ppt-skill —— 主题和示例都在它里面。装上之后重开一次。
@@ -117,7 +116,7 @@ export function Gallery({
         <div className="gallery-head-right">
           {/* 版式是第二个、很小的选择:它决定稿子的结构,不决定长什么样。 */}
           <select
-            className="gallery-layout"
+            className={buttonClass()}
             value={mode}
             onChange={(event) => setMode(event.target.value)}
             aria-label="模式"
@@ -128,9 +127,7 @@ export function Gallery({
               </option>
             ))}
           </select>
-          <button type="button" onClick={onOpen}>
-            打开已有的…
-          </button>
+          <Button onClick={onOpen}>打开已有的…</Button>
         </div>
       </header>
 
@@ -169,9 +166,9 @@ export function Gallery({
             onChange={(event) => setTitle(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && create()}
           />
-          <button type="button" className="gallery-create" disabled={busy} onClick={create}>
+          <Button variant="primary" disabled={busy} onClick={create}>
             {busy ? '建着…' : '创建'}
-          </button>
+          </Button>
         </footer>
       )}
 

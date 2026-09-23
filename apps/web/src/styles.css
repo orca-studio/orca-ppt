@@ -2,17 +2,66 @@
  * token 层。主题、密度、动效归 app 所有 —— 不引 UI 框架的默认皮。
  *
  * 颜色**只在这里**定义。组件里写死一个色值,换主题时它就不会跟着变 —— 这是深浅两套皮
- * 最常见的烂法。
+ * 最常见的烂法。字号、间距、圆角、控件高度同理:写死一个 13px,下一个人就会写 12px,
+ * 半年后就是六种字号、九种圆角 —— 这份文件以前就是这样。
  */
 :root {
   --pane-left: 260px;
   --pane-right: 360px;
-  font-family:
-    ui-sans-serif,
-    -apple-system,
-    'Segoe UI',
-    system-ui,
-    sans-serif;
+
+  /*
+   * 中文字体要点名。macOS 上 -apple-system 会自己回退到苹方,Windows 上不点名就看
+   * 系统心情 —— 而两个平台排版一致是选 Electron 的理由之一(见 ARCHITECTURE)。
+   * 西文在前、中文在后:西文字符用 SF / Segoe,汉字才落到苹方 / 雅黑。
+   */
+  --font-ui:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /*
+   * 字号四档 + 一个标题档。层级靠「字号 + 字重 + 行高」一起给,不是只靠灰度:
+   *   xs 11 注脚、提示   sm 12 次要信息、控件   md 13 正文(macOS 的正文就是 13)
+   *   xl 22 首屏标题
+   */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 13px;
+  --text-xl: 22px;
+  --weight-regular: 400;
+  --weight-strong: 600;
+  /* 单行的界面文字要紧,成段的说明要松 —— 汉字字面大,1.6 以下读长段会挤。 */
+  --leading-tight: 1.35;
+  --leading-body: 1.6;
+
+  /* 间距走 4 的倍数。 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /*
+   * 圆角。嵌套时里层 = 外层 − 内边距,否则两层圆角的弧心不同心,拐角处看着歪:
+   * 菜单 lg(12) 内边距 4 → 菜单项 md(8)。
+   */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* 控件高度三档。xs 只给嵌在一行字里的小图标钮。 */
+  --control-xs: 20px;
+  --control-sm: 24px;
+  --control-md: 28px;
+
+  /* 界面动效:进出场用强 ease-out,开头就动,手感是「立刻有反应」。 */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --duration-fast: 120ms;
+
   color-scheme: light dark;
 }
 
@@ -35,6 +84,9 @@
   --control: rgb(0 0 0 / 0.06);
   --control-hover: rgb(0 0 0 / 0.11);
   --control-on: rgb(0 0 0 / 0.16);
+  /* 分段控件里选中的那一格:比底槽亮,浮起来 */
+  --control-thumb: #ffffff;
+  --control-thumb-shadow: 0 1px 2px rgb(0 0 0 / 0.14);
 }
 
 /* 跟随系统。用户在应用里显式选过就走 [data-theme],不再受系统影响。 */
@@ -52,6 +104,8 @@
     --control: rgb(255 255 255 / 0.08);
     --control-hover: rgb(255 255 255 / 0.14);
     --control-on: rgb(255 255 255 / 0.2);
+    --control-thumb: rgb(255 255 255 / 0.18);
+    --control-thumb-shadow: none;
   }
 }
 
@@ -69,31 +123,196 @@
   --control: rgb(255 255 255 / 0.08);
   --control-hover: rgb(255 255 255 / 0.14);
   --control-on: rgb(255 255 255 / 0.2);
+  --control-thumb: rgb(255 255 255 / 0.18);
+  --control-thumb-shadow: none;
 }
 
 * {
   box-sizing: border-box;
 }
 
-.gallery-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.gallery-brand img {
-  flex-shrink: 0;
-}
-
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-tight);
 }
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+code {
+  color: var(--text);
+}
+
+/*
+ * 按钮的浏览器默认皮一次性剥掉。以前每条 `xxx button` 规则都要把 border / background /
+ * font / cursor 重写一遍,漏一条就冒出一个系统灰按钮。
+ */
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+}
+
+button:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0;
+}
+
+/* ── 按钮(ui/Button.tsx) ─────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  /* 也套在 <select> 上,它的原生边框不归上面的 button 重置管 */
+  border: 0;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+  transition:
+    background-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) var(--ease-out);
+}
+
+/* 胶囊的左右留白取高度的一半,两头的半圆和字之间才匀称。 */
+.btn--xs {
+  height: var(--control-xs);
+  padding: 0 calc(var(--control-xs) / 2);
+}
+
+.btn--sm {
+  height: var(--control-sm);
+  padding: 0 calc(var(--control-sm) / 2);
+}
+
+.btn--md {
+  height: var(--control-md);
+  padding: 0 calc(var(--control-md) / 2);
+}
+
+/* 圆钮 —— Keynote 的播放就是一个圆里放 ▶,没有文字。宽 = 高,不留左右内边距。 */
+.btn--icon {
+  aspect-ratio: 1;
+  padding: 0;
+}
+
+.btn--secondary {
+  background: var(--control);
+  color: var(--text);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--control-hover);
+}
+
+.btn--primary,
+.btn--secondary[data-on='true'] {
+  background: var(--accent);
+  color: var(--panel);
+}
+
+.btn--primary:hover:not(:disabled),
+.btn--secondary[data-on='true']:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 88%, var(--text));
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn--ghost:hover:not(:disabled),
+.btn--ghost[data-on='true'] {
+  background: var(--control);
+  color: var(--text);
+}
+
+/* 按下去要有「按到了」的手感。幅度要小:0.97,不是 0.9。 */
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* 减少动效:位移和缩放都去掉,颜色和透明度的变化留着 —— 那是状态,不是动效。 */
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+
+  .viewmenu {
+    transform: none;
+    @starting-style {
+      transform: none;
+    }
+  }
+}
+
+.btn:disabled {
+  opacity: 0.45;
+}
+
+/* ── 分段控件(ui/Segmented.tsx) ─────────────────────────────────── */
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-full);
+  background: var(--control);
+}
+
+.segmented button {
+  flex: 1;
+  height: calc(var(--control-md) - 4px);
+  border-radius: var(--radius-full);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  text-align: center;
+  transition: color var(--duration-fast) ease;
+}
+
+.segmented button:hover {
+  color: var(--text);
+}
+
+.segmented button[aria-selected='true'] {
+  background: var(--control-thumb);
+  box-shadow: var(--control-thumb-shadow);
+  color: var(--text);
+  font-weight: var(--weight-strong);
+}
+
+/* ── 骨架 ─────────────────────────────────────────────────────────── */
 
 .app {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   height: 100vh;
 }
 
@@ -110,9 +329,9 @@ body {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-3);
   height: 44px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   border-bottom: 1px solid var(--line);
   background: var(--panel);
   -webkit-app-region: drag;
@@ -127,9 +346,9 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* 稿子名是窗口标题:和 macOS 标题栏一样,13 号加粗。 */
 .toolbar-title {
-  font-size: 13px;
-  color: var(--text);
+  font-weight: var(--weight-strong);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -138,57 +357,7 @@ body {
 .toolbar-actions {
   margin-left: auto;
   display: flex;
-  gap: 8px;
-}
-
-/* 胶囊。无边框 + 柔和填充,和 macOS 的工具栏一致。 */
-.toolbar-actions button {
-  height: 28px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 0.12s ease;
-}
-
-.toolbar-actions button:hover:not(:disabled) {
-  background: var(--control-hover);
-}
-
-.toolbar-actions button:active:not(:disabled) {
-  background: var(--control-on);
-}
-
-.toolbar-actions button:disabled {
-  color: var(--muted);
-  cursor: default;
-  opacity: 0.55;
-}
-
-/* 播放是圆的 —— Keynote 就是一个圆里放 ▶,没有文字。 */
-.toolbar-play {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  /* 圆按钮要写死 border-radius:50%,999px 在等宽等高时也对,但写 50% 更不容易被
-     后面的规则改宽之后变成胶囊 */
-  border-radius: 50%;
-  line-height: 0;
-}
-
-.toolbar-agent {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.toolbar-agent[data-live='true'] {
-  color: var(--accent);
+  gap: var(--space-2);
 }
 
 .pane {
@@ -202,12 +371,15 @@ body {
   border-right: 0;
 }
 
+/*
+ * 栏头。不做大写 + 拉字距:那是西文小标题的写法,中文没有大小写,字距只会把字拉散。
+ * 层级靠字重给。
+ */
 .pane-head {
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--line);
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
   color: var(--muted);
   user-select: none;
 }
@@ -215,9 +387,8 @@ body {
 .pane-body {
   flex: 1;
   overflow: auto;
-  padding: 16px;
-  font-size: 13px;
-  line-height: 1.7;
+  padding: var(--space-4);
+  line-height: var(--leading-body);
 }
 
 /*
@@ -229,18 +400,25 @@ body {
 .stage {
   flex: 1;
   display: grid;
-  grid-template-rows: 1fr auto;
   background: var(--stage);
-  padding: 20px;
+  padding: var(--space-5);
   min-height: 0;
 }
 
 .stage-canvas {
+  /* 稿子下面那行提示的高度。没有那一行(还没出成品)时是 0。 */
+  --stage-meta-h: 0px;
+
   min-height: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
   /* 给下面的 cqw / cqh 一个参照 */
   container-type: size;
+}
+
+.stage-canvas:has(.stage-meta) {
+  --stage-meta-h: calc(var(--control-sm) + var(--space-3));
 }
 
 /*
@@ -251,15 +429,15 @@ body {
  * aspect-ratio 直接被忽略,画面会被拉变形(实测 779×713)。
  */
 .stage-frame {
-  width: min(100cqw, calc(100cqh * 16 / 9));
+  width: min(100cqw, calc((100cqh - var(--stage-meta-h)) * 16 / 9));
   height: auto;
   aspect-ratio: 16 / 9;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
   color: var(--muted);
   text-align: center;
-  padding: 24px;
+  padding: var(--space-6);
   box-shadow: var(--stage-shadow);
   background: var(--panel);
 }
@@ -280,19 +458,31 @@ body {
 .stage-error {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--danger);
   color: var(--panel);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
+/* 稿子正下方那行:操作提示 + 自动播放(放映方式归这儿,不占工具栏) */
 .stage-meta {
-  padding-top: 12px;
-  font-size: 12px;
+  height: var(--stage-meta-h);
+  padding-top: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
+/* ── 左栏:胶片 ───────────────────────────────────────────────────── */
+
 .filmstrip {
+  /* 页号列宽。两页之间那道转场说明要和缩略图左边对齐,得知道缩略图从哪儿起。 */
+  --filmstrip-no: 18px;
+  --filmstrip-pad: 6px;
+
   list-style: none;
   margin: 0;
   padding: 0;
@@ -303,28 +493,28 @@ body {
    * 内容以下 —— 和 flex 项要 min-width:0 是同一类坑。
    */
   grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .filmstrip button {
   width: 100%;
-  text-align: left;
   display: flex;
-  gap: 10px;
-  padding: 8px 10px;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--filmstrip-pad);
   border: 1px solid transparent;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
+  border-radius: var(--radius-md);
+  text-align: left;
+  /* 慢是给 agent 那圈高亮的:它退场要让人来得及看见(见下面 data-agent)。 */
   transition:
     box-shadow 0.3s ease,
     background-color 0.3s ease;
 }
 
+/* 悬停是每分钟几十次的事,进场不能拖 —— 目标状态上的 transition 管进场那一程。 */
 .filmstrip button:hover {
   background: var(--panel);
+  transition-duration: var(--duration-fast);
 }
 
 .filmstrip button[data-current='true'] {
@@ -333,501 +523,19 @@ body {
 
 .filmstrip-no {
   color: var(--muted);
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
-  min-width: 1.5em;
-}
-
-.picker {
-  display: grid;
-  gap: 12px;
-}
-
-.picker input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
-}
-
-.picker-button {
-  width: 100%;
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.picker-button:hover {
-  background: var(--control-hover);
-}
-
-.picker-error {
-  color: var(--danger);
-  margin: 0;
-}
-
-.muted {
-  color: var(--muted);
-  margin: 0;
-}
-
-code {
-  color: var(--text);
-}
-
-.status {
-  padding: 8px 16px;
-  border-top: 1px solid var(--line);
-  font-size: 12px;
-  color: var(--muted);
-  display: flex;
-  gap: 16px;
-}
-
-.dot {
-  color: var(--accent);
-}
-
-.dot[data-off='true'] {
-  color: var(--danger);
-}
-
-/* 对话栏 */
-.composer {
-  flex: 1;
-  display: grid;
-  grid-template-rows: 1fr auto auto auto;
-  min-height: 0;
-}
-
-.thread {
-  overflow: auto;
-  padding: 16px;
-  display: grid;
-  gap: 10px;
-  align-content: start;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.thread-item {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-
-.thread-kind {
-  color: var(--muted);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
+  min-width: var(--filmstrip-no);
   flex: none;
-  min-width: 2em;
-}
-
-.thread-item[data-kind='reasoning'] .thread-text,
-.thread-busy {
-  color: var(--muted);
-}
-
-.thread-item[data-kind='command'] .thread-text,
-.thread-item[data-kind='file_change'] .thread-text {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-}
-
-.thread-item[data-kind='error'] .thread-text {
-  color: var(--danger);
-}
-
-/* 挂在输入框上、还没发出去的锚 */
-.anchors {
-  list-style: none;
-  margin: 0;
-  padding: 0 16px 8px;
-  display: grid;
-  gap: 6px;
-}
-
-.anchors li {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 6px 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  font-size: 12px;
-}
-
-.anchors img {
-  width: 56px;
-  height: 32px;
-  object-fit: cover;
-  border-radius: 2px;
-  flex: none;
-}
-
-.anchors span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.anchors button {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.composer-controls {
-  padding: 0 16px 8px;
-}
-
-.pick {
-  width: 100%;
-  padding: 9px 10px;
-  border: 1px dashed var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.pick:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
-.pick[data-picking='true'] {
-  border-style: solid;
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.composer textarea {
-  border: 0;
-  border-top: 1px solid var(--line);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  padding: 12px 16px;
-  min-height: 80px;
-  resize: none;
-  outline: none;
-}
-
-/* 阶段栏 */
-.rail {
-  display: grid;
-  gap: 8px;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.rail-request {
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  padding: 8px;
-  min-height: 56px;
-  resize: vertical;
-  outline: none;
-}
-
-.rail-runall {
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.rail-runall:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-.rail-runall:disabled {
-  color: var(--muted);
-  cursor: default;
-}
-
-.rail-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.rail-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.rail-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--line);
-  flex: none;
-}
-
-[data-status='running'] .rail-dot {
-  background: var(--accent);
-  animation: pulse 1s ease-in-out infinite;
-}
-
-[data-status='done'] .rail-dot {
-  background: var(--accent);
-}
-
-[data-status='failed'] .rail-dot {
-  background: var(--danger);
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.3;
-  }
-}
-
-.rail-name {
-  flex: 1;
-  text-align: left;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  padding: 6px 0;
-  cursor: pointer;
-}
-
-.rail-link,
-.rail-run {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  padding: 2px 4px;
-}
-
-.rail-link:hover,
-.rail-run:hover:not(:disabled) {
-  color: var(--accent);
-}
-
-.rail-run:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.rail-hint,
-.rail-note {
-  font-size: 11px;
-  margin: 0 0 4px 14px;
-  color: var(--muted);
-}
-
-.rail-issues {
-  margin: 2px 0 6px 14px;
-  padding-left: 14px;
-  font-size: 11px;
-  color: var(--danger);
-}
-
-/* 授权 */
-.permission {
-  margin: 12px 16px 0;
-  padding: 12px;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  background: var(--panel);
-  display: grid;
-  gap: 8px;
-}
-
-.permission-tool {
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.permission-summary {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.permission-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.permission-actions button {
-  flex: 1;
-  padding: 6px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.permission-actions button:hover {
-  background: var(--control-hover);
-}
-
-.permission-actions .deny:hover {
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-/* 待办栏 */
-.queue {
-  flex: 1;
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-height: 0;
-}
-
-.queue-pick {
-  padding: 16px;
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  gap: 8px;
-}
-
-.queue-pick input {
-  padding: 8px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  outline: none;
-}
-
-.pending {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.pending-empty p {
-  margin: 0 0 8px;
-  line-height: 1.7;
-}
-
-.pending header code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  color: var(--accent);
-}
-
-.pending img {
-  height: 18px;
-  border-radius: 3px;
-  flex: none;
-}
-
-.pending li span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pending li button {
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-}
-
-.pick:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/* agent 还没连上时,怎么连要看得见 */
-.install {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  display: grid;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.install button {
-  justify-self: start;
-  padding: 4px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.install button:hover {
-  background: var(--control-hover);
-}
-
-.install code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  word-break: break-all;
-  color: var(--muted);
-}
-
-.filmstrip-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .filmstrip-thumb {
-  width: 64px;
+  /* flex 项默认不肯缩到内容以下,不给 min-width:0 就会把图顶出栏外 */
+  flex: 1;
+  min-width: 0;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 2px;
-  flex: none;
+  border-radius: var(--radius-xs);
   background: var(--bg);
 }
 
@@ -836,545 +544,25 @@ code {
   background: transparent;
 }
 
-.filmstrip button {
-  align-items: center;
-}
-
-/* 左栏是纯导航,给缩略图更多宽度 */
-.pane--nav .pane-body {
-  padding: 12px;
-}
-
-.pane--nav .filmstrip button {
-  gap: 12px;
-  padding: 6px;
-}
-
-.pane--nav .filmstrip-thumb {
-  /* flex 项默认不肯缩到内容以下,不给 min-width:0 就会把图顶出栏外 */
-  width: auto;
-  flex: 1;
-  min-width: 0;
-}
-
-.pane--nav .filmstrip-title {
-  white-space: normal;
+.filmstrip-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.4;
 }
 
-/* 右栏:取锚在上(常用),待办中间,阶段折在最下面 */
-.queue {
-  grid-template-rows: auto 1fr auto;
+/* 左栏是纯导航,给缩略图更多宽度 */
+.pane--nav .pane-body {
+  padding: var(--space-3);
 }
 
-.queue .rail {
-  padding: 12px 16px;
-  margin: 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 0;
-  gap: 6px;
-}
-
-.rail > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.rail > summary::-webkit-details-marker {
-  display: none;
-}
-
-.rail > summary::before {
-  content: '›';
-  display: inline-block;
-  transition: transform 0.12s ease;
-}
-
-.rail[open] > summary::before {
-  transform: rotate(90deg);
-}
-
-.rail > summary em {
-  margin-left: auto;
-  font-style: normal;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 左栏三档:导航器(缩略图)、大纲(只有标题,更窄)、收起。 */
-.shell {
-  transition: grid-template-columns 0.18s ease;
-}
-
-.shell[data-nav='outline'] {
-  grid-template-columns: 200px 1fr var(--pane-right);
-}
-
-.shell[data-nav='off'] {
-  grid-template-columns: 0 1fr var(--pane-right);
-}
-
-.shell[data-nav='off'] .pane--nav {
-  border-right: 0;
-  overflow: hidden;
-}
-
-/* 右栏也能收 */
-.shell[data-maker='false'] {
-  grid-template-columns: var(--pane-left) 1fr 0;
-}
-
-.shell[data-maker='false'][data-nav='outline'] {
-  grid-template-columns: 200px 1fr 0;
-}
-
-.shell[data-maker='false'][data-nav='off'] {
-  grid-template-columns: 0 1fr 0;
-}
-
-.shell[data-maker='false'] .pane:last-child {
-  overflow: hidden;
-}
-
-/* 侧栏开关:圆的,和 macOS 一致 */
-.toolbar-nav {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  flex: none;
-}
-
-.toolbar-nav:hover {
-  background: var(--control);
-  color: var(--text);
-}
-
-.toolbar-nav[data-on='true'] {
-  background: var(--control);
-  color: var(--text);
-}
-
-/* 视图菜单 */
-.toolbar-view {
-  position: relative;
-  -webkit-app-region: no-drag;
-}
-
-.viewmenu {
-  position: absolute;
-  top: 34px;
-  left: 0;
-  z-index: 20;
-  min-width: 230px;
-  padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
-  display: grid;
-  gap: 1px;
-}
-
-.viewmenu button {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.viewmenu button:hover {
-  background: var(--control);
-}
-
-.viewmenu-check {
-  width: 14px;
-  flex: none;
-  color: var(--accent);
-}
-
-.viewmenu-label {
-  display: grid;
-  gap: 1px;
-}
-
-.viewmenu-label em {
-  font-style: normal;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.viewmenu hr {
-  margin: 4px 8px;
-  border: 0;
-  border-top: 1px solid var(--line);
-}
-
-/* 大纲模式:没有缩略图,行更密 */
-.shell[data-nav='outline'] .filmstrip button {
-  padding: 5px 8px;
+/* 大纲模式:没有缩略图,行更密。左右内边距不动,转场说明才还对得齐。 */
+.shell[data-nav='outline'] .filmstrip {
+  --filmstrip-pad: var(--space-1) 6px;
 }
 
 .shell[data-nav='outline'] .filmstrip-title {
   -webkit-line-clamp: 1;
-}
-
-/* 看片台 */
-.lighttable {
-  flex: 1;
-  overflow: auto;
-  padding: 24px;
-  background: var(--stage);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
-  align-content: start;
-}
-
-.lighttable button {
-  display: grid;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.lighttable img,
-.lighttable-blank {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 6px;
-  background: var(--panel);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-}
-
-.lighttable button[data-current='true'] img,
-.lighttable button[data-current='true'] .lighttable-blank {
-  outline-color: var(--accent);
-}
-
-.lighttable-caption {
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.toolbar-auto[data-on='true'] {
-  background: var(--accent);
-  color: var(--panel);
-}
-
-/* 模板选择器:没打开稿子时的首屏 */
-.gallery {
-  overflow: auto;
-  padding: 28px 32px 90px;
-  background: var(--bg);
-  position: relative;
-}
-
-.gallery > header {
-  display: flex;
-  align-items: baseline;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.gallery h1 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.gallery > header button {
-  margin-left: auto;
-  padding: 0 14px;
-  height: 28px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.gallery > header button:hover {
-  background: var(--control-hover);
-}
-
-.gallery h2 {
-  margin: 0 0 12px;
-  font-size: 13px;
-  font-weight: 600;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.gallery h2 em {
-  font-style: normal;
-  font-weight: 400;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.gallery section + section {
-  margin-top: 28px;
-}
-
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
-  gap: 18px;
-}
-
-.gallery-grid button {
-  display: grid;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.gallery-grid img,
-.gallery-blank {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 8px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
-  outline: 2px solid transparent;
-  outline-offset: 3px;
-}
-
-.gallery-grid button[data-picked='true'] img,
-.gallery-grid button[data-picked='true'] .gallery-blank {
-  outline-color: var(--accent);
-}
-
-.gallery-title {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.gallery-head-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* 版式是第二个、很小的选择 —— 它决定结构,不决定长什么样,所以不占版面。 */
-.gallery-layout {
-  height: 28px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.gallery-note {
-  margin: 0 0 16px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-/* 主题卡比示例卡大一档:它是这一屏的主角,而且要看清字形才能比。 */
-.gallery-grid--themes {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-}
-
-/* 场景是人先问的那一半,给正文色;风格是补充,淡一档。 */
-.gallery-scene,
-.gallery-style {
-  font-size: 11px;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-top: -3px;
-}
-
-.gallery-scene {
-  color: var(--text);
-}
-
-.gallery-style {
-  color: var(--muted);
-}
-
-/* 示例是参考,不是起点 —— 默认收起来。 */
-.gallery-examples {
-  margin-top: 36px;
-  border-top: 1px solid var(--line);
-  padding-top: 20px;
-}
-
-.gallery-examples > summary {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.gallery-examples > summary::-webkit-details-marker {
-  display: none;
-}
-
-.gallery-examples > summary::after {
-  content: '›';
-  color: var(--muted);
-  transition: transform 0.15s ease;
-}
-
-.gallery-examples[open] > summary::after {
-  transform: rotate(90deg);
-}
-
-.gallery-examples > summary em {
-  font-style: normal;
-  font-weight: 400;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.gallery-examples > section {
-  margin-top: 20px;
-}
-
-/* 主题分区之间留白大一点:同一张卡会在好几个分区里出现,分不开就成了重复。 */
-.gallery-themes + .gallery-themes {
-  margin-top: 32px;
-}
-
-.gallery > footer {
-  position: sticky;
-  bottom: 0;
-  margin: 24px -32px -90px;
-  padding: 14px 32px;
-  border-top: 1px solid var(--line);
-  background: var(--panel);
-  display: flex;
-  gap: 10px;
-}
-
-.gallery > footer input {
-  flex: 1;
-  padding: 7px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-  outline: none;
-}
-
-.gallery-create {
-  padding: 0 20px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--panel);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.gallery-create:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.gallery-empty,
-.gallery-error {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.gallery-error {
-  color: var(--danger);
-}
-
-/* 空白模板要看得出是空白,别和「没渲出缩略图的示例」撞脸 */
-.gallery-blank {
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.gallery-blank[data-kind='template'] {
-  border-style: dashed;
-  box-shadow: none;
-}
-
-/* 选择器没有顶栏,它自己的 header 当窗口拖动区 */
-.app--gallery {
-  grid-template-rows: 1fr;
-}
-
-.gallery > header {
-  -webkit-app-region: drag;
-  user-select: none;
-}
-
-.gallery > header button {
-  -webkit-app-region: no-drag;
-}
-
-:root[data-platform='darwin'] .gallery > header {
-  padding-left: 66px;
-}
-
-.gallery > header button + button {
-  margin-left: 0;
 }
 
 /* 两张缩略图之间的那一道:这次翻页怎么接上的 */
@@ -1382,16 +570,16 @@ code {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 2px 0 2px 26px;
-  padding: 2px 0;
-  font-size: 11px;
+  /* 和缩略图左边对齐:按钮内边距 + 边框 + 页号列 + 间距 */
+  margin: 2px 0 2px calc(6px + 1px + var(--filmstrip-no) + var(--space-3));
+  font-size: var(--text-xs);
   color: var(--muted);
-  min-height: 18px;
+  min-height: var(--control-xs);
 }
 
 /* 没写计划的那几次翻页留一道空隙,不留的话上下两张图会贴在一起 */
 .tlink--none {
-  min-height: 10px;
+  min-height: var(--space-2);
 }
 
 .tlink-technique {
@@ -1410,64 +598,90 @@ code {
   display: flex;
   gap: 2px;
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity var(--duration-fast) ease;
 }
 
-.tlink:hover .tlink-actions {
+/* 用键盘 Tab 过来时也得看得见,不然焦点落在一个透明按钮上。 */
+.tlink:hover .tlink-actions,
+.tlink:focus-within .tlink-actions {
   opacity: 1;
 }
 
-.tlink-actions button {
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
+.tlink-actions .btn {
   font-size: 10px;
-  line-height: 1;
-  cursor: pointer;
 }
 
-.tlink-actions button:hover {
-  background: var(--control-hover);
+/* 没打开稿子时左栏的「打开」 */
+.picker {
+  display: grid;
+  gap: var(--space-3);
 }
 
-/* 画布底下那行:页数提示 + 自动播放(放映方式归这儿,不占工具栏) */
-.stage-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
+.picker .btn {
+  width: 100%;
 }
 
-.stage-meta button {
-  padding: 3px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
+.picker input {
+  width: 100%;
+  height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--panel);
   color: var(--text);
   font: inherit;
-  font-size: 11px;
-  cursor: pointer;
 }
 
-.stage-meta button:hover {
-  background: var(--control-hover);
+.picker-error {
+  color: var(--danger);
+  margin: 0;
 }
 
-.stage-meta button[data-on='true'] {
-  background: var(--accent);
-  color: var(--panel);
+/* ── 状态栏 ───────────────────────────────────────────────────────── */
+
+.status {
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  display: flex;
+  gap: var(--space-4);
+}
+
+.dot {
+  color: var(--accent);
+}
+
+.dot[data-off='true'] {
+  color: var(--danger);
+}
+
+.pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pending img {
+  height: 18px;
+  border-radius: var(--radius-xs);
+  flex: none;
+}
+
+/* 中文没有斜体,浏览器只会把字硬拧斜 —— em 一律不斜,靠颜色区分。 */
+.pending em {
+  font-style: normal;
+  margin-left: var(--space-2);
 }
 
 .status-right {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   /* agent 那行字长短不一,右对齐的话整块会来回抖。固定右端,往左生长。 */
   min-width: 0;
 }
@@ -1490,7 +704,12 @@ code {
 .status-agent-doing[data-tone='busy']::before {
   content: '●';
   margin-right: 6px;
-  animation: agent-pulse 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-agent-doing[data-tone='busy']::before {
+    animation: agent-pulse 1.1s ease-in-out infinite;
+  }
 }
 
 .status-agent-doing[data-tone='failed'] {
@@ -1535,92 +754,487 @@ code {
   }
 }
 
+/* ── 阶段栏 ───────────────────────────────────────────────────────── */
+
+.rail {
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.rail > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.rail > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rail > summary::before {
+  content: '›';
+  display: inline-block;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.rail[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.rail > summary em {
+  margin-left: auto;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.rail-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.rail-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+
+[data-status='running'] .rail-dot {
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-status='running'] .rail-dot {
+    animation: pulse 1s ease-in-out infinite;
+  }
+}
+
+[data-status='done'] .rail-dot {
+  background: var(--accent);
+}
+
+[data-status='failed'] .rail-dot {
+  background: var(--danger);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.rail-name {
+  flex: 1;
+  padding: 6px 0;
+}
+
+.rail-hint,
+.rail-note {
+  font-size: var(--text-xs);
+  margin: 0 0 var(--space-1) 14px;
+  color: var(--muted);
+}
+
+.rail-issues {
+  margin: 2px 0 6px 14px;
+  padding-left: 14px;
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+
 /* 展开一个阶段:这一步该怎么做,人读得懂也带得走 */
 .rail-how {
-  margin: 2px 0 8px 14px;
+  margin: 2px 0 var(--space-2) 14px;
   display: grid;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .rail-how pre {
   margin: 0;
   max-height: 220px;
   overflow: auto;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  line-height: 1.6;
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
   white-space: pre-wrap;
   color: var(--text);
 }
 
-.rail-how button {
+.rail-how .btn {
   justify-self: start;
-  padding: 3px 12px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
 }
 
-.rail-how button:hover:not(:disabled) {
-  background: var(--control-hover);
+/* ── 左栏三档与右栏开合 ─────────────────────────────────────────────
+   导航器(缩略图)、大纲(只有标题,更窄)、收起。 */
+
+.shell[data-nav='outline'] {
+  grid-template-columns: 200px 1fr var(--pane-right);
+}
+
+.shell[data-nav='off'] {
+  grid-template-columns: 0 1fr var(--pane-right);
+}
+
+.shell[data-nav='off'] .pane--nav {
+  border-right: 0;
+  overflow: hidden;
+}
+
+/* 右栏也能收 */
+.shell[data-maker='false'] {
+  grid-template-columns: var(--pane-left) 1fr 0;
+}
+
+.shell[data-maker='false'][data-nav='outline'] {
+  grid-template-columns: 200px 1fr 0;
+}
+
+.shell[data-maker='false'][data-nav='off'] {
+  grid-template-columns: 0 1fr 0;
+}
+
+.shell[data-maker='false'] .pane:last-child {
+  overflow: hidden;
+}
+
+/* ── 视图菜单 ─────────────────────────────────────────────────────── */
+
+.toolbar-view {
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+
+.viewmenu {
+  position: absolute;
+  top: calc(var(--control-md) + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 230px;
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.28);
+  display: grid;
+  gap: 1px;
+  /*
+   * 从触发它的按钮那一角长出来,不是从自己中心。只做进场:关的时候直接没,
+   * 选完一项还要等菜单退场,会觉得刚切出来的视图被挡了一下。
+   */
+  transform-origin: top left;
+  transition:
+    opacity 150ms var(--ease-out),
+    transform 150ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.viewmenu button {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.viewmenu button:hover {
+  background: var(--control);
+}
+
+.viewmenu-check {
+  width: 14px;
+  flex: none;
+  color: var(--accent);
+}
+
+.viewmenu-label {
+  display: grid;
+  gap: 1px;
+}
+
+.viewmenu-label em {
+  font-style: normal;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.viewmenu hr {
+  margin: var(--space-1) var(--space-2);
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* ── 看片台 ───────────────────────────────────────────────────────── */
+
+.lighttable {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-6);
+  background: var(--stage);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-5);
+  align-content: start;
+}
+
+.lighttable button {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.lighttable img,
+.lighttable-blank {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.2);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.lighttable button[data-current='true'] img,
+.lighttable button[data-current='true'] .lighttable-blank {
+  outline-color: var(--accent);
+}
+
+.lighttable-caption {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 模板选择器:没打开稿子时的首屏 ─────────────────────────────────── */
+
+.gallery {
+  overflow: auto;
+  padding: 28px var(--space-8) 90px;
+  background: var(--bg);
+  position: relative;
+}
+
+/* 选择器没有顶栏,它自己的 header 当窗口拖动区 */
+.app--gallery {
+  grid-template-rows: 1fr;
+}
+
+.gallery > header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+:root[data-platform='darwin'] .gallery > header {
+  padding-left: 66px;
+}
+
+.gallery > header button,
+.gallery > header select {
+  -webkit-app-region: no-drag;
+}
+
+.gallery > header > .btn {
+  margin-left: auto;
+}
+
+.gallery-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-brand img {
+  flex-shrink: 0;
+}
+
+/* 大字要收紧字距:字号上去之后,默认字距读起来是散的。 */
+.gallery h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-strong);
+  letter-spacing: -0.01em;
+}
+
+.gallery h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.gallery h2 em {
+  font-style: normal;
+  font-weight: var(--weight-regular);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.gallery-head-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-note {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: var(--space-5);
+}
+
+/* 主题卡比示例卡大一档:它是这一屏的主角,而且要看清字形才能比。 */
+.gallery-grid--themes {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.gallery-grid button {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.gallery-grid img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.16);
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+}
+
+.gallery-grid button[data-picked='true'] img {
+  outline-color: var(--accent);
+}
+
+.gallery-title {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 场景是人先问的那一半,给正文色;风格是补充,淡一档。 */
+.gallery-scene,
+.gallery-style {
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: -3px;
+}
+
+.gallery-scene {
+  color: var(--text);
+}
+
+.gallery-style {
+  color: var(--muted);
+}
+
+/* 主题分区之间留白大一点:同一张卡会在好几个分区里出现,分不开就成了重复。 */
+.gallery-themes + .gallery-themes {
+  margin-top: var(--space-8);
+}
+
+.gallery > footer {
+  position: sticky;
+  bottom: 0;
+  margin: var(--space-6) calc(-1 * var(--space-8)) -90px;
+  padding: var(--space-3) var(--space-8);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  display: flex;
+  gap: var(--space-2);
+}
+
+.gallery > footer input {
+  flex: 1;
+  height: var(--control-md);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.gallery-empty,
+.gallery-error {
+  color: var(--muted);
+}
+
+.gallery-error {
+  color: var(--danger);
 }
 
 /* ── 右栏:三个作用域 ─────────────────────────────────────────
-   三档是**作用域**不是工具:这一页 / 这一次转场 / 整份稿子。
+   三档是**作用域**不是工具:这一次转场 / 这一页 / 整份稿子。
    人心里想改的东西天然带着一个作用域,按作用域分,找东西不用记它归在哪个工具下。 */
 
 .inspector-head {
-  display: flex;
-  gap: 4px;
-  padding: 8px 10px;
-}
-
-.inspector-head button {
-  flex: 1;
-  height: 24px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.inspector-head button:hover {
-  background: var(--control);
-}
-
-.inspector-head button[data-on='true'] {
-  background: var(--control-on);
-  color: var(--text);
+  padding: var(--space-2) var(--space-3);
 }
 
 .inspector {
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
   align-content: start;
-  font-size: 12px;
 }
 
 .inspector-row {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: baseline;
 }
 
-/* 标签列对齐:值参差不齐的话整块读起来像一堆碎片。 */
+/* 标签列对齐:值参差不齐的话整块读起来像一堆碎片。标签小一号,值是正文。 */
 .inspector-row > span:first-child {
   min-width: 4.5em;
   flex: none;
+  font-size: var(--text-sm);
 }
 
 .inspector-row > span:last-child {
@@ -1629,10 +1243,18 @@ code {
   text-overflow: ellipsis;
 }
 
+/* 「没写」后面那个属性名:给想自己补上的人一个线索,但不抢值的位置。 */
+.inspector-hint {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+/* 分节标题:和上面拉开一段,人才看得出这是新的一块,不是上一行的续。 */
 .inspector h3 {
-  margin: 8px 0 0;
-  font-size: 12px;
-  font-weight: 600;
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
 }
 
 .inspector-carries {
@@ -1645,21 +1267,21 @@ code {
 
 .inspector-carries li {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   align-items: baseline;
   min-width: 0;
 }
 
 .inspector-carries code {
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: 1px 5px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   background: var(--control);
   flex: none;
 }
 
 .inspector-carries .muted {
-  font-size: 10px;
+  font-size: var(--text-xs);
   flex: none;
 }
 
@@ -1673,49 +1295,10 @@ code {
 
 .inspector-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 6px;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
-.inspector-actions button {
+.inspector-actions .btn {
   flex: 1;
-  height: 26px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.inspector-actions button:hover {
-  background: var(--control-hover);
-}
-
-/* 指给 agent 看:和播放一样是个圆钮,但它是次要动作,不给实心底。 */
-.toolbar-pick {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 999px;
-  background: var(--control);
-  color: var(--text);
-  cursor: pointer;
-}
-
-.toolbar-pick:hover:not(:disabled) {
-  background: var(--control-hover);
-}
-
-.toolbar-pick[data-on='true'] {
-  background: var(--accent);
-  color: var(--panel);
-}
-
-.toolbar-pick:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
