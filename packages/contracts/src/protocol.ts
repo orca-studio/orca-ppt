@@ -158,6 +158,29 @@ export const requests = {
     result: z.object({ phases: z.array(PhaseReport) }),
   },
   /**
+   * 稿子此刻写的是什么:每一页**源文件里的原文**,和一个随内容变的版本号。
+   *
+   * 界面用不着它 —— 页胶片自己看得见。agent 看不见画布,改字前只能读这个;而且它要的
+   * 是源文件里的原文,不是放映出来的样子(CSS 把 `Studio placeholder` 显示成大写,照着
+   * 屏幕抄就对不上 `edit_text`)。版本号让宿主一眼看出一次调用到底动没动稿子。
+   */
+  'deck.inspect': {
+    params: z.object({ deckId: z.string() }),
+    result: z.object({
+      revision: z.string(),
+      slides: z.array(
+        z.object({
+          /** 从 0 数起,和其余工具的 `slide` 参数同一套。 */
+          index: z.number().int().nonnegative(),
+          title: z.string().nullable(),
+          pageType: z.string().nullable(),
+          /** 这一页里一段一段的文字,按源码顺序,实体已还原。 */
+          texts: z.array(z.string()),
+        }),
+      ),
+    }),
+  },
+  /**
    * 截一张画布的图。agent 靠它**自己看一眼**做出来的东西 —— 稿子好不好只有放映能回答,
    * 等人来描述等于让它闭着眼改。
    *

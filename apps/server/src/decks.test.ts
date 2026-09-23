@@ -1,5 +1,15 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { countTopLevelSections, readPageTypes, readSlideTitles } from './decks.js'
+import {
+  countTopLevelSections,
+  deckRevision,
+  readPageTypes,
+  readSlideTexts,
+  readSlideTitles,
+} from './decks.js'
+import { applyTextEdit } from './edit.js'
 
 describe('countTopLevelSections', () => {
   it('数 .slides 的直接子 section', () => {
@@ -132,5 +142,60 @@ describe('readPageTypes', () => {
       '<section><section data-page="list">2a</section></section>' +
       '</div>'
     expect(readPageTypes(html)).toHaveLength(2)
+  })
+})
+
+describe('readSlideTexts', () => {
+  const wrap = (sections: string) => `<div class="slides">${sections}</div>`
+
+  it('按页、按源码顺序给出每一段文字,脚本样式注释里的不算', () => {
+    const html = wrap(
+      '<section><h1>Studio placeholder</h1><!-- 注释 --><p>第二段<br>第三段</p>' +
+        '<script>let a = 1 > 0</script><style>p{}</style></section>' +
+        '<section><div class="s-dot"></div></section>',
+    )
+    expect(readSlideTexts(html)).toEqual([['Studio placeholder', '第二段', '第三段'], []])
+  })
+
+  it('读出来的原文原样交给 edit_text 一定定位得上 —— 转义过的也一样', () => {
+    const html = wrap('<section><p>R&amp;D 投入 &lt; 10%</p></section>')
+    const [[text]] = readSlideTexts(html) as [[string]]
+    expect(text).toBe('R&D 投入 < 10%')
+    const result = applyTextEdit(html, { slide: 0, oldText: text, newText: '研发投入' })
+    expect(result.ok).toBe(true)
+  })
+})
+
+describe('deckRevision', () => {
+  async function deck(html: string): Promise<string> {
+    const root = await mkdtemp(join(tmpdir(), 'orca-rev-'))
+    await writeFile(join(root, 'index.html'), html)
+    return root
+  }
+
+  it('内容不变,版本号就不变', async () => {
+    const root = await deck('<div class="slides"><section>a</section></div>')
+    expect(await deckRevision(root)).toBe(await deckRevision(root))
+  })
+
+  it('成品改了一个字,版本号就变', async () => {
+    const root = await deck('<div class="slides"><section>a</section></div>')
+    const before = await deckRevision(root)
+    await writeFile(join(root, 'index.html'), '<div class="slides"><section>b</section></div>')
+    expect(await deckRevision(root)).not.toBe(before)
+  })
+
+  it('阶段产物改了也算', async () => {
+    const root = await deck('<div class="slides"><section>a</section></div>')
+    await mkdir(join(root, '.deck'))
+    await writeFile(join(root, '.deck/plan.json'), '{"transitions":[]}')
+    const before = await deckRevision(root)
+    await writeFile(join(root, '.deck/plan.json'), '{"transitions":[{}]}')
+    expect(await deckRevision(root)).not.toBe(before)
+  })
+
+  it('还没出稿的目录也有版本号', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-rev-'))
+    expect(await deckRevision(root)).toMatch(/^[0-9a-f]{16}$/)
   })
 })

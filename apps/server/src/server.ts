@@ -17,7 +17,15 @@ import { DeckWatcher } from './deck-watch.js'
 import { applyTextEdit } from './edit.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
-import { findEntryName, openDeck, type OpenedDeck } from './decks.js'
+import {
+  deckRevision,
+  findEntryName,
+  openDeck,
+  readPageTypes as readSlidePageTypes,
+  readSlideTexts,
+  readSlideTitles,
+  type OpenedDeck,
+} from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
 import { planPreview } from './preview.js'
 import { PreviewHost } from './preview-host.js'
@@ -308,6 +316,24 @@ export async function startServer(
         const params = parseParams('phase.check', raw)
         const all = await readPhaseStatus(deckPathOf(params.deckId))
         return { phases: params.phase ? all.filter((row) => row.phase === params.phase) : all }
+      }
+      case 'deck.inspect': {
+        const params = parseParams('deck.inspect', raw)
+        const root = deckPathOf(params.deckId)
+        const name = await findEntryName(root)
+        // 每次都重读磁盘,和 deck.editText 一样:agent 可能刚写过。
+        const html = name ? await readFile(join(root, name), 'utf8') : ''
+        const titles = readSlideTitles(html)
+        const pageTypes = readSlidePageTypes(html)
+        return {
+          revision: await deckRevision(root),
+          slides: readSlideTexts(html).map((texts, index) => ({
+            index,
+            title: titles[index] ?? null,
+            pageType: pageTypes[index] ?? null,
+            texts,
+          })),
+        }
       }
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)

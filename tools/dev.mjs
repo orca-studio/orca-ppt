@@ -27,7 +27,18 @@ function stop(code = 0) {
 
 process.on('SIGINT', () => stop(0))
 
-run('pnpm', ['--filter', '@orca-ppt/web', 'dev', '--port', PORT, '--strictPort'])
+// 显式绑 IPv4:Vite 默认听 localhost,在新版 macOS 上只落到 [::1],而壳加载的是
+// 127.0.0.1 —— 连不上,窗口一片黑,画布和截图全都不工作。
+run('pnpm', [
+  '--filter',
+  '@orca-ppt/web',
+  'dev',
+  '--port',
+  PORT,
+  '--strictPort',
+  '--host',
+  '127.0.0.1',
+])
 run('pnpm', ['-r', '--filter', '!@orca-ppt/web', 'build']).on('exit', () => {
   run('pnpm', ['--filter', '@orca-ppt/desktop', 'start'], {
     ORCA_PPT_DEV_SERVER: `http://127.0.0.1:${PORT}`,

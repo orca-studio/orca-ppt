@@ -1,4 +1,5 @@
-import { readFile, realpath, stat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import { Slide, Transition } from '@orca-ppt/contracts'
 import type { DeckSummary } from '@orca-ppt/contracts'
@@ -136,6 +137,56 @@ export function sliceSections(html: string): string[] {
  * 标题在 `t-h1` 上;只有封面这类没有 `t-h1` 的页才轮到 `t-display`。
  */
 const TITLE_CLASSES = ['t-h1', 't-display', 't-h2'] as const
+
+/**
+ * 每一页里一段一段的文字,**源文件里的原文**。给 agent 核对用:`edit_text` 要的就是这个,
+ * 而不是放映出来的样子 —— CSS 改大小写、自动换行都会让屏幕上的字和源码对不上。
+ *
+ * 标签之间的每一段算一段(和 `edit_text` 能定位的单位一致);脚本、样式、注释里的不算。
+ * 只还原 `edit_text` 自己认的那三种转义,空白原样保留 —— 拿这里的字原样回传一定能定位上。
+ */
+export function readSlideTexts(html: string): string[][] {
+  return sliceSections(html).map((section) => {
+    const markup = section
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/<(script|style)\b[\s\S]*?<\/\1>/gi, '')
+    const texts: string[] = []
+    for (const match of markup.matchAll(/>([^<]+)</g)) {
+      const text = match[1]!.trim()
+      if (text) texts.push(unescapeHtml(text))
+    }
+    return texts
+  })
+}
+
+function unescapeHtml(text: string): string {
+  return text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+}
+
+/**
+ * 稿子的版本号:成品文件和 `.deck/` 里各阶段产物的内容哈希。内容一变它就变,
+ * 只是被打开、被看、翻了页都不变 —— 宿主拿它判断一次调用到底动没动稿子。
+ */
+export async function deckRevision(root: string): Promise<string> {
+  const hash = createHash('sha256')
+  const entry = await findEntry(root)
+  if (entry) hash.update(entry.file).update('\0').update(entry.html)
+  let names: string[] = []
+  try {
+    names = (await readdir(join(root, '.deck'))).filter((n) => n.endsWith('.json')).sort()
+  } catch {
+    // 手工做出来的稿子没有 .deck/ —— 只按成品算。
+  }
+  for (const name of names) {
+    hash.update('\0').update(name).update('\0')
+    try {
+      hash.update(await readFile(join(root, '.deck', name)))
+    } catch {
+      // 读的时候刚好被删了:当它不在。
+    }
+  }
+  return hash.digest('hex').slice(0, 16)
+}
 
 export function readSlideTitles(html: string): Array<string | null> {
   return sliceSections(html).map((section) => titleOf(section))

@@ -172,3 +172,18 @@ describe('agent 活动', () => {
     expect(activity[0]!.slides).toEqual([])
   })
 })
+
+describe('自报家门', () => {
+  it('initialize 带上应用图标 —— 宿主拿不到 .app 时只能靠它', async () => {
+    const body = await mcp('initialize', {
+      protocolVersion: '2025-06-18',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '0' },
+    })
+    const line = body.split('\n').find((l) => l.startsWith('data:')) ?? body
+    const info = JSON.parse(line.replace(/^data:/, '')).result.serverInfo
+    expect(info.title).toBe('OrcaPPT')
+    expect(info.icons[0].mimeType).toBe('image/png')
+    expect(info.icons[0].src).toMatch(/^data:image\/png;base64,iVBORw0KGgo/)
+  })
+})

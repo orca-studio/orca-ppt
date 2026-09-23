@@ -6,6 +6,7 @@ import type {
   RequestResult,
 } from '@orca-ppt/contracts'
 import { phaseOrder } from '@orca-ppt/contracts'
+import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 
 /**
@@ -62,7 +63,8 @@ const Phase = z.enum(phaseOrder as [DeckPhase, ...DeckPhase[]])
  * 用它而不是 throw:理由要原样交到 agent 手里(「这一页里有好几处一样的文字」比
  * 一个异常有用得多),同时界面也认得出这次没办成 —— 报成功是不诚实的。
  */
-type Text = { content: Array<{ type: 'text'; text: string }>; isError?: boolean }
+type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }
+type Text = { content: Content[]; isError?: boolean }
 const text = (value: string): Text => ({ content: [{ type: 'text', text: value }] })
 const refuse = (value: string): Text => ({
   content: [{ type: 'text', text: value }],
@@ -85,9 +87,30 @@ export interface ToolActivity {
   hint?: string
 }
 
+/**
+ * MCP 自己的工具标注。宿主(比如 Jevbot)拿它决定一次调用要不要先问人,所以要说实话:
+ *
+ * - `readOnlyHint`:不动磁盘上的任何东西。翻页、放映、截图也算 —— 它们只动画布。
+ * - `destructiveHint`:会不会丢东西。改字不算:原文就在参数里,反着调一次就回去了。
+ * - `openWorldHint`:全是 false,这些工具只碰本机的这份稿子。
+ */
+export interface ToolAnnotations {
+  readOnlyHint: boolean
+  destructiveHint?: boolean
+  idempotentHint?: boolean
+  openWorldHint: boolean
+}
+
+const looking: ToolAnnotations = { readOnlyHint: true, openWorldHint: false }
+
 export interface ToolSpec {
   name: string
-  config: { title: string; description: string; inputSchema?: z.ZodRawShape }
+  config: {
+    title: string
+    description: string
+    inputSchema?: z.ZodRawShape
+    annotations: ToolAnnotations
+  }
   run: (args: Record<string, unknown>) => Promise<Text>
   /** 不给就按「读、说不准哪一页、拿标题当说明」处理。 */
   activity?: (args: Record<string, unknown>) => ToolActivity
@@ -109,6 +132,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '打开稿子', slides: [] }),
       config: {
         title: '打开 deck',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
         description:
           '打开一个 deck 目录并在界面上放映它。认 deck.html 和 index.html;成品还没做出来的目录也能打开。返回页数、各阶段状态和放映地址。',
         inputSchema: { path: z.string().describe('deck 目录的绝对路径') },
@@ -130,6 +159,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'write', label: '新建稿子', slides: [] }),
       config: {
         title: '新建 deck',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
         description: '在一个目录下建一份空 deck。建完还要 open_deck 才会在界面上打开。',
         inputSchema: {
           parentDir: z.string().describe('放在哪个目录下'),
@@ -149,12 +184,26 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '看稿子的状态', slides: [] }),
       config: {
         title: '看当前 deck 的状态',
+        annotations: looking,
         description:
-          '当前打开的 deck 有几页、每一页的主角和版式、转场计划、各阶段跑到哪了。改完稿子想确认结果就调它。',
+          '当前打开的 deck:一个版本号,每一页的标题、版式和**源文件里的原文**,还有各阶段的校验结果。`slide` 从 0 数起(和其余工具的参数一致),`page` 是跟用户说话时用的「第几页」。`edit_text` 的 `old_text` 从这里的 `texts` 原样抄 —— 画布上看到的字可能被 CSS 改过大小写。版本号只在稿子内容变了时才变,改完想确认有没有生效,前后比一下它。',
       },
       run: async () => {
-        const status = await call('phase.check', { deckId: await active.get(call) })
-        return json(status)
+        const deckId = await active.get(call)
+        const [inspected, checked] = await Promise.all([
+          call('deck.inspect', { deckId }),
+          call('phase.check', { deckId }),
+        ])
+        return json({
+          revision: inspected.revision,
+          slideCount: inspected.slides.length,
+          slides: inspected.slides.map(({ index, ...rest }) => ({
+            slide: index,
+            page: index + 1,
+            ...rest,
+          })),
+          phases: checked.phases,
+        })
       },
     },
     {
@@ -165,6 +214,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '让画布跳到第几页',
+        annotations: looking,
         description:
           '界面上的放映画布跳到指定页(从 0 数起)。跟用户讨论某一页时先调它 —— 他看到的和你说的才是同一页。',
         inputSchema: { index: z.number().int().nonnegative().describe('页号,从 0 数起') },
@@ -190,6 +240,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '换掉一句话',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
         description:
           '在源文件里把某一页的一段文字精确换成新的,标签和属性一个不动 —— 改文案用它,比你自己编辑 HTML 稳,不会误伤 data-id / data-carry 这些转场靠的属性。`old_text` 要和页面上现在那段字**一模一样**。找不到、或者这一页里有好几处一样的,它会拒绝并告诉你为什么,那时候再自己动手。',
         inputSchema: {
@@ -214,6 +270,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '取你指的地方', slides: [] }),
       config: {
         title: '用户正指着什么',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
         description:
           '用户在界面上点中的地方 —— 带页号、**相对那一页的** CSS 选择器、1920×1080 设计坐标,和一张带上下文的裁切图。他说「这儿太挤」「按我圈的地方改」「刚点的那处」时调它,不用猜他指的是哪儿。也包括他点了「跑」的阶段。读完就清空。',
       },
@@ -230,6 +292,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '看你指的地方', slides: [] }),
       config: {
         title: '看一眼用户指着什么但不清空',
+        annotations: looking,
         description: '和 user_selection 一样,但读完不清空。',
       },
       run: async () => {
@@ -246,6 +309,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       }),
       config: {
         title: '取一个阶段的做法',
+        annotations: looking,
         description:
           '拿到某个阶段该怎么做的完整说明(定题 brief → 选主题 theme → 列页面 outline → 写转场 plan → 出稿 build)。上游产物不合规时**直接拒绝**并说清是哪一条 —— 闸门在这儿,别绕过去。',
         inputSchema: {
@@ -272,6 +336,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '校验各阶段', slides: [] }),
       config: {
         title: '校验阶段产物',
+        annotations: looking,
         description:
           '对磁盘上的阶段产物跑确定性检查(版式理由写没写、格子凑不凑得满、转场是不是相邻两页、匹配剪辑有没有锚……)。写完一个阶段就调它,别等到出稿才发现。',
         inputSchema: { phase: Phase.optional().describe('不给就查全部') },
@@ -289,6 +354,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '找产物路径', slides: [] }),
       config: {
         title: '拿阶段产物的路径',
+        annotations: looking,
         description: '某个阶段的产物文件在磁盘上的绝对路径,用来读写它。',
         inputSchema: { phase: Phase.describe('阶段') },
       },
@@ -305,6 +371,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: (args) => ({ kind: 'read', label: '开始放映', slides: slideArg(args, 'from') }),
       config: {
         title: '全屏放映',
+        annotations: looking,
         description:
           '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见 —— 截图看不出。',
         inputSchema: {
@@ -328,6 +395,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       }),
       config: {
         title: '自动播放',
+        annotations: looking,
         description:
           '让画布按每页声明的停留时长自动往后翻,用户不用一直按方向键。说「自动放一遍」「让它自己走」时调它。用户一动键盘鼠标就会停。',
         inputSchema: { on: z.boolean().describe('开还是关') },
@@ -346,8 +414,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '截一张画布的图',
+        annotations: looking,
         description:
-          '把放映画布上的某一页截下来,返回图片路径,你自己读它看效果。**改完一定要看一眼** —— 稿子好不好只有放映能回答,光读 HTML 看不出挤不挤、对不对得上。不给页号就截当前这一页。',
+          '把放映画布上的某一页截下来,图直接附在结果里,另给磁盘路径。**改完一定要看一眼** —— 稿子好不好只有放映能回答,光读 HTML 看不出挤不挤、对不对得上。不给页号就截当前这一页。',
         inputSchema: {
           slide: z.number().int().nonnegative().optional().describe('页号,从 0 数起'),
         },
@@ -363,7 +432,17 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           deckId,
           ...(args.slide === undefined ? {} : { slide: Number(args.slide) }),
         })
-        return text(`截好了:${shot.path}\n用你的读文件工具打开它看。`)
+        // 图直接给,不只给路径:不是每个宿主都让 agent 读任意文件,而且多读一趟也白费。
+        // 读不到就退回只给路径 —— 截图本身是成功的。
+        let data: string | undefined
+        try {
+          data = (await readFile(shot.path)).toString('base64')
+        } catch {
+          data = undefined
+        }
+        const note = text(`截好了:${shot.path}`)
+        if (!data) return note
+        return { content: [...note.content, { type: 'image', data, mimeType: 'image/png' }] }
       },
     },
     {
@@ -371,6 +450,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       activity: () => ({ kind: 'read', label: '看现成主题', slides: [] }),
       config: {
         title: '列出现成主题和版式',
+        annotations: looking,
         description:
           '来自 orca-ppt-skill 的主题和版式目录。选主题阶段先从这里挑,不合适再新建 —— 颜色只能来自主题文件,不要在稿子里改颜色。',
       },

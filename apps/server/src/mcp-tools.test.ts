@@ -1,3 +1,6 @@
+import { mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { ActiveDeck, buildTools, type ProtocolCaller } from './mcp-tools.js'
 
@@ -8,6 +11,11 @@ function fakeClient(responses: Record<string, unknown> = {}) {
     return responses[method] ?? {}
   }) as unknown as ProtocolCaller
   return { client, calls }
+}
+
+/** 结果里的第一段文字。图片不算。 */
+function textOf(result: { content: Array<{ type: string; text?: string }> }): string {
+  return result.content.find((part) => part.type === 'text')?.text ?? ''
 }
 
 function toolsOf(client: ProtocolCaller, active = new ActiveDeck()) {
@@ -34,11 +42,13 @@ describe('MCP 工具', () => {
   it('应用里开着一份就直接用它 —— 不逼 agent 再开一次,它多半会猜错路径', async () => {
     const { client, calls } = fakeClient({
       'deck.list': { decks: [{ id: '/already-open', path: '/already-open' }] },
+      'deck.inspect': { revision: 'r', slides: [] },
       'phase.check': { phases: [] },
     })
     const { map } = toolsOf(client)
     await map.get('deck_status')!.run({})
-    expect(calls[1]).toEqual(['phase.check', { deckId: '/already-open' }])
+    expect(calls).toContainEqual(['deck.inspect', { deckId: '/already-open' }])
+    expect(calls).toContainEqual(['phase.check', { deckId: '/already-open' }])
   })
 
   it('应用里一份都没开就如实说,而不是拿个空 id 去问 server', async () => {
@@ -63,12 +73,13 @@ describe('MCP 工具', () => {
   it('open_deck 记住当前 deck,后面的工具不用再传路径', async () => {
     const { client, calls } = fakeClient({
       'deck.open': { deck: { id: '/d' }, slideCount: 4, phases: [], previewUrl: 'http://x' },
+      'deck.inspect': { revision: 'r', slides: [] },
       'phase.check': { phases: [] },
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
     await map.get('deck_status')!.run({})
-    expect(calls[1]).toEqual(['phase.check', { deckId: '/d' }])
+    expect(calls).toContainEqual(['deck.inspect', { deckId: '/d' }])
   })
 
   it('show_slide 的回话按人读的页号,从 1 数起', async () => {
@@ -78,7 +89,7 @@ describe('MCP 工具', () => {
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
     const result = await map.get('show_slide')!.run({ index: 3 })
-    expect(result.content[0]!.text).toContain('第 4 页')
+    expect(textOf(result)).toContain('第 4 页')
   })
 
   it('user_selection 把锚翻译成模型一眼看懂的样子', async () => {
@@ -88,7 +99,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('user_selection')!.run({})).content[0]!.text
+    const out = textOf(await map.get('user_selection')!.run({}))
 
     expect(out).toContain('第 4 页')
     expect(out).toContain('(180, 220)')
@@ -104,7 +115,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    expect((await map.get('user_selection')!.run({})).content[0]!.text).toContain('没指着任何地方')
+    expect(textOf(await map.get('user_selection')!.run({}))).toContain('没指着任何地方')
   })
 
   it('转场锚说的是两页之间', async () => {
@@ -123,7 +134,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('user_selection')!.run({})).content[0]!.text
+    const out = textOf(await map.get('user_selection')!.run({}))
     expect(out).toContain('第 3 页 → 第 4 页')
   })
 
@@ -134,7 +145,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('phase_prompt')!.run({ phase: 'plan' })).content[0]!.text
+    const out = textOf(await map.get('phase_prompt')!.run({ phase: 'plan' }))
     expect(out).toContain('卡在「outline」')
     expect(out).toContain('格子凑不满')
   })
@@ -146,8 +157,7 @@ describe('MCP 工具', () => {
     })
     const { map } = toolsOf(client)
     await map.get('open_deck')!.run({ path: '/d' })
-    const out = (await map.get('phase_prompt')!.run({ phase: 'brief', request: '讲讲 Q3' }))
-      .content[0]!.text
+    const out = textOf(await map.get('phase_prompt')!.run({ phase: 'brief', request: '讲讲 Q3' }))
     expect(out).toContain('.deck/brief.json')
   })
 
@@ -156,6 +166,76 @@ describe('MCP 工具', () => {
     for (const tool of buildTools(client, new ActiveDeck())) {
       expect(tool.config.title.length).toBeGreaterThan(0)
       expect(tool.config.description.length).toBeGreaterThan(20)
+    }
+  })
+
+  it('deck_status 给出版本号和每页原文,页号两套都给', async () => {
+    const { client } = fakeClient({
+      'deck.list': { decks: [{ id: '/d', path: '/d' }] },
+      'deck.inspect': {
+        revision: 'abc123',
+        slides: [{ index: 0, title: '封面', pageType: 'cover', texts: ['Studio placeholder'] }],
+      },
+      'phase.check': { phases: [{ phase: 'build', ok: true, issues: [] }] },
+    })
+    const { map } = toolsOf(client)
+    const out = JSON.parse(textOf(await map.get('deck_status')!.run({})))
+    expect(out.revision).toBe('abc123')
+    expect(out.slideCount).toBe(1)
+    expect(out.slides[0]).toEqual({
+      slide: 0,
+      page: 1,
+      title: '封面',
+      pageType: 'cover',
+      texts: ['Studio placeholder'],
+    })
+    expect(out.phases).toHaveLength(1)
+  })
+
+  it('capture_slide 把图直接附在结果里,另给路径', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'orca-capture-'))
+    const file = join(dir, 'shot.png')
+    await writeFile(file, Buffer.from([0x89, 0x50, 0x4e, 0x47]))
+    const { client } = fakeClient({
+      'deck.list': { decks: [{ id: '/d', path: '/d' }] },
+      'deck.capture': { path: file },
+    })
+    const { map } = toolsOf(client)
+    const result = await map.get('capture_slide')!.run({})
+    expect(textOf(result)).toContain(file)
+    expect(result.content).toContainEqual({
+      type: 'image',
+      data: Buffer.from([0x89, 0x50, 0x4e, 0x47]).toString('base64'),
+      mimeType: 'image/png',
+    })
+  })
+
+  it('图读不到时退回只给路径 —— 截图本身是成功的', async () => {
+    const { client } = fakeClient({
+      'deck.list': { decks: [{ id: '/d', path: '/d' }] },
+      'deck.capture': { path: '/nowhere/shot.png' },
+    })
+    const { map } = toolsOf(client)
+    const result = await map.get('capture_slide')!.run({})
+    expect(result.isError).toBeUndefined()
+    expect(result.content).toHaveLength(1)
+    expect(textOf(result)).toContain('/nowhere/shot.png')
+  })
+
+  it('每个工具都标了会不会动稿子 —— 宿主靠它决定要不要先问人', () => {
+    const { client } = fakeClient()
+    const byName = new Map(
+      buildTools(client, new ActiveDeck()).map((tool) => [tool.name, tool.config.annotations]),
+    )
+    for (const [, annotations] of byName) {
+      expect(annotations.openWorldHint).toBe(false)
+    }
+    // 动磁盘的,和取走就清空的,不能标成只读。
+    for (const name of ['edit_text', 'create_deck', 'open_deck', 'user_selection']) {
+      expect(byName.get(name)?.readOnlyHint).toBe(false)
+    }
+    for (const name of ['deck_status', 'capture_slide', 'peek_selection', 'check_phase']) {
+      expect(byName.get(name)?.readOnlyHint).toBe(true)
     }
   })
 })

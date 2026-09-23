@@ -28,6 +28,13 @@ const here = dirname(fileURLToPath(import.meta.url))
 const supervisor = new ServerSupervisor()
 const isMac = process.platform === 'darwin'
 
+/**
+ * 应用图标。壳是直接 `electron dist/main.js` 跑起来的,没有打包出 .app,Dock 默认显示
+ * Electron 自己的图标 —— 所以在这里显式设。源图在 docs/brand/orca-app-icon.png;这份
+ * 按 macOS 图标的留白缩到 824 居中、加了投影,不然在 Dock 里比别的图标大一圈。
+ */
+const ICON = join(here, '../assets/icon.png')
+
 /** 工作台窗口。菜单动作永远发给它,不管当前焦点在哪。 */
 let workbench: BrowserWindow | undefined
 
@@ -56,6 +63,8 @@ async function createWindow(): Promise<void> {
     width: 1440,
     height: 900,
     backgroundColor: '#0b0b0c',
+    // macOS 上窗口不用它(图标归 Dock 管),Windows / Linux 的任务栏靠它。
+    icon: ICON,
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     webPreferences: {
       // Electron 偏弱的安全默认值在壳里补齐。渲染层永远不 spawn 进程、不碰文件系统、
@@ -324,7 +333,12 @@ ipcMain.handle(
 
 app.whenReady().then(() => {
   applyMenu({ canPresent: false, theme: 'system' })
-  app.setAboutPanelOptions({ applicationName: APP_NAME, applicationVersion: app.getVersion() })
+  app.setAboutPanelOptions({
+    applicationName: APP_NAME,
+    applicationVersion: app.getVersion(),
+    iconPath: ICON,
+  })
+  if (isMac) app.dock?.setIcon(ICON)
   return createWindow()
 })
 app.on('window-all-closed', () => {

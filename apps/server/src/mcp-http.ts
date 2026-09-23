@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { ActiveDeck, buildTools, type ProtocolCaller, type ToolSpec } from './mcp-tools.js'
@@ -27,9 +30,28 @@ export interface McpActivity {
   error?: string
 }
 
+/**
+ * 自报家门时带上图标(MCP `serverInfo.icons`)。宿主不一定能从装好的 .app 里取到图标 ——
+ * 开发时壳是直接 `electron dist/main.js` 跑的,根本没有 .app —— 那它只能靠这里。
+ * 用 data URI:不多开一个路由,宿主也不用再发一次请求。图读不到就不带,不影响工具。
+ * 源图见 docs/brand/orca-app-icon.png,这份是 256 的派生。
+ */
+export function serverIcons(
+  file = join(dirname(fileURLToPath(import.meta.url)), '../assets/icon.png'),
+) {
+  try {
+    const data = readFileSync(file).toString('base64')
+    return [{ src: `data:image/png;base64,${data}`, mimeType: 'image/png', sizes: ['256x256'] }]
+  } catch {
+    return []
+  }
+}
+
 export class McpEndpoint {
   /** 跨请求活着的只有「当前是哪份 deck」。其余每个请求自成一体。 */
   readonly #active = new ActiveDeck()
+  /** 读一次就够了 —— 每个请求都要新建 server,别每次都读盘。 */
+  readonly #icons = serverIcons()
 
   constructor(
     private readonly call: ProtocolCaller,
@@ -85,7 +107,12 @@ export class McpEndpoint {
 
     // 无状态范式:**每个请求新建一套** server + transport。
     // 复用同一个 transport 会让它把响应发到上一个请求的 res 上 —— 第二个请求就静默空回。
-    const server = new McpServer({ name: 'orca-ppt', version: '0.1.0' })
+    const server = new McpServer({
+      name: 'orca-ppt',
+      title: 'OrcaPPT',
+      version: '0.1.0',
+      ...(this.#icons.length > 0 ? { icons: this.#icons } : {}),
+    })
     for (const tool of buildTools(this.call, this.#active)) {
       server.registerTool(
         tool.name,
@@ -114,8 +141,8 @@ export class McpEndpoint {
 }
 
 /** 工具自己给的那句理由,直接摆到界面上。 */
-function firstLine(result: { content: Array<{ text: string }> }): string {
-  return result.content[0]?.text ?? '没办成'
+function firstLine(result: { content: Array<{ type: string; text?: string }> }): string {
+  return result.content.find((part) => part.type === 'text')?.text ?? '没办成'
 }
 
 /** transport 要的是解析好的 JSON body;GET(SSE)没有 body。 */
