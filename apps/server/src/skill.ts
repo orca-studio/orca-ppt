@@ -5,8 +5,8 @@ import { readRecentThemes } from './recent.js'
 import { keepKnown, parseVocabulary, tagIssues, tagLine, type Vocabulary } from './tags.js'
 
 /**
- * 规范、主题、版式、录制脚本都从 skill 目录读,不抄进本仓 —— skill 更新产品跟着更新,
- * 不两边同步(见 docs/DECK-MODE.md 末节)。
+ * 规范、主题、版式、录制脚本都从 skill 目录读,不抄进本仓。发布版的 skill 是**跟着
+ * app 一起发的那一份**(见 docs/ARCHITECTURE.md「交付形态」),开发时读本地仓。
  */
 /**
  * 两个名字都认:仓从 `orca-transition-skill` 改成了 `orca-ppt-skill`(和应用同源),
@@ -19,10 +19,18 @@ const DEFAULT_LOCATIONS = [
   join(homedir(), '.claude/skills/orca-transition'),
 ]
 
+/**
+ * 找 skill 的顺序:
+ *
+ * 1. `ORCA_PPT_SKILL` —— 显式指定,开发时拿来试 skill 的改动。
+ * 2. `ORCA_PPT_BUNDLED_SKILL` —— app 自带的那一份,壳在发布版里设。skill 跟着 app 发版,
+ *    所以只要它在,就用它:版本一定和 app 对得上。
+ * 3. 开发时的本地仓和旧的安装位置。
+ */
 export async function resolveSkillPath(env = process.env): Promise<string | undefined> {
-  const candidates = env.ORCA_PPT_SKILL
-    ? [env.ORCA_PPT_SKILL, ...DEFAULT_LOCATIONS]
-    : DEFAULT_LOCATIONS
+  const candidates = [env.ORCA_PPT_SKILL, env.ORCA_PPT_BUNDLED_SKILL, ...DEFAULT_LOCATIONS].filter(
+    (path): path is string => Boolean(path),
+  )
 
   for (const candidate of candidates) {
     try {

@@ -63,10 +63,12 @@ pnpm test
 规范、主题、版式、录制脚本不在本仓,从 skill 读:
 
 - [orca-ppt-skill](https://github.com/zhenwusw/orca-ppt-skill) — 转场、主题、版式、`capture.mjs`
-- [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) — 场景内部的 MG 动画
+- [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) — 场景内部的 MG 动画。
+  可选件,app 不读它;稿子页面自己加载它时,ppt-skill 的 engine 在转场后播放场景
 - [ppt.orca-studio.ai](https://ppt.orca-studio.ai) — 示例库
 
-skill 更新,产品跟着更新,不两边同步。
+发布版的 skill 跟着 app 一起发,版本和 app 一致;开发时读本地仓。
+见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)「交付形态」。
 
 ## 致谢
 

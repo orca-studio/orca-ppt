@@ -81,8 +81,16 @@ async function undoOrRedo(action: 'undo' | 'redo'): Promise<void> {
   workbench?.webContents.send('menu:action', action)
 }
 
+/**
+ * skill 跟着 app 发版:发布版把它放在 Resources/skill,告诉 server 用这一份。
+ * 开发时没有这一份,server 自己去读本地仓(见 apps/server/src/skill.ts)。
+ */
+function bundledSkill(): Record<string, string> {
+  return app.isPackaged ? { ORCA_PPT_BUNDLED_SKILL: join(process.resourcesPath, 'skill') } : {}
+}
+
 async function createWindow(): Promise<void> {
-  const port = await supervisor.start(join(here, '../../server/dist/main.js'))
+  const port = await supervisor.start(join(here, '../../server/dist/main.js'), bundledSkill())
   serverPort = port
 
   const window = new BrowserWindow({

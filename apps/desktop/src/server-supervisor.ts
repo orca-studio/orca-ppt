@@ -8,10 +8,10 @@ export class ServerSupervisor {
   #child: ChildProcess | undefined
 
   /** server 在 stdout 上报端口。等到那一行再开窗口,避免渲染层连一个还没起来的端口。 */
-  async start(entry: string): Promise<number> {
+  async start(entry: string, env: Record<string, string> = {}): Promise<number> {
     const child = spawn(process.execPath, [entry], {
       stdio: ['ignore', 'pipe', 'inherit'],
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      env: { ...process.env, ...env, ELECTRON_RUN_AS_NODE: '1' },
     })
     this.#child = child
 

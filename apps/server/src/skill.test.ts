@@ -32,6 +32,19 @@ describe('resolveSkillPath', () => {
     expect(await resolveSkillPath({ ORCA_PPT_SKILL: dir })).toBe(dir)
   })
 
+  it('app 自带的那一份排在本地仓前面 —— 发布版的 skill 要和 app 版本对得上', async () => {
+    const bundled = await fakeSkill()
+    expect(await resolveSkillPath({ ORCA_PPT_BUNDLED_SKILL: bundled })).toBe(bundled)
+  })
+
+  it('显式指定的还能盖过自带的 —— 开发时要拿它试 skill 的改动', async () => {
+    const bundled = await fakeSkill()
+    const explicit = await fakeSkill()
+    expect(
+      await resolveSkillPath({ ORCA_PPT_SKILL: explicit, ORCA_PPT_BUNDLED_SKILL: bundled }),
+    ).toBe(explicit)
+  })
+
   it('指过去的路径不是 skill 就往下找,而不是硬用', async () => {
     const empty = await mkdtemp(join(tmpdir(), 'notskill-'))
     const resolved = await resolveSkillPath({ ORCA_PPT_SKILL: empty })

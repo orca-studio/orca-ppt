@@ -125,11 +125,15 @@ _不做:_ **自动视觉自评**(抽关键帧调模型打分)和**自动修复�
 
 ## 与 skill 的关系
 
-`orca-ppt-skill` 和 `orca-motion-skill` 不被抄进本仓,而是作为**内容层依赖**被读取:
-规范文档、主题、版式模板、`capture.mjs` 都从 skill 目录读。skill 更新,产品跟着更新,不用
-两边同步。
+`orca-ppt-skill` 不被抄进本仓,而是作为**内容层依赖**被读取:
+规范文档、主题、版式模板、`capture.mjs` 都从 skill 目录读。发布版读的是跟着 app 一起发的
+那一份,版本和 app 一致(见 ARCHITECTURE「交付形态」)。
 
 产品负责的是 skill 做不到的那部分:把规范变成界面,把放映变成可点击的评审面,把录制变成
 一个按钮。
 
 _否掉:_ 把规范内容复制进 `packages/deck-agent`(立刻和 skill 分叉,两边都不对)。
+
+`orca-motion-skill` 和产品没有直接关系:app 不读它的任何文件。它是 ppt-skill 旁边的一个
+可选件 —— 稿子页面自己加载了它的 `motion.js`、页里有 `.mo-scene` 时,ppt-skill 的
+`engine.js` 在转场结束后播放场景动画。这是两个 skill 在稿子里的约定,不经过 app。
