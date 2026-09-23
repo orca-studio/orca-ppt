@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { HistoryState } from '@orca-ppt/contracts'
 import type { Layout } from './layout.js'
 import { ViewMenu } from './ViewMenu.js'
 import { Button } from './ui/Button.js'
@@ -21,6 +22,10 @@ export interface ToolbarProps {
   onLayoutChange: (next: Partial<Layout>) => void
   canPresent: boolean
   onPresent: () => void
+  /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
+  history: HistoryState
+  onUndo: () => void
+  onRedo: () => void
   /** 进入取锚状态:点画布上一处,指给 agent 看。 */
   picking: boolean
   canPick: boolean
@@ -33,6 +38,9 @@ export function Toolbar({
   onLayoutChange,
   canPresent,
   onPresent,
+  history,
+  onUndo,
+  onRedo,
   picking,
   canPick,
   onPick,
@@ -72,6 +80,27 @@ export function Toolbar({
       <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
 
       <div className="toolbar-actions">
+        {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
+        <Button
+          variant="ghost"
+          icon
+          onClick={onUndo}
+          disabled={!history.canUndo}
+          title={history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改字'}
+          aria-label="撤销"
+        >
+          <UndoIcon />
+        </Button>
+        <Button
+          variant="ghost"
+          icon
+          onClick={onRedo}
+          disabled={!history.canRedo}
+          title={history.redo ? `重做:${history.redo}(⇧⌘Z)` : '没有可以重做的改字'}
+          aria-label="重做"
+        >
+          <UndoIcon flipped />
+        </Button>
         {/* 指给 agent 看是次要动作:和播放一样是圆钮,开着的时候才上强调色。 */}
         <Button
           icon
@@ -103,6 +132,28 @@ function PlayIcon() {
   return (
     <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">
       <path d="M1 1.2 L8 5 L1 8.8 Z" fill="currentColor" />
+    </svg>
+  )
+}
+
+/** 回转箭头。重做是它的镜像。 */
+function UndoIcon({ flipped = false }: { flipped?: boolean }) {
+  return (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 13 13"
+      aria-hidden="true"
+      style={flipped ? { transform: 'scaleX(-1)' } : undefined}
+    >
+      <path
+        d="M4.2 2.2 1.5 4.9l2.7 2.7M1.8 4.9h5.9a3.6 3.6 0 0 1 0 7.2H5.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   )
 }

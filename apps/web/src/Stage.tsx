@@ -44,6 +44,8 @@ export interface StageHandle {
    * 写盘会触发重载,这会儿点亮的是马上就要被换掉的那个 DOM。
    */
   spotlight(text: string): void
+  /** 在画布上说一句话(比如撤销为什么没做成),贴着最近改过的那一处。 */
+  notify(message: string): void
   /** 等画布加载完。重载途中截图会截到空白,得等它。 */
   whenReady(timeoutMs?: number): Promise<boolean>
   /** 这一页的情况:停留时长、参与转场的元素。只有画布答得出来。 */
@@ -224,6 +226,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           ?.executeJavaScript('window.__orcaInspect.slideInfo()')
           .catch(() => null)
         return (result as SlideInfo | null) ?? null
+      },
+      notify: (message: string) => {
+        void ref.current
+          ?.executeJavaScript(`window.__orcaEdit?.notify(${JSON.stringify(message)})`)
+          .catch(() => {})
       },
       spotlight: (text: string) => {
         // 一律攒到下一次加载完成:改文字必然引发重载,现在点亮的是马上要被换掉的 DOM。

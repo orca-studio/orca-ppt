@@ -172,6 +172,46 @@ describe('deck.editText', () => {
   })
 })
 
+describe('撤销 / 重做', () => {
+  const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
+
+  it('撤掉一处改字,磁盘上原样还回去;重做又回来', async () => {
+    const { dir, id } = await builtDeck(deck('<section><p class="t-h1">走过的四站。</p></section>'))
+    const file = join(dir, 'deck.html')
+    const original = await readFile(file, 'utf8')
+    await call('deck.editText', { deckId: id, slide: 0, oldText: '走过的四站。', newText: '四站' })
+    const edited = await readFile(file, 'utf8')
+
+    const undone = await call('deck.undo', { deckId: id })
+    expect(undone.data).toEqual({ ok: true, slide: 0, text: '走过的四站。' })
+    expect(await readFile(file, 'utf8')).toBe(original)
+
+    const redone = await call('deck.redo', { deckId: id })
+    expect(redone.data).toEqual({ ok: true, slide: 0, text: '四站' })
+    expect(await readFile(file, 'utf8')).toBe(edited)
+  })
+
+  it('状态推给界面,按钮跟着亮灭', async () => {
+    const { id } = await builtDeck(deck('<section><p>甲</p></section>'))
+    expect((await call('deck.history', { deckId: id })).data).toEqual({
+      canUndo: false,
+      canRedo: false,
+    })
+    await call('deck.editText', { deckId: id, slide: 0, oldText: '甲', newText: '乙' })
+    await new Promise((r) => setTimeout(r, 30))
+    const changed = pushes.filter((p) => p.channel === 'history.changed').pop()
+    expect(changed.data).toMatchObject({ deckId: id, canUndo: true, canRedo: false })
+  })
+
+  it('没有可撤的就如实拒绝,不动磁盘', async () => {
+    const { dir, id } = await builtDeck(deck('<section><p>甲</p></section>'))
+    const before = await readFile(join(dir, 'deck.html'), 'utf8')
+    const response = await call('deck.undo', { deckId: id })
+    expect(response.data).toEqual({ ok: false, reason: '没有可以撤销的改动' })
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(before)
+  })
+})
+
 describe('待办队列', () => {
   it('界面挂一处锚,agent 取走后队列清空', async () => {
     const { id } = await builtDeck()

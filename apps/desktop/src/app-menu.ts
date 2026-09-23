@@ -17,6 +17,8 @@ export type MenuAction =
   | 'theme:light'
   | 'theme:dark'
   | 'connect-agent'
+  | 'undo'
+  | 'redo'
 
 export interface MenuOptions {
   appName: string
@@ -63,8 +65,9 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
       // 少了它们 ⌘C / ⌘V 在应用里就失效了。
       label: '编辑',
       submenu: [
-        { role: 'undo', label: '撤销' },
-        { role: 'redo', label: '重做' },
+        // 不用 role:⌘Z 在输入框里是撤销打字,在画布上是撤销改字 —— 壳看焦点决定。
+        { label: '撤销', accelerator: 'CmdOrCtrl+Z', click: () => send('undo') },
+        { label: '重做', accelerator: 'Shift+CmdOrCtrl+Z', click: () => send('redo') },
         { type: 'separator' },
         { role: 'cut', label: '剪切' },
         { role: 'copy', label: '拷贝' },

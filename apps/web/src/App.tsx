@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { DeckPhase, PendingRequest, RequestResult } from '@orca-ppt/contracts'
+import type { DeckPhase, HistoryState, PendingRequest, RequestResult } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
@@ -28,6 +28,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const presentRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
+  const stepHistoryRef = useRef<(direction: 'undo' | 'redo') => void>(() => {})
 
   const [state, setState] = useState<TransportState>('closed')
   const [deck, setDeck] = useState<OpenedDeck | undefined>()
@@ -38,6 +39,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
+  const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   const [templates, setTemplates] = useState<Template[]>([])
   const [themes, setThemes] = useState<Theme[]>([])
   /** 最近用过的主题。**不是标签** —— 系统从使用记录算出来的,所以单独一个字段。 */
@@ -63,6 +65,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setSlide(0)
       slideRef.current = 0
       setRequests((await via.request('requests.list', { deckId: opened.deck.id })).requests)
+      setHistory(await via.request('deck.history', { deckId: opened.deck.id }))
       void refreshThumbs(via, opened.deck.id)
     } catch (cause) {
       setDeck(undefined)
@@ -131,6 +134,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
       }
     })
 
+    // 改字、撤销、重做,不管是人还是 agent 做的,按钮都跟着。
+    next.subscribe('history.changed', ({ deckId, ...state }) => {
+      if (deckRef.current?.deck.id === deckId) setHistory(state)
+    })
+
     next.subscribe('autoplay.changed', (data) => {
       setAutoplay(data.on)
       stage.current?.autoplay(data.on)
@@ -195,6 +203,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'present') presentRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
+      else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
       else if (action.startsWith('theme:')) {
         const next = action.slice('theme:'.length) as ThemeSource
         applyTheme(next)
@@ -381,6 +390,32 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }
   }, [])
 
+  /**
+   * 撤销 / 重做一处改字。成了就翻到那一页、把那一处点亮 —— 撤的可能不是眼前这页,
+   * 人得看见动的是哪儿;不成就在画布上把理由说出来。
+   */
+  const stepHistory = useCallback(async (direction: 'undo' | 'redo') => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return
+    try {
+      const method = direction === 'undo' ? 'deck.undo' : 'deck.redo'
+      const result = await active.request(method, { deckId: current.deck.id })
+      if (!result.ok) {
+        stage.current?.notify(result.reason ?? '没做成')
+        return
+      }
+      if (result.slide !== undefined && result.slide !== slideRef.current) {
+        // 走协议方法,不直接动画布:和 agent 让画布翻页是同一条路。
+        await active.request('deck.showSlide', { deckId: current.deck.id, index: result.slide })
+      }
+      if (result.text) stage.current?.spotlight(result.text)
+    } catch (cause) {
+      stage.current?.notify(cause instanceof Error ? cause.message : '没做成')
+    }
+  }, [])
+  stepHistoryRef.current = (direction) => void stepHistory(direction)
+
   /** 指着一次转场说「这儿不对」—— 产生一条转场锚,和画布上点元素同一个去处。 */
   const flagTransition = useCallback(
     (from: number, to: number) => {
@@ -530,6 +565,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
         onLayoutChange={changeLayout}
         canPresent={Boolean(deck?.previewUrl)}
         onPresent={present}
+        history={history}
+        onUndo={() => void stepHistory('undo')}
+        onRedo={() => void stepHistory('redo')}
         picking={picking}
         canPick={Boolean(deck?.previewUrl)}
         onPick={() => {

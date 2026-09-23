@@ -238,4 +238,28 @@ describe('MCP 工具', () => {
       expect(byName.get(name)?.readOnlyHint).toBe(true)
     }
   })
+
+  it('undo 没撤成时如实报错,撤成了说清是哪一页、现在是什么字', async () => {
+    const { client } = fakeClient({
+      'deck.list': { decks: [{ id: '/d', path: '/d' }] },
+      'deck.undo': { ok: false, reason: '没有可以撤销的改动' },
+      'deck.redo': { ok: true, slide: 2, text: '新标题' },
+    })
+    const { map } = toolsOf(client)
+    const refused = await map.get('undo')!.run({})
+    expect(refused.isError).toBe(true)
+    expect(textOf(refused)).toContain('没有可以撤销的改动')
+    expect(textOf(await map.get('redo')!.run({}))).toContain('第 3 页')
+  })
+
+  it('undo / redo 标成会改稿子但不丢东西 —— 宿主据此知道这个应用撤得回去', () => {
+    const { client } = fakeClient()
+    const tools = new Map(buildTools(client, new ActiveDeck()).map((t) => [t.name, t.config]))
+    for (const name of ['undo', 'redo']) {
+      expect(tools.get(name)?.annotations).toMatchObject({
+        readOnlyHint: false,
+        destructiveHint: false,
+      })
+    }
+  })
 })

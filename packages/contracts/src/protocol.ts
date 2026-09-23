@@ -30,6 +30,26 @@ export const PendingRequest = z.union([
 ])
 export type PendingRequest = z.infer<typeof PendingRequest>
 
+/**
+ * 改字的撤销 / 重做走到哪了。`undo` / `redo` 是下一步会撤掉 / 重做的那一处,
+ * 给界面当按钮提示用 —— 「撤销」两个字不说清是哪一处,人不敢点。
+ */
+export const HistoryState = z.object({
+  canUndo: z.boolean(),
+  canRedo: z.boolean(),
+  undo: z.string().optional(),
+  redo: z.string().optional(),
+})
+export type HistoryState = z.infer<typeof HistoryState>
+
+/** 撤销 / 重做一步的结果。成了就说是哪一页、那一处现在是什么字,界面拿它翻过去点亮。 */
+const HistoryStep = z.object({
+  ok: z.boolean(),
+  reason: z.string().optional(),
+  slide: z.number().int().nonnegative().optional(),
+  text: z.string().optional(),
+})
+
 export const requests = {
   'deck.list': { params: z.object({}), result: z.object({ decks: z.array(DeckSummary) }) },
   'deck.open': {
@@ -133,6 +153,27 @@ export const requests = {
       newText: z.string(),
     }),
     result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
+  },
+  /**
+   * 撤掉最近一次改字(`deck.editText` 做的,不管是人双击改的还是 agent 改的)。
+   *
+   * 稿子还是那次改完的样子,就原样还回改之前;在那之后被别处改过(agent 直接写了
+   * HTML、人在编辑器里动过),就退一步只把那段字换回去;连那段字都对不上了就拒绝,
+   * 不猜 —— 和 `deck.editText` 同一个规矩。只管改字:直接写文件的改动不在这里面。
+   */
+  'deck.undo': {
+    params: z.object({ deckId: z.string() }),
+    result: HistoryStep,
+  },
+  /** 重做刚撤掉的那一步。又改过字之后就没有可重做的了。 */
+  'deck.redo': {
+    params: z.object({ deckId: z.string() }),
+    result: HistoryStep,
+  },
+  /** 撤销 / 重做现在能不能点。打开稿子时问一次,之后跟着 `history.changed` 走。 */
+  'deck.history': {
+    params: z.object({ deckId: z.string() }),
+    result: HistoryState,
   },
   /** 某个阶段产物的绝对路径。界面拿它交给系统编辑器,agent 拿它去读写。 */
   'artifact.path': {
@@ -373,6 +414,8 @@ export const pushes = {
   }),
   /** 自动播放开关变了。画布和放映窗口都跟着。 */
   'autoplay.changed': z.object({ deckId: z.string(), on: z.boolean() }),
+  /** 撤销 / 重做的状态变了 —— 改了字、撤了、重做了,不管是谁做的。 */
+  'history.changed': HistoryState.extend({ deckId: z.string() }),
   /** 请壳开一个全屏窗口放映。只有壳做得到。 */
   'present.request': z.object({
     deckId: z.string(),

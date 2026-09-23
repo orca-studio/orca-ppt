@@ -15,6 +15,7 @@ import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyTextEdit } from './edit.js'
+import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
 import {
@@ -69,6 +70,34 @@ export async function startServer(
   const previews = new PreviewHost()
   for (const root of options.allowRoots ?? []) await previews.allow(root)
   const openDecks = new Map<string, string>()
+  /** 每份稿子的改字记录。打开过就一直在,直到进程退出 —— 见 history.ts。 */
+  const histories = new Map<string, EditHistory>()
+  const historyOf = (deckId: string): EditHistory => {
+    let history = histories.get(deckId)
+    if (!history) {
+      history = new EditHistory()
+      histories.set(deckId, history)
+    }
+    return history
+  }
+  const announceHistory = (deckId: string) =>
+    bus.broadcast('history.changed', { deckId, ...historyOf(deckId).state() })
+  /** 撤销和重做是同一件事的两个方向。 */
+  const stepHistory = async (deckId: string, direction: 'undo' | 'redo') => {
+    const root = deckPathOf(deckId)
+    const name = await findEntryName(root)
+    if (!name) return { ok: false, reason: '这份稿子还没有出稿文件' }
+    const file = join(root, name)
+    const history = historyOf(deckId)
+    // 每次都重读磁盘:agent 可能刚写过,history 据此决定整份还回去还是只换那段字。
+    const current = await readFile(file, 'utf8')
+    const result = direction === 'undo' ? history.undo(current) : history.redo(current)
+    if (!result.ok) return { ok: false, reason: result.reason }
+    if (result.html !== current) await writeFile(file, result.html, 'utf8')
+    announceHistory(deckId)
+    const { step } = result
+    return { ok: true, slide: step.slide, text: direction === 'undo' ? step.oldText : step.newText }
+  }
 
   const captures = new Roundtrip<string, { slide?: number }>((payload) =>
     bus.broadcast('capture.request', payload),
@@ -289,9 +318,32 @@ export async function startServer(
           newText: params.newText,
         })
         if (!result.ok) return { ok: false, reason: result.reason }
-        if (result.html !== html) await writeFile(file, result.html, 'utf8')
+        if (result.html !== html) {
+          await writeFile(file, result.html, 'utf8')
+          historyOf(params.deckId).record({
+            slide: params.slide,
+            oldText: params.oldText.trim(),
+            newText: params.newText.trim(),
+            before: html,
+            after: result.html,
+          })
+          announceHistory(params.deckId)
+        }
         // 不用在这儿广播:文件一变,看稿子的 watcher 自己会推 deck.changed。
         return { ok: true }
+      }
+      case 'deck.undo': {
+        const params = parseParams('deck.undo', raw)
+        return stepHistory(params.deckId, 'undo')
+      }
+      case 'deck.redo': {
+        const params = parseParams('deck.redo', raw)
+        return stepHistory(params.deckId, 'redo')
+      }
+      case 'deck.history': {
+        const params = parseParams('deck.history', raw)
+        deckPathOf(params.deckId)
+        return historyOf(params.deckId).state()
       }
       case 'artifact.path': {
         const params = parseParams('artifact.path', raw)

@@ -266,6 +266,50 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'undo',
+      activity: () => ({ kind: 'write', label: '撤销上一处改字', slides: [] }),
+      config: {
+        title: '撤销上一处改字',
+        // 会改稿子,但不丢东西:撤掉的那一步 redo 能拿回来。
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+        description:
+          '撤掉最近一次改字 —— 不管是 edit_text 改的,还是用户在画布上双击改的,和界面上的撤销按钮是同一件事。只管改字:你直接写 HTML 的改动不在这里面。没有可撤的、或者那段字在那之后被改得对不上了,它会拒绝并说明。',
+      },
+      run: async () => {
+        const result = await call('deck.undo', { deckId: await active.get(call) })
+        if (!result.ok) return refuse(`没撤:${result.reason}`)
+        return text(
+          `撤销了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
+        )
+      },
+    },
+    {
+      name: 'redo',
+      activity: () => ({ kind: 'write', label: '重做刚撤掉的改字', slides: [] }),
+      config: {
+        title: '重做刚撤掉的改字',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+        description: '把刚撤掉的那处改字重做回来。撤销之后又改过字,就没有可重做的了。',
+      },
+      run: async () => {
+        const result = await call('deck.redo', { deckId: await active.get(call) })
+        if (!result.ok) return refuse(`没重做:${result.reason}`)
+        return text(
+          `重做了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
+        )
+      },
+    },
+    {
       name: 'user_selection',
       activity: () => ({ kind: 'read', label: '取你指的地方', slides: [] }),
       config: {

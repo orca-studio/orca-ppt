@@ -46,6 +46,10 @@ function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'da
       void showConnectAgent()
       return
     }
+    if (action === 'undo' || action === 'redo') {
+      void undoOrRedo(action)
+      return
+    }
     // 不能用 getFocusedWindow():从菜单栏点的时候应用常常不是聚焦状态,
     // 那样返回 null,动作被静默丢掉。放映窗口在前面时同理。
     workbench?.webContents.send('menu:action', action)
@@ -53,6 +57,28 @@ function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'da
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(buildMenuTemplate({ appName: APP_NAME, isMac, ...state, send })),
   )
+}
+
+/**
+ * ⌘Z 归谁。有人正在打字(输入框、画布上双击改的那段字)就归那个输入框,撤的是
+ * 打字;否则归稿子,撤的是上一处改字。焦点可能在 guest 里 —— 问的是真正拿着
+ * 焦点的那个 webContents,不是工作台。
+ */
+async function undoOrRedo(action: 'undo' | 'redo'): Promise<void> {
+  const focused = webContents.getFocusedWebContents()
+  const typing = focused
+    ? await focused
+        .executeJavaScript(
+          `(() => { const el = document.activeElement; return !!el && (el.isContentEditable || /^(INPUT|TEXTAREA)$/.test(el.tagName)) })()`,
+        )
+        .catch(() => false)
+    : false
+  if (focused && typing) {
+    if (action === 'undo') focused.undo()
+    else focused.redo()
+    return
+  }
+  workbench?.webContents.send('menu:action', action)
 }
 
 async function createWindow(): Promise<void> {

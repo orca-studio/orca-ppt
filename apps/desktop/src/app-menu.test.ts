@@ -33,6 +33,20 @@ describe('应用菜单', () => {
     }
   })
 
+  it('⌘Z / ⇧⌘Z 发动作而不是 role —— 壳看焦点决定撤打字还是撤改字', () => {
+    const sent: MenuAction[] = []
+    const edit = build({ send: (action) => sent.push(action) }).find(
+      (item) => item.label === '编辑',
+    )!.submenu as Array<{ label?: string; accelerator?: string; role?: string; click?: () => void }>
+    const undo = edit.find((item) => item.label === '撤销')!
+    const redo = edit.find((item) => item.label === '重做')!
+    expect(undo.accelerator).toBe('CmdOrCtrl+Z')
+    expect(redo.accelerator).toBe('Shift+CmdOrCtrl+Z')
+    undo.click!()
+    redo.click!()
+    expect(sent).toEqual(['undo', 'redo'])
+  })
+
   it('打开和放映各自发一个动作', () => {
     const sent: MenuAction[] = []
     const template = build({ send: (action) => sent.push(action) })
