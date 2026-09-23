@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node tools/brand-dev-electron.mjs && node tools/dev.mjs",
     "build": "pnpm -r build",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p apps/web",
     "test": "vitest run",
     "lint": "prettier --check .",
     "format": "prettier --write ."
