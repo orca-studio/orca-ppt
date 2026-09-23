@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
 import type { InspectAnchor } from '@orca-ppt/contracts'
 import autoplayScript from './guest/autoplay.guest.js?raw'
 import editScript from './guest/edit.guest.js?raw'
@@ -85,10 +85,29 @@ export interface StageProps {
    * 拒绝的理由要摆回他刚才双击的地方,不能默默吞掉。
    */
   onTextEdit: (edit: TextEdit) => Promise<string | undefined>
+  /**
+   * agent 正拿着稿子。这时不接新的双击改字、不响应方向键 —— 改了也会被 server 拒掉,
+   * 翻页会和 agent 抢。已经在改的那处不收走:人打到一半的字直接没了,比被拒一次更糟。
+   */
+  readOnly: boolean
+  /** 盖在画布上的那一层(agent 拿着稿子时的遮罩)。 */
+  overlay?: ReactNode
+  /** 替换画布下面那行提示:人接管了、agent 交还时留了话。 */
+  notice?: ReactNode
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, initialSlide, autoplay, onToggleAutoplay, onSlideChange, onTextEdit },
+  {
+    previewUrl,
+    initialSlide,
+    autoplay,
+    onToggleAutoplay,
+    onSlideChange,
+    onTextEdit,
+    readOnly,
+    overlay,
+    notice,
+  },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -106,6 +125,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
   const onTextEditRef = useRef(onTextEdit)
   onTextEditRef.current = onTextEdit
+  const readOnlyRef = useRef(readOnly)
+  readOnlyRef.current = readOnly
+  /** 守候改字那一轮在不在跑。只读时停下,放开时从这里重新接上。 */
+  const watching = useRef(false)
+  const watchRef = useRef<() => void>(() => {})
+  /** 有一次重载在等人改完字。 */
+  const reloadWaiting = useRef(false)
 
   useEffect(() => {
     const view = ref.current
@@ -118,6 +144,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
      * 这一轮会在下一次加载时被 guest 那边的重复注入解掉(arm 的 Promise 解成 null)。
      */
     const watchEdits = () => {
+      if (readOnlyRef.current) {
+        watching.current = false
+        return
+      }
+      watching.current = true
       void view
         .executeJavaScript('window.__orcaEdit.arm()')
         .then(async (result) => {
@@ -132,8 +163,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         })
         .then(watchEdits)
         // guest 没了就别再守了,不然重载时会空转。
-        .catch(() => {})
+        .catch(() => {
+          watching.current = false
+        })
     }
+    watchRef.current = watchEdits
 
     const onStartLoading = () => {
       loading.current = true
@@ -180,6 +214,46 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /**
+   * 稿子在磁盘上变了要重载画布 —— 可人正双击改着字的时候不能重载,他打到一半的字会直接没了。
+   * 等他改完(提交或放弃)再重载。他提交时 server 会重读磁盘,旧文字对不上就拒,不会盖掉 agent 的。
+   */
+  const reloadWhenNotEditing = async () => {
+    if (reloadWaiting.current) return
+    reloadWaiting.current = true
+    try {
+      for (;;) {
+        const view = ref.current
+        if (!view) return
+        const editing = await view
+          .executeJavaScript('!!window.__orcaEdit?.editing()')
+          .catch(() => false)
+        if (!editing) {
+          view.reload()
+          return
+        }
+        await new Promise((resume) => setTimeout(resume, 400))
+      }
+    } finally {
+      reloadWaiting.current = false
+    }
+  }
+
+  useEffect(() => {
+    const view = ref.current
+    if (!view || !ready) return
+    if (!readOnly) {
+      if (!watching.current) watchRef.current()
+      return
+    }
+    // 焦点留在画布里的话,方向键会直接进 reveal,绕过下面的拦截。
+    view.blur()
+    // 收起双击改字。守候那一轮的 Promise 会解成 null,watchEdits 看到只读就不再接上。
+    void view
+      .executeJavaScript('window.__orcaEdit?.editing() || window.__orcaEdit?.disarm()')
+      .catch(() => {})
+  }, [readOnly, ready])
+
   useImperativeHandle(
     handle,
     (): StageHandle => ({
@@ -203,7 +277,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       reload: (slide: number) => {
         restoreTo.current = slide
-        ref.current?.reload()
+        void reloadWhenNotEditing()
       },
       goto: (slide: number) => {
         void ref.current?.executeJavaScript(`Reveal.slide(${slide})`).catch(() => {})
@@ -267,6 +341,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       const target = event.target as HTMLElement | null
       // 用户正在输入框里打字,方向键归输入框。
       if (target?.closest('input, textarea, [contenteditable="true"]')) return
+      // agent 拿着稿子:翻页是它的,人要翻先接管。
+      if (readOnlyRef.current) return
 
       const call =
         event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' '
@@ -298,13 +374,15 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
             partition="persist:deck-preview"
           />
           {error && <div className="stage-error">{error}</div>}
+          {overlay}
         </div>
         {/*
           贴在稿子正下方,不沉到画布底:离稿子两百像素的一行字读起来不属于任何东西。
           页数不写 —— 状态栏已经有「第几 / 共几页」。
         */}
         <div className="stage-meta">
-          <span>方向键翻页 · 双击改字</span>
+          {/* agent 拿着稿子时这两件都做不了,遮罩上已经说了为什么 —— 这里不再写一遍反话。 */}
+          {notice ?? (!readOnly && <span>方向键翻页 · 双击改字</span>)}
           <Button size="sm" on={autoplay} aria-pressed={autoplay} onClick={onToggleAutoplay}>
             {autoplay ? '自动播放中' : '自动播放'}
           </Button>

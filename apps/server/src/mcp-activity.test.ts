@@ -187,3 +187,147 @@ describe('自报家门', () => {
     expect(info.icons[0].src).toMatch(/^data:image\/png;base64,iVBORw0KGgo/)
   })
 })
+
+describe('agent 拿着稿子时,界面只读', () => {
+  async function openForEdit(text: string): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(
+      join(dir, 'deck.html'),
+      `<div class="slides"><section><p>${text}</p></section></div>`,
+    )
+    const opened = await call('deck.open', { path: dir })
+    await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    return opened.data.deck.id
+  }
+
+  const tool = (name: string, args: Record<string, unknown> = {}) =>
+    mcp('tools/call', { name, arguments: args })
+
+  it('agent 刚动过,人改字被拒,理由里说得出它在干什么', async () => {
+    const deckId = await openForEdit('走过的四站。')
+    await tool('show_slide', { index: 0 })
+
+    const response = await call('deck.editText', {
+      deckId,
+      slide: 0,
+      oldText: '走过的四站。',
+      newText: '四站',
+    })
+    expect(response.data).toMatchObject({ ok: false })
+    expect(response.data.reason).toContain('让你看第 1 页')
+  })
+
+  it('撤销也一样拦 —— 菜单里的 ⌘Z 不走按钮,拦在协议层才拦得住', async () => {
+    const deckId = await openForEdit('一')
+    await tool('show_slide', { index: 0 })
+    const response = await call('deck.undo', { deckId })
+    expect(response.data.ok).toBe(false)
+    expect(response.data.reason).toContain('agent')
+  })
+
+  it('agent 自己的调用不受影响', async () => {
+    await openForEdit('走过的四站。')
+    await tool('show_slide', { index: 0 })
+    await tool('edit_text', { slide: 0, old_text: '走过的四站。', new_text: '四站,一年' })
+    await settle()
+    expect(activity.at(-1)!.error).toBeUndefined()
+  })
+
+  it('界面连上时能问到归谁,换人时会推 control.changed', async () => {
+    const changes: any[] = []
+    socket.on('message', (raw: Buffer) => {
+      const message = JSON.parse(raw.toString())
+      if (message.channel === 'control.changed') changes.push(message.data)
+    })
+    expect((await call('control.state', {})).data).toEqual({ holder: 'none', explicit: false })
+
+    await openForEdit('一')
+    await tool('show_slide', { index: 0 })
+    await settle()
+    expect(changes[0]).toMatchObject({ holder: 'agent' })
+    expect((await call('control.state', {})).data.holder).toBe('agent')
+  })
+})
+
+describe('握手:agent 明说拿起、交还,人能接管', () => {
+  async function openForEdit(text: string): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(
+      join(dir, 'deck.html'),
+      `<div class="slides"><section><p>${text}</p></section></div>`,
+    )
+    const opened = await call('deck.open', { path: dir })
+    await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    return opened.data.deck.id
+  }
+
+  const tool = (name: string, args: Record<string, unknown> = {}) =>
+    mcp('tools/call', { name, arguments: args })
+
+  const edit = (deckId: string, oldText: string, newText: string) =>
+    call('deck.editText', { deckId, slide: 0, oldText, newText })
+
+  it('握手时就告诉宿主先 take_control —— 不然 agent 不会调,遮罩只在每次调用前后闪一下', async () => {
+    const reply = await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    expect(reply).toContain('"instructions"')
+    expect(reply).toContain('take_control')
+    expect(reply).toContain('USER_IN_CONTROL')
+  })
+
+  it('take_control 之后人改不了,hand_off 之后能改,留的话界面拿得到', async () => {
+    const deckId = await openForEdit('一')
+    await tool('take_control', { reason: '重排标题' })
+    expect((await call('control.state', {})).data).toMatchObject({
+      holder: 'agent',
+      explicit: true,
+      label: '重排标题',
+    })
+    expect((await edit(deckId, '一', '二')).data.reason).toContain('重排标题')
+
+    await tool('hand_off', { message: '标题请你看一眼' })
+    expect((await call('control.state', {})).data).toMatchObject({
+      holder: 'none',
+      message: '标题请你看一眼',
+    })
+    expect((await edit(deckId, '一', '二')).data.ok).toBe(true)
+  })
+
+  it('人接管之后,agent 的工具收到硬停止,而且不报活动', async () => {
+    await openForEdit('一')
+    await call('control.takeOver', {})
+    activity.length = 0
+
+    const refused = await tool('edit_text', { slide: 0, old_text: '一', new_text: '二' })
+    expect(refused).toContain('USER_IN_CONTROL')
+    expect(refused).toContain('不要重试')
+    await settle()
+    expect(activity).toHaveLength(0)
+  })
+
+  it('人接管期间 take_control 仍然放行 —— 用户在对话里说了继续,agent 要能拿回来', async () => {
+    await openForEdit('一')
+    await call('control.takeOver', {})
+    await tool('take_control', { reason: '接着改' })
+    expect((await call('control.state', {})).data.holder).toBe('agent')
+    expect(await tool('show_slide', { index: 0 })).not.toContain('USER_IN_CONTROL')
+  })
+
+  it('人交还之后 agent 又能动了', async () => {
+    await openForEdit('一')
+    await call('control.takeOver', {})
+    await call('control.release', {})
+    expect(await tool('show_slide', { index: 0 })).not.toContain('USER_IN_CONTROL')
+  })
+})

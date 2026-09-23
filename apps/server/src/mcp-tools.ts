@@ -266,6 +266,44 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'take_control',
+      config: {
+        title: '拿起稿子',
+        // 不动磁盘:只是让界面知道这段时间归你改。
+        annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+        description:
+          '开始一段连续的修改之前调一次,说清要做什么(reason 会显示给用户)。之后画布上会盖一层遮罩,用户不能同时改稿子,直到你调 hand_off,或者两分钟没有任何调用。不调也能用别的工具,只是每次调用停下几秒后用户就能动了,几步连着改时可能被他插进来。' +
+          '用户在界面上点了「接管」之后,你的所有工具都会返回 USER_IN_CONTROL —— 那是硬停止:不要重试,也不要自己调 take_control 拿回来;结束这一轮告诉用户你停在哪儿,等他明确说继续,再调 take_control。',
+        inputSchema: {
+          reason: z.string().describe('接下来要做什么,一句人话,比如「重排第 2 到 4 页的标题」'),
+        },
+      },
+      run: async (args) => {
+        const state = await call('control.take', { reason: String(args.reason ?? '') })
+        return text(`拿着了:${state.label ?? ''}。改完调 hand_off 交还给用户。`)
+      },
+    },
+    {
+      name: 'hand_off',
+      config: {
+        title: '交还稿子',
+        annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+        description:
+          '干完了,把稿子交还给用户:画布上的遮罩撤掉,他又能改了。需要他确认或接着做什么,写进 message,会显示在画布下面。',
+        inputSchema: {
+          message: z
+            .string()
+            .optional()
+            .describe('留给用户的一句话,比如「第 3 页的数字请你确认一下」。没有就不写'),
+        },
+      },
+      run: async (args) => {
+        const message = typeof args.message === 'string' && args.message ? args.message : undefined
+        await call('control.handOff', message ? { message } : {})
+        return text('交还了。')
+      },
+    },
+    {
       name: 'undo',
       activity: () => ({ kind: 'write', label: '撤销上一处改字', slides: [] }),
       config: {

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { DeckPhase, HistoryState, PendingRequest, RequestResult } from '@orca-ppt/contracts'
+import type {
+  Control,
+  DeckPhase,
+  HistoryState,
+  PendingRequest,
+  RequestResult,
+} from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { PhaseRail } from './PhaseRail.js'
@@ -40,6 +46,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
+  /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
+  const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
   const [templates, setTemplates] = useState<Template[]>([])
   const [themes, setThemes] = useState<Theme[]>([])
   /** 最近用过的主题。**不是标签** —— 系统从使用记录算出来的,所以单独一个字段。 */
@@ -79,7 +87,16 @@ export function App({ serverUrl }: { serverUrl: string }) {
     useAssetOrigin(serverUrl)
     const next = new Transport(serverUrl)
     transport.current = next
-    next.onStateChange = setState
+    next.onStateChange = (current) => {
+      setState(current)
+      // 连上(包括断线重连)就问一次:断开那会儿错过的 control.changed 补不回来。
+      if (current === 'open') {
+        void next
+          .request('control.state', {})
+          .then(setControl)
+          .catch(() => {})
+      }
+    }
     next.connect()
 
     next.subscribe('requests.changed', (data) => setRequests(data.requests))
@@ -138,6 +155,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('history.changed', ({ deckId, ...state }) => {
       if (deckRef.current?.deck.id === deckId) setHistory(state)
     })
+
+    next.subscribe('control.changed', setControl)
 
     next.subscribe('autoplay.changed', (data) => {
       setAutoplay(data.on)
@@ -325,6 +344,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
   useEffect(() => {
     void window.orca?.setMenuState?.({ canPresent: Boolean(deck?.previewUrl), theme })
   }, [deck?.previewUrl, theme])
+
+  /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
+  const setHolder = useCallback((method: 'control.takeOver' | 'control.release') => {
+    void transport.current
+      ?.request(method, {})
+      .then(setControl)
+      .catch(() => {})
+  }, [])
 
   const toggleAutoplay = useCallback(() => {
     const active = transport.current
@@ -538,6 +565,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [autoplay])
 
   // 没打开稿子时,整屏是模板选择器 —— 三栏都没有内容可放,摆在那儿只是空框。
+  const agentHolds = control.holder === 'agent'
+
   if (!deck) {
     // 选择器上不摆顶栏:播放、自动播放、视图切换在这儿全是灰的 —— 没有稿子可播、
     // 没有栏可切。它自己的 header 当窗口拖动区。
@@ -566,10 +595,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
         canPresent={Boolean(deck?.previewUrl)}
         onPresent={present}
         history={history}
+        locked={agentHolds}
         onUndo={() => void stepHistory('undo')}
         onRedo={() => void stepHistory('redo')}
         picking={picking}
-        canPick={Boolean(deck?.previewUrl)}
+        canPick={Boolean(deck?.previewUrl) && !agentHolds}
         onPick={() => {
           if (!picking) return void pick()
           stage.current?.cancelPick()
@@ -648,6 +678,32 @@ export function App({ serverUrl }: { serverUrl: string }) {
               onToggleAutoplay={toggleAutoplay}
               onSlideChange={onSlideChange}
               onTextEdit={editText}
+              readOnly={agentHolds}
+              overlay={
+                agentHolds && (
+                  <AgentLock
+                    label={control.label}
+                    onTakeOver={() => setHolder('control.takeOver')}
+                  />
+                )
+              }
+              notice={
+                control.holder === 'user' ? (
+                  <>
+                    <span>你接管了 · agent 已停下</span>
+                    <Button size="sm" onClick={() => setHolder('control.release')}>
+                      交还给 agent
+                    </Button>
+                  </>
+                ) : control.message ? (
+                  <>
+                    <span className="stage-handoff">agent:{control.message}</span>
+                    <Button size="sm" onClick={() => setHolder('control.release')}>
+                      知道了
+                    </Button>
+                  </>
+                ) : undefined
+              }
             />
           ) : (
             <div className="stage">
@@ -776,6 +832,23 @@ function DeckPicker({
         认 <code>deck.html</code> 和 <code>index.html</code>,skill 做出来的稿子直接能开。
       </p>
       {error && <p className="picker-error">{error}</p>}
+    </div>
+  )
+}
+
+/**
+ * agent 拿着稿子时盖在画布上的那一层。学 ego-lite:agent 在操作的东西,人要动得先明着
+ * 接管 —— 不是悄悄地和它抢。画布仍然看得见,agent 改了哪儿人照样能盯着。
+ */
+function AgentLock({ label, onTakeOver }: { label: string | undefined; onTakeOver: () => void }) {
+  return (
+    <div className="stage-lock">
+      <div className="stage-lock-bar">
+        <span className="stage-lock-doing">agent 正在{label ? `「${label}」` : '操作'}</span>
+        <Button variant="primary" size="sm" onClick={onTakeOver}>
+          接管
+        </Button>
+      </div>
     </div>
   )
 }

@@ -42,6 +42,30 @@ export const HistoryState = z.object({
 })
 export type HistoryState = z.infer<typeof HistoryState>
 
+/**
+ * 稿子此刻归谁动。同一时刻只有一方能改 —— 两边同时改同一份文件,总有一边的改动会被
+ * 悄悄盖掉。交接的做法借自 ego-lite 浏览器:agent 明说拿起、明说交还,人随时能接管。
+ *
+ * - `none`:谁都能动。
+ * - `agent`:agent 拿着。它明说的(`control.take`),或者从它正在调的工具猜的。
+ *   这时界面发来的改稿子请求一律拒绝。
+ * - `user`:人在界面上接管了。这时 agent 的工具一律拒绝(拿回控制权那个除外),
+ *   话术要它**停下、别重试、等人说继续**。
+ */
+export const Control = z.object({
+  holder: z.enum(['none', 'agent', 'user']),
+  /**
+   * agent 是明说拿着的。猜的那种停下几秒就放;明说的要等它交还,或者长时间没动静 ——
+   * agent 可能直接消失,不能让它把稿子锁死。
+   */
+  explicit: z.boolean(),
+  /** agent 在做的事,或者它拿着的理由。人话,直接显示。 */
+  label: z.string().optional(),
+  /** agent 交还时留给人的话:「第 3 页的数字请你确认一下」。人看过之后清掉。 */
+  message: z.string().optional(),
+})
+export type Control = z.infer<typeof Control>
+
 /** 撤销 / 重做一步的结果。成了就说是哪一页、那一处现在是什么字,界面拿它翻过去点亮。 */
 const HistoryStep = z.object({
   ok: z.boolean(),
@@ -174,6 +198,34 @@ export const requests = {
   'deck.history': {
     params: z.object({ deckId: z.string() }),
     result: HistoryState,
+  },
+  /** 稿子现在归谁动。连上时问一次,之后跟着 `control.changed` 走。 */
+  'control.state': {
+    params: z.object({}),
+    result: Control,
+  },
+  /**
+   * agent 明说拿起稿子,开始一段连续的活儿。人接管着的时候也能拿回来 —— 所以只该在人
+   * 说了「继续」之后调(和 ego 一样,这条靠工具说明约束,不靠 server 拦)。
+   */
+  'control.take': {
+    params: z.object({ reason: z.string() }),
+    result: Control,
+  },
+  /** agent 干完了,把稿子交还给人。可以留一句话:要人确认什么、接着做什么。 */
+  'control.handOff': {
+    params: z.object({ message: z.string().optional() }),
+    result: Control,
+  },
+  /** 人接管。之后 agent 的工具一律拒绝,直到人交还或者 agent 在人同意后拿回。 */
+  'control.takeOver': {
+    params: z.object({}),
+    result: Control,
+  },
+  /** 人交还控制权,或者看过 agent 留的话之后收起它。 */
+  'control.release': {
+    params: z.object({}),
+    result: Control,
   },
   /** 某个阶段产物的绝对路径。界面拿它交给系统编辑器,agent 拿它去读写。 */
   'artifact.path': {
@@ -416,6 +468,8 @@ export const pushes = {
   'autoplay.changed': z.object({ deckId: z.string(), on: z.boolean() }),
   /** 撤销 / 重做的状态变了 —— 改了字、撤了、重做了,不管是谁做的。 */
   'history.changed': HistoryState.extend({ deckId: z.string() }),
+  /** 稿子换了人拿。界面据此切换只读、显示接管 / 交还。 */
+  'control.changed': Control,
   /** 请壳开一个全屏窗口放映。只有壳做得到。 */
   'present.request': z.object({
     deckId: z.string(),

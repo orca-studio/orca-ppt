@@ -15,6 +15,7 @@ import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyTextEdit } from './edit.js'
+import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
@@ -154,11 +155,18 @@ export async function startServer(
     return `http://127.0.0.1:${port}${previews.mount(plan).urlPath}`
   }
 
+  // 稿子同一时刻只归一方动:agent 拿着时拦人(见 handle),人接管时拦 agent(见下面的 gate)。
+  const control = new DeckControl((state) => bus.broadcast('control.changed', state))
+
   // MCP 和界面走同一个进程、同一个端口:工具调的就是界面调的那批方法。
   const mcp = new McpEndpoint(
     (method, params) => dispatch(method, params) as never,
     // agent 动了一下,界面就该看得见 —— 它是代替人执行的,做的事不该比人做的更隐蔽。
-    (activity) => bus.broadcast('mcp.activity', activity),
+    (activity) => {
+      control.observe(activity)
+      bus.broadcast('mcp.activity', activity)
+    },
+    (tool) => control.blocksAgent(tool),
   )
 
   const http = createHttpServer((req, res) => {
@@ -220,7 +228,16 @@ export async function startServer(
     return path
   }
 
+  /**
+   * 界面发来的请求。MCP 不走这里,它直接调 dispatch —— 所以「是人还是 agent」在这一层
+   * 天然分得开,拦截放在协议层而不只是把按钮置灰:菜单里的 ⌘Z、以后别的客户端,都一样拦得住。
+   */
   async function handle(envelope: RequestEnvelope): Promise<ResponseEnvelope> {
+    const reason = HUMAN_EDITS.has(envelope.method) ? control.blocksHuman() : undefined
+    if (reason) {
+      // 按「没办成」答,不按出错:界面本来就会把 reason 摆到人刚才动的那处。
+      return { id: envelope.id, ok: true, data: { ok: false, reason } }
+    }
     try {
       return { id: envelope.id, ok: true, data: await dispatch(envelope.method, envelope.params) }
     } catch (error) {
@@ -344,6 +361,26 @@ export async function startServer(
         const params = parseParams('deck.history', raw)
         deckPathOf(params.deckId)
         return historyOf(params.deckId).state()
+      }
+      case 'control.state': {
+        parseParams('control.state', raw)
+        return control.state()
+      }
+      case 'control.take': {
+        const params = parseParams('control.take', raw)
+        return control.take(params.reason)
+      }
+      case 'control.handOff': {
+        const params = parseParams('control.handOff', raw)
+        return control.handOff(params.message)
+      }
+      case 'control.takeOver': {
+        parseParams('control.takeOver', raw)
+        return control.takeOver()
+      }
+      case 'control.release': {
+        parseParams('control.release', raw)
+        return control.release()
       }
       case 'artifact.path': {
         const params = parseParams('artifact.path', raw)
@@ -485,6 +522,7 @@ export async function startServer(
     bus,
     close: async () => {
       watcher.closeAll()
+      control.close()
       await mcp.close()
       await clearPortFile()
       await new Promise<void>((done) => {
@@ -494,6 +532,12 @@ export async function startServer(
     },
   }
 }
+
+/**
+ * agent 拿着稿子时,界面发来的这几个一律拒绝:它们都会改磁盘上的稿子。
+ * 翻页、放映、指给 agent 看不在里面 —— 那些不改稿子,人随时能做。
+ */
+const HUMAN_EDITS = new Set<RequestMethod>(['deck.editText', 'deck.undo', 'deck.redo'])
 
 /** 目录名。中文标题原样留着,只把路径里不能用的字符换掉。 */
 function slugify(title: string): string {

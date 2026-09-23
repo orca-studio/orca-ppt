@@ -47,6 +47,17 @@ export function serverIcons(
   }
 }
 
+/**
+ * MCP 握手时交给宿主的使用说明。宿主一般会把它放进模型的上下文 —— 不看工具列表也知道
+ * 该先拿起稿子。不这么说的话,agent 多半不会调 take_control,人看到的遮罩就只在它每次
+ * 调用前后闪一下。
+ */
+const INSTRUCTIONS =
+  'OrcaPPT 是用户开着的演示稿应用,你和用户看着同一块画布。' +
+  '要改稿子时,先调 take_control 说明要做什么:画布会盖上遮罩,用户不会和你同时改;' +
+  '全部做完调 hand_off 交还,需要用户确认的写进 message。' +
+  '任何工具返回 USER_IN_CONTROL,说明用户接管了:立刻停下,不要重试,告诉用户你停在哪一步。'
+
 export class McpEndpoint {
   /** 跨请求活着的只有「当前是哪份 deck」。其余每个请求自成一体。 */
   readonly #active = new ActiveDeck()
@@ -57,6 +68,11 @@ export class McpEndpoint {
     private readonly call: ProtocolCaller,
     /** 每次工具调用报两声(跑之前、跑之后),界面据此把 agent 做的事显示出来。 */
     private readonly onActivity: (activity: McpActivity) => void = () => {},
+    /**
+     * 这个工具现在能不能跑。人在界面上接管了稿子时,返回给 agent 的那段话 ——
+     * 在工具跑之前就挡掉,也不报活动:它没做成任何事,界面上不该亮。
+     */
+    private readonly gate: (tool: string) => string | undefined = () => undefined,
   ) {}
 
   /**
@@ -67,6 +83,9 @@ export class McpEndpoint {
    */
   #announce(tool: ToolSpec): ToolSpec['run'] {
     return async (args) => {
+      const blocked = this.gate(tool.name)
+      if (blocked) return { content: [{ type: 'text', text: blocked }], isError: true }
+
       const id = randomUUID()
       const shape = tool.activity?.(args) ?? {
         kind: 'read' as const,
@@ -107,12 +126,15 @@ export class McpEndpoint {
 
     // 无状态范式:**每个请求新建一套** server + transport。
     // 复用同一个 transport 会让它把响应发到上一个请求的 res 上 —— 第二个请求就静默空回。
-    const server = new McpServer({
-      name: 'orca-ppt',
-      title: 'OrcaPPT',
-      version: '0.1.0',
-      ...(this.#icons.length > 0 ? { icons: this.#icons } : {}),
-    })
+    const server = new McpServer(
+      {
+        name: 'orca-ppt',
+        title: 'OrcaPPT',
+        version: '0.1.0',
+        ...(this.#icons.length > 0 ? { icons: this.#icons } : {}),
+      },
+      { instructions: INSTRUCTIONS },
+    )
     for (const tool of buildTools(this.call, this.#active)) {
       server.registerTool(
         tool.name,

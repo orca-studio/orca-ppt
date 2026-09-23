@@ -24,6 +24,8 @@ export interface ToolbarProps {
   onPresent: () => void
   /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
   history: HistoryState
+  /** agent 正拿着稿子。撤销 / 重做会改稿子,这时点不了(server 那头也会拒)。 */
+  locked: boolean
   onUndo: () => void
   onRedo: () => void
   /** 进入取锚状态:点画布上一处,指给 agent 看。 */
@@ -39,6 +41,7 @@ export function Toolbar({
   canPresent,
   onPresent,
   history,
+  locked,
   onUndo,
   onRedo,
   picking,
@@ -85,8 +88,10 @@ export function Toolbar({
           variant="ghost"
           icon
           onClick={onUndo}
-          disabled={!history.canUndo}
-          title={history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改字'}
+          disabled={!history.canUndo || locked}
+          title={
+            locked ? LOCKED_TITLE : history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改字'
+          }
           aria-label="撤销"
         >
           <UndoIcon />
@@ -95,8 +100,14 @@ export function Toolbar({
           variant="ghost"
           icon
           onClick={onRedo}
-          disabled={!history.canRedo}
-          title={history.redo ? `重做:${history.redo}(⇧⌘Z)` : '没有可以重做的改字'}
+          disabled={!history.canRedo || locked}
+          title={
+            locked
+              ? LOCKED_TITLE
+              : history.redo
+                ? `重做:${history.redo}(⇧⌘Z)`
+                : '没有可以重做的改字'
+          }
           aria-label="重做"
         >
           <UndoIcon flipped />
@@ -126,6 +137,8 @@ export function Toolbar({
     </header>
   )
 }
+
+const LOCKED_TITLE = 'agent 正在操作,等它停下再撤销'
 
 /** 用 SVG 不用「▶」:那个字符的字形本身偏右偏上,怎么摆都不在圆心上。 */
 function PlayIcon() {
