@@ -1,0 +1,5 @@
+# Optional mascot
+
+Generated with the built-in image_gen tool. This mascot is optional; the primary logo is the slide stack and AI sparkle.
+
+Use case: stylized-concept. Create a premium brand mascot for Orca PPT, a professional presentation workbench. One square image, solid pure white background #FFFFFF, no border or rounded canvas. One friendly sculptural orca whale, black satin upper body and creamy white underside, unmistakable white oval eye patch, small dorsal fin, flippers, split tail fully visible. Beautiful sophisticated soft-vinyl designer collectible, not a robot, not a dolphin. Floating gently at a 3/4 side angle facing right, horizontal streamlined silhouette, relaxed intelligent expression. A small vivid green (#16a34a) triangular play button inset on the flank. Restrained black/white/green palette. Soft studio light, clean restrained material, no water, no splashes, no props, no words, no lettering, no fake UI, no watermark. Entire animal occupies central 72% of square, all fins/tail within safe margins. Suitable for social avatar and creative-tool branding.

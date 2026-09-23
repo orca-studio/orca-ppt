@@ -73,6 +73,10 @@ skill 更新,产品跟着更新,不两边同步。
 形状借自 [TasteCode](https://github.com/Leonxlnx/tastecode):本地 server 拥有状态、适配器
 驱动官方 CLI、渲染层是薄客户端,以及「真正的差异化是上面那个垂直 Mode」这个判断。
 
+## 品牌素材
+
+Logo、正方形头像和宣传图见 [品牌素材包](./docs/brand/README.md)。
+
 ## License
 
 [MIT](LICENSE)

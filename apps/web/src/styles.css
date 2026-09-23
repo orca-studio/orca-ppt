@@ -75,6 +75,16 @@
   box-sizing: border-box;
 }
 
+.gallery-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gallery-brand img {
+  flex-shrink: 0;
+}
+
 body {
   margin: 0;
   background: var(--bg);

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
+import { BrandMark } from './BrandMark.js'
 import { assetUrl } from './assets.js'
 import { sectionsOf } from './facets.js'
 
@@ -91,7 +92,10 @@ export function Gallery({
     return (
       <div className="gallery">
         <header>
-          <h1>新建演示稿</h1>
+          <h1 className="gallery-brand">
+            <BrandMark size={36} />
+            新建演示稿
+          </h1>
           <button type="button" onClick={onOpen}>
             打开已有的…
           </button>
@@ -106,7 +110,10 @@ export function Gallery({
   return (
     <div className="gallery">
       <header>
-        <h1>选取主题</h1>
+        <h1 className="gallery-brand">
+          <BrandMark size={36} />
+          选取主题
+        </h1>
         <div className="gallery-head-right">
           {/* 版式是第二个、很小的选择:它决定稿子的结构,不决定长什么样。 */}
           <select
