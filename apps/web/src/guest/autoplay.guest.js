@@ -35,7 +35,9 @@
       stop()
       return
     }
-    window.Reveal.next()
+    // 走引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧。老稿子没有就退回 Reveal
+    if (window.__orcaAdvance) window.__orcaAdvance()
+    else window.Reveal.next()
     schedule()
   }
 
@@ -61,4 +63,11 @@
   }
 
   window.__orcaAutoplay = { start, stop, running: () => running, dwellMs }
+
+  // 每次翻页报一声页号。宿主能听到的只有 console-message(preload 是剥掉的,没有别的通道)——
+  // 不报的话,人在画布里按键、自动播放翻的页,状态栏和页胶片都不知道,页码就对不上。
+  if (window.Reveal?.on && !window.__orcaSlideReport) {
+    window.__orcaSlideReport = true
+    window.Reveal.on('slidechanged', (event) => console.debug('__orca:slide ' + event.indexh))
+  }
 })()

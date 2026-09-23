@@ -55,6 +55,12 @@ export interface StageHandle {
 /** 攒着的点亮过期时间。隔太久再闪一下,人根本对不上是哪次改动。 */
 const SPOTLIGHT_TTL_MS = 8_000
 
+/**
+ * 往前翻一页。走 skill 引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧
+ * (见 orca-ppt-skill runtime/engine.js)。老稿子的引擎没有它,就退回 Reveal.next()。
+ */
+const ADVANCE = 'window.__orcaAdvance ? window.__orcaAdvance() : Reveal.next()'
+
 /** 这一页在画布上的情况。右栏「页」那一档显示它。 */
 export interface SlideInfo {
   index: number
@@ -125,6 +131,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
   const onTextEditRef = useRef(onTextEdit)
   onTextEditRef.current = onTextEdit
+  const onSlideChangeRef = useRef(onSlideChange)
+  onSlideChangeRef.current = onSlideChange
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
   /** 守候改字那一轮在不在跑。只读时停下,放开时从这里重新接上。 */
@@ -202,10 +210,19 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       const detail = event as Event & { errorDescription?: string }
       setError(detail.errorDescription || '加载失败')
     }
+    // guest 里翻了页都从这里报回来 —— 人在画布里按键、自动播放、agent 让它跳页,一律一条路。
+    // 以前只有焦点在画布外的那一路会报,画布里翻的页状态栏不知道,页码就对不上。
+    const onConsole = (event: Event) => {
+      const message = (event as Event & { message?: string }).message ?? ''
+      const match = /^__orca:slide (\d+)$/.exec(message)
+      if (match) onSlideChangeRef.current(Number(match[1]))
+    }
+    view.addEventListener('console-message', onConsole)
     view.addEventListener('did-start-loading', onStartLoading)
     view.addEventListener('dom-ready', onLoad)
     view.addEventListener('did-fail-load', onFail)
     return () => {
+      view.removeEventListener('console-message', onConsole)
       view.removeEventListener('did-start-loading', onStartLoading)
       view.removeEventListener('dom-ready', onLoad)
       view.removeEventListener('did-fail-load', onFail)
@@ -284,7 +301,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       next: () => {
         void ref.current
-          ?.executeJavaScript('window.__orcaAutoplay?.stop(); Reveal.next()')
+          ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${ADVANCE}`)
           .catch(() => {})
       },
       guestId: () => {
@@ -346,7 +363,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
 
       const call =
         event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' '
-          ? 'Reveal.next()'
+          ? ADVANCE
           : event.key === 'ArrowLeft' || event.key === 'PageUp'
             ? 'Reveal.prev()'
             : undefined
@@ -354,9 +371,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
 
       event.preventDefault()
       // 人自己翻页就别再自动播了 —— 跟他抢翻页是最烦的。
-      void ref.current
-        ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${call}; Reveal.getIndices().h`)
-        .then((index) => onSlideChange(Number(index)))
+      // 翻到第几页不在这里读:转场没放完时 advance 会晚一点才翻,立刻读是旧的。
+      // 页号由 guest 翻完之后自己报回来(见上面的 console-message)。
+      void ref.current?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${call}`).catch(() => {})
     }
 
     window.addEventListener('keydown', onKeyDown)
