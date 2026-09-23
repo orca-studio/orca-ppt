@@ -52,11 +52,17 @@ export function serverIcons(
  * 该先拿起稿子。不这么说的话,agent 多半不会调 take_control,人看到的遮罩就只在它每次
  * 调用前后闪一下。
  */
-const INSTRUCTIONS =
-  'OrcaPPT 是用户开着的演示稿应用,你和用户看着同一块画布。' +
-  '要改稿子时,先调 take_control 说明要做什么:画布会盖上遮罩,用户不会和你同时改;' +
-  '全部做完调 hand_off 交还,需要用户确认的写进 message。' +
-  '任何工具返回 USER_IN_CONTROL,说明用户接管了:立刻停下,不要重试,告诉用户你停在哪一步。'
+const INSTRUCTIONS = [
+  'OrcaPPT 是用户开着的演示稿应用,你和用户看着同一块画布。',
+  '控制权:要改稿子,先调 take_control 说明要做什么 —— 画布会盖上遮罩,底部的胶囊显示这件事,用户不会和你同时改;' +
+    '在等用户批准时再调一次并带上 waiting;全部做完调 hand_off 交还,需要用户确认的写进 message。' +
+    '任何工具返回 USER_IN_CONTROL,说明用户接管了:立刻停下,不要重试,告诉用户你停在哪一步。' +
+    '返回 USER_STOPPED,说明用户停止了这件事:结束这一轮,不要继续。',
+  '改字:先调 deck_status 读每页的原文,edit_text 的 old_text 从那里照抄 —— 画布上的字可能被 CSS 改过大小写,' +
+    '照屏幕抄会对不上。改完用 capture_slide 看一眼;改错了用 undo。',
+  '做新稿子:按阶段走 phase_prompt(定题 → 选主题 → 列页面 → 写转场 → 出稿)。上游产物不合格时它会拒绝并说明哪一条,' +
+    '改好上游再往下走,不要跳过;check_phase 可以随时跑一遍校验。',
+].join('\n')
 
 export class McpEndpoint {
   /** 跨请求活着的只有「当前是哪份 deck」。其余每个请求自成一体。 */

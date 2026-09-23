@@ -284,6 +284,9 @@ describe('握手:agent 明说拿起、交还,人能接管', () => {
     expect(reply).toContain('"instructions"')
     expect(reply).toContain('take_control')
     expect(reply).toContain('USER_IN_CONTROL')
+    expect(reply).toContain('USER_STOPPED')
+    // 改稿流程也要交代:原文从 deck_status 抄,别照屏幕抄
+    expect(reply).toContain('deck_status')
   })
 
   it('take_control 之后人改不了,hand_off 之后能改,留的话界面拿得到', async () => {
@@ -292,7 +295,7 @@ describe('握手:agent 明说拿起、交还,人能接管', () => {
     expect((await call('control.state', {})).data).toMatchObject({
       holder: 'agent',
       explicit: true,
-      label: '重排标题',
+      task: '重排标题',
     })
     expect((await edit(deckId, '一', '二')).data.reason).toContain('重排标题')
 
@@ -322,6 +325,31 @@ describe('握手:agent 明说拿起、交还,人能接管', () => {
     await tool('take_control', { reason: '接着改' })
     expect((await call('control.state', {})).data.holder).toBe('agent')
     expect(await tool('show_slide', { index: 0 })).not.toContain('USER_IN_CONTROL')
+  })
+
+  it('人按停止之后,agent 的工具收到 USER_STOPPED —— 宿主认出它就中断这一轮', async () => {
+    await openForEdit('一')
+    await tool('take_control', { reason: '重排' })
+    await call('control.stop', {})
+    expect((await call('control.state', {})).data).toMatchObject({
+      holder: 'user',
+      stopped: true,
+      task: '重排',
+    })
+    const refused = await tool('show_slide', { index: 0 })
+    expect(refused).toContain('USER_STOPPED')
+    expect(refused).not.toContain('USER_IN_CONTROL')
+  })
+
+  it('take_control 带 waiting,界面拿得到「在等批准什么」', async () => {
+    await openForEdit('一')
+    await tool('take_control', { reason: '清理稿子', waiting: '删掉第 5 页' })
+    expect((await call('control.state', {})).data).toMatchObject({
+      task: '清理稿子',
+      waiting: '删掉第 5 页',
+    })
+    await tool('take_control', { reason: '清理稿子' })
+    expect((await call('control.state', {})).data.waiting).toBeUndefined()
   })
 
   it('人交还之后 agent 又能动了', async () => {

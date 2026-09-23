@@ -368,7 +368,7 @@ export async function startServer(
       }
       case 'control.take': {
         const params = parseParams('control.take', raw)
-        return control.take(params.reason)
+        return control.take(params.reason, params.waiting)
       }
       case 'control.handOff': {
         const params = parseParams('control.handOff', raw)
@@ -377,6 +377,10 @@ export async function startServer(
       case 'control.takeOver': {
         parseParams('control.takeOver', raw)
         return control.takeOver()
+      }
+      case 'control.stop': {
+        parseParams('control.stop', raw)
+        return control.stop()
       }
       case 'control.release': {
         parseParams('control.release', raw)

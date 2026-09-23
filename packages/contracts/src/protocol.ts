@@ -59,8 +59,17 @@ export const Control = z.object({
    * agent 可能直接消失,不能让它把稿子锁死。
    */
   explicit: z.boolean(),
-  /** agent 在做的事,或者它拿着的理由。人话,直接显示。 */
-  label: z.string().optional(),
+  /**
+   * 这一整段活儿的名字:take_control 的 reason。胶囊第一行。人接管、agent 交还之后还留着 ——
+   * 人得知道停下的、交回来的是哪件事。猜的持有没有这一项。
+   */
+  task: z.string().optional(),
+  /** 此刻正在跑的那次工具调用,人话。胶囊第二行。调用结束就清掉。 */
+  doing: z.string().optional(),
+  /** agent 在等人批准什么。有值时第二行改成「等你批准:…」。 */
+  waiting: z.string().optional(),
+  /** 人按了「停止」:这件事不做了。和接管的区别是 agent 收到的话 —— 接管是暂停,停止是到此为止。 */
+  stopped: z.boolean().optional(),
   /** agent 交还时留给人的话:「第 3 页的数字请你确认一下」。人看过之后清掉。 */
   message: z.string().optional(),
 })
@@ -209,7 +218,11 @@ export const requests = {
    * 说了「继续」之后调(和 ego 一样,这条靠工具说明约束,不靠 server 拦)。
    */
   'control.take': {
-    params: z.object({ reason: z.string() }),
+    params: z.object({
+      reason: z.string(),
+      /** 在等人批准什么。传了就设上,不传就清空 —— 批准完再调一次 take 不带它。 */
+      waiting: z.string().optional(),
+    }),
     result: Control,
   },
   /** agent 干完了,把稿子交还给人。可以留一句话:要人确认什么、接着做什么。 */
@@ -219,6 +232,14 @@ export const requests = {
   },
   /** 人接管。之后 agent 的工具一律拒绝,直到人交还或者 agent 在人同意后拿回。 */
   'control.takeOver': {
+    params: z.object({}),
+    result: Control,
+  },
+  /**
+   * 人按了「停止」:这件事不做了,控制权回到人手上。之后 agent 的工具返回 USER_STOPPED ——
+   * 和接管的 USER_IN_CONTROL 不同,宿主认出它就直接中断这一轮,不等模型自己停。
+   */
+  'control.stop': {
     params: z.object({}),
     result: Control,
   },

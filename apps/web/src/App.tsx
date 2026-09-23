@@ -19,6 +19,7 @@ import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.
 import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
+import { ControlCapsule } from './ControlCapsule.js'
 import { Button } from './ui/Button.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 
@@ -346,12 +347,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [deck?.previewUrl, theme])
 
   /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
-  const setHolder = useCallback((method: 'control.takeOver' | 'control.release') => {
-    void transport.current
-      ?.request(method, {})
-      .then(setControl)
-      .catch(() => {})
-  }, [])
+  const setHolder = useCallback(
+    (method: 'control.takeOver' | 'control.stop' | 'control.release') => {
+      void transport.current
+        ?.request(method, {})
+        .then(setControl)
+        .catch(() => {})
+    },
+    [],
+  )
 
   const toggleAutoplay = useCallback(() => {
     const active = transport.current
@@ -658,7 +662,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
           </div>
         </section>
 
-        <section className="pane">
+        <section className="pane pane--stage">
           {deck && layout.lightTable ? (
             <LightTable
               count={deck.slideCount}
@@ -681,28 +685,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
               readOnly={agentHolds}
               overlay={
                 agentHolds && (
-                  <AgentLock
-                    label={control.label}
+                  <AgentMask
+                    explicit={control.explicit}
                     onTakeOver={() => setHolder('control.takeOver')}
                   />
                 )
-              }
-              notice={
-                control.holder === 'user' ? (
-                  <>
-                    <span>你接管了 · agent 已停下</span>
-                    <Button size="sm" onClick={() => setHolder('control.release')}>
-                      交还给 agent
-                    </Button>
-                  </>
-                ) : control.message ? (
-                  <>
-                    <span className="stage-handoff">agent:{control.message}</span>
-                    <Button size="sm" onClick={() => setHolder('control.release')}>
-                      知道了
-                    </Button>
-                  </>
-                ) : undefined
               }
             />
           ) : (
@@ -715,6 +702,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 </div>
               </div>
             </div>
+          )}
+          {deck && (
+            <ControlCapsule
+              control={control}
+              fallbackTitle={deck.deck.title}
+              onTakeOver={() => setHolder('control.takeOver')}
+              onStop={() => setHolder('control.stop')}
+              onRelease={() => setHolder('control.release')}
+            />
           )}
         </section>
 
@@ -839,16 +835,18 @@ function DeckPicker({
 /**
  * agent 拿着稿子时盖在画布上的那一层。学 ego-lite:agent 在操作的东西,人要动得先明着
  * 接管 —— 不是悄悄地和它抢。画布仍然看得见,agent 改了哪儿人照样能盯着。
+ *
+ * 明说拿着的,接管在底部的胶囊里。猜出来的不弹胶囊(会闪),可它要 30 秒才放 ——
+ * 遮罩上不留一个「接管」,人就只能干等,所以角上放一个小的。
  */
-function AgentLock({ label, onTakeOver }: { label: string | undefined; onTakeOver: () => void }) {
+function AgentMask({ explicit, onTakeOver }: { explicit: boolean; onTakeOver: () => void }) {
   return (
     <div className="stage-lock">
-      <div className="stage-lock-bar">
-        <span className="stage-lock-doing">agent 正在{label ? `「${label}」` : '操作'}</span>
-        <Button variant="primary" size="sm" onClick={onTakeOver}>
+      {!explicit && (
+        <Button size="sm" className="stage-lock-take" onClick={onTakeOver}>
           接管
         </Button>
-      </div>
+      )}
     </div>
   )
 }

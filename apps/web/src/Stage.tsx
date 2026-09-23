@@ -98,8 +98,6 @@ export interface StageProps {
   readOnly: boolean
   /** 盖在画布上的那一层(agent 拿着稿子时的遮罩)。 */
   overlay?: ReactNode
-  /** 替换画布下面那行提示:人接管了、agent 交还时留了话。 */
-  notice?: ReactNode
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
@@ -112,7 +110,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     onTextEdit,
     readOnly,
     overlay,
-    notice,
   },
   handle,
 ) {
@@ -398,8 +395,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           页数不写 —— 状态栏已经有「第几 / 共几页」。
         */}
         <div className="stage-meta">
-          {/* agent 拿着稿子时这两件都做不了,遮罩上已经说了为什么 —— 这里不再写一遍反话。 */}
-          {notice ?? (!readOnly && <span>方向键翻页 · 双击改字</span>)}
+          {/* agent 拿着稿子时这两件都做不了,胶囊上已经说了为什么 —— 这里不再写一遍反话。
+              控制状态不放这一行:和「自动播放」挤在一起,看不出那是一个控制状态。 */}
+          {!readOnly && <span>方向键翻页 · 双击改字</span>}
           <Button size="sm" on={autoplay} aria-pressed={autoplay} onClick={onToggleAutoplay}>
             {autoplay ? '自动播放中' : '自动播放'}
           </Button>
