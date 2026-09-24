@@ -294,7 +294,14 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         void reloadWhenNotEditing()
       },
       goto: (slide: number) => {
-        void ref.current?.executeJavaScript(`Reveal.slide(${slide})`).catch(() => {})
+        // 正好是下一页就当成「往前翻」:走 advance,上一段转场没放完时先放完,不跳帧,
+        // 而且翻过去照样有转场。别的页是跳页,跳页本来就没有转场,直接去。
+        const index = Math.trunc(slide)
+        void ref.current
+          ?.executeJavaScript(
+            `Reveal.getIndices().h + 1 === ${index} ? (${ADVANCE}) : Reveal.slide(${index})`,
+          )
+          .catch(() => {})
       },
       next: () => {
         void ref.current
