@@ -31,6 +31,10 @@ declare global {
       renderThumbnails?: (input: {
         previewUrl: string
         slideCount: number
+        /** 只渲这几页。不给就是全部。 */
+        slides?: number[]
+        /** 输出宽度。不给就是 320。 */
+        width?: number
       }) => Promise<Array<string | null>>
       /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
       openFile?: (path: string) => Promise<string | undefined>

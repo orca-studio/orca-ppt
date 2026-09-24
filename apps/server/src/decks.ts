@@ -164,8 +164,11 @@ function unescapeHtml(text: string): string {
 }
 
 /**
- * 稿子的版本号:成品文件和 `.deck/` 里各阶段产物的内容哈希。内容一变它就变,
+ * 稿子的版本号:成品文件、`.deck/` 里各阶段产物和 `assets/` 里素材的内容哈希。内容一变它就变,
  * 只是被打开、被看、翻了页都不变 —— 宿主拿它判断一次调用到底动没动稿子。
+ *
+ * 素材也要算:换一张图,观众看到的就变了。按内容算而不是按修改时间,改了又改回去版本号也回得去
+ * (「可录制应用」约定靠这个认出内容相同)。
  */
 export async function deckRevision(root: string): Promise<string> {
   const hash = createHash('sha256')
@@ -185,7 +188,55 @@ export async function deckRevision(root: string): Promise<string> {
       // 读的时候刚好被删了:当它不在。
     }
   }
+  for (const file of await listFiles(join(root, 'assets'))) {
+    hash.update('\0assets/').update(file.relative).update('\0')
+    hash.update(await fileDigest(file.path))
+  }
   return hash.digest('hex').slice(0, 16)
+}
+
+/**
+ * 素材的内容哈希,按「路径 + 大小 + 修改时间」缓存。素材里可能有大图、视频,宿主又会频繁问版本号,
+ * 每次都整个读一遍太慢;文件没动过就用上次算的。
+ */
+const digestCache = new Map<string, { size: number; mtimeMs: number; digest: string }>()
+
+async function fileDigest(path: string): Promise<string> {
+  try {
+    const info = await stat(path)
+    const cached = digestCache.get(path)
+    if (cached && cached.size === info.size && cached.mtimeMs === info.mtimeMs) return cached.digest
+    const digest = createHash('sha256')
+      .update(await readFile(path))
+      .digest('hex')
+    digestCache.set(path, { size: info.size, mtimeMs: info.mtimeMs, digest })
+    return digest
+  } catch {
+    // 读的时候刚好被删了:当它不在。
+    return ''
+  }
+}
+
+/** 目录下所有文件,按相对路径排好。目录不在就是空的。 */
+async function listFiles(
+  dir: string,
+  prefix = '',
+): Promise<Array<{ path: string; relative: string }>> {
+  let entries
+  try {
+    entries = await readdir(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+  const out: Array<{ path: string; relative: string }> = []
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    if (entry.name.startsWith('.')) continue
+    const relative = prefix ? `${prefix}/${entry.name}` : entry.name
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) out.push(...(await listFiles(path, relative)))
+    else if (entry.isFile()) out.push({ path, relative })
+  }
+  return out
 }
 
 export function readSlideTitles(html: string): Array<string | null> {

@@ -273,13 +273,23 @@ ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide
  */
 ipcMain.handle(
   'deck:thumbnails',
-  async (_event, input: { previewUrl: string; slideCount: number }) => {
+  async (
+    _event,
+    input: { previewUrl: string; slideCount: number; slides?: number[]; width?: number },
+  ) => {
     if (input.slideCount === 0) return []
+    // 录制要的缩略图只要被改的那一页,而且更大;页胶片要全部、320 宽
+    const indices =
+      input.slides?.filter((index) => index < input.slideCount) ??
+      Array.from({ length: input.slideCount }, (_, index) => index)
+    const width = input.width ?? 320
 
     const offscreen = new BrowserWindow({
       show: false,
       width: 960,
       height: 540,
+      // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
+      useContentSize: true,
       webPreferences: { sandbox: true, contextIsolation: true },
     })
 
@@ -295,7 +305,7 @@ ipcMain.handle(
       await mkdir(dir, { recursive: true })
 
       const paths: Array<string | null> = []
-      for (let index = 0; index < input.slideCount; index += 1) {
+      for (const index of indices) {
         try {
           await offscreen.webContents.executeJavaScript(
             `(async () => { const { transition } = await window.__capture.go(${index}); await window.__capture.seek(transition); })()`,
@@ -305,8 +315,14 @@ ipcMain.handle(
             paths.push(null)
             continue
           }
-          const file = join(dir, `${index}.png`)
-          await writeFile(file, image.resize({ width: 320 }).toPNG())
+          const resized = image.resize({ width })
+          const png = resized.toPNG()
+          // 可录制应用约定:单张不超过 300KB。PNG 太大就换 JPEG
+          const [file, bytes] =
+            png.length > 300_000
+              ? [join(dir, `${index}.jpg`), resized.toJPEG(85)]
+              : [join(dir, `${index}.png`), png]
+          await writeFile(file, bytes)
           paths.push(file)
         } catch {
           // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了

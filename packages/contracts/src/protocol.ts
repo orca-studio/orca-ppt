@@ -75,6 +75,42 @@ export const Control = z.object({
 })
 export type Control = z.infer<typeof Control>
 
+/**
+ * 「可录制应用」约定 v1(jevbot-mac docs/recordable-app-contract.md)里的一条事件:
+ * 稿子被改了一次 —— 谁改的、改了什么、改完之后的版本号。回放的主体在宿主那边,
+ * 应用只负责把「人在界面上做了什么」这类宿主看不到的事报出来。
+ */
+export const RecordingDocument = z.object({
+  /** 稿子目录的绝对路径 —— 和 deckId 同一个值。 */
+  id: z.string(),
+  label: z.string(),
+})
+export const RecordingEvent = z.object({
+  /** 游标。补零的序号,按字符串比较严格递增,重启后接着编号。 */
+  id: z.string(),
+  /** ISO 8601,精确到毫秒,带时区。 */
+  at: z.string(),
+  /** user:人在界面上;agent:经 MCP;external:只看到文件变了,不知道是谁。 */
+  actor: z.enum(['user', 'agent', 'external']),
+  summary: z.string(),
+  document: RecordingDocument,
+  target: z
+    .object({
+      kind: z.string(),
+      index: z.number().int().nonnegative().optional(),
+      id: z.string().optional(),
+      label: z.string(),
+    })
+    .optional(),
+  /** 这一步之后的版本号。 */
+  revision: z.string(),
+  /** agent 事件必需:触发它的 MCP 工具名,宿主靠它和自己的调用记录对上。 */
+  tool: z.string().optional(),
+  undoable: z.boolean().optional(),
+  detail: z.record(z.string(), z.unknown()).optional(),
+})
+export type RecordingEvent = z.infer<typeof RecordingEvent>
+
 /** 撤销 / 重做一步的结果。成了就说是哪一页、那一处现在是什么字,界面拿它翻过去点亮。 */
 const HistoryStep = z.object({
   ok: z.boolean(),
@@ -207,6 +243,45 @@ export const requests = {
   'deck.history': {
     params: z.object({ deckId: z.string() }),
     result: HistoryState,
+  },
+  /** 某个游标之后发生的事件(可录制应用约定)。游标太旧、已经被清掉时 gap 为 true。 */
+  'recording.events': {
+    params: z.object({
+      after: z.string().optional(),
+      limit: z.number().int().min(1).max(1000).optional(),
+    }),
+    result: z.object({
+      version: z.literal(1),
+      events: z.array(RecordingEvent),
+      cursor: z.string(),
+      more: z.boolean(),
+      gap: z.boolean(),
+      revisionIsContentHash: z.boolean(),
+    }),
+  },
+  /**
+   * 一张缩略图(可录制应用约定)。**离屏渲**:不翻用户眼前的画布。只渲得了当前版本 ——
+   * 要旧版本就 REVISION_UNAVAILABLE,宿主用当时记下的那张。
+   */
+  'recording.snapshot': {
+    params: z.object({
+      document: z.string().optional(),
+      revision: z.string().optional(),
+      maxSize: z.number().int().min(64).max(1280).optional(),
+    }),
+    result: z.object({
+      ok: z.boolean(),
+      /** 没办成时的原因,以错误码开头(REVISION_UNAVAILABLE: 等)。 */
+      reason: z.string().optional(),
+      /** base64。 */
+      image: z.string().optional(),
+      mimeType: z.enum(['image/png', 'image/jpeg']).optional(),
+      document: RecordingDocument.optional(),
+      revision: z.string().optional(),
+      width: z.number().int().optional(),
+      height: z.number().int().optional(),
+      target: RecordingEvent.shape.target,
+    }),
   },
   /** 稿子现在归谁动。连上时问一次,之后跟着 `control.changed` 走。 */
   'control.state': {
@@ -530,6 +605,10 @@ export const pushes = {
     requestId: z.string(),
     previewUrl: z.string(),
     slideCount: z.number().int().nonnegative(),
+    /** 只渲这几页(录制要的缩略图只要被改的那一页)。不给就是全部。 */
+    slides: z.array(z.number().int().nonnegative()).optional(),
+    /** 输出宽度。不给就是页胶片用的 320。 */
+    width: z.number().int().positive().optional(),
   }),
   /** 有人要求跳页 —— 可能是 agent。画布跟着走。 */
   'deck.slide': z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),

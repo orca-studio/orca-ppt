@@ -176,6 +176,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
           const paths = await window.orca?.renderThumbnails?.({
             previewUrl: data.previewUrl,
             slideCount: data.slideCount,
+            ...(data.slides ? { slides: data.slides } : {}),
+            ...(data.width ? { width: data.width } : {}),
           })
           await next.request('thumbnails.result', {
             requestId: data.requestId,

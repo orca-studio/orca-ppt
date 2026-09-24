@@ -359,3 +359,121 @@ describe('握手:agent 明说拿起、交还,人能接管', () => {
     expect(await tool('show_slide', { index: 0 })).not.toContain('USER_IN_CONTROL')
   })
 })
+
+describe('可录制应用约定:操作记录', () => {
+  async function openDeckAt(text: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(
+      join(dir, 'deck.html'),
+      `<div class="slides"><section><p>封面</p></section><section><p>${text}</p></section></div>`,
+    )
+    const opened = await call('deck.open', { path: dir })
+    await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    return { dir, deckId: opened.data.deck.id as string }
+  }
+
+  const tool = (name: string, args: Record<string, unknown> = {}) =>
+    mcp('tools/call', { name, arguments: args })
+
+  /** 现在最新的游标:之后的事件才是这个用例产生的。 */
+  const cursorNow = async () =>
+    (await call('recording.events', { limit: 1000 })).data.cursor as string
+  const eventsAfter = async (after: string) =>
+    (await call('recording.events', { after })).data.events as any[]
+
+  it('人在界面改字记成 user,改完的版本号和 deck_status 报的一致', async () => {
+    const { deckId } = await openDeckAt('走过的四站。')
+    const cursor = await cursorNow()
+    await call('deck.editText', { deckId, slide: 1, oldText: '走过的四站。', newText: '四站' })
+
+    const [event] = await eventsAfter(cursor)
+    expect(event).toMatchObject({
+      actor: 'user',
+      document: { id: deckId },
+      target: { kind: 'slide', index: 1, label: '第 2 页' },
+      detail: { oldText: '走过的四站。', newText: '四站' },
+    })
+    expect(event.tool).toBeUndefined()
+    expect(await tool('deck_status')).toContain(event.revision)
+  })
+
+  it('agent 经 MCP 改字记成 agent,带上工具名 —— 宿主靠它和自己的调用对上', async () => {
+    await openDeckAt('走过的四站。')
+    const cursor = await cursorNow()
+    await tool('edit_text', { slide: 1, old_text: '走过的四站。', new_text: '四站' })
+    const [event] = await eventsAfter(cursor)
+    expect(event).toMatchObject({ actor: 'agent', tool: 'edit_text', target: { index: 1 } })
+  })
+
+  it('录制工具不算 agent 的操作:不锁画布、不报活动,也不记成事件', async () => {
+    await openDeckAt('一')
+    await settle()
+    await call('control.release', {})
+    activity.length = 0
+    const cursor = await cursorNow()
+
+    await tool('recording_events', {})
+    await settle()
+    expect((await call('control.state', {})).data.holder).toBe('none')
+    expect(activity).toHaveLength(0)
+    expect(await eventsAfter(cursor)).toHaveLength(0)
+  })
+
+  it('人接管了,宿主照样能取记录', async () => {
+    await openDeckAt('一')
+    await call('control.takeOver', {})
+    expect(await tool('recording_events', {})).not.toContain('USER_IN_CONTROL')
+    await call('control.release', {})
+  })
+
+  it('文件在外面被改,记成 external;我们自己写的不会被当成外面改的', async () => {
+    const { dir, deckId } = await openDeckAt('一')
+    const cursor = await cursorNow()
+    await call('deck.editText', { deckId, slide: 1, oldText: '一', newText: '二' })
+    await new Promise((resolve) => setTimeout(resolve, 400))
+    expect((await eventsAfter(cursor)).map((e) => e.actor)).toEqual(['user'])
+
+    await writeFile(
+      join(dir, 'deck.html'),
+      '<div class="slides"><section><p>封面</p></section><section><p>三</p></section></div>',
+    )
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    const events = await eventsAfter(cursor)
+    expect(events.map((e) => e.actor)).toEqual(['user', 'external'])
+    expect(events[1]).toMatchObject({ summary: '文件在外部被修改', document: { id: deckId } })
+  })
+
+  it('缩略图:离屏渲被改的那一页,带宽度;旧版本 REVISION_UNAVAILABLE', async () => {
+    const { deckId } = await openDeckAt('一')
+    await call('deck.editText', { deckId, slide: 1, oldText: '一', newText: '二' })
+
+    // 扮演界面:收到渲缩略图的请求,交回一张图
+    const png = join(await mkdtemp(join(tmpdir(), 'thumb-')), '1.png')
+    await writeFile(png, Buffer.from('89504e470d0a1a0a', 'hex'))
+    const requests: any[] = []
+    socket.on('message', (raw: Buffer) => {
+      const message = JSON.parse(raw.toString())
+      if (message.channel !== 'thumbnails.request') return
+      requests.push(message.data)
+      socket.send(
+        JSON.stringify({
+          id: 'thumb',
+          method: 'thumbnails.result',
+          params: { requestId: message.data.requestId, paths: [png] },
+        }),
+      )
+    })
+
+    const reply = await tool('recording_snapshot', { maxSize: 800 })
+    expect(requests[0]).toMatchObject({ slides: [1], width: 800 })
+    expect(reply).toContain('"type":"image"')
+    expect(reply).toContain('第 2 页')
+
+    const stale = await tool('recording_snapshot', { document: deckId, revision: 'old' })
+    expect(stale).toContain('REVISION_UNAVAILABLE')
+  })
+})

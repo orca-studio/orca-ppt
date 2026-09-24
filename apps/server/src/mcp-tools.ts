@@ -266,6 +266,74 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'recording_events',
+      config: {
+        title: '取操作记录',
+        annotations: looking,
+        description:
+          '给宿主用于录制和回放,agent 不要调用。取某个游标之后稿子被改的事件(可录制应用约定 v1):谁改的(user / agent / external)、改了哪份稿子哪一页、改完的版本号。返回 JSON:{ version, events, cursor, more, gap, revisionIsContentHash }。',
+        inputSchema: {
+          after: z
+            .string()
+            .optional()
+            .describe('游标:上次返回的 cursor。不给就从还保留着的最早一条开始'),
+          limit: z.number().int().min(1).max(1000).optional().describe('最多几条,默认 200'),
+        },
+      },
+      run: async (args) => {
+        const after = typeof args.after === 'string' && args.after ? args.after : undefined
+        const limit = typeof args.limit === 'number' ? args.limit : undefined
+        return json(
+          await call('recording.events', {
+            ...(after !== undefined ? { after } : {}),
+            ...(limit !== undefined ? { limit } : {}),
+          }),
+        )
+      },
+    },
+    {
+      name: 'recording_snapshot',
+      config: {
+        title: '取缩略图',
+        annotations: looking,
+        description:
+          '给宿主用于录制和回放,agent 不要调用。当前版本的一张缩略图:被改的那一页,离屏渲染,不会翻动用户眼前的画布。旧版本渲不了,返回 REVISION_UNAVAILABLE。',
+        inputSchema: {
+          document: z
+            .string()
+            .optional()
+            .describe('稿子 id(目录的绝对路径)。不给就是最近打开的那份'),
+          revision: z.string().optional().describe('要哪个版本。只支持当前版本'),
+          maxSize: z.number().int().min(64).max(1280).optional().describe('长边上限,默认 640'),
+        },
+      },
+      run: async (args) => {
+        const pick = (key: string) =>
+          typeof args[key] === 'string' && args[key] ? (args[key] as string) : undefined
+        const document = pick('document')
+        const revision = pick('revision')
+        const maxSize = typeof args.maxSize === 'number' ? args.maxSize : undefined
+        const result = await call('recording.snapshot', {
+          ...(document ? { document } : {}),
+          ...(revision ? { revision } : {}),
+          ...(maxSize !== undefined ? { maxSize } : {}),
+        })
+        if (!result.ok || !result.image || !result.mimeType) {
+          return refuse(result.reason ?? 'REVISION_UNAVAILABLE:渲不出来')
+        }
+        const { document: doc, revision: rev, width, height, target } = result
+        return {
+          content: [
+            { type: 'image', data: result.image, mimeType: result.mimeType },
+            {
+              type: 'text',
+              text: JSON.stringify({ document: doc, revision: rev, width, height, target }),
+            },
+          ],
+        }
+      },
+    },
+    {
       name: 'take_control',
       config: {
         title: '拿起稿子',

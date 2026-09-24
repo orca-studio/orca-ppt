@@ -194,6 +194,25 @@ describe('deckRevision', () => {
     expect(await deckRevision(root)).not.toBe(before)
   })
 
+  it('assets 里换了一张图也算 —— 观众看到的变了', async () => {
+    const root = await deck('<div class="slides"><section>a</section></div>')
+    await mkdir(join(root, 'assets/img'), { recursive: true })
+    await writeFile(join(root, 'assets/img/cover.png'), 'v1')
+    const before = await deckRevision(root)
+    await writeFile(join(root, 'assets/img/cover.png'), 'v2')
+    expect(await deckRevision(root)).not.toBe(before)
+  })
+
+  it('素材改了又改回去,版本号也回得去 —— 按内容算,不按修改时间', async () => {
+    const root = await deck('<div class="slides"><section>a</section></div>')
+    await mkdir(join(root, 'assets'))
+    await writeFile(join(root, 'assets/a.png'), 'v1')
+    const original = await deckRevision(root)
+    await writeFile(join(root, 'assets/a.png'), 'v2')
+    await writeFile(join(root, 'assets/a.png'), 'v1')
+    expect(await deckRevision(root)).toBe(original)
+  })
+
   it('还没出稿的目录也有版本号', async () => {
     const root = await mkdtemp(join(tmpdir(), 'orca-rev-'))
     expect(await deckRevision(root)).toMatch(/^[0-9a-f]{16}$/)

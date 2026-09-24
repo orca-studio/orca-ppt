@@ -5,7 +5,9 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import { RECORDING_TOOLS } from './control.js'
 import { ActiveDeck, buildTools, type ProtocolCaller, type ToolSpec } from './mcp-tools.js'
+import { mcpCall } from './mcp-origin.js'
 
 /**
  * MCP 就挂在这台 server 的 `/mcp` 上,和界面同一个进程、同一个端口。
@@ -88,6 +90,11 @@ export class McpEndpoint {
    * 报告失败不该带垮工具本身:界面上少亮一下,远好过 agent 的调用平白报错。
    */
   #announce(tool: ToolSpec): ToolSpec['run'] {
+    // 带上「这是哪个工具在调」:协议方法据此把操作记成 agent 做的(见 mcp-origin.ts)
+    const run = (args: Record<string, unknown>) =>
+      mcpCall.run({ tool: tool.name }, () => tool.run(args))
+    // 录制工具不算 agent 的操作:不拦、不报活动,也就不会推断成 agent 拿着稿子
+    if (RECORDING_TOOLS.has(tool.name)) return run
     return async (args) => {
       const blocked = this.gate(tool.name)
       if (blocked) return { content: [{ type: 'text', text: blocked }], isError: true }
@@ -115,7 +122,7 @@ export class McpEndpoint {
 
       say('start')
       try {
-        const result = await tool.run(args)
+        const result = await run(args)
         // 工具跑到了但这件事没办成(isError),界面上也该显示成没办成 —— 报成功是不诚实的。
         say('done', result.isError ? firstLine(result) : undefined)
         return result

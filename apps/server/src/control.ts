@@ -30,6 +30,16 @@ export const IDLE_MS = 120_000
 export const CONTROL_TOOLS = new Set(['take_control', 'hand_off'])
 
 /**
+ * 给宿主录制和回放用的工具(可录制应用约定)。宿主会定期轮询它们 —— 算成 agent 在干活的话,
+ * 画布就一直被锁着。所以它们完全不经过控制权:不报活动、不推断持有、人接管了也照样能取。
+ */
+export const RECORDING_TOOLS = new Set([
+  'recording_events',
+  'recording_snapshot',
+  'recording_restore',
+])
+
+/**
  * 人接管之后,agent 的每个工具收到的都是这段话。措辞学 ego:说清这是硬停止。
  * 不提 take_control:在 Jevbot 这类宿主里拿回控制权由宿主代做,agent 看不到那个工具,
  * 提了它只会自己去调、被拒、平白多一步。直连的 agent 看得到 take_control 的说明,照样知道怎么拿回。

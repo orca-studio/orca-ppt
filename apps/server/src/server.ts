@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import {
   RequestEnvelope,
   artifactPath,
@@ -19,6 +19,8 @@ import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
+import { mcpCall } from './mcp-origin.js'
+import { RecordingLog, recordingFilePath } from './recording.js'
 import {
   deckRevision,
   findEntryName,
@@ -65,6 +67,8 @@ export async function startServer(
      * 允许目录之外的引用一律 403 —— 这不是一个通用文件服务。
      */
     allowRoots?: string[]
+    /** 操作记录落在哪。默认 ~/.orca-ppt/recording.jsonl;测试给一个临时文件。 */
+    recordingFile?: string
   } = {},
 ): Promise<OrcaServer> {
   const bus = new PushBus()
@@ -81,6 +85,71 @@ export async function startServer(
     }
     return history
   }
+  /**
+   * 操作记录(可录制应用约定)。每改一次稿子记一条 —— 谁改的、改了哪页、改完的版本号。
+   * 回放在宿主那边,这里只报宿主看不到的:人在界面上改的、文件在外面被改的。
+   */
+  const recording = new RecordingLog(options.recordingFile ?? recordingFilePath())
+  await recording.load()
+  /** 每份稿子最近一次记下的版本号。文件监听看到的版本号和它不同,才是外面改的。 */
+  const lastSeen = new Map<string, string>()
+  /** 我们自己正在写的稿子:这时文件监听报的变化不是「外面改的」。 */
+  const selfWriting = new Set<string>()
+  /** 最近打开的那份:取缩略图没说是哪份时就用它。 */
+  let lastOpened: string | undefined
+
+  const documentOf = (deckId: string) => ({ id: deckId, label: basename(deckPathOf(deckId)) })
+
+  /** 稿子被我们改了一次,记一条。是不是经 MCP 来的决定记成人还是 agent。 */
+  const recordChange = async (
+    deckId: string,
+    change: { summary: string; slide?: number; detail?: Record<string, unknown> },
+  ) => {
+    const revision = await deckRevision(deckPathOf(deckId))
+    lastSeen.set(deckId, revision)
+    const call = mcpCall.getStore()
+    recording.append({
+      actor: call ? 'agent' : 'user',
+      summary: change.summary,
+      document: documentOf(deckId),
+      ...(change.slide !== undefined
+        ? { target: { kind: 'slide', index: change.slide, label: `第 ${change.slide + 1} 页` } }
+        : {}),
+      revision,
+      ...(call ? { tool: call.tool } : {}),
+      undoable: true,
+      ...(change.detail ? { detail: change.detail } : {}),
+    })
+  }
+
+  /**
+   * 文件监听报了变化:版本号和我们记的不一样,就是外面改的 —— agent 用自己的工具直接写了
+   * HTML、人在编辑器里改了。只看得到结果,不知道是谁,记成 external。
+   */
+  const noticeExternal = async (deckId: string) => {
+    if (selfWriting.has(deckId) || !openDecks.has(deckId)) return
+    const revision = await deckRevision(deckPathOf(deckId))
+    if (lastSeen.get(deckId) === revision) return
+    lastSeen.set(deckId, revision)
+    recording.append({
+      actor: 'external',
+      summary: '文件在外部被修改',
+      document: documentOf(deckId),
+      revision,
+    })
+  }
+
+  /** 我们自己写稿子:写的这段时间里文件监听报的变化不算外面改的。 */
+  const writeOwn = async (deckId: string, file: string, html: string) => {
+    selfWriting.add(deckId)
+    try {
+      await writeFile(file, html, 'utf8')
+    } finally {
+      // 文件监听要攒 150ms 才报;报上来时版本号已经等于 lastSeen,会被认出是自己写的
+      setTimeout(() => selfWriting.delete(deckId), 0)
+    }
+  }
+
   const announceHistory = (deckId: string) =>
     bus.broadcast('history.changed', { deckId, ...historyOf(deckId).state() })
   /** 撤销和重做是同一件事的两个方向。 */
@@ -94,9 +163,14 @@ export async function startServer(
     const current = await readFile(file, 'utf8')
     const result = direction === 'undo' ? history.undo(current) : history.redo(current)
     if (!result.ok) return { ok: false, reason: result.reason }
-    if (result.html !== current) await writeFile(file, result.html, 'utf8')
+    if (result.html !== current) await writeOwn(deckId, file, result.html)
     announceHistory(deckId)
     const { step } = result
+    const text = direction === 'undo' ? step.oldText : step.newText
+    await recordChange(deckId, {
+      summary: `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
+      slide: step.slide,
+    })
     return { ok: true, slide: step.slide, text: direction === 'undo' ? step.oldText : step.newText }
   }
 
@@ -106,7 +180,7 @@ export async function startServer(
   // 一份稿子每页渲一张,比单张截图慢得多,给足时间。
   const thumbnails = new Roundtrip<
     Array<string | null>,
-    { previewUrl: string; slideCount: number }
+    { previewUrl: string; slideCount: number; slides?: number[]; width?: number }
   >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
 
   const queue = new RequestQueue((deckId, pending) =>
@@ -115,6 +189,7 @@ export async function startServer(
 
   // 稿子变了就让画布重载 —— agent 改的和用户自己在编辑器里改的,一视同仁。
   const watcher = new DeckWatcher((deckId) => {
+    void noticeExternal(deckId).catch(() => {})
     const path = openDecks.get(deckId)
     if (!path) return
     void announceDeck(deckId, path).catch(() => {
@@ -232,6 +307,57 @@ export async function startServer(
    * 界面发来的请求。MCP 不走这里,它直接调 dispatch —— 所以「是人还是 agent」在这一层
    * 天然分得开,拦截放在协议层而不只是把按钮置灰:菜单里的 ⌘Z、以后别的客户端,都一样拦得住。
    */
+  /**
+   * 录制要的缩略图:被改的那一页(没有记录就第 1 页),**离屏渲** —— 用的是页胶片那套隐藏窗口,
+   * 不翻用户眼前的画布。宿主每条事件之后都来取一张,人正在编辑时画面不能被来回拖。
+   * 只渲得了当前版本:旧版本的内容没存,要旧的就 REVISION_UNAVAILABLE,宿主用当时记下的那张。
+   */
+  async function snapshot(params: {
+    document?: string | undefined
+    revision?: string | undefined
+    maxSize?: number | undefined
+  }) {
+    const unavailable = (why: string) => ({ ok: false, reason: `REVISION_UNAVAILABLE:${why}` })
+    const deckId = params.document ?? lastOpened
+    if (!deckId || !openDecks.has(deckId)) return unavailable('这份稿子没有打开')
+    const root = deckPathOf(deckId)
+    const revision = await deckRevision(root)
+    if (params.revision && params.revision !== revision) {
+      return unavailable('只渲得了当前版本;旧版本请用当时记下的缩略图')
+    }
+    const opened = await openDeck(root)
+    const previewUrl = mountPreview(opened)
+    if (!previewUrl || opened.slideCount === 0) return unavailable('这份稿子还没有出稿文件')
+    if (bus.connectionCount === 0) return unavailable('应用界面没开,渲不了缩略图')
+
+    const slide = Math.min(recording.lastFor(deckId)?.target?.index ?? 0, opened.slideCount - 1)
+    const width = Math.min(params.maxSize ?? 640, 1280)
+    let path: string | null | undefined
+    try {
+      ;[path] = await thumbnails.request(deckId, {
+        previewUrl,
+        slideCount: opened.slideCount,
+        slides: [slide],
+        width,
+      })
+    } catch (cause) {
+      return unavailable(cause instanceof Error ? cause.message : '渲不出来')
+    }
+    if (!path) return unavailable('这一页渲不出来')
+    const bytes = await readFile(path)
+    // 报图片的真实尺寸,不按比例推:推出来的和实际对不上时,宿主拿到的元信息就是错的
+    const size = pngSize(bytes) ?? { width, height: Math.round((width * 9) / 16) }
+    return {
+      ok: true,
+      image: bytes.toString('base64'),
+      mimeType: path.endsWith('.jpg') ? ('image/jpeg' as const) : ('image/png' as const),
+      document: documentOf(deckId),
+      revision,
+      ...size,
+      target: { kind: 'slide', index: slide, label: `第 ${slide + 1} 页` },
+    }
+  }
+
   async function handle(envelope: RequestEnvelope): Promise<ResponseEnvelope> {
     const reason = HUMAN_EDITS.has(envelope.method) ? control.blocksHuman() : undefined
     if (reason) {
@@ -265,6 +391,11 @@ export async function startServer(
 
         openDecks.set(opened.deck.id, opened.deck.path)
         watcher.watch(opened.deck.id, opened.deck.path)
+        lastOpened = opened.deck.id
+        // 打开时的版本号是基准:之后文件监听看到不一样的,才算外面改的
+        if (!lastSeen.has(opened.deck.id)) {
+          lastSeen.set(opened.deck.id, await deckRevision(opened.deck.path))
+        }
         // 记一笔「最近用过这个主题」—— 选择器上最有用的那个标签(派生的,见 recent.ts)。
         // 读不出主题或者写不进去都不管:少一个标签,不值得让打开稿子这件事失败。
         const theme = opened.entryFile
@@ -336,7 +467,7 @@ export async function startServer(
         })
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
-          await writeFile(file, result.html, 'utf8')
+          await writeOwn(params.deckId, file, result.html)
           historyOf(params.deckId).record({
             slide: params.slide,
             oldText: params.oldText.trim(),
@@ -345,6 +476,11 @@ export async function startServer(
             after: result.html,
           })
           announceHistory(params.deckId)
+          await recordChange(params.deckId, {
+            summary: `把第 ${params.slide + 1} 页的「${clip(params.oldText)}」改成「${clip(params.newText)}」`,
+            slide: params.slide,
+            detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
+          })
         }
         // 不用在这儿广播:文件一变,看稿子的 watcher 自己会推 deck.changed。
         return { ok: true }
@@ -463,6 +599,18 @@ export async function startServer(
         bus.broadcast('autoplay.changed', { deckId: params.deckId, on: params.on })
         return {}
       }
+      case 'recording.events': {
+        const params = parseParams('recording.events', raw)
+        return {
+          version: 1 as const,
+          ...recording.since(params.after, params.limit ?? 200),
+          // 版本号是内容哈希(deckRevision):改了又改回去,版本号也回得去
+          revisionIsContentHash: true,
+        }
+      }
+      case 'recording.snapshot': {
+        return snapshot(parseParams('recording.snapshot', raw))
+      }
       case 'deck.thumbnails': {
         const params = parseParams('deck.thumbnails', raw)
         const opened = await openDeck(deckPathOf(params.deckId))
@@ -527,6 +675,7 @@ export async function startServer(
     close: async () => {
       watcher.closeAll()
       control.close()
+      await recording.flush()
       await mcp.close()
       await clearPortFile()
       await new Promise<void>((done) => {
@@ -535,6 +684,18 @@ export async function startServer(
       })
     },
   }
+}
+
+/** PNG 的宽高在 IHDR 里(第 16–24 字节)。不是 PNG(比如换成了 JPEG)就返回 undefined。 */
+function pngSize(bytes: Buffer): { width: number; height: number } | undefined {
+  if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47) return undefined
+  return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
+}
+
+/** 事件摘要里引用原文时截短:一句人话,不是全文。 */
+function clip(text: string, max = 24): string {
+  const flat = text.trim().replace(/\s+/g, ' ')
+  return flat.length > max ? `${flat.slice(0, max)}…` : flat
 }
 
 /**
