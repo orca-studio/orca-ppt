@@ -26,6 +26,10 @@ export interface PickedAnchor extends Omit<InspectAnchor, 'note'> {
 
 export interface StageHandle {
   /** 进入取锚状态。用户点下给出锚,Esc 取消给出 null。 */
+  targetText(
+    slide: number,
+    text: string,
+  ): Promise<{ x: number; y: number; width: number; height: number; targetId: string } | null>
   pick(): Promise<PickedAnchor | null>
   cancelPick(): void
   /** 自动播放:按每页的 data-hold 依次往后翻。 */
@@ -180,6 +184,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       loading.current = true
     }
 
+    const onStopLoading = () => {
+      // Reveal 的 hash 导航也触发 loading，但不会重新触发 dom-ready。
+      loading.current = false
+      for (const resume of waiters.current.splice(0)) resume()
+    }
+
     const onLoad = () => {
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
       void view.executeJavaScript(`${inspectScript};${autoplayScript};${editScript}`).then(() => {
@@ -223,11 +233,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       if (match) onSlideChangeRef.current(Number(match[1]))
     }
     view.addEventListener('console-message', onConsole)
+    view.addEventListener('did-stop-loading', onStopLoading)
     view.addEventListener('did-start-loading', onStartLoading)
     view.addEventListener('dom-ready', onLoad)
     view.addEventListener('did-fail-load', onFail)
     return () => {
       view.removeEventListener('console-message', onConsole)
+      view.removeEventListener('did-stop-loading', onStopLoading)
       view.removeEventListener('did-start-loading', onStartLoading)
       view.removeEventListener('dom-ready', onLoad)
       view.removeEventListener('did-fail-load', onFail)
@@ -279,6 +291,22 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   useImperativeHandle(
     handle,
     (): StageHandle => ({
+      targetText: async (slide, text) => {
+        const view = ref.current
+        if (!view) return null
+        const result = (await view.executeJavaScript(`(() => {
+          const section = document.querySelectorAll('.reveal .slides > section')[${JSON.stringify(slide)}];
+          if (!section || !section.classList.contains('present')) return null;
+          const matches = [...section.querySelectorAll('*')].filter(e => e.textContent === ${JSON.stringify(text)} && ![...e.children].some(c => c.textContent === ${JSON.stringify(text)}));
+          if (matches.length !== 1) return null;
+          const e = matches[0], r = e.getBoundingClientRect();
+          if (r.width <= 0 || r.height <= 0 || r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return null;
+          return {x:r.x,y:r.y,width:r.width,height:r.height,targetId:e.id || e.getAttribute('data-id') || 'slide.' + ${JSON.stringify(slide)} + '.element.' + [...section.querySelectorAll('*')].indexOf(e)};
+        })()`)) as { x: number; y: number; width: number; height: number; targetId: string } | null
+        if (!result) return null
+        const host = view.getBoundingClientRect()
+        return { ...result, x: host.x + result.x, y: host.y + result.y }
+      },
       pick: async () => {
         const result = await ref.current?.executeJavaScript('window.__orcaInspect.arm()')
         return (result as PickedAnchor | null) ?? null

@@ -6,6 +6,8 @@ import type { AddressInfo } from 'node:net'
 import { basename, join } from 'node:path'
 import {
   RequestEnvelope,
+  type RequestParams,
+  type RequestResult,
   artifactPath,
   type PushEnvelope,
   type RequestMethod,
@@ -171,6 +173,10 @@ export async function startServer(
     return { ok: true, slide: step.slide, text: direction === 'undo' ? step.oldText : step.newText }
   }
 
+  const visualTargets = new Roundtrip<
+    RequestResult<'visual.prepare'>,
+    Omit<RequestParams<'visual.prepare'>, 'deckId'>
+  >((payload) => bus.broadcast('visual.request', payload), 2000)
   const captures = new Roundtrip<string, { slide?: number }>((payload) =>
     bus.broadcast('capture.request', payload),
   )
@@ -277,6 +283,7 @@ export async function startServer(
       bus.detach(connectionId)
       // 界面走了就没人能截图了,挂着的别让 agent 干等。
       if (bus.connectionCount === 0) {
+        visualTargets.failAll(AgentError.uiDisconnected())
         captures.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
       }
@@ -608,6 +615,22 @@ export async function startServer(
             texts,
           })),
         }
+      }
+      case 'visual.prepare': {
+        const params = parseParams('visual.prepare', raw)
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
+        if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
+        const { deckId, ...request } = params
+        const target = await visualTargets.request(deckId, request)
+        if (deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
+        return target
+      }
+      case 'visual.result': {
+        const params = parseParams('visual.result', raw)
+        visualTargets.settle(params.requestId, { value: params.target, error: params.error })
+        return {}
       }
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)

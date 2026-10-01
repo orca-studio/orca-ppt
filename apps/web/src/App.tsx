@@ -16,10 +16,10 @@ import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
-import { caption, idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
+import { idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
-import { ControlCapsule } from './ControlCapsule.js'
+import { AgentStatus } from './AgentStatus.js'
 import { Button } from './ui/Button.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 
@@ -194,6 +194,80 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
 
     // agent 要自己看一眼做出来的东西 —— 只有壳截得了图。
+    next.subscribe('visual.request', (data) => {
+      void (async () => {
+        try {
+          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
+          const args = data.arguments
+          let rect: { x: number; y: number; width: number; height: number } | undefined
+          let targetId: string | undefined
+          if (data.phase !== 'prepare') {
+            if (
+              data.phase === 'completed' &&
+              data.action === 'edit_text' &&
+              typeof args.new_text === 'string'
+            )
+              stage.current?.spotlight(args.new_text)
+            if (data.phase === 'failed') stage.current?.notify('操作未完成')
+          } else if (
+            data.action === 'edit_text' &&
+            Number.isInteger(args.slide) &&
+            typeof args.old_text === 'string'
+          ) {
+            await stage.current?.whenReady(1000)
+            const target = await stage.current?.targetText(Number(args.slide), args.old_text)
+            if (target) {
+              rect = target
+              targetId = target.targetId
+            }
+          } else {
+            const label =
+              data.action === 'show_slide'
+                ? `第 ${Number(args.index) + 1} 页`
+                : data.action === 'undo'
+                  ? '撤销'
+                  : '重做'
+            const element = [...document.querySelectorAll<HTMLElement>('[aria-label]')].find(
+              (e) => e.getAttribute('aria-label') === label,
+            )
+            if (element) {
+              rect = element.getBoundingClientRect()
+              targetId = label
+            }
+          }
+          const bounds = await window.orca?.contentBounds?.()
+          const valid =
+            rect &&
+            bounds &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.x >= 0 &&
+            rect.y >= 0 &&
+            rect.x + rect.width <= innerWidth &&
+            rect.y + rect.height <= innerHeight
+          await next.request('visual.result', {
+            requestId: data.requestId,
+            target: {
+              measuredAt: Date.now(),
+              ...(valid && rect && bounds
+                ? {
+                    rect: {
+                      x: bounds.x + rect.x * bounds.zoom,
+                      y: bounds.y + rect.y * bounds.zoom,
+                      width: rect.width * bounds.zoom,
+                      height: rect.height * bounds.zoom,
+                    },
+                    ...(targetId ? { targetId } : {}),
+                  }
+                : {}),
+            },
+          })
+        } catch (cause) {
+          await next.request('visual.result', { requestId: data.requestId, error: String(cause) })
+        }
+      })()
+    })
+
     next.subscribe('capture.request', (data) => {
       void (async () => {
         try {
@@ -521,7 +595,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   // agent 在不在,只能看它最近动没动 —— MCP 是无状态 HTTP,没有连接可查。
   const agentLive = isLive(agent, now)
-  const agentCaption = caption(agent)
 
   /**
    * 这一页在画布上的情况(停留时长、参与转场的元素)。只有画布答得出来,所以翻一页
@@ -639,6 +712,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                   <li key={index}>
                     <button
                       type="button"
+                      aria-label={`第 ${index + 1} 页`}
                       data-current={index === slide}
                       // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
                       // 写是「这儿被改了」,后者更要紧,也留得更久。
@@ -700,14 +774,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
               }}
               onTextEdit={editText}
               readOnly={agentHolds}
-              overlay={
-                agentHolds && (
-                  <AgentMask
-                    explicit={control.explicit}
-                    onTakeOver={() => setHolder('control.takeOver')}
-                  />
-                )
-              }
+              overlay={agentHolds && <div className="stage-lock" />}
             />
           ) : (
             <div className="stage">
@@ -719,15 +786,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 </div>
               </div>
             </div>
-          )}
-          {deck && (
-            <ControlCapsule
-              control={control}
-              fallbackTitle={deck.deck.title}
-              onTakeOver={() => setHolder('control.takeOver')}
-              onStop={() => setHolder('control.stop')}
-              onRelease={() => setHolder('control.release')}
-            />
           )}
         </section>
 
@@ -777,21 +835,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
           它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
         */}
         <Pending requests={requests} crops={crops} />
-        {/* agent 状态是状态,归这儿 —— 工具栏放动作 */}
-        <span className="status-right">
-          {/*
-            agent 正在做什么,就写在它的状态旁边 —— 这是这块最要紧的信息:
-            画布自己翻了页、文字自己变了,人得当场知道是谁干的。
-          */}
-          {agentCaption && (
-            <span className="status-agent-doing" data-tone={agentCaption.tone}>
-              {agentCaption.text}
-            </span>
-          )}
-          <span className="status-agent" data-live={agentLive}>
-            {agentLive ? 'agent 在线' : 'agent 未连'}
-          </span>
-        </span>
+        <AgentStatus
+          control={control}
+          connected={state === 'open' && agentLive}
+          onTakeOver={() => setHolder('control.takeOver')}
+          onStop={() => setHolder('control.stop')}
+          onRelease={() => setHolder('control.release')}
+        />
       </footer>
     </div>
   )
@@ -845,25 +895,6 @@ function DeckPicker({
         认 <code>deck.html</code> 和 <code>index.html</code>,skill 做出来的稿子直接能开。
       </p>
       {error && <p className="picker-error">{error}</p>}
-    </div>
-  )
-}
-
-/**
- * agent 拿着稿子时盖在画布上的那一层。学 ego-lite:agent 在操作的东西,人要动得先明着
- * 接管 —— 不是悄悄地和它抢。画布仍然看得见,agent 改了哪儿人照样能盯着。
- *
- * 明说拿着的,接管在底部的胶囊里。猜出来的不弹胶囊(会闪),可它要 30 秒才放 ——
- * 遮罩上不留一个「接管」,人就只能干等,所以角上放一个小的。
- */
-function AgentMask({ explicit, onTakeOver }: { explicit: boolean; onTakeOver: () => void }) {
-  return (
-    <div className="stage-lock">
-      {!explicit && (
-        <Button size="sm" className="stage-lock-take" onClick={onTakeOver}>
-          接管
-        </Button>
-      )}
     </div>
   )
 }

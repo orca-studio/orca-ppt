@@ -203,6 +203,12 @@ ipcMain.handle(
  * 不在应用里做 JSON 编辑器:deck 是磁盘上的目录,产物就是文件,用用户自己的编辑器改它
  * 比我们再造一个差劲的编辑器强,也和「用户随时能把目录拿走」这条一致。
  */
+ipcMain.handle('app:content-bounds', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  if (!window || window.isMinimized() || !window.isVisible()) return undefined
+  return { ...window.getContentBounds(), zoom: event.sender.getZoomFactor() }
+})
+
 ipcMain.handle('deck:open-file', async (_event, path: string) => {
   const failure = await shell.openPath(path)
   return failure || undefined

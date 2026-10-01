@@ -445,3 +445,39 @@ it('导航走共享推送，停止自动播放，拒绝旧稿子和不完整重�
   ).toBe(true)
   expect(pushes.some((p) => p.channel === 'autoplay.changed' && p.data.on === false)).toBe(true)
 })
+
+it('操作定位拒绝旧文档和人工接管状态', async () => {
+  const request = {
+    deckId: 'stale',
+    action: 'edit_text',
+    arguments: { slide: 0, old_text: 'Title' },
+  }
+  const stale = await call('visual.prepare', request)
+  expect(JSON.stringify(stale)).toContain('DOCUMENT_CHANGED')
+  const deck = await builtDeck()
+  await call('control.takeOver', {})
+  const taken = await call('visual.prepare', { ...request, deckId: deck.id })
+  expect(JSON.stringify(taken)).toContain('USER_IN_CONTROL')
+})
+
+it('操作定位通过 renderer 往返返回目标坐标', async () => {
+  const deck = await builtDeck()
+  const target = {
+    rect: { x: 20, y: 30, width: 80, height: 20 },
+    targetId: 'title',
+    measuredAt: Date.now(),
+  }
+  const respond = (raw: Buffer) => {
+    const message = JSON.parse(raw.toString())
+    if (message.channel !== 'visual.request') return
+    void call('visual.result', { requestId: message.data.requestId, target })
+  }
+  socket.on('message', respond)
+  const result = await call('visual.prepare', {
+    deckId: deck.id,
+    action: 'edit_text',
+    arguments: {},
+  })
+  socket.off('message', respond)
+  expect(result.data).toEqual(target)
+})

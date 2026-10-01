@@ -18,6 +18,7 @@ electron.contextBridge.exposeInMainWorld('orca', {
   serverPort: port ? Number(port) : undefined,
   // 渲染层要知道平台:macOS 的红绿灯按钮浮在窗口左上角,那块地方不能放东西。
   platform: process.platform,
+  contentBounds: () => electron.ipcRenderer.invoke('app:content-bounds'),
   initialDeck: read('--orca-deck='),
   pickDeck: (): Promise<string | undefined> => electron.ipcRenderer.invoke('deck:pick'),
   captureAnchor: (input: unknown): Promise<string | undefined> =>

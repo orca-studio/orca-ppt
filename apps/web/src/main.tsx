@@ -39,6 +39,9 @@ declare global {
       /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
       openFile?: (path: string) => Promise<string | undefined>
       /** 截整张画布 —— agent 靠它自己看一眼做出来的东西。 */
+      contentBounds?: () => Promise<
+        { x: number; y: number; width: number; height: number; zoom: number } | undefined
+      >
       captureCanvas?: (input: { guestId: number | undefined }) => Promise<string | undefined>
     }
   }

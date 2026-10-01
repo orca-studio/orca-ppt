@@ -27,7 +27,7 @@ export const GRACE_MS = 30_000
 export const IDLE_MS = 120_000
 
 /** 管控制权本身的工具。它们不算「agent 在干活」,也不受人接管的拦截。 */
-export const CONTROL_TOOLS = new Set(['take_control', 'hand_off'])
+export const CONTROL_TOOLS = new Set(['take_control', 'hand_off', 'control_state'])
 
 /**
  * 给宿主录制和回放用的工具(可录制应用约定)。宿主会定期轮询它们 —— 算成 agent 在干活的话,

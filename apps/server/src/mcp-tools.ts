@@ -116,6 +116,7 @@ export interface ToolSpec {
   name: string
   config: {
     title: string
+    _meta?: Record<string, unknown>
     description: string
     inputSchema?: z.ZodRawShape
     annotations: ToolAnnotations
@@ -291,6 +292,51 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'visual_target',
+      config: {
+        title: '定位操作目标',
+        description: '宿主操作反馈接口：定位可见目标或报告操作结束，不改文档内容。',
+        annotations: looking,
+        _meta: { 'dev.jevbot/ui': { version: 1, resolves: true } },
+        inputSchema: {
+          action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
+          arguments: z.record(z.string(), z.unknown()),
+          phase: z.enum(['prepare', 'completed', 'failed']).default('prepare'),
+        },
+      },
+      run: async (args) => {
+        const deckId = await active.get(call)
+        const arguments_ = args.arguments as Record<string, unknown>
+        if (
+          (args.phase ?? 'prepare') === 'prepare' &&
+          args.action === 'edit_text' &&
+          Number.isInteger(arguments_.slide) &&
+          Number(arguments_.slide) >= 0
+        ) {
+          await call('deck.showSlide', { deckId, index: Number(arguments_.slide) })
+        }
+        return json(
+          await call('visual.prepare', {
+            deckId,
+            action: args.action as 'show_slide' | 'edit_text' | 'undo' | 'redo',
+            arguments: arguments_,
+            phase: (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed',
+          }),
+        )
+      },
+    },
+    {
+      name: 'control_state',
+      config: {
+        title: '读取控制权',
+        description: '宿主读取控制权状态，用于结束操作反馈；不取得或续期控制权。',
+        annotations: looking,
+        _meta: { 'dev.jevbot/ui': { version: 1, controlState: true } },
+        inputSchema: {},
+      },
+      run: async () => json(await call('control.state', {})),
+    },
+    {
       name: 'show_slide',
       activity: (args) => {
         const slides = slideArg(args, 'index')
@@ -298,6 +344,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '让画布跳到第几页',
+        _meta: {
+          'dev.jevbot/ui': { version: 1, label: '第 {index+1} 页', role: 'AXButton', visual: true },
+        },
         annotations: looking,
         description:
           '界面上的放映画布跳到指定页(从 0 数起)。跟用户讨论某一页时先调它 —— 他看到的和你说的才是同一页。',
@@ -324,6 +373,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '换掉一句话',
+        _meta: { 'dev.jevbot/ui': { version: 1, label: '{old_text}', role: 'AXStaticText' } },
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -482,6 +532,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'undo',
       activity: () => ({ kind: 'write', label: '撤销上一处改字', slides: [] }),
       config: {
+        _meta: { 'dev.jevbot/ui': { version: 1, label: '撤销', role: 'AXButton' } },
         title: '撤销上一处改字',
         // 会改稿子,但不丢东西:撤掉的那一步 redo 能拿回来。
         annotations: {
@@ -505,6 +556,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'redo',
       activity: () => ({ kind: 'write', label: '重做刚撤掉的改字', slides: [] }),
       config: {
+        _meta: { 'dev.jevbot/ui': { version: 1, label: '重做', role: 'AXButton' } },
         title: '重做刚撤掉的改字',
         annotations: {
           readOnlyHint: false,

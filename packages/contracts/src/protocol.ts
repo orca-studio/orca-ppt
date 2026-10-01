@@ -9,6 +9,24 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
  * 界面里有、这里没有的操作,不许存在(见 docs/ARCHITECTURE.md)。
  */
 
+export const VisualRequest = z.object({
+  action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
+  arguments: z.record(z.string(), z.unknown()),
+  phase: z.enum(['prepare', 'completed', 'failed']).default('prepare'),
+})
+export const VisualTarget = z.object({
+  rect: z
+    .object({
+      x: z.number().finite(),
+      y: z.number().finite(),
+      width: z.number().positive(),
+      height: z.number().positive(),
+    })
+    .optional(),
+  targetId: z.string().optional(),
+  measuredAt: z.number(),
+})
+
 export const PhaseStatus = z.enum(['idle', 'running', 'done', 'failed'])
 export type PhaseStatus = z.infer<typeof PhaseStatus>
 
@@ -489,6 +507,15 @@ export const requests = {
     result: z.object({}),
   },
   /** 壳把截好的图交回来。只有壳会调。 */
+  'visual.prepare': { params: VisualRequest.extend({ deckId: z.string() }), result: VisualTarget },
+  'visual.result': {
+    params: z.object({
+      requestId: z.string(),
+      target: VisualTarget.optional(),
+      error: z.string().optional(),
+    }),
+    result: z.object({}),
+  },
   'capture.result': {
     params: z.object({
       requestId: z.string(),
@@ -623,6 +650,7 @@ export const pushes = {
   /** 待办队列变了。界面据此显示「已取 N 处,去跟 agent 说一声」。 */
   'requests.changed': z.object({ deckId: z.string(), requests: z.array(PendingRequest) }),
   /** 请壳截一张画布的图。壳截完调 `capture.result` 交回来。 */
+  'visual.request': VisualRequest.extend({ deckId: z.string(), requestId: z.string() }),
   'capture.request': z.object({
     deckId: z.string(),
     requestId: z.string(),

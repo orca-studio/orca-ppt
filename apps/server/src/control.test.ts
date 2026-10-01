@@ -177,3 +177,16 @@ describe('人接管 / 停止', () => {
     expect(control.state()).toEqual({ holder: 'none', explicit: false })
   })
 })
+
+it('控制权查询不取得或续期控制权，接管后也可读取', () => {
+  call('poll', 'start', '读取控制权', 'control_state')
+  expect(control.state().holder).toBe('none')
+  control.take('测试任务')
+  vi.advanceTimersByTime(9_000)
+  call('poll', 'start', '读取控制权', 'control_state')
+  call('poll', 'done', '读取控制权', 'control_state')
+  vi.advanceTimersByTime(1_000)
+  expect(control.state().holder).toBe('none')
+  control.takeOver()
+  expect(control.blocksAgent('control_state')).toBeUndefined()
+})
