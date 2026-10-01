@@ -244,6 +244,27 @@ export const requests = {
     params: z.object({ deckId: z.string() }),
     result: HistoryState,
   },
+  /**
+   * 诊断:这一侧的环境是什么样。agent 碰到 UI_DISCONNECTED、SKILL_NOT_FOUND 这类错误,
+   * 或者工具行为不对时先看它 —— 比猜强。
+   */
+  'app.doctor': {
+    params: z.object({}),
+    result: z.object({
+      app: z.object({ version: z.string() }),
+      server: z.object({ port: z.number().int(), mcp: z.string() }),
+      skill: z.object({
+        path: z.string().optional(),
+        /** explicit:ORCA_PPT_SKILL 指定的;bundled:app 自带的;local:开发时的本地仓;missing:没找到。 */
+        source: z.enum(['explicit', 'bundled', 'local', 'missing']),
+        searched: z.array(z.string()),
+      }),
+      /** 界面(窗口)连着没有。截图、缩略图、放映都要靠它。 */
+      ui: z.object({ connected: z.boolean(), connections: z.number().int() }),
+      decks: z.array(z.object({ id: z.string(), label: z.string() })),
+      recording: z.object({ file: z.string(), events: z.number().int() }),
+    }),
+  },
   /** 某个游标之后发生的事件(可录制应用约定)。游标太旧、已经被清掉时 gap 为 true。 */
   'recording.events': {
     params: z.object({

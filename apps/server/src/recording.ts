@@ -99,6 +99,15 @@ export class RecordingLog {
     }
   }
 
+  /** 现在留着多少条。 */
+  get size(): number {
+    return this.#events.length
+  }
+
+  get path(): string {
+    return this.file
+  }
+
   /** 这份稿子最近一条事件。 */
   lastFor(documentId: string): RecordingEvent | undefined {
     for (let i = this.#events.length - 1; i >= 0; i -= 1) {

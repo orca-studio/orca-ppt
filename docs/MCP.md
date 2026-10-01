@@ -124,7 +124,7 @@ Cursor 手动加进 `~/.cursor/mcp.json`:
 { "mcpServers": { "orca-ppt": { "type": "http", "url": "http://127.0.0.1:6722/mcp" } } }
 ```
 
-应用里待办栏的底部有「复制连接命令」。
+应用菜单「帮助 > 连接 agent…」给出这行命令,点一下就拷走。
 
 **为什么是 HTTP 不是 stdio:** stdio 要在 agent 配置里写一条指向本仓 `dist` 的路径
 (打包之后就废了),还要多起一个进程、再想办法告诉它连哪个端口。HTTP 只要一行,而且

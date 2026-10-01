@@ -477,3 +477,47 @@ describe('可录制应用约定:操作记录', () => {
     expect(stale).toContain('REVISION_UNAVAILABLE')
   })
 })
+
+describe('环境类错误带前缀和下一步', () => {
+  it('没出稿就改字:前缀在开头,不被「没改:」盖住', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await call('deck.open', { path: dir })
+    await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    await mcp('tools/call', { name: 'open_deck', arguments: { path: dir } })
+    const reply = await mcp('tools/call', {
+      name: 'edit_text',
+      arguments: { slide: 0, old_text: '一', new_text: '二' },
+    })
+    expect(reply).toContain('"text":"NO_BUILD:')
+    expect(reply).toContain('下一步')
+  })
+})
+
+describe('doctor', () => {
+  it('报版本、skill 在哪、界面连没连上、开着哪些稿子', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    const opened = await call('deck.open', { path: dir })
+    const report = (await call('app.doctor', {})).data
+    expect(report.app.version).toMatch(/\d/)
+    expect(report.server.mcp).toContain('/mcp')
+    expect(['explicit', 'bundled', 'local', 'missing']).toContain(report.skill.source)
+    expect(report.skill.searched.length).toBeGreaterThan(0)
+    // 测试里连着一个 WebSocket,就是「界面」
+    expect(report.ui.connected).toBe(true)
+    expect(report.decks.map((d: any) => d.id)).toContain(opened.data.deck.id)
+  })
+
+  it('握手时报的版本号就是 doctor 报的 app 版本', async () => {
+    const init = await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    const { version } = (await call('app.doctor', {})).data.app
+    expect(init).toContain(`"version":"${version}"`)
+  })
+})

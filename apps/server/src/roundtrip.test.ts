@@ -29,7 +29,7 @@ describe('Roundtrip', () => {
 
   it('壳不回话就超时,不把调用方吊死', async () => {
     const broker = new Roundtrip<string>(vi.fn(), 20)
-    await expect(broker.request('/d')).rejects.toThrow('应用开着吗')
+    await expect(broker.request('/d')).rejects.toThrow(/^UI_TIMEOUT:/)
   })
 
   it('超时之后才回来的结果被忽略,不炸', async () => {

@@ -27,21 +27,39 @@ const DEFAULT_LOCATIONS = [
  *    所以只要它在,就用它:版本一定和 app 对得上。
  * 3. 开发时的本地仓和旧的安装位置。
  */
-export async function resolveSkillPath(env = process.env): Promise<string | undefined> {
-  const candidates = [env.ORCA_PPT_SKILL, env.ORCA_PPT_BUNDLED_SKILL, ...DEFAULT_LOCATIONS].filter(
-    (path): path is string => Boolean(path),
-  )
+export interface SkillLocation {
+  /** 找到的 skill 目录。没找到就没有。 */
+  path?: string
+  /** 从哪儿找到的。doctor 靠它回答「用的是哪一份」。 */
+  source: 'explicit' | 'bundled' | 'local' | 'missing'
+  /** 按顺序找过的位置 —— 找不到时让人知道该放哪儿。 */
+  searched: string[]
+}
 
+export async function locateSkill(env = process.env): Promise<SkillLocation> {
+  const candidates: Array<{ path: string; source: SkillLocation['source'] }> = [
+    ...(env.ORCA_PPT_SKILL ? [{ path: env.ORCA_PPT_SKILL, source: 'explicit' as const }] : []),
+    ...(env.ORCA_PPT_BUNDLED_SKILL
+      ? [{ path: env.ORCA_PPT_BUNDLED_SKILL, source: 'bundled' as const }]
+      : []),
+    ...DEFAULT_LOCATIONS.map((path) => ({ path, source: 'local' as const })),
+  ]
+  const searched: string[] = []
   for (const candidate of candidates) {
+    searched.push(candidate.path)
     try {
       // SKILL.md 在就认,别的目录长得再像也不是。
-      await readFile(join(candidate, 'SKILL.md'), 'utf8')
-      return candidate
+      await readFile(join(candidate.path, 'SKILL.md'), 'utf8')
+      return { path: candidate.path, source: candidate.source, searched }
     } catch {
       // 下一个
     }
   }
-  return undefined
+  return { source: 'missing', searched }
+}
+
+export async function resolveSkillPath(env = process.env): Promise<string | undefined> {
+  return (await locateSkill(env)).path
 }
 
 export interface Catalog {

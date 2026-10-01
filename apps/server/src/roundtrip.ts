@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { AgentError } from './agent-errors.js'
 
 /**
  * 一次往返:server 请壳干一件只有壳干得了的事,然后等它回话。
@@ -26,7 +27,7 @@ export class Roundtrip<T, P = Record<string, never>> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.#pending.delete(requestId)
-        reject(new Error('界面没有回应 —— 应用开着吗?'))
+        reject(new Error(AgentError.uiTimeout()))
       }, this.timeoutMs)
       timer.unref?.()
 

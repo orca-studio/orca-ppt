@@ -81,6 +81,8 @@ export class McpEndpoint {
      * 在工具跑之前就挡掉,也不报活动:它没做成任何事,界面上不该亮。
      */
     private readonly gate: (tool: string) => string | undefined = () => undefined,
+    /** 握手时报的版本号:app 的真实版本。宿主靠它判断连的是哪一版,skill 也跟着这个版本发。 */
+    private readonly version = '0.0.0-dev',
   ) {}
 
   /**
@@ -143,7 +145,7 @@ export class McpEndpoint {
       {
         name: 'orca-ppt',
         title: 'OrcaPPT',
-        version: '0.1.0',
+        version: this.version,
         ...(this.#icons.length > 0 ? { icons: this.#icons } : {}),
       },
       { instructions: INSTRUCTIONS },

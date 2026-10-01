@@ -8,6 +8,7 @@ import type {
 import { phaseOrder } from '@orca-ppt/contracts'
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
+import { AgentError, hasAgentCode } from './agent-errors.js'
 
 /**
  * MCP 工具直接调 server 自己的协议方法 —— 它就住在 server 进程里,没有中间的连接。
@@ -46,12 +47,8 @@ export class ActiveDeck {
       this.#id = decks[0].id
       return this.#id
     }
-    if (decks.length === 0) {
-      throw new Error('应用里还没打开 deck —— 让用户打开一份,或者用 open_deck 指定路径')
-    }
-    throw new Error(
-      `应用里开着好几份 deck,用 open_deck 指定是哪一份:${decks.map((d) => d.path).join('、')}`,
-    )
+    if (decks.length === 0) throw new Error(AgentError.noDeckOpen())
+    throw new Error(AgentError.multipleDecks(decks.map((d) => d.path)))
   }
 }
 
@@ -71,6 +68,9 @@ const refuse = (value: string): Text => ({
   isError: true,
 })
 const json = (value: unknown): Text => text(JSON.stringify(value, null, 2))
+/** 拒绝理由前面加「没改:」之类;已经带错误码前缀的原样给 —— 前缀得在开头,宿主才认得出。 */
+const tag = (prefix: string, reason: string | undefined): string =>
+  reason && hasAgentCode(reason) ? reason : `${prefix}${reason ?? ''}`
 
 /**
  * 这次调用在界面上该显示成什么。**agent 是代替人执行的,那它做的事就该和人做的一样
@@ -261,9 +261,20 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           oldText: String(args.old_text),
           newText: String(args.new_text),
         })
-        if (!result.ok) return refuse(`没改:${result.reason}`)
+        if (!result.ok) return refuse(tag('没改:', result.reason))
         return text(`第 ${Number(args.slide) + 1} 页改好了。`)
       },
+    },
+    {
+      name: 'doctor',
+      activity: () => ({ kind: 'read', label: '检查环境', slides: [] }),
+      config: {
+        title: '检查环境',
+        annotations: looking,
+        description:
+          '查 OrcaPPT 这一侧的环境:应用版本、skill 在哪(从哪儿找到的、找过哪些位置)、界面连没连上、开着哪些稿子、操作记录存在哪。碰到 UI_DISCONNECTED、SKILL_NOT_FOUND、UI_TIMEOUT 这类错误,或者工具行为不对时先调它,别猜。',
+      },
+      run: async () => json(await call('app.doctor', {})),
     },
     {
       name: 'recording_events',
@@ -400,7 +411,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       run: async () => {
         const result = await call('deck.undo', { deckId: await active.get(call) })
-        if (!result.ok) return refuse(`没撤:${result.reason}`)
+        if (!result.ok) return refuse(tag('没撤:', result.reason))
         return text(
           `撤销了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
         )
@@ -421,7 +432,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       run: async () => {
         const result = await call('deck.redo', { deckId: await active.get(call) })
-        if (!result.ok) return refuse(`没重做:${result.reason}`)
+        if (!result.ok) return refuse(tag('没重做:', result.reason))
         return text(
           `重做了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
         )

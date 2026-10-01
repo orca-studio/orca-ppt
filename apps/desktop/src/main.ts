@@ -90,7 +90,13 @@ function bundledSkill(): Record<string, string> {
 }
 
 async function createWindow(): Promise<void> {
-  const port = await supervisor.start(join(here, '../../server/dist/main.js'), bundledSkill())
+  const port = await supervisor.start(join(here, '../../server/dist/main.js'), {
+    ...bundledSkill(),
+    // 握手时报的版本号、doctor 里的版本都用它 —— server 自己不知道 app 是哪一版。
+    // 只在发布版传:开发时 `electron dist/main.js` 找不到应用的 package.json,
+    // app.getVersion() 退回成 Electron 自己的版本(实测 43.7.3),那比不传还误导人。
+    ...(app.isPackaged ? { ORCA_PPT_APP_VERSION: app.getVersion() } : {}),
+  })
   serverPort = port
 
   const window = new BrowserWindow({

@@ -20,6 +20,7 @@ import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
 import { McpEndpoint } from './mcp-http.js'
 import { mcpCall } from './mcp-origin.js'
+import { AgentError } from './agent-errors.js'
 import { RecordingLog, recordingFilePath } from './recording.js'
 import {
   deckRevision,
@@ -36,13 +37,7 @@ import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
-import {
-  readCatalog,
-  readPageTypes,
-  readVocabulary,
-  resolveSkillPath,
-  type Catalog,
-} from './skill.js'
+import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
 import { readTransitionPlan } from './transitions.js'
 
@@ -156,7 +151,7 @@ export async function startServer(
   const stepHistory = async (deckId: string, direction: 'undo' | 'redo') => {
     const root = deckPathOf(deckId)
     const name = await findEntryName(root)
-    if (!name) return { ok: false, reason: '这份稿子还没有出稿文件' }
+    if (!name) return { ok: false, reason: AgentError.noBuild() }
     const file = join(root, name)
     const history = historyOf(deckId)
     // 每次都重读磁盘:agent 可能刚写过,history 据此决定整份还回去还是只换那段字。
@@ -233,6 +228,9 @@ export async function startServer(
   // 稿子同一时刻只归一方动:agent 拿着时拦人(见 handle),人接管时拦 agent(见下面的 gate)。
   const control = new DeckControl((state) => bus.broadcast('control.changed', state))
 
+  /** app 的版本。壳用 ORCA_PPT_APP_VERSION 告诉我们;单独跑 server 时退回它自己的包版本。 */
+  const appVersion = process.env.ORCA_PPT_APP_VERSION ?? (await ownVersion())
+
   // MCP 和界面走同一个进程、同一个端口:工具调的就是界面调的那批方法。
   const mcp = new McpEndpoint(
     (method, params) => dispatch(method, params) as never,
@@ -242,6 +240,7 @@ export async function startServer(
       bus.broadcast('mcp.activity', activity)
     },
     (tool) => control.blocksAgent(tool),
+    appVersion,
   )
 
   const http = createHttpServer((req, res) => {
@@ -276,8 +275,8 @@ export async function startServer(
       bus.detach(connectionId)
       // 界面走了就没人能截图了,挂着的别让 agent 干等。
       if (bus.connectionCount === 0) {
-        captures.failAll('界面断开了')
-        thumbnails.failAll('界面断开了')
+        captures.failAll(AgentError.uiDisconnected())
+        thumbnails.failAll(AgentError.uiDisconnected())
       }
     })
   })
@@ -289,7 +288,8 @@ export async function startServer(
   await writePortFile(port)
 
   // skill 在哪一次解析,之后一直用。找不到也要能起来 —— 提示词里会如实说明。
-  const catalog: Catalog = await readCatalog(await resolveSkillPath())
+  const skill = await locateSkill()
+  const catalog: Catalog = await readCatalog(skill.path)
   // 词表读一次就够 —— 它跟着 skill 的文件走,和 catalog 一样。
   const vocabulary = catalog.skillPath ? readVocabulary(catalog.skillPath) : Promise.resolve([])
   const pageTypes = catalog.skillPath ? readPageTypes(catalog.skillPath) : Promise.resolve([])
@@ -299,7 +299,7 @@ export async function startServer(
 
   function deckPathOf(deckId: string): string {
     const path = openDecks.get(deckId)
-    if (!path) throw new Error('这份 deck 还没打开')
+    if (!path) throw new Error(AgentError.deckNotOpen())
     return path
   }
 
@@ -426,7 +426,7 @@ export async function startServer(
         const path = join(params.parentDir, slugify(params.title))
 
         if (params.from) {
-          if (!catalog.skillPath) throw new Error('找不到 skill,没有模板可用')
+          if (!catalog.skillPath) throw new Error(AgentError.skillNotFound())
           await instantiate({
             skillPath: catalog.skillPath,
             templateId: params.from,
@@ -455,7 +455,7 @@ export async function startServer(
         const params = parseParams('deck.editText', raw)
         const root = deckPathOf(params.deckId)
         const name = await findEntryName(root)
-        if (!name) return { ok: false, reason: '这份稿子还没有出稿文件' }
+        if (!name) return { ok: false, reason: AgentError.noBuild() }
 
         const file = join(root, name)
         // 每次都重读磁盘:agent 可能刚写过。旧文字对不上时下面会拒绝,这正是我们要的。
@@ -567,6 +567,8 @@ export async function startServer(
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)
         deckPathOf(params.deckId)
+        // 界面不在就立刻说,别让 agent 干等 15 秒超时
+        if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
         return {
           path: await captures.request(params.deckId, {
             ...(params.slide === undefined ? {} : { slide: params.slide }),
@@ -584,7 +586,7 @@ export async function startServer(
         const params = parseParams('deck.present', raw)
         const opened = await openDeck(deckPathOf(params.deckId))
         const previewUrl = mountPreview(opened)
-        if (!previewUrl) throw new Error('成品还没出来,没有东西可放映')
+        if (!previewUrl) throw new Error(AgentError.noBuild())
 
         bus.broadcast('present.request', {
           deckId: params.deckId,
@@ -598,6 +600,17 @@ export async function startServer(
         deckPathOf(params.deckId)
         bus.broadcast('autoplay.changed', { deckId: params.deckId, on: params.on })
         return {}
+      }
+      case 'app.doctor': {
+        parseParams('app.doctor', raw)
+        return {
+          app: { version: appVersion },
+          server: { port, mcp: `http://127.0.0.1:${port}/mcp` },
+          skill,
+          ui: { connected: bus.connectionCount > 0, connections: bus.connectionCount },
+          decks: [...openDecks.keys()].map(documentOf),
+          recording: { file: recording.path, events: recording.size },
+        }
       }
       case 'recording.events': {
         const params = parseParams('recording.events', raw)
@@ -683,6 +696,21 @@ export async function startServer(
         http.close(() => done())
       })
     },
+  }
+}
+
+/**
+ * 没有壳告诉我们版本时(开发、单独跑 server):用 server 自己的包版本加 `-dev`。
+ * 一眼看得出不是发布版 —— doctor 和握手报出来的版本号,宿主是要拿去判断兼容的。
+ */
+async function ownVersion(): Promise<string> {
+  try {
+    const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+      version?: string
+    }
+    return `${pkg.version ?? '0.0.0'}-dev`
+  } catch {
+    return '0.0.0-dev'
   }
 }
 

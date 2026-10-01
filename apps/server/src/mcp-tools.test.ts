@@ -54,7 +54,7 @@ describe('MCP 工具', () => {
   it('应用里一份都没开就如实说,而不是拿个空 id 去问 server', async () => {
     const { client } = fakeClient({ 'deck.list': { decks: [] } })
     const { map } = toolsOf(client)
-    await expect(map.get('deck_status')!.run({})).rejects.toThrow('还没打开 deck')
+    await expect(map.get('deck_status')!.run({})).rejects.toThrow(/^NO_DECK_OPEN:.*下一步/)
   })
 
   it('开着好几份时要求指定,并把路径都列出来', async () => {
