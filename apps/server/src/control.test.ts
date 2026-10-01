@@ -190,3 +190,26 @@ it('控制权查询不取得或续期控制权，接管后也可读取', () => {
   control.takeOver()
   expect(control.blocksAgent('control_state')).toBeUndefined()
 })
+
+it('目标定位不取得或续期控制权，且服从人工接管', () => {
+  call('track', 'start', '定位', 'visual_target')
+  expect(control.state().holder).toBe('none')
+  call('edit', 'start')
+  call('edit', 'done')
+  vi.advanceTimersByTime(900)
+  call('track', 'start', '定位', 'visual_target')
+  call('track', 'done', '定位', 'visual_target')
+  vi.advanceTimersByTime(100)
+  expect(control.state().holder).toBe('none')
+  control.takeOver()
+  expect(control.blocksAgent('visual_target')).toBeDefined()
+})
+
+it('批准等待的续期不能覆盖人工接管或停止', () => {
+  control.take('test')
+  control.takeOver()
+  expect(() => control.take('test', undefined, true)).toThrow(USER_IN_CONTROL)
+  expect(control.state().holder).toBe('user')
+  control.take('explicit resume')
+  expect(control.state().holder).toBe('agent')
+})

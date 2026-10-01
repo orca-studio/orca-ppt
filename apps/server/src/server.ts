@@ -556,7 +556,7 @@ export async function startServer(
       }
       case 'control.take': {
         const params = parseParams('control.take', raw)
-        return control.take(params.reason, params.waiting)
+        return control.take(params.reason, params.waiting, params.renew)
       }
       case 'control.handOff': {
         const params = parseParams('control.handOff', raw)

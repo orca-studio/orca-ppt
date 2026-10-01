@@ -2,6 +2,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 import { ActiveDeck, buildTools, type ProtocolCaller } from './mcp-tools.js'
 
 function fakeClient(responses: Record<string, unknown> = {}) {
@@ -288,4 +289,18 @@ it('MCP 新建透传 UI 的模板和主题，并提供同一个模板目录', as
     'deck.create',
     { parentDir: '/tmp', title: 'Test', from: 'blank', theme: 'forest' },
   ])
+})
+
+it('publishes readable labels without changing the edit_text protocol', () => {
+  const { client } = fakeClient()
+  const tool = buildTools(client, new ActiveDeck()).find((tool) => tool.name === 'edit_text')!
+  const input = z.object(tool.config.inputSchema!)
+  const fields = z.toJSONSchema(input).properties!
+  expect(fields.slide).toMatchObject({
+    title: '页码',
+    'x-jevbot-format': 'one-based-index',
+  })
+  expect(fields.old_text).toMatchObject({ title: '原文字' })
+  expect(fields.new_text).toMatchObject({ title: '替换为' })
+  expect(input.parse({ slide: 0, old_text: 'before', new_text: 'after' }).slide).toBe(0)
 })

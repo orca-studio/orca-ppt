@@ -80,7 +80,7 @@ export class DeckControl {
 
   /** agent 的一次工具调用开始或结束了。 */
   observe(call: ToolCall): void {
-    if (CONTROL_TOOLS.has(call.tool)) return
+    if (CONTROL_TOOLS.has(call.tool) || call.tool === 'visual_target') return
     // 人接管着的时候工具根本跑不起来(见 gate),这里不会有调用。
     if (this.#state.holder === 'user') return
 
@@ -109,7 +109,11 @@ export class DeckControl {
     }
   }
 
-  take(task: string, waiting?: string): Control {
+  take(task: string, waiting?: string, renew = false): Control {
+    if (renew) {
+      const refusal = this.blocksAgent('renew_control')
+      if (refusal) throw new Error(refusal)
+    }
     const doing = [...this.#running.values()].at(-1)
     this.#set({
       holder: 'agent',

@@ -29,6 +29,8 @@ export interface StageHandle {
   targetText(
     slide: number,
     text: string,
+    targetId?: string,
+    replacement?: string,
   ): Promise<{ x: number; y: number; width: number; height: number; targetId: string } | null>
   pick(): Promise<PickedAnchor | null>
   cancelPick(): void
@@ -291,13 +293,16 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   useImperativeHandle(
     handle,
     (): StageHandle => ({
-      targetText: async (slide, text) => {
+      targetText: async (slide, text, targetId, replacement) => {
         const view = ref.current
         if (!view) return null
         const result = (await view.executeJavaScript(`(() => {
           const section = document.querySelectorAll('.reveal .slides > section')[${JSON.stringify(slide)}];
           if (!section || !section.classList.contains('present')) return null;
-          const matches = [...section.querySelectorAll('*')].filter(e => e.textContent === ${JSON.stringify(text)} && ![...e.children].some(c => c.textContent === ${JSON.stringify(text)}));
+          const elements = [...section.querySelectorAll('*')];
+          const identity = e => e.id || e.getAttribute('data-id') || 'slide.' + ${JSON.stringify(slide)} + '.element.' + elements.indexOf(e);
+          const texts = ${JSON.stringify([text, replacement].filter((v) => v !== undefined))};
+          const matches = elements.filter(e => texts.includes(e.textContent) && ![...e.children].some(c => texts.includes(c.textContent)) && (${JSON.stringify(targetId ?? null)} === null || identity(e) === ${JSON.stringify(targetId ?? null)}));
           if (matches.length !== 1) return null;
           const e = matches[0], r = e.getBoundingClientRect();
           if (r.width <= 0 || r.height <= 0 || r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return null;

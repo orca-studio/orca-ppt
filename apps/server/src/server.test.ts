@@ -481,3 +481,30 @@ it('操作定位通过 renderer 往返返回目标坐标', async () => {
   socket.off('message', respond)
   expect(result.data).toEqual(target)
 })
+
+it('跟踪保留目标标识且不导航或取得控制权', async () => {
+  const deck = await builtDeck()
+  const respond = (raw: Buffer) => {
+    const message = JSON.parse(raw.toString())
+    if (message.channel !== 'visual.request') return
+    expect(message.data.phase).toBe('track')
+    expect(message.data.targetId).toBe('same-target')
+    void call('visual.result', {
+      requestId: message.data.requestId,
+      target: { measuredAt: Date.now() },
+    })
+  }
+  socket.on('message', respond)
+  const before = await call('deck.current', {})
+  const result = await call('visual.prepare', {
+    deckId: deck.id,
+    action: 'edit_text',
+    arguments: { slide: 100, old_text: 'missing' },
+    phase: 'track',
+    targetId: 'same-target',
+  })
+  socket.off('message', respond)
+  expect(result.data).toHaveProperty('measuredAt')
+  expect((await call('deck.current', {})).data).toEqual(before.data)
+  expect((await call('control.state', {})).data).toHaveProperty('holder', 'none')
+})

@@ -209,7 +209,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'open_deck',
       activity: () => ({ kind: 'read', label: '打开稿子', slides: [] }),
       config: {
-        title: '打开 deck',
+        title: '打开稿子',
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -218,7 +218,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         },
         description:
           '打开一个 deck 目录并在界面上放映它。认 deck.html 和 index.html;成品还没做出来的目录也能打开。返回页数、各阶段状态和放映地址。',
-        inputSchema: { path: z.string().describe('deck 目录的绝对路径') },
+        inputSchema: {
+          path: z.string().describe('deck 目录的绝对路径').meta({ title: '稿子位置' }),
+        },
       },
       run: async (args) => {
         const opened = await call('deck.open', { path: String(args.path) })
@@ -236,7 +238,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'create_deck',
       activity: () => ({ kind: 'write', label: '新建稿子', slides: [] }),
       config: {
-        title: '新建 deck',
+        title: '新建稿子',
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -246,10 +248,14 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '新建稿子，可从 list_templates 选择起始模板并指定主题。省略模板则建空目录。建完用 open_deck 打开。',
         inputSchema: {
-          parentDir: z.string().describe('放在哪个目录下'),
-          title: z.string().describe('deck 名字,会成为目录名'),
-          from: z.string().optional().describe('list_templates 返回的模板 id'),
-          theme: z.string().optional().describe('list_themes 返回的主题名'),
+          parentDir: z.string().describe('放在哪个目录下').meta({ title: '保存位置' }),
+          title: z.string().describe('deck 名字,会成为目录名').meta({ title: '稿子名称' }),
+          from: z
+            .string()
+            .optional()
+            .describe('list_templates 返回的模板 id')
+            .meta({ title: '模板' }),
+          theme: z.string().optional().describe('list_themes 返回的主题名').meta({ title: '主题' }),
         },
       },
       run: async (args) =>
@@ -297,11 +303,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         title: '定位操作目标',
         description: '宿主操作反馈接口：定位可见目标或报告操作结束，不改文档内容。',
         annotations: looking,
-        _meta: { 'dev.jevbot/ui': { version: 1, resolves: true } },
+        _meta: { 'dev.jevbot/ui': { version: 1, resolves: true, tracks: true } },
         inputSchema: {
           action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
           arguments: z.record(z.string(), z.unknown()),
-          phase: z.enum(['prepare', 'completed', 'failed']).default('prepare'),
+          phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
+          targetId: z.string().optional(),
         },
       },
       run: async (args) => {
@@ -320,7 +327,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
             deckId,
             action: args.action as 'show_slide' | 'edit_text' | 'undo' | 'redo',
             arguments: arguments_,
-            phase: (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed',
+            phase: (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed' | 'track',
+            targetId: args.targetId as string | undefined,
           }),
         )
       },
@@ -350,7 +358,14 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         annotations: looking,
         description:
           '界面上的放映画布跳到指定页(从 0 数起)。跟用户讨论某一页时先调它 —— 他看到的和你说的才是同一页。',
-        inputSchema: { index: z.number().int().nonnegative().describe('页号,从 0 数起') },
+        inputSchema: {
+          index: z
+            .number()
+            .int()
+            .nonnegative()
+            .describe('页号,从 0 数起')
+            .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
+        },
       },
       run: async (args) => {
         await call('deck.showSlide', {
@@ -383,9 +398,14 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '在源文件里把某一页的一段文字精确换成新的,标签和属性一个不动 —— 改文案用它,比你自己编辑 HTML 稳,不会误伤 data-id / data-carry 这些转场靠的属性。`old_text` 要和页面上现在那段字**一模一样**。找不到、或者这一页里有好几处一样的,它会拒绝并告诉你为什么,那时候再自己动手。',
         inputSchema: {
-          slide: z.number().int().nonnegative().describe('页号,从 0 数起'),
-          old_text: z.string().describe('现在那段文字,要一模一样'),
-          new_text: z.string().describe('换成什么'),
+          slide: z
+            .number()
+            .int()
+            .nonnegative()
+            .describe('页号,从 0 数起')
+            .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
+          old_text: z.string().describe('现在那段文字,要一模一样').meta({ title: '原文字' }),
+          new_text: z.string().describe('换成什么').meta({ title: '替换为' }),
         },
       },
       run: async (args) => {
@@ -490,6 +510,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           '用户点了「接管」,你的工具会返回 USER_IN_CONTROL:硬停止,不要重试,也不要自己调 take_control 拿回来;结束这一轮告诉用户你停在哪儿,等他明确说继续再调 take_control。' +
           '用户点了「停止」,工具会返回 USER_STOPPED:这件事不做了,结束这一轮。',
         inputSchema: {
+          renew: z.boolean().optional().describe('只续期当前操作；人工接管后拒绝，不夺回控制权'),
           reason: z.string().describe('接下来要做什么,一句人话,比如「重排第 2 到 4 页的标题」'),
           waiting: z
             .string()
@@ -500,7 +521,11 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       run: async (args) => {
         const reason = String(args.reason ?? '')
         const waiting = typeof args.waiting === 'string' && args.waiting ? args.waiting : undefined
-        const state = await call('control.take', waiting ? { reason, waiting } : { reason })
+        const state = await call('control.take', {
+          reason,
+          waiting,
+          renew: args.renew as boolean | undefined,
+        })
         return text(
           state.waiting
             ? `拿着了:${state.task ?? ''}。界面显示在等你批准:${state.waiting}。`
@@ -684,7 +709,13 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见 —— 截图看不出。',
         inputSchema: {
-          slide: z.number().int().nonnegative().optional().describe('从第几页开始,从 0 数起'),
+          slide: z
+            .number()
+            .int()
+            .nonnegative()
+            .optional()
+            .describe('从第几页开始,从 0 数起')
+            .meta({ title: '起始页', 'x-jevbot-format': 'one-based-index' }),
         },
       },
       run: async (args) => {
@@ -707,7 +738,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         annotations: looking,
         description:
           '让画布按每页声明的停留时长自动往后翻,用户不用一直按方向键。说「自动放一遍」「让它自己走」时调它。用户一动键盘鼠标就会停。',
-        inputSchema: { on: z.boolean().describe('开还是关') },
+        inputSchema: { on: z.boolean().describe('开还是关').meta({ title: '自动播放' }) },
       },
       run: async (args) => {
         const on = args.on !== false
@@ -727,7 +758,13 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '把放映画布上的某一页截下来,图直接附在结果里,另给磁盘路径。**改完一定要看一眼** —— 稿子好不好只有放映能回答,光读 HTML 看不出挤不挤、对不对得上。不给页号就截当前这一页。',
         inputSchema: {
-          slide: z.number().int().nonnegative().optional().describe('页号,从 0 数起'),
+          slide: z
+            .number()
+            .int()
+            .nonnegative()
+            .optional()
+            .describe('页号,从 0 数起')
+            .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
         },
       },
       run: async (args) => {

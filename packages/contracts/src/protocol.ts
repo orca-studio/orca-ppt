@@ -12,7 +12,8 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
 export const VisualRequest = z.object({
   action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
   arguments: z.record(z.string(), z.unknown()),
-  phase: z.enum(['prepare', 'completed', 'failed']).default('prepare'),
+  phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
+  targetId: z.string().optional(),
 })
 export const VisualTarget = z.object({
   rect: z
@@ -376,6 +377,7 @@ export const requests = {
   'control.take': {
     params: z.object({
       reason: z.string(),
+      renew: z.boolean().optional(),
       /** 在等人批准什么。传了就设上,不传就清空 —— 批准完再调一次 take 不带它。 */
       waiting: z.string().optional(),
     }),

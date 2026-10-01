@@ -199,9 +199,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
         try {
           if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
           const args = data.arguments
+          const tracking = data.phase === 'track'
+          const tracked =
+            tracking && data.targetId ? (JSON.parse(data.targetId) as string[]) : undefined
+          if (tracking && (!tracked || tracked[0] !== data.deckId))
+            throw new Error('DOCUMENT_CHANGED')
           let rect: { x: number; y: number; width: number; height: number } | undefined
           let targetId: string | undefined
-          if (data.phase !== 'prepare') {
+          if (data.phase !== 'prepare' && !tracking) {
             if (
               data.phase === 'completed' &&
               data.action === 'edit_text' &&
@@ -215,10 +220,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
             typeof args.old_text === 'string'
           ) {
             await stage.current?.whenReady(1000)
-            const target = await stage.current?.targetText(Number(args.slide), args.old_text)
+            const target = await stage.current?.targetText(
+              Number(args.slide),
+              args.old_text,
+              tracking ? tracked?.[1] : undefined,
+              tracking && typeof args.new_text === 'string' ? args.new_text : undefined,
+            )
             if (target) {
               rect = target
-              targetId = target.targetId
+              targetId = JSON.stringify([data.deckId, target.targetId])
             }
           } else {
             const label =
@@ -232,9 +242,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
             )
             if (element) {
               rect = element.getBoundingClientRect()
-              targetId = label
+              targetId = JSON.stringify([data.deckId, label])
             }
           }
+          if (tracking && targetId !== data.targetId) rect = undefined
+          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
           const bounds = await window.orca?.contentBounds?.()
           const valid =
             rect &&
