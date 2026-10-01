@@ -422,3 +422,26 @@ async function restartWithSkill(skillRoot: string): Promise<void> {
     if (message.channel) pushes.push(message)
   })
 }
+
+it('当前稿子跟随 UI 打开，旧画布报告不能覆盖新稿子的可见页', async () => {
+  const a = await builtDeck()
+  await call('deck.visibleSlide', { deckId: a.id, index: 0 })
+  expect((await call('deck.current', {})).data).toEqual({ deckId: a.id, slide: 0 })
+  const b = await builtDeck()
+  await call('deck.visibleSlide', { deckId: a.id, index: 8 })
+  expect((await call('deck.current', {})).data).toEqual({ deckId: b.id })
+})
+
+it('导航走共享推送，停止自动播放，拒绝旧稿子和不完整重放', async () => {
+  const a = await builtDeck()
+  const b = await builtDeck()
+  expect((await call('deck.navigation', { deckId: a.id, action: 'next' })).ok).toBe(false)
+  expect((await call('deck.navigation', { deckId: b.id, action: 'replay' })).ok).toBe(false)
+  expect((await call('deck.navigation', { deckId: b.id, action: 'replay', from: 0 })).ok).toBe(true)
+  expect(
+    pushes.some(
+      (p) => p.channel === 'deck.navigation' && p.data.action === 'replay' && p.data.from === 0,
+    ),
+  ).toBe(true)
+  expect(pushes.some((p) => p.channel === 'autoplay.changed' && p.data.on === false)).toBe(true)
+})

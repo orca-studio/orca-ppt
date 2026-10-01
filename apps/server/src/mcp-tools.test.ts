@@ -263,3 +263,29 @@ describe('MCP 工具', () => {
     }
   })
 })
+
+it('UI 切换稿子后拒绝沿用旧任务目标，不静默改另一份', async () => {
+  const responses = { 'deck.current': { deckId: '/a' } }
+  const { client } = fakeClient(responses)
+  const active = new ActiveDeck()
+  expect(await active.get(client)).toBe('/a')
+  responses['deck.current'] = { deckId: '/b' }
+  await expect(active.get(client)).rejects.toThrow('DOCUMENT_CHANGED:')
+  active.set('/b')
+  expect(await active.get(client)).toBe('/b')
+})
+
+it('MCP 新建透传 UI 的模板和主题，并提供同一个模板目录', async () => {
+  const { client, calls } = fakeClient({
+    'catalog.templates': { templates: [{ id: 'blank', title: '空白', mode: 'report' }] },
+  })
+  const { map } = toolsOf(client)
+  expect(textOf(await map.get('list_templates')!.run({}))).toContain('blank')
+  await map
+    .get('create_deck')!
+    .run({ parentDir: '/tmp', title: 'Test', from: 'blank', theme: 'forest' })
+  expect(calls).toContainEqual([
+    'deck.create',
+    { parentDir: '/tmp', title: 'Test', from: 'blank', theme: 'forest' },
+  ])
+})

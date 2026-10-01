@@ -36,7 +36,7 @@ export interface StageHandle {
   reload(slide: number): void
   goto(slide: number): void
   /** 往后翻一页 —— 只有往后翻才播转场。 */
-  next(): void
+  navigate(action: 'next' | 'previous' | 'replay', from?: number): void
   /** guest 的 webContents id —— 主进程按它找到 guest 去截图。 */
   guestId(): number | undefined
   /**
@@ -85,6 +85,7 @@ export interface StageProps {
   onToggleAutoplay: () => void
   /** 重新挂载时回到这一页 —— 从看片台切回来不该跳回第一页。 */
   initialSlide: number
+  onNavigate: (action: 'next' | 'previous') => void
   onSlideChange: (index: number) => void
   /**
    * 人双击改完了一处文字。返回被拒的理由(没被拒就返回 undefined)——
@@ -107,6 +108,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     autoplay,
     onToggleAutoplay,
     onSlideChange,
+    onNavigate,
     onTextEdit,
     readOnly,
     overlay,
@@ -184,6 +186,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         const slide = restoreTo.current ?? initialSlide
         restoreTo.current = undefined
         if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
+        void view
+          .executeJavaScript('Reveal.getIndices().h')
+          .then((index) => {
+            if (typeof index === 'number') onSlideChangeRef.current(index)
+          })
+          .catch(() => {})
         watchEdits()
 
         // 攒着的那处点亮,现在才有意义 —— DOM 是新的了。太旧的就算了,
@@ -303,9 +311,15 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           )
           .catch(() => {})
       },
-      next: () => {
+      navigate: (action, from) => {
+        const command =
+          action === 'previous'
+            ? 'Reveal.prev()'
+            : action === 'replay'
+              ? `Reveal.slide(${Math.trunc(from ?? 0)}); setTimeout(() => { ${ADVANCE} }, 260)`
+              : ADVANCE
         void ref.current
-          ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${ADVANCE}`)
+          ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${command}`)
           .catch(() => {})
       },
       guestId: () => {
@@ -367,9 +381,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
 
       const call =
         event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' '
-          ? ADVANCE
+          ? 'next'
           : event.key === 'ArrowLeft' || event.key === 'PageUp'
-            ? 'Reveal.prev()'
+            ? 'previous'
             : undefined
       if (!call) return
 
@@ -377,12 +391,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       // 人自己翻页就别再自动播了 —— 跟他抢翻页是最烦的。
       // 翻到第几页不在这里读:转场没放完时 advance 会晚一点才翻,立刻读是旧的。
       // 页号由 guest 翻完之后自己报回来(见上面的 console-message)。
-      void ref.current?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${call}`).catch(() => {})
+      onNavigate(call)
     }
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [ready, onSlideChange])
+  }, [ready, onSlideChange, onNavigate])
 
   return (
     <div className="stage">

@@ -40,7 +40,16 @@ export class ActiveDeck {
   }
 
   async get(call: ProtocolCaller): Promise<string> {
-    if (this.#id) return this.#id
+    const current = await call('deck.current', {})
+    if (this.#id) {
+      if (current.deckId && current.deckId !== this.#id)
+        throw new Error('DOCUMENT_CHANGED: 用户已切换稿子，请确认目标并用 open_deck 重新选择。')
+      return this.#id
+    }
+    if (current.deckId) {
+      this.#id = current.deckId
+      return this.#id
+    }
 
     const { decks } = await call('deck.list', {})
     if (decks.length === 1 && decks[0]) {
@@ -128,6 +137,74 @@ const nth = (slides: number[]) =>
 export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[] {
   return [
     {
+      name: 'list_skill',
+      config: {
+        title: '列出随附规范资料',
+        description: '浏览本版本 OrcaPPT 随附 Skill 的相对目录，分页返回；无需打开稿子。',
+        annotations: looking,
+        inputSchema: {
+          path: z.string().optional(),
+          offset: z.number().int().nonnegative().optional(),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('skill.list', {
+            path: typeof args.path === 'string' ? args.path : '',
+            offset: typeof args.offset === 'number' ? args.offset : 0,
+          }),
+        ),
+    },
+    {
+      name: 'read_skill',
+      config: {
+        title: '读取随附规范',
+        description:
+          '默认读取 SKILL.md。引用资料用相对路径读取；next 非空时以其作为 offset 继续。不需要宿主文件权限。仅文本，单文件最多 2 MB。',
+        annotations: looking,
+        inputSchema: {
+          path: z.string().optional(),
+          offset: z.number().int().nonnegative().optional(),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('skill.read', {
+            path: typeof args.path === 'string' ? args.path : 'SKILL.md',
+            offset: typeof args.offset === 'number' ? args.offset : 0,
+          }),
+        ),
+    },
+    {
+      name: 'list_templates',
+      config: {
+        title: '查看起始模板',
+        description: '列出 UI 新建稿子使用的相同模板，id 可传给 create_deck 的 from。',
+        annotations: looking,
+      },
+      run: async () => json(await call('catalog.templates', {})),
+    },
+    {
+      name: 'navigate',
+      config: {
+        title: '翻页或重放转场',
+        description: '与键盘翻页和 UI 重放共用操作。replay 必须带 from，页号从 0 数起。',
+        annotations: looking,
+        inputSchema: {
+          action: z.enum(['next', 'previous', 'replay']),
+          from: z.number().int().nonnegative().optional(),
+        },
+      },
+      run: async (args) => {
+        await call('deck.navigation', {
+          deckId: await active.get(call),
+          action: args.action as 'next' | 'previous' | 'replay',
+          ...(typeof args.from === 'number' ? { from: args.from } : {}),
+        })
+        return text('已请求画布执行；完成后的页号请读取 deck_status。')
+      },
+    },
+    {
       name: 'open_deck',
       activity: () => ({ kind: 'read', label: '打开稿子', slides: [] }),
       config: {
@@ -165,10 +242,13 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           idempotentHint: false,
           openWorldHint: false,
         },
-        description: '在一个目录下建一份空 deck。建完还要 open_deck 才会在界面上打开。',
+        description:
+          '新建稿子，可从 list_templates 选择起始模板并指定主题。省略模板则建空目录。建完用 open_deck 打开。',
         inputSchema: {
           parentDir: z.string().describe('放在哪个目录下'),
           title: z.string().describe('deck 名字,会成为目录名'),
+          from: z.string().optional().describe('list_templates 返回的模板 id'),
+          theme: z.string().optional().describe('list_themes 返回的主题名'),
         },
       },
       run: async (args) =>
@@ -176,6 +256,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           await call('deck.create', {
             parentDir: String(args.parentDir),
             title: String(args.title),
+            ...(typeof args.from === 'string' ? { from: args.from } : {}),
+            ...(typeof args.theme === 'string' ? { theme: args.theme } : {}),
           }),
         ),
     },
@@ -195,6 +277,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           call('phase.check', { deckId }),
         ])
         return json({
+          deckId,
+          currentSlide: (await call('deck.current', {})).slide ?? null,
           revision: inspected.revision,
           slideCount: inspected.slides.length,
           slides: inspected.slides.map(({ index, ...rest }) => ({

@@ -13,9 +13,8 @@
 
 决策已记在 ARCHITECTURE「交付形态」:app + MCP + skill 同一个版本号一起交付。
 
-- [ ] **打包配置。** 现在没有任何打包配置(electron-builder 之类)。发布版要把 orca-ppt-skill
-      复制进 `Resources/skill`(orca-motion-skill 不带,app 不读它);壳已经会把这个路径
-      通过 `ORCA_PPT_BUNDLED_SKILL` 告诉 server。
+- [x] **打包配置。** `pnpm package` 固定 Skill Git 提交并复制到 Resources/skill，包含锁定依赖和 bundle-manifest；正式签名、公证仍待完成。
+- [x] **MCP 按需读取 Skill。** list_skill / read_skill 提供受限相对路径、分页文本读取，phase_prompt 指向此入口。
 - [ ] **首次引导。** 先问人,同意后只链 `~/.agents/skills` 和 `~/.claude/skills`;软链三层
       (各家目录 → `~/.local/share/orca-ppt/skill` → 当前版本),升级只换最后一根。
       顺带引导把 MCP 加进用户的 agent。

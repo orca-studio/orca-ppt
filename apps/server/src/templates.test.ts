@@ -155,3 +155,22 @@ describe('配色', () => {
     expect(await readFile(join(dir, 'deck.html'), 'utf8')).not.toContain('palettes/')
   })
 })
+
+it('注释里的示例 link 不会吞掉新插入的主题和配色', async () => {
+  const skill = await fakeSkill()
+  await writeFile(
+    join(skill, 'templates/starter.html'),
+    '<head><link rel="stylesheet" href="{{ROOT}}/runtime/tokens.css">\n<!-- 示例:\n<link rel="stylesheet" href="example.css">\n-->\n</head>',
+  )
+  const dir = await target()
+  await instantiate({
+    skillPath: skill,
+    templateId: 'template:starter.html',
+    targetDir: dir,
+    theme: 'editorial-forest',
+    palette: 'forest',
+  })
+  const active = (await readFile(join(dir, 'deck.html'), 'utf8')).replace(/<!--[\s\S]*?-->/g, '')
+  expect(active).toContain('themes/editorial-forest.css')
+  expect(active).toContain('palettes/forest.css')
+})

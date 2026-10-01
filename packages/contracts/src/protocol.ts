@@ -120,6 +120,48 @@ const HistoryStep = z.object({
 })
 
 export const requests = {
+  'skill.list': {
+    params: z.object({
+      path: z.string().default(''),
+      offset: z.number().int().nonnegative().default(0),
+    }),
+    result: z.object({
+      path: z.string(),
+      entries: z.array(z.object({ name: z.string(), directory: z.boolean() })),
+      next: z.number().nullable(),
+    }),
+  },
+  'skill.read': {
+    params: z.object({
+      path: z.string().default('SKILL.md'),
+      offset: z.number().int().nonnegative().default(0),
+    }),
+    result: z.object({
+      path: z.string(),
+      text: z.string(),
+      next: z.number().nullable(),
+      total: z.number(),
+    }),
+  },
+  'deck.current': {
+    params: z.object({}),
+    result: z.object({
+      deckId: z.string().optional(),
+      slide: z.number().int().nonnegative().optional(),
+    }),
+  },
+  'deck.navigation': {
+    params: z.object({
+      deckId: z.string(),
+      action: z.enum(['next', 'previous', 'replay']),
+      from: z.number().int().nonnegative().optional(),
+    }),
+    result: z.object({}),
+  },
+  'deck.visibleSlide': {
+    params: z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),
+    result: z.object({}),
+  },
   'deck.list': { params: z.object({}), result: z.object({ decks: z.array(DeckSummary) }) },
   'deck.open': {
     params: z.object({ path: z.string() }),
@@ -544,6 +586,11 @@ export const ResponseEnvelope = z.union([
 export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>
 
 export const pushes = {
+  'deck.navigation': z.object({
+    deckId: z.string(),
+    action: z.enum(['next', 'previous', 'replay']),
+    from: z.number().int().nonnegative().optional(),
+  }),
   /** deck 文件变了,画布该热更新了。previewUrl 变了也走这条(成品第一次出现时)。 */
   /**
    * 有人开了一份稿子 —— 可能是 agent。**界面要跟着开**:agent 是代替人执行的,

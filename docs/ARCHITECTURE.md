@@ -204,7 +204,7 @@ server 找 skill 的顺序(`apps/server/src/skill.ts`):
 
 1. `ORCA_PPT_SKILL` —— 显式指定,开发时拿来试 skill 的改动;
 2. `ORCA_PPT_BUNDLED_SKILL` —— app 自带的那一份,壳在发布版里设;
-3. 开发时的本地仓(ghq 路径)和旧的安装位置。
+3. 未配置内置目录的开发环境可读本地仓(ghq 路径)和旧的安装位置。发布包内置目录缺失时直接报告 missing，不回退其他版本。
 
 **skill 仓仍是规范内容的唯一来源。** 打包时复制进安装包,不进本仓源码 —— AGENTS.md 边界 4
 不变。代价是改一处转场规范也要发一次 app。
@@ -232,8 +232,7 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 
 **还没做:**
 
-- 打包配置。加上时把 orca-ppt-skill 复制进 `Resources/skill`,版本号跟 app 走。
-  orca-motion-skill 不打:app 不读它的任何文件,它和 app 没有接口约定(见 DECK-MODE 末节)。
+- 正式发布签名、公证和发布版本号管理（当前打包输出用于本地验收）。
 - 首次引导本身(连同上面那一步询问)。
 
 ---
@@ -257,3 +256,9 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 | 2026-09-24 | skill 跟着 app 发版,打进安装包;推翻「skill 更新产品跟着更新,不两边同步」                       | 三件之间有接口约定,分开发版要维护兼容矩阵,skill 一改老 app 就坏;参照 ego-lite                            |
 | 2026-09-24 | 自带的 skill 链进 agent 的 skills 目录之前先问人,只链 `~/.agents/skills` 和 `~/.claude/skills` | 往用户的 agent 配置里写东西是用户该点头的事;不学 ego 往几十个目录撒软链、替没装的 agent 建空目录         |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法       | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉 |
+
+### 已实现的打包和按需读取
+
+`pnpm package` 构建桌面、server 和网页，使用 Electron Packager 输出当前平台应用到 `release/`。`tools/skill-lock.json` 固定 Skill Git 提交；打包通过 git archive 读取该提交，忽略工作区修改，并按 Skill 的 package-lock.json 安装生产依赖。`Resources/skill/bundle-manifest.json` 记录应用版本、Skill 仓库及提交。开发者可用 `ORCA_PPT_SKILL_SOURCE` 指定本地 Git 仓路径，但不能改变锁定提交。
+
+MCP 的 `list_skill` / `read_skill` 按相对路径提供随附规范文本。它们走 contracts 的 skill.list / skill.read，支持分页并拒绝越界路径及外部软链。阶段提示词引导宿主调用这些工具，不要求它拥有文件工具。此读取路径不安装全局 Skill、不写宿主配置；上述软链安装仍是可选且未实现的引导。图片/视频资料暂不由 read_skill 返回；应用截图继续走 capture_slide。

@@ -52,6 +52,8 @@ export async function locateSkill(env = process.env): Promise<SkillLocation> {
       await readFile(join(candidate.path, 'SKILL.md'), 'utf8')
       return { path: candidate.path, source: candidate.source, searched }
     } catch {
+      // 发布包缺规范不能静默使用开发机上的另一版本。
+      if (candidate.source === 'bundled') return { source: 'missing', searched }
       // 下一个
     }
   }

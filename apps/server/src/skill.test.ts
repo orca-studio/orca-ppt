@@ -148,3 +148,8 @@ describe('主题的默认配色', () => {
     expect(catalog.themes.every((t) => t.palette === undefined)).toBe(true)
   })
 })
+
+it('发布包缺失 skill 时不静默回退到本地仓', async () => {
+  const missing = await mkdtemp(join(tmpdir(), 'missing-bundle-'))
+  expect(await resolveSkillPath({ ORCA_PPT_BUNDLED_SKILL: missing })).toBeUndefined()
+})

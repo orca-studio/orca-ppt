@@ -1,3 +1,4 @@
+import { listSkill, readSkill } from './skill-content.js'
 import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
@@ -92,6 +93,7 @@ export async function startServer(
   const selfWriting = new Set<string>()
   /** 最近打开的那份:取缩略图没说是哪份时就用它。 */
   let lastOpened: string | undefined
+  const visibleSlides = new Map<string, number>()
 
   const documentOf = (deckId: string) => ({ id: deckId, label: basename(deckPathOf(deckId)) })
 
@@ -359,6 +361,9 @@ export async function startServer(
   }
 
   async function handle(envelope: RequestEnvelope): Promise<ResponseEnvelope> {
+    if (envelope.method === 'deck.navigation' && control.blocksHuman()) {
+      return { id: envelope.id, ok: false, error: { message: control.blocksHuman()! } }
+    }
     const reason = HUMAN_EDITS.has(envelope.method) ? control.blocksHuman() : undefined
     if (reason) {
       // 按「没办成」答,不按出错:界面本来就会把 reason 摆到人刚才动的那处。
@@ -376,7 +381,46 @@ export async function startServer(
   }
 
   async function dispatch(method: RequestMethod, raw: unknown): Promise<unknown> {
+    if (mcpCall.getStore() && ['deck.editText', 'deck.undo', 'deck.redo'].includes(method)) {
+      const target = (raw as { deckId?: string }).deckId
+      if (target !== lastOpened)
+        throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换，请重新读取状态。')
+    }
     switch (method) {
+      case 'skill.list': {
+        const params = parseParams('skill.list', raw)
+        return listSkill(catalog.skillPath, params.path, params.offset)
+      }
+      case 'skill.read': {
+        const params = parseParams('skill.read', raw)
+        return readSkill(catalog.skillPath, params.path, params.offset)
+      }
+      case 'deck.current': {
+        parseParams('deck.current', raw)
+        return lastOpened
+          ? {
+              deckId: lastOpened,
+              ...(visibleSlides.has(lastOpened) ? { slide: visibleSlides.get(lastOpened) } : {}),
+            }
+          : {}
+      }
+      case 'deck.visibleSlide': {
+        const params = parseParams('deck.visibleSlide', raw)
+        deckPathOf(params.deckId)
+        if (params.deckId === lastOpened) visibleSlides.set(params.deckId, params.index)
+        return {}
+      }
+      case 'deck.navigation': {
+        const params = parseParams('deck.navigation', raw)
+        deckPathOf(params.deckId)
+        if (params.deckId !== lastOpened)
+          throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换，请重新读取状态。')
+        if (params.action === 'replay' && params.from === undefined)
+          throw new Error('重放需要 from 页号')
+        bus.broadcast('autoplay.changed', { deckId: params.deckId, on: false })
+        bus.broadcast('deck.navigation', params)
+        return {}
+      }
       case 'deck.list': {
         parseParams('deck.list', raw)
         // 当前开着的那些。MCP 靠它回退:人已经在应用里开着 deck 了,agent 不该被迫再开一次。
@@ -391,6 +435,7 @@ export async function startServer(
 
         openDecks.set(opened.deck.id, opened.deck.path)
         watcher.watch(opened.deck.id, opened.deck.path)
+        if (lastOpened !== opened.deck.id) visibleSlides.delete(opened.deck.id)
         lastOpened = opened.deck.id
         // 打开时的版本号是基准:之后文件监听看到不一样的,才算外面改的
         if (!lastSeen.has(opened.deck.id)) {

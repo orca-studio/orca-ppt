@@ -103,14 +103,13 @@ function withTheme(html: string, toSkill: string, theme: string): string {
   return withLink(html, `${toSkill}/runtime/themes/${theme}.css`)
 }
 
-/** 把一条样式表接在**最后一条 link 后面** —— 层叠顺序就是引入顺序。 */
+/** 在 head 末尾追加样式表，保持主题覆盖基础样式的层叠顺序。 */
 function withLink(html: string, href: string): string {
   const link = `  <link rel="stylesheet" href="${href}">`
-  const links = [...html.matchAll(/^.*<link[^>]*rel="stylesheet"[^>]*>.*$/gm)]
-  const last = links[links.length - 1]?.[0]
-  // 起始文件里一条 link 都没有就挂在 </head> 前 —— 至少别把它丢了。
-  if (!last) return html.replace('</head>', `${link}\n</head>`)
-  return html.replace(last, `${last}\n${link}`)
+  // 注释里的示例 link 不是生效的样式表，不能当插入锚点。
+  const head = /<\/head\s*>/i.exec(html)
+  if (!head) throw new Error('模板缺少 </head>，无法插入主题')
+  return html.slice(0, head.index) + link + '\n' + html.slice(head.index)
 }
 
 function splitId(id: string): ['template' | 'example', string] {

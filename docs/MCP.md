@@ -16,8 +16,8 @@ VISION 写明不做通用 agent 客户端 —— 那是 TasteCode。但适配器
 ```
 Electron 界面  ──┐
                  ├── 类型化 WebSocket ──→ 本地 server(拥有全部状态)
-MCP server    ──┘                            ↑
-   ↑ stdio                                   │
+MCP adapter   ──┘                            ↑
+   ↑ HTTP /mcp                                   │
 你的 agent                          deck 目录 · 预览 · 阶段状态机 · 待办队列
 ```
 
@@ -78,16 +78,16 @@ announce —— `capture_slide` 会把画布跳到另一页,不先说一声的�
 用自己的读写文件工具直接改 HTML,这里就什么都看不到 —— 只有文件 watcher 会说「变了」,
 说不出是谁改的、改了哪儿。
 
-截图落在应用自己的数据目录,agent 用它自己的读文件工具打开。server 截不了图(画布在壳
+截图落在应用自己的数据目录，MCP 同时返回图片内容；只有读取图片失败时才退回路径。server 截不了图(画布在壳
 里),所以是一个往返:server 推 `capture.request` → 壳截 → 壳调 `capture.result`。
 壳不回话就超时失败,不把 agent 吊死。
 
 **要 agent 干活的** —— 经待办队列:
 
-| 工具            | 做什么                              |
-| --------------- | ----------------------------------- |
-| `take_requests` | 取走用户挂起的锚和阶段请求,取完清空 |
-| `peek_requests` | 同上但不清空                        |
+| 工具             | 做什么                              |
+| ---------------- | ----------------------------------- |
+| `user_selection` | 取走用户挂起的锚和阶段请求,取完清空 |
+| `peek_selection` | 同上但不清空                        |
 
 ## 方向:人推不动 agent,所以 agent 来拉
 
@@ -95,7 +95,7 @@ MCP 没有可靠的「把消息推进用户对话」的原语。notification 能
 正在跑的 agent 会去看。与其假装能推,不如把方向摆明:
 
 人在画布上点一处 → 挂进待办队列,界面显示「已挂 N 件,跟 agent 说一声」→
-用户说「看我刚点的那处」→ agent 调 `take_requests` 拿到页号、选择器、1920×1080 设计
+用户说「看我刚点的那处」→ agent 调 `user_selection` 拿到页号、选择器、1920×1080 设计
 坐标和一张裁切图。
 
 代价是从一步变成两步。坐标照样准确传过去 —— 那才是核心价值。
@@ -135,3 +135,17 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 的。
 
 应用没开的时候 MCP 连不上,这是对的:画布在应用里,没有应用就没有可看的东西。
+
+## UI 与 MCP 的操作对齐
+
+`list_templates` 返回 UI 新建窗口使用的模板目录。`create_deck` 接受 `parentDir`、`title`，以及可选的 `from` 模板 ID 和 `theme` 主题名，直接调用同一个 `deck.create`。省略 `from` 时仍创建空目录，保持原有行为。
+
+`deck.current` 是当前打开稿子的协议状态。MCP 首次使用它确定目标，后续保持目标绑定；用户在 UI 切换稿子后，返回 `DOCUMENT_CHANGED`，必须确认目标后显式 `open_deck`，不会自动将旧任务转向新稿。`deck_status` 返回 `deckId` 和 `currentSlide`（从 0 数起；画布尚未报告时为 null）。
+
+`navigate` 支持 `next`、`previous`、`replay`，重放必须带 `from`。UI 键盘导航和重放同样调用 `deck.navigation`，由服务端停止自动播放并通知画布执行。画布完成翻页后通过 `deck.visibleSlide` 报告实际页号；请求成功不等于动画已经结束。旧稿子的导航请求被拒绝，旧画布的页号报告不会覆盖当前稿子。
+
+这是现有操作入口的一致性改进，不代表已经实现完整的手工排版、增删页或通用导出功能。
+
+## 随附规范
+
+先调用 `read_skill`（默认 `SKILL.md`）；引用资料通过 `list_skill` 浏览，再按相对路径 `read_skill`。目录每页 100 项，文本每页 6000 个 Unicode 字符；返回 `next` 非空时继续传入 `offset`。单文件上限 2 MB，仅支持文档、JSON、HTML/CSS/脚本等文本。不能读任意本机文件，不能通过软链逃出 Skill 根目录；图片和视频不由此接口提供。无需打开稿子。`doctor` 可确认当前 Skill 来源是否 bundled。

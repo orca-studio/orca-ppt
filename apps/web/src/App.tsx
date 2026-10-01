@@ -160,6 +160,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('control.changed', setControl)
 
     next.subscribe('autoplay.changed', (data) => {
+      if (data.deckId !== deckRef.current?.deck.id) return
       setAutoplay(data.on)
       stage.current?.autoplay(data.on)
     })
@@ -214,9 +215,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     // agent 说「你看第 4 页」,画布跟着跳。
     next.subscribe('deck.slide', (data) => {
+      if (data.deckId !== deckRef.current?.deck.id) return
       setSlide(data.index)
       slideRef.current = data.index
       stage.current?.goto(data.index)
+    })
+
+    next.subscribe('deck.navigation', (data) => {
+      if (data.deckId !== deckRef.current?.deck.id) return
+      stage.current?.navigate(data.action, data.from)
     })
 
     // 菜单里的动作。它和顶栏按钮走同一条路 —— 菜单只是另一个触发器。
@@ -400,10 +407,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const active = transport.current
     const current = deckRef.current
     if (!active || !current) return
-    void active
-      .request('deck.showSlide', { deckId: current.deck.id, index: from })
-      .then(() => new Promise((resolve) => setTimeout(resolve, 260)))
-      .then(() => stage.current?.next())
+    void active.request('deck.navigation', { deckId: current.deck.id, action: 'replay', from })
   }, [])
 
   /**
@@ -551,6 +555,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const onSlideChange = useCallback((index: number) => {
     setSlide(index)
     slideRef.current = index
+    const current = deckRef.current
+    if (current)
+      void transport.current?.request('deck.visibleSlide', { deckId: current.deck.id, index })
   }, [])
 
   /**
@@ -564,7 +571,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
     if (!autoplay) return
     const timer = setInterval(() => {
       void stage.current?.autoplayRunning().then((running) => {
-        if (!running) setAutoplay(false)
+        if (!running) {
+          setAutoplay(false)
+          const current = deckRef.current
+          if (current)
+            void transport.current?.request('deck.autoplay', { deckId: current.deck.id, on: false })
+        }
       })
     }, 1000)
     return () => clearInterval(timer)
@@ -683,6 +695,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
               autoplay={autoplay}
               onToggleAutoplay={toggleAutoplay}
               onSlideChange={onSlideChange}
+              onNavigate={(action) => {
+                void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
+              }}
               onTextEdit={editText}
               readOnly={agentHolds}
               overlay={

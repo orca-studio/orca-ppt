@@ -12,19 +12,22 @@
     "typecheck": "tsc -b && tsc -p apps/web",
     "test": "vitest run",
     "lint": "prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "package": "pnpm build && node tools/package.mjs"
   },
   "devDependencies": {
+    "@electron/packager": "^20.3.0",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.0.0",
     "electron": "^43.0.0",
+    "esbuild": "^0.28.2",
+    "jsdom": "^27.0.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
     "vite": "^7.1.0",
-    "vitest": "^4.1.10",
-    "@vitejs/plugin-react": "^5.0.0",
-    "jsdom": "^27.0.0"
+    "vitest": "^4.1.10"
   }
 }

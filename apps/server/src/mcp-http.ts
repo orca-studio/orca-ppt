@@ -55,6 +55,7 @@ export function serverIcons(
  * 调用前后闪一下。
  */
 const INSTRUCTIONS = [
+  '规范读取：先用 read_skill 读取随应用发布的 SKILL.md，引用资料用 list_skill/read_skill 按需获取，next 非空时继续读取。',
   'OrcaPPT 是用户开着的演示稿应用,你和用户看着同一块画布。',
   '控制权:要改稿子,先调 take_control 说明要做什么 —— 画布会盖上遮罩,底部的胶囊显示这件事,用户不会和你同时改;' +
     '在等用户批准时再调一次并带上 waiting;全部做完调 hand_off 交还,需要用户确认的写进 message。' +
