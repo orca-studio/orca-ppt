@@ -11,5 +11,5 @@
   "dependencies": {
     "@orca-ppt/contracts": "workspace:*"
   },
-  "productName": "OrcaPPT"
+  "productName": "Orca PPT"
 }

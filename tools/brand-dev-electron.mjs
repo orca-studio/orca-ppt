@@ -1,4 +1,4 @@
-// 开发时把 Electron.app 的 bundle 名字改成 OrcaPPT。
+// 开发时把 Electron.app 的 bundle 名字改成 Orca PPT。
 //
 // 为什么非得动 bundle:macOS 最左边那个应用菜单的标题取自 `CFBundleName`,
 // `app.setName()` 和菜单模板里的 label 都改不动它 —— 不改就一直显示 "Electron"。
@@ -9,7 +9,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-const NAME = 'OrcaPPT'
+const NAME = 'Orca PPT'
 
 if (process.platform !== 'darwin') process.exit(0)
 

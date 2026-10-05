@@ -15,7 +15,7 @@ export const AgentError = {
     say(
       'NO_DECK_OPEN',
       '应用里还没打开稿子',
-      '让用户在 OrcaPPT 里打开一份,或者用 open_deck 指定目录',
+      '让用户在 Orca PPT 里打开一份,或者用 open_deck 指定目录',
     ),
   multipleDecks: (paths: string[]) =>
     say('MULTIPLE_DECKS', `应用里开着好几份稿子:${paths.join('、')}`, '用 open_deck 指定是哪一份'),
@@ -25,11 +25,15 @@ export const AgentError = {
   uiDisconnected: () =>
     say(
       'UI_DISCONNECTED',
-      'OrcaPPT 的窗口没开 —— 截图、缩略图、放映都要靠它',
-      '请用户打开 OrcaPPT 的窗口,再试一次',
+      'Orca PPT 的窗口没开 —— 截图、缩略图、放映都要靠它',
+      '请用户打开 Orca PPT 的窗口,再试一次',
     ),
   uiTimeout: () =>
-    say('UI_TIMEOUT', 'OrcaPPT 的界面没有回应', '请用户确认窗口开着、没有卡住;doctor 能看连接状态'),
+    say(
+      'UI_TIMEOUT',
+      'Orca PPT 的界面没有回应',
+      '请用户确认窗口开着、没有卡住;doctor 能看连接状态',
+    ),
   skillNotFound: () =>
     say(
       'SKILL_NOT_FOUND',

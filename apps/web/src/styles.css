@@ -367,10 +367,36 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.toolbar-actions {
-  margin-left: auto;
-  display: flex;
+.canvas-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
   gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.canvas-controls-group,
+.canvas-controls-pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.canvas-controls-primary {
+  justify-content: flex-end;
+}
+
+.canvas-controls-count {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.canvas-controls-pages .btn {
+  font-size: 22px;
 }
 
 .pane {
@@ -489,9 +515,21 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
-/* Agent 提示与控制动作统一在底部状态栏。 */
-.agent-control {
+/* Agent 状态与控制在窗口右上角，任务文字可截断，按钮始终可见。 */
+.toolbar-agent {
+  margin-left: auto;
   min-width: 0;
+  max-width: 50%;
+  -webkit-app-region: no-drag;
+}
+
+.agent-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
 }
 
 .agent-control-label {
@@ -523,8 +561,6 @@ select:focus-visible {
 /* ── 左栏:胶片 ───────────────────────────────────────────────────── */
 
 .filmstrip {
-  /* 页号列宽。两页之间那道转场说明要和缩略图左边对齐,得知道缩略图从哪儿起。 */
-  --filmstrip-no: 18px;
   --filmstrip-pad: 6px;
 
   list-style: none;
@@ -563,14 +599,6 @@ select:focus-visible {
 
 .filmstrip button[data-current='true'] {
   border-color: var(--accent);
-}
-
-.filmstrip-no {
-  color: var(--muted);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-  min-width: var(--filmstrip-no);
-  flex: none;
 }
 
 .filmstrip-thumb {
@@ -614,8 +642,8 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 6px;
-  /* 和缩略图左边对齐:按钮内边距 + 边框 + 页号列 + 间距 */
-  margin: 2px 0 2px calc(6px + 1px + var(--filmstrip-no) + var(--space-3));
+  /* 和缩略图左边对齐:按钮内边距 + 边框 */
+  margin: 2px 0 2px calc(6px + 1px);
   font-size: var(--text-xs);
   color: var(--muted);
   min-height: var(--control-xs);

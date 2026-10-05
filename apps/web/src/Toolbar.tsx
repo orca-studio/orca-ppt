@@ -1,53 +1,18 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { HistoryState } from '@orca-ppt/contracts'
 import type { Layout } from './layout.js'
 import { ViewMenu } from './ViewMenu.js'
 import { Button } from './ui/Button.js'
 
-/**
- * 顶栏。只放**动作**。
- *
- * 「指给 agent 看」摆在这儿,是因为它是一个**动作**,不是一个作用域 —— 右栏按
- * 作用域组织(转场/页/稿子),把一个动作塞进去,人找不到它该归哪一档。
- *
- * 自动播放归「放映」菜单和画布底下那行(它是放映方式,不是全局动作);打开是 ⌘O,
- * 菜单里有;主题是偏好,归「显示 > 外观」;agent 状态是状态,归底部状态栏。
- * 都摆在这儿的话,唯一真正的动作(播放)就淹了。
- *
- * 标题栏是藏起来的(macOS hiddenInset),这条同时是窗口的拖动区。
- */
+/** 窗口标题和视图切换，同时保留 macOS 窗口拖动区。 */
 export interface ToolbarProps {
   title: string | undefined
+  children?: ReactNode
   layout: Layout
   onLayoutChange: (next: Partial<Layout>) => void
-  canPresent: boolean
-  onPresent: () => void
-  /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
-  history: HistoryState
-  /** agent 正拿着稿子。撤销 / 重做会改稿子,这时点不了(server 那头也会拒)。 */
-  locked: boolean
-  onUndo: () => void
-  onRedo: () => void
-  /** 进入取锚状态:点画布上一处,指给 agent 看。 */
-  picking: boolean
-  canPick: boolean
-  onPick: () => void
 }
 
-export function Toolbar({
-  title,
-  layout,
-  onLayoutChange,
-  canPresent,
-  onPresent,
-  history,
-  locked,
-  onUndo,
-  onRedo,
-  picking,
-  canPick,
-  onPick,
-}: ToolbarProps) {
+export function Toolbar({ title, layout, onLayoutChange, children }: ToolbarProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const viewRef = useRef<HTMLDivElement>(null)
 
@@ -80,9 +45,47 @@ export function Toolbar({
         )}
       </div>
 
-      <span className="toolbar-title">{title ?? 'orca-ppt'}</span>
+      <span className="toolbar-title">{title ?? 'Orca PPT'}</span>
+      <div className="toolbar-agent">{children}</div>
+    </header>
+  )
+}
 
-      <div className="toolbar-actions">
+export interface CanvasControlsProps {
+  canPresent: boolean
+  onPresent: () => void
+  /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
+  history: HistoryState
+  /** agent 正拿着稿子。撤销 / 重做会改稿子,这时点不了(server 那头也会拒)。 */
+  locked: boolean
+  onUndo: () => void
+  onRedo: () => void
+  /** 进入取锚状态:点画布上一处,指给 agent 看。 */
+  picking: boolean
+  canPick: boolean
+  onPick: () => void
+  slide: number
+  slideCount: number
+  onNavigate: (action: 'previous' | 'next') => void
+}
+
+export function CanvasControls({
+  canPresent,
+  onPresent,
+  history,
+  locked,
+  onUndo,
+  onRedo,
+  picking,
+  canPick,
+  onPick,
+  slide,
+  slideCount,
+  onNavigate,
+}: CanvasControlsProps) {
+  return (
+    <div className="canvas-controls" role="toolbar" aria-label="画布操作">
+      <div className="canvas-controls-group">
         {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
         <Button
           variant="ghost"
@@ -112,6 +115,33 @@ export function Toolbar({
         >
           <UndoIcon flipped />
         </Button>
+      </div>
+      <div className="canvas-controls-pages">
+        <Button
+          variant="ghost"
+          icon
+          disabled={locked || slide === 0}
+          onClick={() => onNavigate('previous')}
+          aria-label="上一页"
+          title="上一页"
+        >
+          <span aria-hidden="true">‹</span>
+        </Button>
+        <span className="canvas-controls-count">
+          第 {slide + 1} / {slideCount} 页
+        </span>
+        <Button
+          variant="ghost"
+          icon
+          disabled={locked || slide >= slideCount - 1}
+          onClick={() => onNavigate('next')}
+          aria-label="下一页"
+          title="下一页"
+        >
+          <span aria-hidden="true">›</span>
+        </Button>
+      </div>
+      <div className="canvas-controls-group canvas-controls-primary">
         {/* 指给 agent 看是次要动作:和播放一样是圆钮,开着的时候才上强调色。 */}
         <Button
           icon
@@ -125,16 +155,16 @@ export function Toolbar({
           <TargetIcon />
         </Button>
         <Button
-          icon
           onClick={onPresent}
           disabled={!canPresent}
           title={canPresent ? '全屏放映(⌥⌘P,Esc 退出)' : '成品还没出来'}
           aria-label="全屏放映"
         >
           <PlayIcon />
+          <span>放映</span>
         </Button>
       </div>
-    </header>
+    </div>
   )
 }
 

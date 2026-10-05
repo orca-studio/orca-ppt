@@ -182,7 +182,7 @@ describe('自报家门', () => {
     })
     const line = body.split('\n').find((l) => l.startsWith('data:')) ?? body
     const info = JSON.parse(line.replace(/^data:/, '')).result.serverInfo
-    expect(info.title).toBe('OrcaPPT')
+    expect(info.title).toBe('Orca PPT')
     expect(info.icons[0].mimeType).toBe('image/png')
     expect(info.icons[0].src).toMatch(/^data:image\/png;base64,iVBORw0KGgo/)
   })

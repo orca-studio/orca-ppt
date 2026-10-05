@@ -214,7 +214,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'list_skill',
       config: {
         title: '列出随附规范资料',
-        description: '浏览本版本 OrcaPPT 随附 Skill 的相对目录，分页返回；无需打开稿子。',
+        description: '浏览本版本 Orca PPT 随附 Skill 的相对目录，分页返回；无需打开稿子。',
         annotations: looking,
         inputSchema: {
           path: z.string().optional(),
@@ -580,7 +580,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         title: '检查环境',
         annotations: looking,
         description:
-          '查 OrcaPPT 这一侧的环境:应用版本、skill 在哪(从哪儿找到的、找过哪些位置)、界面连没连上、开着哪些稿子、操作记录存在哪。碰到 UI_DISCONNECTED、SKILL_NOT_FOUND、UI_TIMEOUT 这类错误,或者工具行为不对时先调它,别猜。',
+          '查 Orca PPT 这一侧的环境:应用版本、skill 在哪(从哪儿找到的、找过哪些位置)、界面连没连上、开着哪些稿子、操作记录存在哪。碰到 UI_DISCONNECTED、SKILL_NOT_FOUND、UI_TIMEOUT 这类错误,或者工具行为不对时先调它,别猜。',
       },
       run: async () => json(await call('app.doctor', {})),
     },

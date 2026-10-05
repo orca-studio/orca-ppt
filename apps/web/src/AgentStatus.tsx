@@ -29,7 +29,7 @@ export function AgentStatus({
         : 'Agent 未连接'
 
   return (
-    <div className="status-right agent-control">
+    <div className="agent-control">
       <span
         className="agent-control-label"
         role="status"

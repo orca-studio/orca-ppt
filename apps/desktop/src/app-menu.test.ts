@@ -3,7 +3,7 @@ import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 
 const build = (over: Partial<Parameters<typeof buildMenuTemplate>[0]> = {}) =>
   buildMenuTemplate({
-    appName: 'OrcaPPT',
+    appName: 'Orca PPT',
     isMac: true,
     canPresent: true,
     theme: 'system',
@@ -16,7 +16,7 @@ const labels = (template: ReturnType<typeof buildMenuTemplate>) =>
 
 describe('应用菜单', () => {
   it('macOS 上第一个菜单是应用名 —— 不自建就是 Electron', () => {
-    expect(labels(build())[0]).toBe('OrcaPPT')
+    expect(labels(build())[0]).toBe('Orca PPT')
   })
 
   it('非 macOS 没有应用菜单,退出放进文件', () => {
@@ -90,7 +90,7 @@ describe('帮助', () => {
   it('连接 agent 在菜单里 —— 那是设置,不该常驻在工作面板上', () => {
     const sent: string[] = []
     const template = buildMenuTemplate({
-      appName: 'OrcaPPT',
+      appName: 'Orca PPT',
       isMac: true,
       canPresent: true,
       theme: 'system',

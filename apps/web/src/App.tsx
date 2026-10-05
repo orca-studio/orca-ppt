@@ -19,7 +19,7 @@ import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { LightTable } from './LightTable.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
 import { idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
-import { Toolbar } from './Toolbar.js'
+import { CanvasControls, Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
 import { Button } from './ui/Button.js'
@@ -412,7 +412,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     if (initial) void openWith(next, initial)
   }, [serverUrl, openWith])
 
-  /** 页胶片的缩略图。渲不出来就留空 —— 页号和标题仍然在。 */
+  /** 页胶片的缩略图。通过隐藏窗口生成，不驱动用户当前画布。 */
   const refreshThumbs = useCallback(async (via: Transport, deckId: string) => {
     const version = ++thumbsVersion.current
     setThumbs([])
@@ -861,24 +861,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   return (
     <div className="app">
-      <Toolbar
-        title={deck?.deck.title}
-        layout={layout}
-        onLayoutChange={changeLayout}
-        canPresent={Boolean(deck?.previewUrl)}
-        onPresent={present}
-        history={history}
-        locked={agentHolds}
-        onUndo={() => void stepHistory('undo')}
-        onRedo={() => void stepHistory('redo')}
-        picking={picking}
-        canPick={Boolean(deck?.previewUrl) && !agentHolds}
-        onPick={() => {
-          if (!picking) return void pick()
-          stage.current?.cancelPick()
-          setPicking(false)
-        }}
-      />
+      <Toolbar title={deck?.deck.title} layout={layout} onLayoutChange={changeLayout}>
+        <AgentStatus
+          control={control}
+          connected={state === 'open' && agentLive}
+          onTakeOver={() => setHolder('control.takeOver')}
+          onStop={() => setHolder('control.stop')}
+          onRelease={() => setHolder('control.release')}
+        />
+      </Toolbar>
       <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
@@ -901,7 +892,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       data-agent={agent.touched.get(index)?.kind}
                       onClick={() => goto(index)}
                     >
-                      <span className="filmstrip-no">{index + 1}</span>
                       {/*
                         导航器只有图,大纲只有字。标题在缩略图里本来就看得清,
                         旁边再写一遍是重复,还挤掉图的宽度。
@@ -969,6 +959,28 @@ export function App({ serverUrl }: { serverUrl: string }) {
               </div>
             </div>
           )}
+          {deck && (
+            <CanvasControls
+              canPresent={Boolean(deck?.previewUrl)}
+              onPresent={present}
+              history={history}
+              locked={agentHolds}
+              onUndo={() => void stepHistory('undo')}
+              onRedo={() => void stepHistory('redo')}
+              picking={picking}
+              canPick={Boolean(deck?.previewUrl) && !agentHolds}
+              onPick={() => {
+                if (!picking) return void pick()
+                stage.current?.cancelPick()
+                setPicking(false)
+              }}
+              slide={slide}
+              slideCount={deck.slideCount}
+              onNavigate={(action) => {
+                void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
+              }}
+            />
+          )}
         </section>
 
         <section className="pane">
@@ -1005,7 +1017,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
       {/*
         状态栏横跨整个窗口。只横在中间一栏下面的话,它读起来像画布的一部分,
-        而它说的是整个应用的事:连没连上、agent 在不在、刚指了哪儿。
+        而它说的是整个应用的事:连没连上、刚指了哪儿。
       */}
       <footer className="status">
         {/* 连着的时候只亮一个点;断了才说话 —— 常驻「open」这种词是内部状态漏到界面上。 */}
@@ -1013,23 +1025,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
           ●
         </span>
         {state !== 'open' && <span>{TRANSPORT_LABEL[state]}</span>}
-        {deck && (
-          <span>
-            第 {slide + 1} / {deck.slideCount} 页
-          </span>
-        )}
+
         {/*
           「已指给 agent · …」是刚发生了什么,归状态栏 —— 那个动作本身在工具栏上,
           它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
         */}
         <Pending requests={requests} crops={crops} />
-        <AgentStatus
-          control={control}
-          connected={state === 'open' && agentLive}
-          onTakeOver={() => setHolder('control.takeOver')}
-          onStop={() => setHolder('control.stop')}
-          onRelease={() => setHolder('control.release')}
-        />
       </footer>
     </div>
   )

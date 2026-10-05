@@ -65,7 +65,7 @@ try {
   const output = await packager({
     dir: app,
     out: join(root, 'release'),
-    name: 'OrcaPPT',
+    name: 'Orca PPT',
     appBundleId: 'studio.orca.ppt',
     appVersion: metadata.version,
     electronVersion: electron.version,

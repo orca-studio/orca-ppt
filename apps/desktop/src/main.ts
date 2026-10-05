@@ -22,8 +22,10 @@ import { ThumbnailQueue } from './thumbnail-queue.js'
  * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
  * 取自这里,设晚了就还是 Electron。
  */
-const APP_NAME = 'OrcaPPT'
+const APP_NAME = 'Orca PPT'
 app.setName(APP_NAME)
+// Keep the existing profile, preferences, and guest storage when the display name changes.
+app.setPath('userData', join(app.getPath('appData'), 'OrcaPPT'))
 
 const here = dirname(fileURLToPath(import.meta.url))
 const supervisor = new ServerSupervisor()
@@ -283,6 +285,7 @@ ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide
  * 用稿子自己的录制接口(`?capture` + `__capture.go/seek`)定位,不用「跳页 + 睡一会儿」:
  * 转场是 GSAP 驱动的,睡固定毫秒会截到还没画完的上一页 —— 实测就是整排错位一格。
  * `go(i)` 返回这次转场的时长,`seek(transition)` 正好落在转场结束的稳定态。
+ * 普通 Reveal.js 稿子没有录制接口时,在隐藏窗口关闭内置转场并直接定位静态页面。
  */
 const thumbnailQueue = new ThumbnailQueue()
 
@@ -308,7 +311,7 @@ ipcMain.handle(
         height: 540,
         // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
         useContentSize: true,
-        webPreferences: { sandbox: true, contextIsolation: true },
+        webPreferences: { sandbox: true, contextIsolation: true, backgroundThrottling: false },
       })
 
       const destroy = () => {
@@ -326,9 +329,28 @@ ipcMain.handle(
       const render = async () => {
         await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
         const ready = await offscreen.webContents.executeJavaScript(
-          'new Promise(r => { const t = setInterval(() => { if (window.__capture) { clearInterval(t); r(true) } }, 50); setTimeout(() => { clearInterval(t); r(false) }, 8000) })',
+          `new Promise(resolve => {
+            const check = () => {
+              if (window.__capture?.go && window.__capture?.seek) return 'capture';
+              if (window.Reveal?.isReady?.()) return 'reveal';
+              return null;
+            };
+            const finish = value => { clearInterval(timer); clearTimeout(timeout); resolve(value); };
+            const timer = setInterval(() => { const mode = check(); if (mode) finish(mode); }, 50);
+            const timeout = setTimeout(() => finish(null), 8000);
+          })`,
         )
-        if (!ready) return []
+        if (!ready) throw new Error('稿子未就绪，无法生成缩略图')
+        // Thumbnails contain slide content only; presentation controls belong to the viewer.
+        await offscreen.webContents.executeJavaScript(
+          `window.Reveal?.configure({ controls: false, progress: false, slideNumber: false });`,
+        )
+        // Plain Reveal decks have no Orca capture API. Disable transitions only in this hidden window.
+        if (ready === 'reveal') {
+          await offscreen.webContents.executeJavaScript(
+            `Reveal.configure({ transition: 'none', backgroundTransition: 'none', autoAnimate: false, autoSlide: 0 });`,
+          )
+        }
         await offscreen.webContents.executeJavaScript('document.fonts.ready')
 
         const dir = join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
@@ -339,7 +361,22 @@ ipcMain.handle(
           if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
           try {
             await offscreen.webContents.executeJavaScript(
-              `(async () => { const { transition } = await window.__capture.go(${index}); await window.__capture.seek(transition); })()`,
+              `(async () => {
+                if (window.__capture?.go && window.__capture?.seek) {
+                  const { transition } = await window.__capture.go(${index});
+                  await window.__capture.seek(transition);
+                } else {
+                  Reveal.slide(${index});
+                  // Use the completed static slide, including all fragment steps.
+                  Reveal.getCurrentSlide().querySelectorAll('.fragment').forEach(el => el.classList.add('visible'));
+                }
+                const images = [...Reveal.getCurrentSlide().querySelectorAll('img')];
+                await Promise.race([
+                  Promise.all(images.map(img => img.decode().catch(() => {}))),
+                  new Promise(resolve => setTimeout(resolve, 3000)),
+                ]);
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+              })()`,
             )
             const image = await offscreen.webContents.capturePage()
             if (image.isEmpty()) {
