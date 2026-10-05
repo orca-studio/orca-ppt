@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
+import { resetTestStorage } from './test-storage.js'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_LAYOUT, readLayout, writeLayout } from './layout.js'
 
-beforeEach(() => localStorage.clear())
+beforeEach(resetTestStorage)
 
 describe('界面偏好', () => {
   it('默认:缩略图导航、右栏开着、不看片台', () => {

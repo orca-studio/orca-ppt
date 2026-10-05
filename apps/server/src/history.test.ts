@@ -83,3 +83,28 @@ describe('EditHistory', () => {
     })
   })
 })
+
+describe('structured edit history', () => {
+  const step = {
+    slide: 0,
+    oldText: '',
+    newText: '',
+    before: 'before',
+    after: 'after',
+    label: '移动页面',
+    files: { '.deck/plan.json': { before: 'old', after: 'new' } },
+  }
+  it('requires exact HTML and metadata, retaining rejected history', () => {
+    const history = new EditHistory()
+    history.record(step)
+    expect(history.undo('external', { '.deck/plan.json': 'new' }).ok).toBe(false)
+    expect(history.undo('after', { '.deck/plan.json': 'external' }).ok).toBe(false)
+    expect(history.state().canUndo).toBe(true)
+    const result = history.undo('after', { '.deck/plan.json': 'new' }, false)
+    expect(result.ok && result.html).toBe('before')
+    expect(history.state().canUndo).toBe(true)
+    history.commit('undo')
+    expect(history.state().redo).toBe('移动页面')
+    expect(history.redo('before', { '.deck/plan.json': 'old' }).ok).toBe(true)
+  })
+})

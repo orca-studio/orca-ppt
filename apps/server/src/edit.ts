@@ -1,4 +1,4 @@
-import { sliceSections } from './decks.js'
+import { sourcePages } from './page-edit.js'
 
 /**
  * 就地改一个元素的文字。
@@ -21,10 +21,15 @@ export interface TextEdit {
 export type EditResult = { ok: true; html: string } | { ok: false; reason: string }
 
 export function applyTextEdit(html: string, edit: TextEdit): EditResult {
-  const sections = sliceSections(html)
-  const section = sections[edit.slide]
-  if (!section) return { ok: false, reason: `没有第 ${edit.slide + 1} 页` }
+  let location
+  try {
+    location = sourcePages(html, false).pages[edit.slide]?.sourceCodeLocation
+  } catch {
+    /* no source page */
+  }
+  if (!location) return { ok: false, reason: `没有第 ${edit.slide + 1} 页` }
 
+  const section = html.slice(location.startOffset, location.endOffset)
   const oldText = edit.oldText.trim()
   const newText = edit.newText.trim()
   if (!oldText) return { ok: false, reason: '原文是空的,没法定位' }
@@ -48,8 +53,11 @@ export function applyTextEdit(html: string, edit: TextEdit): EditResult {
   const at = section.indexOf(target)
   const edited = section.slice(0, at) + escapeHtml(newText) + section.slice(at + target.length)
 
-  // 整段替换回去。section 是从 html 里原样切出来的,所以一定只出现一次。
-  return { ok: true, html: html.replace(section, edited) }
+  // Use the actual source offset: two pages may have identical markup.
+  return {
+    ok: true,
+    html: html.slice(0, location.startOffset) + edited + html.slice(location.endOffset),
+  }
 }
 
 function countOccurrences(text: string, needle: string): number {

@@ -4,6 +4,9 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { realpath } from 'node:fs/promises'
+import { deckRevision } from './decks.js'
+import { planPreview } from './preview.js'
 import { PreviewHost } from './preview-host.js'
 
 /**
@@ -88,5 +91,26 @@ describe('/asset', () => {
     const dir = await mkdtemp(join(tmpdir(), 'skill-'))
     await host.allow(dir)
     expect((await get(dir)).status).toBe(404)
+  })
+})
+
+describe('preview version evidence', () => {
+  it('keeps entry bytes unchanged and changes the navigation revision with content', async () => {
+    const dir = await realpath(await mkdtemp(join(tmpdir(), 'preview-version-')))
+    const file = join(dir, 'deck.html')
+    const html = '<section><h2>Original</h2></section>'
+    await writeFile(file, html)
+    const mount = host.mount(planPreview(dir, file))
+    const first = await fetch(base + mount.urlPath)
+    expect(await first.text()).toBe(html)
+    const revision = await deckRevision(dir)
+    expect(first.headers.get('server-timing')).toBe(`orca-revision;desc="${revision}"`)
+    await writeFile(file, html.replace('Original', 'Changed'))
+    const second = await fetch(base + mount.urlPath)
+    expect(second.headers.get('server-timing')).not.toBe(first.headers.get('server-timing'))
+    expect(await second.text()).toContain('Changed')
+    const head = await fetch(base + mount.urlPath, { method: 'HEAD' })
+    expect(await head.text()).toBe('')
+    expect(head.headers.get('server-timing')).toBe(second.headers.get('server-timing'))
   })
 })

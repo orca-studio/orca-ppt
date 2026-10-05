@@ -1,3 +1,5 @@
+import { sourcePages } from './page-edit.js'
+import { fileDigest } from './asset-digest.js'
 import { createHash } from 'node:crypto'
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
@@ -99,7 +101,7 @@ async function findEntry(root: string): Promise<{ file: string; html: string } |
 
 /**
  * reveal.js 里,`.slides` 的直接子 `<section>` 是一页;嵌套的 `<section>` 是纵向子页,
- * 不该各算一页。所以要数嵌套深度,不能直接数 `<section` 的个数。
+ * 不该各算一页。解析源码区段,不把脚本或注释里的 `<section` 算进来。
  */
 export function countTopLevelSections(html: string): number {
   return sliceSections(html).length
@@ -107,23 +109,14 @@ export function countTopLevelSections(html: string): number {
 
 /** 每一页在 HTML 里的那一段。 */
 export function sliceSections(html: string): string[] {
-  // class 可以不带引号、可以带单引号、也可以和别的类名并存 —— 这些都是合法 HTML,
-  // 只认 `class="slides"` 一种写法会在别人写的稿子上静默数出 0 页。
-  const slides = findSlidesContainer(html)
-  if (slides === -1) return []
-
-  const rest = html.slice(slides)
-  const starts: number[] = []
-  let depth = 0
-  for (const match of rest.matchAll(/<(\/?)section\b/g)) {
-    if (match[1]) {
-      depth -= 1
-      continue
-    }
-    if (depth === 0) starts.push(match.index)
-    depth += 1
+  try {
+    return sourcePages(html, false).pages.flatMap((page) => {
+      const location = page.sourceCodeLocation
+      return location ? [html.slice(location.startOffset, location.endOffset)] : []
+    })
+  } catch {
+    return []
   }
-  return starts.map((start, i) => rest.slice(start, starts[i + 1] ?? rest.length))
 }
 
 /**
@@ -193,28 +186,6 @@ export async function deckRevision(root: string): Promise<string> {
     hash.update(await fileDigest(file.path))
   }
   return hash.digest('hex').slice(0, 16)
-}
-
-/**
- * 素材的内容哈希,按「路径 + 大小 + 修改时间」缓存。素材里可能有大图、视频,宿主又会频繁问版本号,
- * 每次都整个读一遍太慢;文件没动过就用上次算的。
- */
-const digestCache = new Map<string, { size: number; mtimeMs: number; digest: string }>()
-
-async function fileDigest(path: string): Promise<string> {
-  try {
-    const info = await stat(path)
-    const cached = digestCache.get(path)
-    if (cached && cached.size === info.size && cached.mtimeMs === info.mtimeMs) return cached.digest
-    const digest = createHash('sha256')
-      .update(await readFile(path))
-      .digest('hex')
-    digestCache.set(path, { size: info.size, mtimeMs: info.mtimeMs, digest })
-    return digest
-  } catch {
-    // 读的时候刚好被删了:当它不在。
-    return ''
-  }
 }
 
 /** 目录下所有文件,按相对路径排好。目录不在就是空的。 */
@@ -298,13 +269,6 @@ function plainText(html: string): string {
 }
 
 /** `class` 里含 `slides` 这个类的那个元素在哪。 */
-function findSlidesContainer(html: string): number {
-  for (const match of html.matchAll(/class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/g)) {
-    const value = match[1] ?? match[2] ?? match[3] ?? ''
-    if (value.split(/\s+/).includes('slides')) return match.index
-  }
-  return -1
-}
 
 /** 产物缺席是正常情况(阶段还没跑到),不是错误。格式不对才是错误。 */
 async function readArtifact<T>(path: string, schema: z.ZodType<T>): Promise<T | undefined> {

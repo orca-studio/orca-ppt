@@ -241,3 +241,17 @@ describe('slideInfo', () => {
     expect(window.__orcaInspect.slideInfo()).toBeNull()
   })
 })
+
+it('uses the page canvas origin rather than a vertically centred section origin', () => {
+  window.Reveal = { getScale: () => 0.5, getIndices: () => ({ h: 0 }) }
+  mount('<div class="slides"><section><h2>Title</h2></section></div>')
+  stubRect(document.querySelector('.slides')!, { x: 100, y: 50, width: 960, height: 540 })
+  stubRect(document.querySelector('section')!, { x: 100, y: 250, width: 960, height: 140 })
+  stubRect(document.querySelector('h2')!, { x: 150, y: 270, width: 200, height: 40 })
+  expect(window.__orcaInspect.anchorFor(document.querySelector('h2')!).box).toEqual({
+    x: 100,
+    y: 440,
+    w: 400,
+    h: 80,
+  })
+})

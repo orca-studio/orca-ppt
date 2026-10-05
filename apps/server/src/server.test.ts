@@ -508,3 +508,329 @@ it('跟踪保留目标标识且不导航或取得控制权', async () => {
   expect((await call('deck.current', {})).data).toEqual(before.data)
   expect((await call('control.state', {})).data).toHaveProperty('holder', 'none')
 })
+
+const canvasEvidence = (revision: string, overrides: Record<string, unknown> = {}) => ({
+  renderedRevision: revision,
+  slide: 0,
+  ready: true,
+  width: 1920,
+  height: 1080,
+  autoplay: false,
+  selection: null,
+  elements: [],
+  elementsTruncated: false,
+  html: null,
+  htmlLength: 0,
+  htmlTruncated: false,
+  errors: [],
+  ...overrides,
+})
+
+function respondToCanvas(reply: (request: any) => Promise<unknown>) {
+  const listener = (raw: Buffer) => {
+    const message = JSON.parse(raw.toString())
+    if (message.channel === 'canvas.request') void reply(message.data)
+  }
+  socket.on('message', listener)
+  return () => socket.off('message', listener)
+}
+
+describe('shared canvas protocol', () => {
+  it('returns live evidence with content/render identity and does not consume opinions', async () => {
+    const { id } = await builtDeck()
+    const revision = (await call('deck.inspect', { deckId: id })).data.revision
+    await call('requests.add', {
+      deckId: id,
+      kind: 'anchor',
+      anchor: { kind: 'transition', from: 0, to: 1, note: 'Review' },
+    })
+    const stop = respondToCanvas(async (request) => {
+      expect(request).toMatchObject({ deckId: id, action: 'inspect', include: 'elements' })
+      return call('canvas.result', {
+        requestId: request.requestId,
+        evidence: canvasEvidence(revision),
+      })
+    })
+    const result = await call('canvas.inspect', {
+      deckId: id,
+      include: 'elements',
+      expectedRevision: revision,
+    })
+    stop()
+    expect(result).toMatchObject({
+      ok: true,
+      data: { deckId: id, revision, renderedRevision: revision, current: true },
+    })
+    expect((await call('requests.list', { deckId: id })).data.requests).toHaveLength(1)
+  })
+  it('reports stale rendered context and rejects it when a specific version is required', async () => {
+    const { id } = await builtDeck()
+    const revision = (await call('deck.inspect', { deckId: id })).data.revision
+    const stop = respondToCanvas((request) =>
+      call('canvas.result', { requestId: request.requestId, evidence: canvasEvidence('old') }),
+    )
+    expect((await call('canvas.inspect', { deckId: id })).data.current).toBe(false)
+    const result = await call('canvas.inspect', { deckId: id, expectedRevision: revision })
+    stop()
+    expect(result).toMatchObject({ ok: false })
+    expect(result.error.message).toContain('RENDER_NOT_READY')
+  })
+  it('rejects a stale content version without sending a guest request', async () => {
+    const { id } = await builtDeck()
+    const result = await call('canvas.select', {
+      deckId: id,
+      selector: 'h2',
+      slide: 0,
+      expectedRevision: 'old',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.error.message).toContain('STALE_REVISION')
+    expect(pushes.some((p) => p.channel === 'canvas.request')).toBe(false)
+  })
+  it('rejects a deck switch during an outstanding inspection', async () => {
+    const { id } = await builtDeck()
+    const stop = respondToCanvas(async (request) => {
+      await builtDeck('<div class="slides"><section>Other</section></div>')
+      return call('canvas.result', {
+        requestId: request.requestId,
+        evidence: canvasEvidence('old'),
+      })
+    })
+    const result = await call('canvas.inspect', { deckId: id })
+    stop()
+    expect(result.error.message).toContain('DOCUMENT_CHANGED')
+  })
+  it('validates guest evidence and forwards guest failure without hanging', async () => {
+    const { id } = await builtDeck()
+    const stop = respondToCanvas(async (request) => {
+      const invalid = await call('canvas.result', {
+        requestId: request.requestId,
+        evidence: { ready: true },
+      })
+      expect(invalid.ok).toBe(false)
+      return call('canvas.result', { requestId: request.requestId, error: 'RENDER_NOT_READY' })
+    })
+    const result = await call('canvas.inspect', { deckId: id })
+    stop()
+    expect(result.error.message).toBe('RENDER_NOT_READY')
+  })
+  it('returns selection evidence and refuses user selection while agent holds control', async () => {
+    const { id } = await builtDeck()
+    const revision = (await call('deck.inspect', { deckId: id })).data.revision
+    const selection = {
+      selector: 'h2',
+      tag: 'h2',
+      text: 'Title',
+      box: { x: 0, y: 0, w: 100, h: 30 },
+      visible: true,
+      source: null,
+    }
+    const stop = respondToCanvas((request) =>
+      call('canvas.result', {
+        requestId: request.requestId,
+        evidence: canvasEvidence(revision, { selection }),
+      }),
+    )
+    expect(
+      (
+        await call('canvas.select', {
+          deckId: id,
+          selector: 'h2',
+          slide: 0,
+          expectedRevision: revision,
+        })
+      ).data.selection,
+    ).toEqual(selection)
+    stop()
+    await call('control.take', { reason: 'Editing' })
+    const blocked = await call('canvas.select', {
+      deckId: id,
+      selector: null,
+      slide: 0,
+      expectedRevision: revision,
+    })
+    expect(blocked.ok).toBe(false)
+  })
+})
+
+describe('version-bound canvas capture', () => {
+  function replyToCapture(reply: (request: any) => Promise<unknown>) {
+    const listener = (raw: Buffer) => {
+      const message = JSON.parse(raw.toString())
+      if (message.channel === 'capture.request') void reply(message.data)
+    }
+    socket.on('message', listener)
+    return () => socket.off('message', listener)
+  }
+  it('returns the actual page and version and rejects a mismatched rendered version', async () => {
+    const { id } = await builtDeck()
+    const revision = (await call('deck.inspect', { deckId: id })).data.revision
+    let renderedRevision = revision
+    const stop = replyToCapture((request) =>
+      call('capture.result', {
+        requestId: request.requestId,
+        path: '/tmp/canvas-evidence.png',
+        slide: 0,
+        renderedRevision,
+      }),
+    )
+    const result = await call('deck.capture', { deckId: id, slide: 0, expectedRevision: revision })
+    expect(result).toMatchObject({
+      ok: true,
+      data: { deckId: id, slide: 0, renderedRevision: revision, path: '/tmp/canvas-evidence.png' },
+    })
+    renderedRevision = 'old'
+    expect(
+      (await call('deck.capture', { deckId: id, expectedRevision: revision })).error.message,
+    ).toContain('STALE_REVISION')
+    stop()
+  })
+  it('refuses evidence for another page', async () => {
+    const { id } = await builtDeck()
+    const stop = replyToCapture((request) =>
+      call('capture.result', {
+        requestId: request.requestId,
+        path: '/tmp/canvas-evidence.png',
+        slide: 1,
+      }),
+    )
+    const result = await call('deck.capture', { deckId: id, slide: 0 })
+    stop()
+    expect(result.error.message).toContain('SLIDE_CHANGED')
+  })
+})
+
+describe('shared page and image edits', () => {
+  const html =
+    '<!-- 转场计划\n1→2 关系：一到二\n2→3 关系：二到三\n--><div class="slides"><section><h2>A</h2></section><section><h2>B</h2></section><section><img id="photo" src="assets/a.png"></section></div><script>const marker = "<section>"</script>'
+  const revisionOf = async (id: string) =>
+    (await call('deck.inspect', { deckId: id })).data.revision
+  it('moves pages, syncs metadata, and undoes/redoes all files byte exactly', async () => {
+    const { dir, id } = await builtDeck(html)
+    await mkdir(join(dir, '.deck'))
+    const outline = JSON.stringify({
+      slides: ['A', 'B', 'C'].map((subject, index) => ({
+        index,
+        subject,
+        layout: 'cover',
+        points: [],
+        layoutReason: 'explicit',
+      })),
+      extra: 'keep',
+    })
+    const plan = JSON.stringify({
+      transitions: [0, 1].map((from) => ({
+        from,
+        to: from + 1,
+        relation: 'next',
+        technique: 'shared-element',
+      })),
+    })
+    await writeFile(join(dir, '.deck/outline.json'), outline)
+    await writeFile(join(dir, '.deck/plan.json'), plan)
+    const result = await call('deck.editPages', {
+      deckId: id,
+      expectedRevision: await revisionOf(id),
+      change: { action: 'move', index: 0, to: 2 },
+    })
+    expect(result.data.ok).toBe(true)
+    expect(
+      JSON.parse(await readFile(join(dir, '.deck/outline.json'), 'utf8')).slides.map(
+        (s: any) => s.subject,
+      ),
+    ).toEqual(['B', 'C', 'A'])
+    expect(JSON.parse(await readFile(join(dir, '.deck/plan.json'), 'utf8')).transitions).toEqual([
+      { from: 0, to: 1, relation: 'next', technique: 'shared-element' },
+    ])
+    const changed = await readFile(join(dir, 'deck.html'), 'utf8')
+    expect((await call('deck.undo', { deckId: id })).data.ok).toBe(true)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(html)
+    expect(await readFile(join(dir, '.deck/outline.json'), 'utf8')).toBe(outline)
+    expect(await readFile(join(dir, '.deck/plan.json'), 'utf8')).toBe(plan)
+    expect((await call('deck.redo', { deckId: id })).data.ok).toBe(true)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(changed)
+  })
+  it('serializes concurrent edits, refusing the second stale revision', async () => {
+    const { dir, id } = await builtDeck(html)
+    const revision = await revisionOf(id)
+    const results = await Promise.all(
+      [1, 2].map((index) =>
+        call('deck.editPages', {
+          deckId: id,
+          expectedRevision: revision,
+          change: { action: 'delete', index },
+        }),
+      ),
+    )
+    expect(results.map((r) => r.data.ok).sort()).toEqual([false, true])
+    expect(results.find((r) => !r.data.ok)?.data.reason).toContain('STALE_REVISION')
+    expect((await readFile(join(dir, 'deck.html'), 'utf8')).match(/<section>/g)).toHaveLength(3) // includes the untouched script marker
+    await call('deck.undo', { deckId: id })
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(html)
+  })
+  it('inserts/deletes a page and refuses structural undo after an external change', async () => {
+    const { dir, id } = await builtDeck(html)
+    const insert = await call('deck.editPages', {
+      deckId: id,
+      expectedRevision: await revisionOf(id),
+      change: { action: 'insert', index: 3, title: '<new>' },
+    })
+    expect(insert.data.ok).toBe(true)
+    expect((await call('deck.inspect', { deckId: id })).data.slides).toHaveLength(4)
+    const remove = await call('deck.editPages', {
+      deckId: id,
+      expectedRevision: insert.data.revision,
+      change: { action: 'delete', index: 3 },
+    })
+    expect(remove.data.ok).toBe(true)
+    expect((await call('deck.undo', { deckId: id })).data).toMatchObject({ ok: true, slide: 3 })
+    expect((await call('deck.redo', { deckId: id })).data.ok).toBe(true)
+    const external = (await readFile(join(dir, 'deck.html'), 'utf8')) + '<!-- external -->'
+    await writeFile(join(dir, 'deck.html'), external)
+    expect((await call('deck.undo', { deckId: id })).data.ok).toBe(false)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(external)
+    expect((await call('deck.history', { deckId: id })).data.canUndo).toBe(true)
+  })
+  it('replaces a packaged image, preserves attributes and shares undo', async () => {
+    const { dir, id } = await builtDeck(html)
+    await mkdir(join(dir, 'assets'))
+    await writeFile(join(dir, 'assets/b.png'), 'fixture')
+    const result = await call('deck.replaceImage', {
+      deckId: id,
+      slide: 2,
+      selector: '#photo',
+      oldSource: 'assets/a.png',
+      source: 'assets/b.png',
+      expectedRevision: await revisionOf(id),
+    })
+    expect(result.data.ok).toBe(true)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(
+      html.replace('assets/a.png', 'assets/b.png'),
+    )
+    expect((await call('deck.undo', { deckId: id })).data.ok).toBe(true)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(html)
+    const refused = await call('deck.replaceImage', {
+      deckId: id,
+      slide: 2,
+      selector: '#photo',
+      oldSource: 'assets/a.png',
+      source: '../outside.png',
+      expectedRevision: await revisionOf(id),
+    })
+    expect(refused.data.ok).toBe(false)
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).toBe(html)
+  })
+  it('blocks human page edits while agent holds control', async () => {
+    const { id } = await builtDeck(html)
+    await call('control.take', { reason: 'working' })
+    expect(
+      (
+        await call('deck.editPages', {
+          deckId: id,
+          expectedRevision: await revisionOf(id),
+          change: { action: 'delete', index: 1 },
+        })
+      ).data.ok,
+    ).toBe(false)
+  })
+})

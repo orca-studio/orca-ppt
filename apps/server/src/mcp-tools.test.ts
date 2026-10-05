@@ -304,3 +304,84 @@ it('publishes readable labels without changing the edit_text protocol', () => {
   expect(fields.new_text).toMatchObject({ title: '替换为' })
   expect(input.parse({ slide: 0, old_text: 'before', new_text: 'after' }).slide).toBe(0)
 })
+
+describe('canvas MCP surface', () => {
+  it('uses the shared inspection protocol for each observation and preserves version guards', async () => {
+    const { client, calls } = fakeClient({
+      'deck.current': { deckId: '/d' },
+      'canvas.inspect': { revision: 'r1', current: true },
+    })
+    const { map } = toolsOf(client)
+    for (const [tool, include] of [
+      ['get_canvas_context', 'context'],
+      ['get_canvas_elements', 'elements'],
+      ['get_canvas_html', 'html'],
+      ['get_canvas_errors', 'errors'],
+    ]) {
+      await map.get(tool!)!.run({ expected_revision: 'r1' })
+      expect(calls).toContainEqual([
+        'canvas.inspect',
+        { deckId: '/d', include, expectedRevision: 'r1' },
+      ])
+      expect(map.get(tool!)!.config.annotations.readOnlyHint).toBe(true)
+    }
+    expect(calls.some(([method]) => method === 'requests.take')).toBe(false)
+  })
+  it('selects and clears using the same revision-bound protocol', async () => {
+    const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
+    const { map } = toolsOf(client)
+    await map
+      .get('select_canvas_element')!
+      .run({ selector: '#title', slide: 2, expected_revision: 'r1' })
+    await map
+      .get('select_canvas_element')!
+      .run({ selector: null, slide: 2, expected_revision: 'r1' })
+    expect(calls).toContainEqual([
+      'canvas.select',
+      { deckId: '/d', selector: '#title', slide: 2, expectedRevision: 'r1' },
+    ])
+    expect(calls).toContainEqual([
+      'canvas.select',
+      { deckId: '/d', selector: null, slide: 2, expectedRevision: 'r1' },
+    ])
+  })
+})
+
+describe('shared page and image tools', () => {
+  it('uses the shared protocol with revision and propagates stale refusal', async () => {
+    const { client, calls } = fakeClient({
+      'deck.list': { decks: [{ id: '/d', path: '/d' }] },
+      'deck.editPages': { ok: true, revision: 'next', slide: 2 },
+      'deck.replaceImage': { ok: false, reason: 'STALE_REVISION: changed' },
+    })
+    const { map } = toolsOf(client)
+    expect(
+      (
+        await map
+          .get('edit_pages')!
+          .run({ action: 'move', index: 0, to: 2, expected_revision: 'before' })
+      ).isError,
+    ).toBeUndefined()
+    expect(calls).toContainEqual([
+      'deck.editPages',
+      {
+        deckId: '/d',
+        expectedRevision: 'before',
+        change: { action: 'move', index: 0, to: 2 },
+      },
+    ])
+    const refused = await map.get('replace_image')!.run({
+      slide: 2,
+      selector: '#photo',
+      old_source: 'a.png',
+      source_path: 'assets/b.png',
+      expected_revision: 'before',
+    })
+    expect(refused.isError).toBe(true)
+    expect(textOf(refused)).toContain('STALE_REVISION')
+    expect(
+      (await map.get('edit_pages')!.run({ action: 'move', index: 0, expected_revision: 'before' }))
+        .isError,
+    ).toBe(true)
+  })
+})

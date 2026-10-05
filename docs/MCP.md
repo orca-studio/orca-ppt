@@ -56,6 +56,27 @@ MCP server 自己**不拥有任何状态**,全部转给本地 server —— 也�
 看不出一页挤不挤、转场对不对得上。有了它,agent 改完能**自己看一眼**,而不是闭着眼改、
 等人来描述。这也是只有「应用开着」才做得到的事,正是我们存在的理由。
 
+## 当前画布检视
+
+| 工具                    | 用途                                                       |
+| ----------------------- | ---------------------------------------------------------- |
+| `get_canvas_context`    | 当前页、实时选区、加载/播放状态、内容与渲染版本            |
+| `get_canvas_elements`   | 当前页元素、页内选择器、设计坐标几何与可见性               |
+| `get_canvas_html`       | 当前页运行时 DOM，最多 100000 字符，不含 Canvas/WebGL 像素 |
+| `get_canvas_errors`     | 当前画布捕获到的加载、脚本、资源和 Promise 错误            |
+| `select_canvas_element` | 按选择器、页号和版本选择/取消选择，并持续高亮              |
+
+右栏「页」中的「选择画布元素 / 取消选择」走相同的 `canvas.select` 协议。
+实时选区与 `user_selection` / `peek_selection` 的意见队列独立，读取现场不会清空意见。
+元素选择器只在返回的页号与版本范围内有效，换页或重载后重新读取。
+
+读取工具可传 `expected_revision` 等待画布加载指定版本；内容已变化则返回 `STALE_REVISION`，
+加载超时返回 `RENDER_NOT_READY`。不传时检查 `current`，false 表示当前画面未确认最新内容。
+`capture_slide` 可传同一参数，返回的文字附带实际 `deckId`、`slide` 和 `renderedRevision`，图片仍内联。
+推荐流程：`deck_status` 取得改后版本 → `get_canvas_context(expected_revision)` → `capture_slide(expected_revision)`。
+
+详细边界与后续计划见 [画布检视实施计划](./CANVAS-INSPECTION.md)。
+
 ## agent 做的事要看得见
 
 **agent 是代替人执行的,那它做的事就该和人做的一样看得见。** 画布自己翻了页、文字自己
@@ -155,3 +176,11 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 show_slide、edit_text、undo、redo 声明 dev.jevbot/ui 操作目标。visual_target 是宿主定位接口，走共享 visual.prepare 协议往返到 renderer，返回 macOS 屏幕点坐标及测量时间。prepare 阶段可先定位目标页，不修改文档；completed / failed 阶段呈现结果。缺失或歧义目标返回无 rect，宿主跳过鼠标提示。
 
 control_state 返回控制权且不续期、不取得控制权，供宿主决定何时收起光标。实际鼠标由 Jevbot 绘制，应用不模拟系统输入。
+
+## 基础编辑
+
+`edit_pages` 对应右侧「页」栏的添加空白页、删除、前移和后移。`index` / `to` 从 0 开始，移动目标是最终位置；添加可用 `index = slideCount` 追加。必须传 `deck_status` 的 `expected_revision`。同步现有 brief 页数、大纲及仍相邻的转场；新增页的大纲版式和理由留空，等 Agent 补充。嵌套 section、标签缺失和页序不同步的大纲会拒绝修改。
+
+`replace_image` 对应选中图片后的路径输入框。传画布检视返回的 `slide`、简单 id/data-anchor 选择器、`old_source`、`expected_revision`；`source_path` 是稿子目录内已有图片的相对文件路径。保留尺寸、样式和转场属性。暂不导入外部资源，不支持 srcset、picture、延迟加载、base 地址或运行时生成的路径选择器。
+
+两种操作与改字共用 `undo` / `redo` 和操作记录。结构及图片编辑要求 HTML 和关联元数据仍匹配才可撤销；有外部修改会拒绝。共享编辑按稿子串行执行，旧版本的并发请求会拒绝。写入先准备临时文件，再校验输入和替换；失败尝试还原已经写入且仍匹配的文件。这不是进程崩溃情况下的多文件原子事务。历史仍只在当前 server 进程内保存。

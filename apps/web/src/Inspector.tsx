@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { DeckPhase, TransitionNote } from '@orca-ppt/contracts'
+import type { CanvasElement, DeckPhase, TransitionNote, RequestParams } from '@orca-ppt/contracts'
 import { PhaseRail, type PhaseRow } from './PhaseRail.js'
 import type { SlideInfo } from './Stage.js'
 import { Button } from './ui/Button.js'
@@ -29,6 +29,12 @@ const SCOPES: Array<{ key: Scope; label: string }> = [
 ]
 
 export interface InspectorProps {
+  locked: boolean
+  onEditPages: (change: RequestParams<'deck.editPages'>['change']) => Promise<void>
+  onReplaceImage: (source: string) => Promise<void>
+  selection: CanvasElement | null
+  onSelect: () => void
+  onClearSelection: () => void
   slide: number
   slideCount: number
   title: string
@@ -81,9 +87,18 @@ const CARRY_LABEL: Record<string, string> = {
   'data-zoom': '放大锚点',
 }
 
-function SlideScope({ title, pageType, info }: InspectorProps) {
+function SlideScope(props: InspectorProps) {
+  const { title, pageType, info, selection, onSelect, onClearSelection } = props
   return (
     <>
+      <PageActions {...props} />
+      <h3>选中的元素</h3>
+      <p>{selection ? selection.text || selection.tag : '尚未选择元素。'}</p>
+      <div className="inspector-actions">
+        <Button onClick={onSelect}>选择画布元素</Button>
+        {selection && <Button onClick={onClearSelection}>取消选择</Button>}
+      </div>
+      {selection?.tag === 'img' && <ImageAction {...props} />}
       <Row label="标题" value={title} />
       {/* 没标就说没标 —— 别推一个出来:标错会同时误导校验、agent 和转场规划。 */}
       <Row label="类型" value={pageType ?? '没标'} hint={pageType ? undefined : 'data-page'} />
@@ -115,6 +130,85 @@ function SlideScope({ title, pageType, info }: InspectorProps) {
         </ul>
       )}
     </>
+  )
+}
+
+function PageActions({ slide, slideCount, locked, onEditPages }: InspectorProps) {
+  const [busy, setBusy] = useState(false)
+  const [title, setTitle] = useState('新页面')
+  const run = async (change: RequestParams<'deck.editPages'>['change']) => {
+    setBusy(true)
+    try {
+      await onEditPages(change)
+    } finally {
+      setBusy(false)
+    }
+  }
+  const disabled = locked || busy
+  return (
+    <fieldset className="page-actions" disabled={disabled}>
+      <legend>页面操作</legend>
+      <div className="inspector-actions">
+        <Button
+          disabled={disabled || slide === 0}
+          onClick={() => void run({ action: 'move', index: slide, to: slide - 1 })}
+        >
+          前移
+        </Button>
+        <Button
+          disabled={disabled || slide >= slideCount - 1}
+          onClick={() => void run({ action: 'move', index: slide, to: slide + 1 })}
+        >
+          后移
+        </Button>
+        <Button
+          disabled={disabled || slideCount <= 1}
+          onClick={() => void run({ action: 'delete', index: slide })}
+        >
+          删除本页
+        </Button>
+      </div>
+      <label>
+        新页面标题
+        <input maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} />
+      </label>
+      <Button
+        disabled={disabled || !title.trim()}
+        onClick={() => void run({ action: 'insert', index: slide + 1, title })}
+      >
+        在本页后添加空白页
+      </Button>
+      <p className="muted">添加和移动后，请检查新相邻页面的转场。所有操作可撤销。</p>
+    </fieldset>
+  )
+}
+
+function ImageAction({ locked, onReplaceImage }: InspectorProps) {
+  const [source, setSource] = useState('')
+  const [busy, setBusy] = useState(false)
+  return (
+    <form
+      className="page-actions"
+      onSubmit={(event) => {
+        event.preventDefault()
+        setBusy(true)
+        void onReplaceImage(source.trim()).finally(() => setBusy(false))
+      }}
+    >
+      <label>
+        图片路径
+        <input
+          placeholder="assets/photo.png"
+          value={source}
+          onChange={(event) => setSource(event.target.value)}
+          disabled={locked || busy}
+        />
+      </label>
+      <p className="muted">填写稿子目录内已有图片的相对路径。图片须有 id 或 data-anchor。</p>
+      <Button type="submit" disabled={locked || busy || !source.trim()}>
+        替换选中的图片
+      </Button>
+    </form>
   )
 }
 

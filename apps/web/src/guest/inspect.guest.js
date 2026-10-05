@@ -33,10 +33,16 @@
    * 选择器(`html > body:nth-child(2) > div > …`),对 agent 定位毫无帮助。
    */
   function selectorFor(element, stopAt) {
-    if (element.id) return '#' + element.id
+    const escape = (value) =>
+      window.CSS?.escape
+        ? window.CSS.escape(value)
+        : Array.from(value, (c) =>
+            /[a-zA-Z_-]/.test(c) ? c : '\\' + c.codePointAt(0).toString(16) + ' ',
+          ).join('')
+    if (element.id) return '#' + escape(element.id)
 
     const anchor = element.getAttribute('data-anchor')
-    if (anchor) return '[data-anchor="' + anchor + '"]'
+    if (anchor) return '[data-anchor="' + escape(anchor) + '"]'
 
     const parent = element.parentElement
     if (!parent || element === stopAt) return element.tagName.toLowerCase()
@@ -63,14 +69,15 @@
   function anchorFor(element) {
     const rect = element.getBoundingClientRect()
     const factor = scale()
+    const origin = slideRootOf(element)?.parentElement?.getBoundingClientRect()
     const text = (element.textContent || '').trim()
 
     const anchor = {
       slide: currentSlide(),
       selector: selectorFor(element, slideRootOf(element)),
       box: {
-        x: Math.round(rect.x / factor),
-        y: Math.round(rect.y / factor),
+        x: Math.round((rect.x - (origin?.x ?? 0)) / factor),
+        y: Math.round((rect.y - (origin?.y ?? 0)) / factor),
         w: Math.round(rect.width / factor),
         h: Math.round(rect.height / factor),
       },

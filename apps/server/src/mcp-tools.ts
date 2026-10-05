@@ -136,7 +136,80 @@ const nth = (slides: number[]) =>
   slides[0] === undefined ? '当前这一页' : `第 ${slides[0] + 1} 页`
 
 export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[] {
+  const canvasReads: ToolSpec[] = [
+    [
+      'get_canvas_context',
+      '读取当前画布和选区',
+      'context',
+      '当前画布的页号、内容版本、已渲染版本、加载和播放状态、实时选区。读取不消费用户意见。current 为 false 时不能把它当成最新画面。',
+    ],
+    [
+      'get_canvas_elements',
+      '列出当前页元素',
+      'elements',
+      '当前页元素的页内选择器、文字、设计坐标几何、可见性和资源地址。最多 500 个，elementsTruncated 表示截断。选择器必须与页号和版本一起使用。',
+    ],
+    [
+      'get_canvas_html',
+      '读取当前页运行时 HTML',
+      'html',
+      '当前页运行时 DOM，不含应用界面和检视覆盖层。最多 100000 字符，htmlTruncated 表示截断；不含 Canvas/WebGL 像素。',
+    ],
+    [
+      'get_canvas_errors',
+      '读取当前画布错误',
+      'errors',
+      '当前加载中的画布错误：加载失败、脚本错误、资源失败和未处理 Promise。空列表仅表示未捕获到错误。',
+    ],
+  ].map(([name, title, include, description]) => ({
+    name: name!,
+    config: {
+      title: title!,
+      description: description!,
+      annotations: looking,
+      inputSchema: {
+        expected_revision: z
+          .string()
+          .optional()
+          .describe('要求画布显示这一版本，未加载时最多等待 10 秒；内容已变化则拒绝。'),
+      },
+    },
+    run: async (args) =>
+      json(
+        await call('canvas.inspect', {
+          deckId: await active.get(call),
+          include: include as 'context' | 'elements' | 'html' | 'errors',
+          ...(typeof args.expected_revision === 'string'
+            ? { expectedRevision: args.expected_revision }
+            : {}),
+        }),
+      ),
+  }))
   return [
+    ...canvasReads,
+    {
+      name: 'select_canvas_element',
+      config: {
+        title: '选择或取消选择画布元素',
+        annotations: looking,
+        description:
+          '在用户当前页选择并持续高亮一个元素。selector 为 null 时取消选择。使用 get_canvas_elements 的页内选择器、slide 和 revision；目标版本或页已变时拒绝，不改稿子，不消费意见队列。',
+        inputSchema: {
+          selector: z.string().min(1).max(2000).nullable(),
+          slide: z.number().int().nonnegative(),
+          expected_revision: z.string(),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('canvas.select', {
+            deckId: await active.get(call),
+            selector: args.selector as string | null,
+            slide: Number(args.slide),
+            expectedRevision: String(args.expected_revision),
+          }),
+        ),
+    },
     {
       name: 'list_skill',
       config: {
@@ -376,6 +449,87 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'edit_pages',
+      activity: (args) => ({
+        kind: 'write',
+        label: '修改页面顺序',
+        slides: slideArg(args, 'index'),
+      }),
+      config: {
+        title: '添加、删除或移动页面',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: false,
+          openWorldHint: false,
+        },
+        description:
+          '与页面侧栏共用编辑操作。insert 在 index 前添加标题空白页（可等于页数）；delete 删除；move 将 index 移到最终位置 to。页号从 0 开始，expected_revision 来自 deck_status。同步大纲和仍然相邻的转场，所有操作可 undo。嵌套页面和不同步的大纲会拒绝。',
+        inputSchema: {
+          action: z.enum(['insert', 'delete', 'move']),
+          index: z.number().int().nonnegative(),
+          to: z.number().int().nonnegative().optional(),
+          title: z.string().trim().min(1).max(200).optional(),
+          expected_revision: z.string(),
+        },
+      },
+      run: async (args) => {
+        const index = Number(args.index)
+        let change: RequestParams<'deck.editPages'>['change']
+        if (args.action === 'insert') {
+          if (typeof args.title !== 'string' || !args.title.trim())
+            return refuse('添加页面需要 title')
+          change = { action: 'insert', index, title: args.title }
+        } else if (args.action === 'move') {
+          if (typeof args.to !== 'number') return refuse('移动页面需要 to')
+          change = { action: 'move', index, to: args.to }
+        } else change = { action: 'delete', index }
+        const result = await call('deck.editPages', {
+          deckId: await active.get(call),
+          expectedRevision: String(args.expected_revision),
+          change,
+        })
+        return result.ok ? json(result) : refuse(tag('没改:', result.reason))
+      },
+    },
+    {
+      name: 'replace_image',
+      activity: (args) => ({
+        kind: 'write',
+        label: `替换${nth(slideArg(args))}的图片`,
+        slides: slideArg(args),
+      }),
+      config: {
+        title: '替换页面图片',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+        description:
+          '替换源文件 img 的 src，保留尺寸、样式和转场标记。使用 get_canvas_elements 的 slide、简单 id/data-anchor 选择器、source 和 revision。source_path 是 deck 内已有图片的相对文件路径；不导入外部文件。拒绝过期目标、srcset、运行时路径选择器；可 undo。',
+        inputSchema: {
+          slide: z.number().int().nonnegative(),
+          selector: z.string().min(1).max(2000),
+          old_source: z.string(),
+          source_path: z.string().min(1).max(2000),
+          expected_revision: z.string(),
+        },
+      },
+      run: async (args) => {
+        const result = await call('deck.replaceImage', {
+          deckId: await active.get(call),
+          slide: Number(args.slide),
+          selector: String(args.selector),
+          oldSource: String(args.old_source),
+          source: String(args.source_path),
+          expectedRevision: String(args.expected_revision),
+        })
+        return result.ok ? json(result) : refuse(tag('没改:', result.reason))
+      },
+    },
+    {
       name: 'edit_text',
       activity: (args) => {
         const slides = slideArg(args)
@@ -555,10 +709,10 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'undo',
-      activity: () => ({ kind: 'write', label: '撤销上一处改字', slides: [] }),
+      activity: () => ({ kind: 'write', label: '撤销上一处改动', slides: [] }),
       config: {
         _meta: { 'dev.jevbot/ui': { version: 1, label: '撤销', role: 'AXButton' } },
-        title: '撤销上一处改字',
+        title: '撤销上一处改动',
         // 会改稿子,但不丢东西:撤掉的那一步 redo 能拿回来。
         annotations: {
           readOnlyHint: false,
@@ -567,11 +721,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           openWorldHint: false,
         },
         description:
-          '撤掉最近一次改字 —— 不管是 edit_text 改的,还是用户在画布上双击改的,和界面上的撤销按钮是同一件事。只管改字:你直接写 HTML 的改动不在这里面。没有可撤的、或者那段字在那之后被改得对不上了,它会拒绝并说明。',
+          '撤销最近一次共享操作：改字、页面编辑或图片替换，和 UI 的撤销按钮共用历史。直接写文件的修改不在历史中；结构或图片修改后的文件被外部修改时拒绝撤销，改字可尝试只还原原文。',
       },
       run: async () => {
         const result = await call('deck.undo', { deckId: await active.get(call) })
         if (!result.ok) return refuse(tag('没撤:', result.reason))
+        if (result.text === undefined) return json(result)
         return text(
           `撤销了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
         )
@@ -579,21 +734,23 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'redo',
-      activity: () => ({ kind: 'write', label: '重做刚撤掉的改字', slides: [] }),
+      activity: () => ({ kind: 'write', label: '重做刚撤掉的改动', slides: [] }),
       config: {
         _meta: { 'dev.jevbot/ui': { version: 1, label: '重做', role: 'AXButton' } },
-        title: '重做刚撤掉的改字',
+        title: '重做刚撤掉的改动',
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
           idempotentHint: false,
           openWorldHint: false,
         },
-        description: '把刚撤掉的那处改字重做回来。撤销之后又改过字,就没有可重做的了。',
+        description:
+          '重做刚撤销的共享操作。撤销之后有新的共享编辑会清空重做记录；文件不再匹配时拒绝，不覆盖外部改动。',
       },
       run: async () => {
         const result = await call('deck.redo', { deckId: await active.get(call) })
         if (!result.ok) return refuse(tag('没重做:', result.reason))
+        if (result.text === undefined) return json(result)
         return text(
           `重做了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
         )
@@ -758,6 +915,10 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '把放映画布上的某一页截下来,图直接附在结果里,另给磁盘路径。**改完一定要看一眼** —— 稿子好不好只有放映能回答,光读 HTML 看不出挤不挤、对不对得上。不给页号就截当前这一页。',
         inputSchema: {
+          expected_revision: z
+            .string()
+            .optional()
+            .describe('从 deck_status 取得的目标版本；要求截图显示该版本。'),
           slide: z
             .number()
             .int()
@@ -777,6 +938,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         const shot = await call('deck.capture', {
           deckId,
           ...(args.slide === undefined ? {} : { slide: Number(args.slide) }),
+          ...(typeof args.expected_revision === 'string'
+            ? { expectedRevision: args.expected_revision }
+            : {}),
         })
         // 图直接给,不只给路径:不是每个宿主都让 agent 读任意文件,而且多读一趟也白费。
         // 读不到就退回只给路径 —— 截图本身是成功的。
@@ -786,7 +950,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         } catch {
           data = undefined
         }
-        const note = text(`截好了:${shot.path}`)
+        const note = text(
+          `截好了:${shot.path}` +
+            (shot.renderedRevision
+              ? `\n${JSON.stringify({ deckId: shot.deckId, slide: shot.slide, renderedRevision: shot.renderedRevision })}`
+              : ''),
+        )
         if (!data) return note
         return { content: [...note.content, { type: 'image', data, mimeType: 'image/png' }] }
       },

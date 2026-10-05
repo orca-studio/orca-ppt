@@ -90,7 +90,7 @@ export function Toolbar({
           onClick={onUndo}
           disabled={!history.canUndo || locked}
           title={
-            locked ? LOCKED_TITLE : history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改字'
+            locked ? LOCKED_TITLE : history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改动'
           }
           aria-label="撤销"
         >
@@ -106,7 +106,7 @@ export function Toolbar({
               ? LOCKED_TITLE
               : history.redo
                 ? `重做:${history.redo}(⇧⌘Z)`
-                : '没有可以重做的改字'
+                : '没有可以重做的改动'
           }
           aria-label="重做"
         >

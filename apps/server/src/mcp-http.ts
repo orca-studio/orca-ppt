@@ -63,6 +63,8 @@ const INSTRUCTIONS = [
     '返回 USER_STOPPED,说明用户停止了这件事:结束这一轮,不要继续。',
   '改字:先调 deck_status 读每页的原文,edit_text 的 old_text 从那里照抄 —— 画布上的字可能被 CSS 改过大小写,' +
     '照屏幕抄会对不上。改完用 capture_slide 看一眼;改错了用 undo。',
+  '页面和图片编辑: edit_pages / replace_image 与 UI 共用操作和撤销，必须使用 deck_status 的 expected_revision；改后检查新相邻转场。replace_image 只替换 deck 内已有资源引用。',
+  '画布检视: get_canvas_context 读取当前页和实时选区，不消费用户意见；get_canvas_elements/get_canvas_html/get_canvas_errors 查看当前画面。选择元素时使用返回的 slide、revision 和页内选择器。改后用 expected_revision 等待 get_canvas_context/capture_slide 确认目标版本；current 为 false 不能当作最新画面。',
   '做新稿子:按阶段走 phase_prompt(定题 → 选主题 → 列页面 → 写转场 → 出稿)。上游产物不合格时它会拒绝并说明哪一条,' +
     '改好上游再往下走,不要跳过;check_phase 可以随时跑一遍校验。',
 ].join('\n')

@@ -1,15 +1,21 @@
+import { editPages, replaceImage } from './page-edit.js'
+import { pageMetadata } from './page-metadata.js'
+import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
 import { listSkill, readSkill } from './skill-content.js'
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { basename, join } from 'node:path'
+import { basename, join, relative, isAbsolute, extname } from 'node:path'
 import {
+  CanvasEvidence,
+  requests,
   RequestEnvelope,
   type RequestParams,
   type RequestResult,
   artifactPath,
   type PushEnvelope,
+  type PushData,
   type RequestMethod,
   type ResponseEnvelope,
   parseParams,
@@ -138,13 +144,11 @@ export async function startServer(
     })
   }
 
-  /** 我们自己写稿子:写的这段时间里文件监听报的变化不算外面改的。 */
-  const writeOwn = async (deckId: string, file: string, html: string) => {
+  const writeChanges = async (deckId: string, changes: FileChanges) => {
     selfWriting.add(deckId)
     try {
-      await writeFile(file, html, 'utf8')
+      await writeEditFiles(deckPathOf(deckId), changes)
     } finally {
-      // 文件监听要攒 150ms 才报;报上来时版本号已经等于 lastSeen,会被认出是自己写的
       setTimeout(() => selfWriting.delete(deckId), 0)
     }
   }
@@ -156,30 +160,59 @@ export async function startServer(
     const root = deckPathOf(deckId)
     const name = await findEntryName(root)
     if (!name) return { ok: false, reason: AgentError.noBuild() }
-    const file = join(root, name)
     const history = historyOf(deckId)
     // 每次都重读磁盘:agent 可能刚写过,history 据此决定整份还回去还是只换那段字。
-    const current = await readFile(file, 'utf8')
-    const result = direction === 'undo' ? history.undo(current) : history.redo(current)
+    const current = await readEditFile(root, name)
+    if (current === null) return { ok: false, reason: AgentError.noBuild() }
+    const pending = history.peek(direction)
+    const files: Record<string, string | null> = {}
+    for (const path of Object.keys(pending?.files ?? {}))
+      files[path] = await readEditFile(root, path)
+    const result =
+      direction === 'undo'
+        ? history.undo(current, files, false)
+        : history.redo(current, files, false)
     if (!result.ok) return { ok: false, reason: result.reason }
-    if (result.html !== current) await writeOwn(deckId, file, result.html)
+    const changes: FileChanges = { [name]: { before: current, after: result.html } }
+    for (const [path, values] of Object.entries(result.step.files ?? {})) {
+      changes[path] = {
+        before: files[path]!,
+        after: direction === 'undo' ? values.before : values.after,
+      }
+    }
+    await writeChanges(deckId, changes)
+    history.commit(direction)
     announceHistory(deckId)
     const { step } = result
     const text = direction === 'undo' ? step.oldText : step.newText
     await recordChange(deckId, {
-      summary: `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
+      summary: step.label
+        ? `${direction === 'undo' ? '撤销' : '重做'}${step.label}`
+        : `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
       slide: step.slide,
     })
-    return { ok: true, slide: step.slide, text: direction === 'undo' ? step.oldText : step.newText }
+    if (step.label) await announceDeck(deckId, root)
+    return {
+      ok: true,
+      slide: direction === 'undo' ? (step.undoSlide ?? step.slide) : step.slide,
+      ...(step.label ? {} : { text }),
+    }
   }
 
   const visualTargets = new Roundtrip<
     RequestResult<'visual.prepare'>,
     Omit<RequestParams<'visual.prepare'>, 'deckId'>
   >((payload) => bus.broadcast('visual.request', payload), 2000)
-  const captures = new Roundtrip<string, { slide?: number }>((payload) =>
-    bus.broadcast('capture.request', payload),
-  )
+  type CanvasPush = PushData<'canvas.request'>
+  const canvases = new Roundtrip<
+    CanvasEvidence,
+    | Omit<Extract<CanvasPush, { action: 'inspect' }>, 'deckId' | 'requestId'>
+    | Omit<Extract<CanvasPush, { action: 'select' }>, 'deckId' | 'requestId'>
+  >((payload) => bus.broadcast('canvas.request', payload))
+  const captures = new Roundtrip<
+    RequestResult<'deck.capture'>,
+    { slide?: number; expectedRevision?: string }
+  >((payload) => bus.broadcast('capture.request', payload))
   // 一份稿子每页渲一张,比单张截图慢得多,给足时间。
   const thumbnails = new Roundtrip<
     Array<string | null>,
@@ -285,6 +318,7 @@ export async function startServer(
       if (bus.connectionCount === 0) {
         visualTargets.failAll(AgentError.uiDisconnected())
         captures.failAll(AgentError.uiDisconnected())
+        canvases.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
       }
     })
@@ -387,13 +421,77 @@ export async function startServer(
     }
   }
 
+  const editTails = new Map<string, Promise<unknown>>()
   async function dispatch(method: RequestMethod, raw: unknown): Promise<unknown> {
-    if (mcpCall.getStore() && ['deck.editText', 'deck.undo', 'deck.redo'].includes(method)) {
+    if (!HUMAN_EDITS.has(method)) return dispatchUnlocked(method, raw)
+    const key = (raw as { deckId?: string } | null)?.deckId ?? ''
+    const previous = editTails.get(key) ?? Promise.resolve()
+    const pending = previous
+      .catch(() => {})
+      .then(() => {
+        const blocked = mcpCall.getStore()
+          ? control.blocksAgent(mcpCall.getStore()!.tool)
+          : control.blocksHuman()
+        if (blocked) return { ok: false, reason: blocked }
+        return dispatchUnlocked(method, raw)
+      })
+    editTails.set(key, pending)
+    try {
+      return await pending
+    } finally {
+      if (editTails.get(key) === pending) editTails.delete(key)
+    }
+  }
+
+  async function dispatchUnlocked(method: RequestMethod, raw: unknown): Promise<unknown> {
+    if (mcpCall.getStore() && HUMAN_EDITS.has(method)) {
       const target = (raw as { deckId?: string }).deckId
       if (target !== lastOpened)
         throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换，请重新读取状态。')
     }
     switch (method) {
+      case 'canvas.inspect':
+      case 'canvas.select': {
+        const params =
+          method === 'canvas.inspect'
+            ? parseParams('canvas.inspect', raw)
+            : parseParams('canvas.select', raw)
+        const root = deckPathOf(params.deckId)
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        if (method === 'canvas.select') {
+          const blocked = mcpCall.getStore()
+            ? control.blocksAgent('select_element')
+            : control.blocksHuman()
+          if (blocked) throw new Error(blocked)
+        }
+        if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
+        const revision = await deckRevision(root)
+        if (params.expectedRevision && params.expectedRevision !== revision)
+          throw new Error('STALE_REVISION: 稿子已改变，请重新读取画布。')
+        const command =
+          'selector' in params
+            ? { ...params, action: 'select' as const }
+            : { ...params, action: 'inspect' as const }
+        const { deckId, ...query } = command
+        const evidence = CanvasEvidence.parse(await canvases.request(deckId, query))
+        if (deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        const latest = await deckRevision(root)
+        if (params.expectedRevision && latest !== params.expectedRevision)
+          throw new Error('STALE_REVISION: 检视过程中稿子已改变，请重新读取画布。')
+        if (params.expectedRevision && (!evidence.ready || evidence.renderedRevision !== latest))
+          throw new Error('RENDER_NOT_READY: 画布尚未确认目标版本。')
+        return requests[method].result.parse({
+          ...evidence,
+          deckId,
+          revision: latest,
+          current: evidence.ready && evidence.renderedRevision === latest,
+        })
+      }
+      case 'canvas.result': {
+        const params = parseParams('canvas.result', raw)
+        canvases.settle(params.requestId, { value: params.evidence, error: params.error })
+        return {}
+      }
       case 'skill.list': {
         const params = parseParams('skill.list', raw)
         return listSkill(catalog.skillPath, params.path, params.offset)
@@ -503,6 +601,86 @@ export async function startServer(
         bus.broadcast('deck.slide', { deckId: params.deckId, index: params.index })
         return {}
       }
+      case 'deck.editPages':
+      case 'deck.replaceImage': {
+        const params =
+          method === 'deck.editPages'
+            ? parseParams('deck.editPages', raw)
+            : parseParams('deck.replaceImage', raw)
+        const root = deckPathOf(params.deckId)
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换')
+        if ((await deckRevision(root)) !== params.expectedRevision)
+          return { ok: false, reason: 'STALE_REVISION: 内容已变化，请重新读取稿子' }
+        const name = await findEntryName(root)
+        if (!name) return { ok: false, reason: AgentError.noBuild() }
+        const before = await readEditFile(root, name)
+        if (before === null) return { ok: false, reason: AgentError.noBuild() }
+        try {
+          let after: string, slide: number, label: string
+          let files: FileChanges = {}
+          if ('change' in params) {
+            const edited = editPages(before, params.change)
+            after = edited.html
+            slide = edited.slide
+            label =
+              params.change.action === 'insert'
+                ? `添加第 ${slide + 1} 页`
+                : params.change.action === 'delete'
+                  ? `删除第 ${params.change.index + 1} 页`
+                  : `将第 ${params.change.index + 1} 页移到第 ${slide + 1} 页`
+            if (after !== before) files = await pageMetadata(root, edited, params.change)
+          } else {
+            // Only existing packaged image files, no remote URL or arbitrary host file reads.
+            if (
+              isAbsolute(params.source) ||
+              /[?#\\]/.test(params.source) ||
+              /^[a-z]+:/i.test(params.source)
+            )
+              throw new Error('请填写 deck 内图片的相对路径')
+            const target = await realpath(join(root, params.source))
+            const path = relative(root, target)
+            if (
+              path === '..' ||
+              path.startsWith('../') ||
+              isAbsolute(path) ||
+              !(await stat(target)).isFile()
+            )
+              throw new Error('图片必须在 deck 目录内')
+            if (
+              !['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.svg'].includes(
+                extname(target).toLowerCase(),
+              )
+            )
+              throw new Error('请选择图片文件')
+            const source = path.split('/').map(encodeURIComponent).join('/')
+            after = replaceImage(before, params.slide, params.selector, params.oldSource, source)
+            slide = params.slide
+            label = `替换第 ${slide + 1} 页的图片`
+          }
+          if (after === before) return { ok: true, revision: params.expectedRevision, slide }
+          if ((await deckRevision(root)) !== params.expectedRevision)
+            throw new Error('STALE_REVISION: 内容已变化，请重新读取稿子')
+          await writeChanges(params.deckId, { [name]: { before, after }, ...files })
+          historyOf(params.deckId).record({
+            slide,
+            oldText: '',
+            newText: '',
+            before,
+            after,
+            label,
+            files,
+            ...('change' in params && params.change.action === 'delete'
+              ? { undoSlide: params.change.index }
+              : {}),
+          })
+          announceHistory(params.deckId)
+          await recordChange(params.deckId, { summary: label, slide })
+          await announceDeck(params.deckId, root)
+          return { ok: true, revision: await deckRevision(root), slide }
+        } catch (error) {
+          return { ok: false, reason: error instanceof Error ? error.message : String(error) }
+        }
+      }
       case 'deck.editText': {
         const params = parseParams('deck.editText', raw)
         const root = deckPathOf(params.deckId)
@@ -519,7 +697,7 @@ export async function startServer(
         })
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
-          await writeOwn(params.deckId, file, result.html)
+          await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
           historyOf(params.deckId).record({
             slide: params.slide,
             oldText: params.oldText.trim(),
@@ -634,20 +812,41 @@ export async function startServer(
       }
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)
-        deckPathOf(params.deckId)
-        // 界面不在就立刻说,别让 agent 干等 15 秒超时
+        const root = deckPathOf(params.deckId)
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
         if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
-        return {
-          path: await captures.request(params.deckId, {
-            ...(params.slide === undefined ? {} : { slide: params.slide }),
-          }),
-        }
+        const revision = await deckRevision(root)
+        if (params.expectedRevision && params.expectedRevision !== revision)
+          throw new Error('STALE_REVISION')
+        const shot = await captures.request(params.deckId, {
+          ...(params.slide === undefined ? {} : { slide: params.slide }),
+          ...(params.expectedRevision ? { expectedRevision: params.expectedRevision } : {}),
+        })
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        if (
+          params.expectedRevision &&
+          (shot.renderedRevision !== revision || (await deckRevision(root)) !== revision)
+        )
+          throw new Error('STALE_REVISION: 截图未确认目标版本。')
+        if (params.slide !== undefined && shot.slide !== undefined && params.slide !== shot.slide)
+          throw new Error('SLIDE_CHANGED: 截图页号与目标不一致。')
+        return requests['deck.capture'].result.parse({ ...shot, deckId: params.deckId })
       }
       case 'capture.result': {
         const params = parseParams('capture.result', raw)
-        // 界面待会儿要显示它,放行这一个文件 —— 见 PreviewHost.allowFile。
         previews.allowFile(params.path)
-        captures.settle(params.requestId, { value: params.path, error: params.error })
+        captures.settle(params.requestId, {
+          ...(params.path
+            ? {
+                value: {
+                  path: params.path,
+                  ...(params.slide === undefined ? {} : { slide: params.slide }),
+                  ...(params.renderedRevision ? { renderedRevision: params.renderedRevision } : {}),
+                },
+              }
+            : {}),
+          error: params.error,
+        })
         return {}
       }
       case 'deck.present': {
@@ -798,7 +997,13 @@ function clip(text: string, max = 24): string {
  * agent 拿着稿子时,界面发来的这几个一律拒绝:它们都会改磁盘上的稿子。
  * 翻页、放映、指给 agent 看不在里面 —— 那些不改稿子,人随时能做。
  */
-const HUMAN_EDITS = new Set<RequestMethod>(['deck.editText', 'deck.undo', 'deck.redo'])
+const HUMAN_EDITS = new Set<RequestMethod>([
+  'deck.editText',
+  'deck.editPages',
+  'deck.replaceImage',
+  'deck.undo',
+  'deck.redo',
+])
 
 /** 目录名。中文标题原样留着,只把路径里不能用的字符换掉。 */
 function slugify(title: string): string {

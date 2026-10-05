@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
+  CanvasElement,
   Control,
   DeckPhase,
   HistoryState,
   PendingRequest,
   RequestResult,
+  RequestParams,
 } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
@@ -44,6 +46,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [requests, setRequests] = useState<PendingRequest[]>([])
   const [crops, setCrops] = useState<Map<string, string>>(new Map())
   const [thumbs, setThumbs] = useState<Array<string | null>>([])
+  const thumbsVersion = useRef(0)
+  const thumbTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
@@ -61,6 +65,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [now, setNow] = useState(() => Date.now())
   const [creating, setCreating] = useState(false)
   const [layout, setLayout] = useState<Layout>(readLayout)
+  const [selection, setSelection] = useState<CanvasElement | null>(null)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -71,6 +76,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       const opened = await via.request('deck.open', { path })
       setDeck(opened)
       deckRef.current = opened
+      setSelection(null)
       setSlide(0)
       slideRef.current = 0
       setRequests((await via.request('requests.list', { deckId: opened.deck.id })).requests)
@@ -125,6 +131,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // 稿子在磁盘上变了 —— 不管是 agent 改的还是用户自己在编辑器里改的,画布都跟着走。
     next.subscribe('deck.changed', (data) => {
       // 先抓更新前的值:setDeck 是异步的,更新里写 ref 再比较会比到新值。
+      if (data.deckId === deckRef.current?.deck.id) setSelection(null)
       const previousUrl = deckRef.current?.previewUrl
       setDeck((current) => {
         if (!current || current.deck.id !== data.deckId) return current
@@ -133,6 +140,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
           slides: data.slides,
           slideCount: data.slideCount,
           slideTitles: data.slideTitles,
+          pageTypes: data.pageTypes,
           previewUrl: data.previewUrl,
         }
         deckRef.current = merged
@@ -140,7 +148,18 @@ export function App({ serverUrl }: { serverUrl: string }) {
       })
       // previewUrl 没变就只是内容变了,重载并回到原来那一页;
       // 从空变成有值说明成品刚出现,Stage 这时才第一次挂上,不用我们管。
-      if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(slideRef.current)
+      if (data.deckId === deckRef.current?.deck.id) {
+        const nextSlide = Math.min(slideRef.current, Math.max(0, data.slideCount - 1))
+        slideRef.current = nextSlide
+        setSlide(nextSlide)
+        if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(nextSlide)
+        setThumbs([])
+        thumbsVersion.current += 1
+        clearTimeout(thumbTimer.current)
+        thumbTimer.current = setTimeout(() => {
+          if (deckRef.current?.deck.id === data.deckId) void refreshThumbs(next, data.deckId)
+        }, 250)
+      }
     })
 
     next.subscribe('mcp.activity', (data) => {
@@ -280,15 +299,59 @@ export function App({ serverUrl }: { serverUrl: string }) {
       })()
     })
 
+    next.subscribe('canvas.request', (data) => {
+      void (async () => {
+        try {
+          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
+          const canvas = stage.current
+          if (!canvas) throw new Error('RENDER_NOT_READY: 当前视图没有画布。')
+          const evidence =
+            data.action === 'select'
+              ? await canvas.selectCanvas(data)
+              : await canvas.inspectCanvas(data.include, data.expectedRevision)
+          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
+          setSelection(evidence.selection)
+          await next.request('canvas.result', { requestId: data.requestId, evidence })
+        } catch (cause) {
+          await next.request('canvas.result', {
+            requestId: data.requestId,
+            error: cause instanceof Error ? cause.message : String(cause),
+          })
+        }
+      })()
+    })
+
     next.subscribe('capture.request', (data) => {
       void (async () => {
         try {
-          // 画布可能正在重载(改完文字必然触发一次),这会儿截会截到空白。
-          await stage.current?.whenReady()
-          const path = await window.orca?.captureCanvas?.({ guestId: stage.current?.guestId() })
+          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
+          const canvas = stage.current
+          if (!canvas || !(await canvas.whenReady())) throw new Error('RENDER_NOT_READY')
+          const before = await canvas.inspectCanvas('context', data.expectedRevision)
+          if (
+            !before.ready ||
+            before.slide === null ||
+            (data.slide !== undefined && before.slide !== data.slide)
+          )
+            throw new Error('SLIDE_CHANGED: 画布尚未到达目标页。')
+          const path = await window.orca?.captureCanvas?.({ guestId: canvas.guestId() })
+          const after = await canvas.inspectCanvas('context')
+          if (
+            data.deckId !== deckRef.current?.deck.id ||
+            before.slide !== after.slide ||
+            before.renderedRevision !== after.renderedRevision ||
+            !after.ready
+          )
+            throw new Error('CANVAS_CHANGED: 截图过程中画布已变化。')
           await next.request('capture.result', {
             requestId: data.requestId,
-            ...(path ? { path } : { error: '画布还没加载出来' }),
+            ...(path
+              ? {
+                  path,
+                  slide: before.slide,
+                  ...(before.renderedRevision ? { renderedRevision: before.renderedRevision } : {}),
+                }
+              : { error: '画布还没加载出来' }),
           })
         } catch (cause) {
           await next.request('capture.result', {
@@ -302,6 +365,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // agent 说「你看第 4 页」,画布跟着跳。
     next.subscribe('deck.slide', (data) => {
       if (data.deckId !== deckRef.current?.deck.id) return
+      if (data.index !== slideRef.current) setSelection(null)
       setSlide(data.index)
       slideRef.current = data.index
       stage.current?.goto(data.index)
@@ -350,13 +414,24 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   /** 页胶片的缩略图。渲不出来就留空 —— 页号和标题仍然在。 */
   const refreshThumbs = useCallback(async (via: Transport, deckId: string) => {
+    const version = ++thumbsVersion.current
+    setThumbs([])
     if (!window.orca?.renderThumbnails) return
     try {
-      setThumbs((await via.request('deck.thumbnails', { deckId })).paths)
+      const { paths } = await via.request('deck.thumbnails', { deckId })
+      if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId) setThumbs(paths)
     } catch {
-      setThumbs([])
+      if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId) setThumbs([])
     }
   }, [])
+
+  useEffect(
+    () => () => {
+      clearTimeout(thumbTimer.current)
+      thumbsVersion.current += 1
+    },
+    [],
+  )
 
   const open = useCallback(
     (path: string) => (transport.current ? openWith(transport.current, path) : undefined),
@@ -392,6 +467,100 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setPicking(false)
     }
   }, [note])
+
+  const selectElement = useCallback(async (clear = false) => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current || !stage.current) return
+    try {
+      const context = await active.request('canvas.inspect', {
+        deckId: current.deck.id,
+        include: 'context',
+      })
+      if (!context.current) throw new Error('画布正在更新，请稍后选择。')
+      const picked = clear ? null : await stage.current.pick()
+      if (!clear && !picked) return
+      const result = await active.request('canvas.select', {
+        deckId: current.deck.id,
+        selector: picked?.selector ?? null,
+        slide: picked?.slide ?? context.slide ?? 0,
+        expectedRevision: context.revision,
+      })
+      setSelection(result.selection)
+    } catch (cause) {
+      stage.current?.notify(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
+  const editPages = useCallback(async (change: RequestParams<'deck.editPages'>['change']) => {
+    const active = transport.current,
+      current = deckRef.current
+    if (!active || !current) return
+    const page = slideRef.current
+    try {
+      const context = await active.request('canvas.inspect', {
+        deckId: current.deck.id,
+        include: 'context',
+      })
+      if (
+        !context.current ||
+        !context.ready ||
+        context.slide !== page ||
+        deckRef.current?.deck.id !== current.deck.id
+      )
+        throw new Error('画布正在更新，请稍后再编辑页面。')
+      const result = await active.request('deck.editPages', {
+        deckId: current.deck.id,
+        expectedRevision: context.revision,
+        change,
+      })
+      if (!result.ok) throw new Error(result.reason ?? '页面编辑失败')
+      if (result.slide !== undefined) {
+        slideRef.current = result.slide
+        setSlide(result.slide)
+        stage.current?.reload(result.slide)
+        await active.request('deck.showSlide', { deckId: current.deck.id, index: result.slide })
+      }
+    } catch (cause) {
+      stage.current?.notify(cause instanceof Error ? cause.message : String(cause))
+    }
+  }, [])
+
+  const replaceSelectedImage = useCallback(
+    async (source: string) => {
+      const active = transport.current,
+        current = deckRef.current,
+        picked = selection
+      if (!active || !current || !picked || picked.tag !== 'img' || !picked.source) return
+      const page = slideRef.current
+      try {
+        const context = await active.request('canvas.inspect', {
+          deckId: current.deck.id,
+          include: 'context',
+        })
+        if (
+          !context.current ||
+          !context.ready ||
+          context.slide !== page ||
+          context.selection?.selector !== picked.selector ||
+          context.selection.source !== picked.source
+        )
+          throw new Error('选中的图片已变化，请重新选择。')
+        const result = await active.request('deck.replaceImage', {
+          deckId: current.deck.id,
+          slide: page,
+          selector: picked.selector,
+          oldSource: picked.source,
+          source,
+          expectedRevision: context.revision,
+        })
+        if (!result.ok) throw new Error(result.reason ?? '图片替换失败')
+      } catch (cause) {
+        stage.current?.notify(cause instanceof Error ? cause.message : String(cause))
+      }
+    },
+    [selection],
+  )
 
   /** 点「跑」不直接驱动谁 —— 挂进待办队列,等 agent 来拉。 */
   const requestPhase = useCallback((phase: DeckPhase) => {
@@ -638,6 +807,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   )
 
   const onSlideChange = useCallback((index: number) => {
+    if (index !== slideRef.current) setSelection(null)
     setSlide(index)
     slideRef.current = index
     const current = deckRef.current
@@ -804,6 +974,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
         <section className="pane">
           {deck ? (
             <Inspector
+              selection={selection}
+              locked={agentHolds}
+              onEditPages={editPages}
+              onReplaceImage={replaceSelectedImage}
+              onSelect={() => void selectElement()}
+              onClearSelection={() => void selectElement(true)}
               slide={slide}
               slideCount={deck.slideCount}
               title={titleOf(slide)}

@@ -16,6 +16,7 @@ import {
 import { paddedRect, type Rect } from './anchor-crop.js'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
+import { ThumbnailQueue } from './thumbnail-queue.js'
 
 /**
  * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
@@ -283,68 +284,94 @@ ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide
  * 转场是 GSAP 驱动的,睡固定毫秒会截到还没画完的上一页 —— 实测就是整排错位一格。
  * `go(i)` 返回这次转场的时长,`seek(transition)` 正好落在转场结束的稳定态。
  */
+const thumbnailQueue = new ThumbnailQueue()
+
 ipcMain.handle(
   'deck:thumbnails',
   async (
-    _event,
+    event,
     input: { previewUrl: string; slideCount: number; slides?: number[]; width?: number },
   ) => {
     if (input.slideCount === 0) return []
-    // 录制要的缩略图只要被改的那一页,而且更大;页胶片要全部、320 宽
-    const indices =
-      input.slides?.filter((index) => index < input.slideCount) ??
-      Array.from({ length: input.slideCount }, (_, index) => index)
-    const width = input.width ?? 320
+    const key = `${event.sender.id}:${input.previewUrl}:${input.slides?.join(',') ?? 'all'}:${input.width ?? 320}`
+    return thumbnailQueue.run(key, async () => {
+      if (event.sender.isDestroyed()) return []
+      // 录制要的缩略图只要被改的那一页,而且更大;页胶片要全部、320 宽
+      const indices =
+        input.slides?.filter((index) => index < input.slideCount) ??
+        Array.from({ length: input.slideCount }, (_, index) => index)
+      const width = input.width ?? 320
 
-    const offscreen = new BrowserWindow({
-      show: false,
-      width: 960,
-      height: 540,
-      // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
-      useContentSize: true,
-      webPreferences: { sandbox: true, contextIsolation: true },
-    })
+      const offscreen = new BrowserWindow({
+        show: false,
+        width: 960,
+        height: 540,
+        // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
+        useContentSize: true,
+        webPreferences: { sandbox: true, contextIsolation: true },
+      })
 
-    try {
-      await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
-      const ready = await offscreen.webContents.executeJavaScript(
-        'new Promise(r => { const t = setInterval(() => { if (window.__capture) { clearInterval(t); r(true) } }, 50); setTimeout(() => { clearInterval(t); r(false) }, 8000) })',
-      )
-      if (!ready) return []
-      await offscreen.webContents.executeJavaScript('document.fonts.ready')
-
-      const dir = join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
-      await mkdir(dir, { recursive: true })
-
-      const paths: Array<string | null> = []
-      for (const index of indices) {
-        try {
-          await offscreen.webContents.executeJavaScript(
-            `(async () => { const { transition } = await window.__capture.go(${index}); await window.__capture.seek(transition); })()`,
-          )
-          const image = await offscreen.webContents.capturePage()
-          if (image.isEmpty()) {
-            paths.push(null)
-            continue
-          }
-          const resized = image.resize({ width })
-          const png = resized.toPNG()
-          // 可录制应用约定:单张不超过 300KB。PNG 太大就换 JPEG
-          const [file, bytes] =
-            png.length > 300_000
-              ? [join(dir, `${index}.jpg`), resized.toJPEG(85)]
-              : [join(dir, `${index}.png`), png]
-          await writeFile(file, bytes)
-          paths.push(file)
-        } catch {
-          // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了
-          paths.push(null)
-        }
+      const destroy = () => {
+        if (!offscreen.isDestroyed()) offscreen.destroy()
       }
-      return paths
-    } finally {
-      offscreen.destroy()
-    }
+      const timeout = setTimeout(destroy, 45_000)
+      event.sender.once('destroyed', destroy)
+
+      let rejectClosed!: (error: Error) => void
+      const closed = new Promise<never>((_resolve, reject) => {
+        rejectClosed = reject
+      })
+      const onClosed = () => rejectClosed(new Error('缩略图渲染已取消或超时'))
+      offscreen.once('closed', onClosed)
+      const render = async () => {
+        await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
+        const ready = await offscreen.webContents.executeJavaScript(
+          'new Promise(r => { const t = setInterval(() => { if (window.__capture) { clearInterval(t); r(true) } }, 50); setTimeout(() => { clearInterval(t); r(false) }, 8000) })',
+        )
+        if (!ready) return []
+        await offscreen.webContents.executeJavaScript('document.fonts.ready')
+
+        const dir = join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
+        await mkdir(dir, { recursive: true })
+
+        const paths: Array<string | null> = []
+        for (const index of indices) {
+          if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
+          try {
+            await offscreen.webContents.executeJavaScript(
+              `(async () => { const { transition } = await window.__capture.go(${index}); await window.__capture.seek(transition); })()`,
+            )
+            const image = await offscreen.webContents.capturePage()
+            if (image.isEmpty()) {
+              paths.push(null)
+              continue
+            }
+            const resized = image.resize({ width })
+            const png = resized.toPNG()
+            // 可录制应用约定:单张不超过 300KB。PNG 太大就换 JPEG
+            const [file, bytes] =
+              png.length > 300_000
+                ? [join(dir, `${index}.jpg`), resized.toJPEG(85)]
+                : [join(dir, `${index}.png`), png]
+            await writeFile(file, bytes)
+            paths.push(file)
+          } catch {
+            if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
+            // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了
+            paths.push(null)
+          }
+        }
+        return paths
+      }
+      try {
+        return await Promise.race([render(), closed])
+      } finally {
+        clearTimeout(timeout)
+        event.sender.removeListener('destroyed', destroy)
+        offscreen.removeListener('closed', onClosed)
+        destroy()
+      }
+    })
   },
 )
 

@@ -93,6 +93,22 @@ _否掉(试过,是错的):_ 「按逃逸层数往上倒推一个公共服务根�
 
 ---
 
+### 缩略图与素材读取的资源上限
+
+缩略图由桌面壳统一排队，最多同时存在一个离屏渲染窗口；同一目标只保留最新的等待请求，不同目标最多等待四个任务。渲染超过 45 秒或请求窗口关闭时销毁离屏窗口，成功与失败都会释放资源。被后续请求替代的任务返回空结果，页胶片沿用版本校验丢弃过期结果。
+
+素材内容哈希按流读取，同一文件版本的并发请求共享一次读取，不把大图或视频完整载入 Buffer。已完成的哈希按最近访问顺序最多保留 512 条；内容版本仍由文件内容决定。
+
+### 当前画布检视
+
+`canvas.inspect / canvas.select` 沿共享协议通过 Roundtrip 请求当前 Stage/guest，结果在边界上按契约校验。临时选区与运行时几何由 guest 提供，换页/重载即失效；稿子与控制权仍由 server 管理。意见队列与实时选区独立。
+
+入口 HTML 原样服务，Server-Timing 响应头携带经过一致性检查的内容版本，guest 从导航 performance 条目读取。server 将当前内容版本与已加载版本分别返回；要求目标版本的请求等待加载并在返回时重新校验。未知版本、换稿、过期版本和超时有明确失败语义，不用重新读取源码冒充画布状态。
+
+实现范围、验证与资源并发限制见 [画布检视计划](./CANVAS-INSPECTION.md)。
+
+---
+
 ## 技术栈
 
 |               |                             |                                     |
@@ -262,3 +278,11 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 `pnpm package` 构建桌面、server 和网页，使用 Electron Packager 输出当前平台应用到 `release/`。`tools/skill-lock.json` 固定 Skill Git 提交；打包通过 git archive 读取该提交，忽略工作区修改，并按 Skill 的 package-lock.json 安装生产依赖。`Resources/skill/bundle-manifest.json` 记录应用版本、Skill 仓库及提交。开发者可用 `ORCA_PPT_SKILL_SOURCE` 指定本地 Git 仓路径，但不能改变锁定提交。
 
 MCP 的 `list_skill` / `read_skill` 按相对路径提供随附规范文本。它们走 contracts 的 skill.list / skill.read，支持分页并拒绝越界路径及外部软链。阶段提示词引导宿主调用这些工具，不要求它拥有文件工具。此读取路径不安装全局 Skill、不写宿主配置；上述软链安装仍是可选且未实现的引导。图片/视频资料暂不由 read_skill 返回；应用截图继续走 capture_slide。
+
+## 共享基础编辑
+
+产品实施顺序见 [Agent Native PPT 计划](./AGENT-NATIVE-PRODUCT-PLAN.md)。
+
+`deck.editPages` / `deck.replaceImage` 与原有改字和撤销走同一 contracts/server/MCP 链路，UI 只是客户端。结构操作通过 parse5 的源码位置移动完整 section，避免浏览器 DOM 重新序列化和脚本中的伪标签误计数。现有 brief 页数、大纲、转场元数据进入同一条历史；新增页不编造内容决策，版式理由留空等待补充。
+
+共享写操作按 deck 串行执行。结构和图片操作绑定内容版本，撤销时精确校验关联文件；改字仍保留只反向替换原文的外部修改容忍方式。文件改动先暂存再替换，异常时尽可能还原仍匹配的已写文件，不提供跨文件崩溃原子性。明确限制见产品计划和 MCP 文档。

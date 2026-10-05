@@ -1,8 +1,9 @@
 import { randomBytes } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { realpath, stat } from 'node:fs/promises'
+import { readFile, realpath, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { basename, dirname, join, resolve, sep } from 'node:path'
+import { deckRevision } from './decks.js'
 import { contentTypeFor, resolveWithinRoots, type PreviewPlan } from './preview.js'
 
 /**
@@ -121,6 +122,21 @@ export class PreviewHost {
         return true
       }
 
+      if (real === (await realpath(plan.entryFile))) {
+        const before = await deckRevision(plan.root)
+        const bytes = await readFile(real)
+        const after = await deckRevision(plan.root)
+        // Concurrent writes cannot be labelled as a confirmed version.
+        const stable = before === after && bytes.equals(await readFile(real))
+        res.writeHead(200, {
+          'content-type': contentTypeFor(real),
+          'content-length': bytes.length,
+          'cache-control': 'no-store',
+          ...(stable ? { 'server-timing': `orca-revision;desc="${after}"` } : {}),
+        })
+        res.end(req.method === 'HEAD' ? undefined : bytes)
+        return true
+      }
       res.writeHead(200, {
         'content-type': contentTypeFor(real),
         'content-length': info.size,

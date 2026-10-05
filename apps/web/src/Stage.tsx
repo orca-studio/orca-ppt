@@ -1,7 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
-import type { InspectAnchor } from '@orca-ppt/contracts'
+import {
+  CanvasEvidence,
+  type InspectAnchor,
+  type CanvasError,
+  type RequestParams,
+} from '@orca-ppt/contracts'
 import autoplayScript from './guest/autoplay.guest.js?raw'
 import editScript from './guest/edit.guest.js?raw'
+import canvasScript from './guest/canvas.guest.js?raw'
 import inspectScript from './guest/inspect.guest.js?raw'
 import { Button } from './ui/Button.js'
 
@@ -25,6 +31,11 @@ export interface PickedAnchor extends Omit<InspectAnchor, 'note'> {
 }
 
 export interface StageHandle {
+  inspectCanvas(
+    include: RequestParams<'canvas.inspect'>['include'],
+    expectedRevision?: string,
+  ): Promise<CanvasEvidence>
+  selectCanvas(input: RequestParams<'canvas.select'>): Promise<CanvasEvidence>
   /** 进入取锚状态。用户点下给出锚,Esc 取消给出 null。 */
   targetText(
     slide: number,
@@ -124,7 +135,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const ref = useRef<WebviewElement | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | undefined>()
-  const restoreTo = useRef<number | undefined>(undefined)
+  const restoreTo = useRef(initialSlide)
+  const loadEpoch = useRef(0)
   /** 等着点亮的那段文字 —— 攒到下一次加载完成。 */
   const pendingSpotlight = useRef<{ text: string; at: number } | undefined>(undefined)
   /**
@@ -132,6 +144,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
    * 给 false 的话刚打开稿子时问什么都答不上来(右栏会一直显示「画布还没加载」)。
    */
   const loading = useRef(true)
+  const runtimeErrors = useRef<CanvasError[]>([])
+  const injected = useRef(false)
   const waiters = useRef<Array<() => void>>([])
   // 常驻回调,不进 effect 依赖 —— 注入和守候都只该在加载时发生一次。
   const onTextEditRef = useRef(onTextEdit)
@@ -157,13 +171,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
      * 这一轮会在下一次加载时被 guest 那边的重复注入解掉(arm 的 Promise 解成 null)。
      */
     const watchEdits = () => {
-      if (readOnlyRef.current) {
+      if (readOnlyRef.current || !injected.current) {
         watching.current = false
         return
       }
       watching.current = true
       void view
-        .executeJavaScript('window.__orcaEdit.arm()')
+        .executeJavaScript('window.__orcaEdit?.arm()')
         .then(async (result) => {
           const edit = result as TextEdit | null
           if (!edit) return
@@ -193,31 +207,37 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     }
 
     const onLoad = () => {
+      const epoch = loadEpoch.current
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
-      void view.executeJavaScript(`${inspectScript};${autoplayScript};${editScript}`).then(() => {
-        const slide = restoreTo.current ?? initialSlide
-        restoreTo.current = undefined
-        if (slide) void view.executeJavaScript(`Reveal.slide(${slide})`)
-        void view
-          .executeJavaScript('Reveal.getIndices().h')
-          .then((index) => {
+      void view
+        .executeJavaScript(`${inspectScript};${autoplayScript};${editScript};${canvasScript}`)
+        .then(async () => {
+          if (epoch !== loadEpoch.current) return
+          // Keep the desired page across successive watcher reloads. A user/agent
+          // navigation during injection supersedes the earlier restore target.
+          for (;;) {
+            const slide = restoreTo.current
+            const index = await view
+              .executeJavaScript(`Reveal.slide(${slide}); Reveal.getIndices().h`)
+              .catch(() => undefined)
+            if (epoch !== loadEpoch.current) return
+            if (slide !== restoreTo.current) continue
+            injected.current = true
             if (typeof index === 'number') onSlideChangeRef.current(index)
-          })
-          .catch(() => {})
-        watchEdits()
+            break
+          }
+          watchEdits()
 
-        // 攒着的那处点亮,现在才有意义 —— DOM 是新的了。太旧的就算了,
-        // 隔了半天再闪一下,人根本对不上是哪次改动。
-        const wanted = pendingSpotlight.current
-        pendingSpotlight.current = undefined
-        if (wanted && Date.now() - wanted.at < SPOTLIGHT_TTL_MS) {
-          void view
-            .executeJavaScript(`window.__orcaEdit.spotlight(${JSON.stringify(wanted.text)})`)
-            .catch(() => {})
-        }
-      })
-      loading.current = false
-      for (const resume of waiters.current.splice(0)) resume()
+          // 攒着的那处点亮,现在才有意义 —— DOM 是新的了。太旧的就算了,
+          // 隔了半天再闪一下,人根本对不上是哪次改动。
+          const wanted = pendingSpotlight.current
+          pendingSpotlight.current = undefined
+          if (wanted && Date.now() - wanted.at < SPOTLIGHT_TTL_MS) {
+            void view
+              .executeJavaScript(`window.__orcaEdit.spotlight(${JSON.stringify(wanted.text)})`)
+              .catch(() => {})
+          }
+        })
       setReady(true)
       setError(undefined)
     }
@@ -226,20 +246,48 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     const onFail = (event: Event) => {
       const detail = event as Event & { errorDescription?: string }
       setError(detail.errorDescription || '加载失败')
+      runtimeErrors.current.push({
+        kind: 'load',
+        message: detail.errorDescription || '加载失败',
+        source: null,
+        stack: null,
+      })
     }
     // guest 里翻了页都从这里报回来 —— 人在画布里按键、自动播放、agent 让它跳页,一律一条路。
     // 以前只有焦点在画布外的那一路会报,画布里翻的页状态栏不知道,页码就对不上。
     const onConsole = (event: Event) => {
       const message = (event as Event & { message?: string }).message ?? ''
+      const detail = event as Event & { level?: number; sourceId?: string }
+      if (detail.level === 3) {
+        runtimeErrors.current.push({
+          kind: 'script',
+          message: message.slice(0, 4000),
+          source: detail.sourceId ?? null,
+          stack: null,
+        })
+        runtimeErrors.current = runtimeErrors.current.slice(-50)
+      }
       const match = /^__orca:slide (\d+)$/.exec(message)
-      if (match) onSlideChangeRef.current(Number(match[1]))
+      if (match && injected.current && !reloadWaiting.current) {
+        restoreTo.current = Number(match[1])
+        onSlideChangeRef.current(restoreTo.current)
+      }
     }
+    const onNavigation = (event: Event) => {
+      if (!(event as Event & { isInPlace?: boolean }).isInPlace) {
+        loadEpoch.current += 1
+        runtimeErrors.current = []
+        injected.current = false
+      }
+    }
+    view.addEventListener('did-start-navigation', onNavigation)
     view.addEventListener('console-message', onConsole)
     view.addEventListener('did-stop-loading', onStopLoading)
     view.addEventListener('did-start-loading', onStartLoading)
     view.addEventListener('dom-ready', onLoad)
     view.addEventListener('did-fail-load', onFail)
     return () => {
+      view.removeEventListener('did-start-navigation', onNavigation)
       view.removeEventListener('console-message', onConsole)
       view.removeEventListener('did-stop-loading', onStopLoading)
       view.removeEventListener('did-start-loading', onStartLoading)
@@ -290,9 +338,75 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       .catch(() => {})
   }, [readOnly, ready])
 
+  const inspectCanvas = async (
+    include: RequestParams<'canvas.inspect'>['include'],
+    expectedRevision?: string,
+  ): Promise<CanvasEvidence> => {
+    const view = ref.current
+    if (!view) throw new Error('UI_DISCONNECTED: 没有可见画布。')
+    const deadline = Date.now() + 10000
+    for (;;) {
+      const value = await view
+        .executeJavaScript(`window.__orcaCanvas?.inspect(${JSON.stringify(include)})`)
+        .catch(() => undefined)
+      if (value) {
+        const evidence = CanvasEvidence.parse(value)
+        evidence.ready =
+          evidence.ready && injected.current && !loading.current && !reloadWaiting.current
+        evidence.errors = mergeErrors(runtimeErrors.current, evidence.errors)
+        if (
+          !expectedRevision ||
+          (evidence.ready && evidence.renderedRevision === expectedRevision)
+        ) {
+          if (evidence.ready) {
+            await view.executeJavaScript(
+              `Promise.race([document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))), new Promise((_, reject) => setTimeout(() => reject(new Error('RENDER_NOT_READY: 字体尚未加载。')), 3000))])`,
+            )
+            const fresh = CanvasEvidence.parse(
+              await view.executeJavaScript(
+                `window.__orcaCanvas.inspect(${JSON.stringify(include)})`,
+              ),
+            )
+            fresh.ready =
+              fresh.ready && injected.current && !loading.current && !reloadWaiting.current
+            fresh.errors = mergeErrors(runtimeErrors.current, fresh.errors)
+            if (expectedRevision && (!fresh.ready || fresh.renderedRevision !== expectedRevision))
+              continue
+            return fresh
+          }
+          return evidence
+        }
+      }
+      if (!value && !expectedRevision)
+        return {
+          renderedRevision: null,
+          slide: null,
+          ready: false,
+          width: 1920,
+          height: 1080,
+          autoplay: false,
+          selection: null,
+          elements: [],
+          elementsTruncated: false,
+          html: null,
+          htmlLength: 0,
+          htmlTruncated: false,
+          errors: [...runtimeErrors.current],
+        }
+      if (Date.now() >= deadline) throw new Error('RENDER_NOT_READY: 画布尚未加载目标版本。')
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
+
   useImperativeHandle(
     handle,
     (): StageHandle => ({
+      inspectCanvas,
+      selectCanvas: async (input) => {
+        await inspectCanvas('context', input.expectedRevision)
+        await ref.current?.executeJavaScript(`window.__orcaCanvas.select(${JSON.stringify(input)})`)
+        return inspectCanvas('context', input.expectedRevision)
+      },
       targetText: async (slide, text, targetId, replacement) => {
         const view = ref.current
         if (!view) return null
@@ -335,6 +449,10 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         void reloadWhenNotEditing()
       },
       goto: (slide: number) => {
+        restoreTo.current = Math.trunc(slide)
+        if (loading.current || reloadWaiting.current || !injected.current) {
+          return
+        }
         // 正好是下一页就当成「往前翻」:走 advance,上一段转场没放完时先放完,不跳帧,
         // 而且翻过去照样有转场。别的页是跳页,跳页本来就没有转场,直接去。
         const index = Math.trunc(slide)
@@ -382,7 +500,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         new Promise<boolean>((resolve) => {
           if (!loading.current) return resolve(true)
           const timer = setTimeout(() => {
-            // 超时也照样往下走:截一张可能不完美的,好过让 agent 干等。
+            // 明确报告未就绪，调用方不能把超时当作渲染完成。
             waiters.current = waiters.current.filter((entry) => entry !== resume)
             resolve(false)
           }, timeoutMs)
@@ -460,3 +578,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     </div>
   )
 })
+
+function mergeErrors(...lists: CanvasError[][]): CanvasError[] {
+  const errors = new Map<string, CanvasError>()
+  for (const error of lists.flat()) {
+    const key = JSON.stringify([error.kind, error.message, error.source])
+    const previous = errors.get(key)
+    errors.set(key, previous?.stack && !error.stack ? previous : error)
+  }
+  return [...errors.values()].slice(-50)
+}

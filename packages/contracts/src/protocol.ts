@@ -50,7 +50,7 @@ export const PendingRequest = z.union([
 export type PendingRequest = z.infer<typeof PendingRequest>
 
 /**
- * 改字的撤销 / 重做走到哪了。`undo` / `redo` 是下一步会撤掉 / 重做的那一处,
+ * 共享编辑的撤销 / 重做走到哪了。`undo` / `redo` 是下一步会撤掉 / 重做的那一处,
  * 给界面当按钮提示用 —— 「撤销」两个字不说清是哪一处,人不敢点。
  */
 export const HistoryState = z.object({
@@ -138,7 +138,82 @@ const HistoryStep = z.object({
   text: z.string().optional(),
 })
 
+/** Live canvas evidence; selectors are scoped to the reported slide and revision. */
+export const CanvasElement = z.object({
+  selector: z.string(),
+  tag: z.string(),
+  text: z.string(),
+  box: z.object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() }),
+  visible: z.boolean(),
+  source: z.string().nullable(),
+})
+export type CanvasElement = z.infer<typeof CanvasElement>
+export const CanvasError = z.object({
+  kind: z.enum(['load', 'script', 'resource', 'promise']),
+  message: z.string(),
+  source: z.string().nullable(),
+  stack: z.string().nullable(),
+})
+export type CanvasError = z.infer<typeof CanvasError>
+export const CanvasEvidence = z.object({
+  renderedRevision: z.string().nullable(),
+  slide: z.number().int().nonnegative().nullable(),
+  ready: z.boolean(),
+  width: z.number().positive(),
+  height: z.number().positive(),
+  autoplay: z.boolean(),
+  selection: CanvasElement.nullable(),
+  elements: z.array(CanvasElement).max(500),
+  elementsTruncated: z.boolean(),
+  html: z.string().max(100000).nullable(),
+  htmlLength: z.number().int().nonnegative(),
+  htmlTruncated: z.boolean(),
+  errors: z.array(CanvasError).max(50),
+})
+export type CanvasEvidence = z.infer<typeof CanvasEvidence>
+const CanvasQuery = z.object({
+  deckId: z.string(),
+  include: z.enum(['context', 'elements', 'html', 'errors']).default('context'),
+  expectedRevision: z.string().optional(),
+})
+const CanvasSelection = z.object({
+  deckId: z.string(),
+  // Null clears the selection. A selector never silently navigates to another page.
+  selector: z.string().min(1).max(2000).nullable(),
+  slide: z.number().int().nonnegative(),
+  expectedRevision: z.string(),
+})
+const CanvasCommand = z.union([
+  CanvasQuery.extend({ action: z.literal('inspect') }),
+  CanvasSelection.extend({ action: z.literal('select') }),
+])
+
 export const requests = {
+  'canvas.inspect': {
+    params: CanvasQuery,
+    result: CanvasEvidence.extend({
+      deckId: z.string(),
+      revision: z.string(),
+      current: z.boolean(),
+    }),
+  },
+  'canvas.select': {
+    params: CanvasSelection,
+    result: CanvasEvidence.extend({
+      deckId: z.string(),
+      revision: z.string(),
+      current: z.boolean(),
+    }),
+  },
+  /** Only the UI replies to an outstanding server→guest request. */
+  'canvas.result': {
+    params: z.object({
+      requestId: z.string(),
+      evidence: CanvasEvidence.optional(),
+      error: z.string().optional(),
+    }),
+    result: z.object({}),
+  },
   'skill.list': {
     params: z.object({
       path: z.string().default(''),
@@ -275,6 +350,46 @@ export const requests = {
    * 找不到或者有好几处一样的就拒绝,`reason` 给人话。不猜着改:静默毁掉一个
    * `data-carry` 会让转场哑掉,而且要等到放映才发现。
    */
+  'deck.editPages': {
+    params: z.object({
+      deckId: z.string(),
+      expectedRevision: z.string(),
+      change: z.discriminatedUnion('action', [
+        z.object({
+          action: z.literal('insert'),
+          index: z.number().int().nonnegative(),
+          title: z.string().trim().min(1).max(200),
+        }),
+        z.object({ action: z.literal('delete'), index: z.number().int().nonnegative() }),
+        z.object({
+          action: z.literal('move'),
+          index: z.number().int().nonnegative(),
+          to: z.number().int().nonnegative(),
+        }),
+      ]),
+    }),
+    result: z.object({
+      ok: z.boolean(),
+      reason: z.string().optional(),
+      revision: z.string().optional(),
+      slide: z.number().int().nonnegative().optional(),
+    }),
+  },
+  'deck.replaceImage': {
+    params: z.object({
+      deckId: z.string(),
+      expectedRevision: z.string(),
+      slide: z.number().int().nonnegative(),
+      selector: z.string().min(1).max(2000),
+      oldSource: z.string(),
+      source: z.string().min(1).max(2000),
+    }),
+    result: z.object({
+      ok: z.boolean(),
+      reason: z.string().optional(),
+      revision: z.string().optional(),
+    }),
+  },
   'deck.editText': {
     params: z.object({
       deckId: z.string(),
@@ -285,17 +400,17 @@ export const requests = {
     result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
   },
   /**
-   * 撤掉最近一次改字(`deck.editText` 做的,不管是人双击改的还是 agent 改的)。
+   * 撤掉最近一次共享编辑(改字、页面编辑或换图,不管是 UI 还是 MCP)。
    *
    * 稿子还是那次改完的样子,就原样还回改之前;在那之后被别处改过(agent 直接写了
    * HTML、人在编辑器里动过),就退一步只把那段字换回去;连那段字都对不上了就拒绝,
-   * 不猜 —— 和 `deck.editText` 同一个规矩。只管改字:直接写文件的改动不在这里面。
+   * 不猜。结构与换图要求关联文件仍完全匹配;直接写文件的改动不在这里面。
    */
   'deck.undo': {
     params: z.object({ deckId: z.string() }),
     result: HistoryStep,
   },
-  /** 重做刚撤掉的那一步。又改过字之后就没有可重做的了。 */
+  /** 重做刚撤掉的那一步。又做过共享编辑之后就没有可重做的了。 */
   'deck.redo': {
     params: z.object({ deckId: z.string() }),
     result: HistoryStep,
@@ -463,8 +578,14 @@ export const requests = {
       deckId: z.string(),
       /** 不给就截当前这一页。 */
       slide: z.number().int().nonnegative().optional(),
+      expectedRevision: z.string().optional(),
     }),
-    result: z.object({ path: z.string() }),
+    result: z.object({
+      path: z.string(),
+      deckId: z.string().optional(),
+      slide: z.number().int().nonnegative().optional(),
+      renderedRevision: z.string().optional(),
+    }),
   },
   /**
    * 全屏放映。稿子好不好只有放映能回答 —— 这是这个产品里最该有的一个动作。
@@ -521,6 +642,8 @@ export const requests = {
   'capture.result': {
     params: z.object({
       requestId: z.string(),
+      slide: z.number().int().nonnegative().optional(),
+      renderedRevision: z.string().optional(),
       path: z.string().optional(),
       error: z.string().optional(),
     }),
@@ -615,6 +738,7 @@ export const ResponseEnvelope = z.union([
 export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>
 
 export const pushes = {
+  'canvas.request': CanvasCommand.and(z.object({ requestId: z.string() })),
   'deck.navigation': z.object({
     deckId: z.string(),
     action: z.enum(['next', 'previous', 'replay']),
@@ -656,6 +780,7 @@ export const pushes = {
   'capture.request': z.object({
     deckId: z.string(),
     requestId: z.string(),
+    expectedRevision: z.string().optional(),
     slide: z.number().int().nonnegative().optional(),
   }),
   /** 自动播放开关变了。画布和放映窗口都跟着。 */

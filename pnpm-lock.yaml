@@ -68,6 +68,9 @@ importers:
       '@orca-ppt/proc':
         specifier: workspace:*
         version: link:../../packages/proc
+      parse5:
+        specifier: 8.0.1
+        version: 8.0.1
       ws:
         specifier: ^8.18.3
         version: 8.21.3

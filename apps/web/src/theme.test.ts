@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
+import { resetTestStorage } from './test-storage.js'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { applyTheme, nextTheme, readTheme, THEME_LABEL } from './theme.js'
 
 beforeEach(() => {
-  localStorage.clear()
+  resetTestStorage()
   document.documentElement.removeAttribute('data-theme')
 })
 
