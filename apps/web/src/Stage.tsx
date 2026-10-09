@@ -210,7 +210,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       const epoch = loadEpoch.current
       // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
       void view
-        .executeJavaScript(`${inspectScript};${autoplayScript};${editScript};${canvasScript}`)
+        .executeJavaScript(
+          `window.Reveal?.configure({ controls: false });${inspectScript};${autoplayScript};${editScript};${canvasScript}`,
+        )
         .then(async () => {
           if (epoch !== loadEpoch.current) return
           // Keep the desired page across successive watcher reloads. A user/agent
