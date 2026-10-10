@@ -6,7 +6,7 @@
 
 ![Orca PPT](./docs/brand/social-card-1200x630.png)
 
-Orca PPT 是一个桌面应用，让你用自己的 AI 助手（比如 Claude Code）做出**会动的演示稿**：
+Orca PPT 是一个桌面应用，让你用自己的 AI 助手做出**会动的演示稿**：
 翻页时，标题会滑到新的位置，卡片会展开成整页，数字会变成图表 —— 像发布会上那样连贯，
 而不是一页一页地硬切。
 
@@ -45,23 +45,31 @@ AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右�
 
 ## 怎么开始
 
-1. **准备一个 AI 助手。** Orca PPT 自己不带 AI，而是连接你已经在用的。目前推荐
-   [Claude Code](https://claude.com/claude-code)，其他支持 MCP 的助手也可以。
+1. **准备一个 AI 助手。** Orca PPT 自己不带 AI，而是连接你已经在用的，支持 MCP 的都可以。
    还没有 AI 助手？可以试试 [Jevbot](https://jevbot.dev)。
 2. **装上 Orca PPT。** 从 [ppt.orca-studio.ai](https://ppt.orca-studio.ai) 下载 Mac 版
    （macOS 12 以上，Apple Silicon），拖进「应用程序」打开。之后有新版本会自动更新。
-3. **把 AI 助手连上 Orca PPT。** 应用开着的时候，在终端里运行一次：
+3. **把 AI 助手连上 Orca PPT。** 应用开着的时候，把这个 MCP 地址加到你的 AI 助手里，只做一次：
+
+   ```
+   http://127.0.0.1:6722/mcp
+   ```
+
+   用命令行的助手一般一行就加好，比如：
 
    ```bash
-   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
+   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp   # Claude Code
+   codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp               # Codex
    ```
+
+   其他助手在各自的 MCP 设置里添加这个地址，名字填 `orca-ppt`。
 
 4. **挑一个同款，点「做同款」**，把复制的那段话贴给 AI 助手，补上你的内容。
 
 ## 常见问题
 
 **需要会写代码吗？**
-不需要。你只要会跟 AI 助手说话。连接 AI 助手时要在终端里粘贴运行一行命令，只做一次。
+不需要。你只要会跟 AI 助手说话。连接 AI 助手时要把一个地址加到它的设置里（命令行的助手是粘贴运行一行命令），只做一次。
 
 **能导出成 PowerPoint 吗？**
 不能。成品是网页形式的演示稿，用浏览器放映。这样才能做出 PowerPoint 做不到的连贯动效。

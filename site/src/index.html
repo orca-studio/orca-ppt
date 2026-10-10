@@ -148,9 +148,8 @@
             <p class="eyebrow">怎么开始</p>
             <h2 id="start-title">三步，做出第一份。</h2>
             <p>
-              Orca PPT 自己不带 AI，连接的是你已经在用的那个。推荐
-              <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a
-              >，Codex 和其他支持 MCP 的助手也可以。还没有 AI 助手？可以试试
+              Orca PPT 自己不带 AI，连接的是你已经在用的那个，支持 MCP 的都可以。还没有 AI
+              助手？可以试试
               <a href="https://jevbot.dev" target="_blank" rel="noopener">Jevbot</a>。
             </p>
           </div>
@@ -169,13 +168,17 @@
             <li>
               <span class="step-n">02</span>
               <h3>连上你的 AI 助手</h3>
-              <p>应用开着的时候，在终端里运行一次：</p>
+              <p>应用开着的时候，把这个 MCP 地址加到你的 AI 助手里，只做一次：</p>
               <div class="copy" data-copy>
-                <code>claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp</code>
-                <button type="button" aria-label="复制命令">复制</button>
+                <code>http://127.0.0.1:6722/mcp</code>
+                <button type="button" aria-label="复制地址">复制</button>
               </div>
               <p class="hint">
-                用 Codex：<code>codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp</code>
+                命令行的助手一行就加好，比如<br />
+                Claude Code：<code
+                  >claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp</code
+                ><br />
+                Codex：<code>codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp</code>
               </p>
             </li>
             <li>
@@ -236,7 +239,8 @@
             <details>
               <summary>需要会写代码吗？</summary>
               <p>
-                不需要，你只要会跟 AI 助手说话。连接 AI 助手时要在终端里粘贴运行一行命令，只做一次。
+                不需要，你只要会跟 AI 助手说话。连接 AI
+                助手时要把一个地址加到它的设置里（命令行的助手是粘贴运行一行命令），只做一次。
               </p>
             </details>
             <details>

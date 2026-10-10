@@ -25,9 +25,9 @@ export function recipePrompt(recipe: RecipeRef): string {
 
 0. 先看你的工具里有没有 orca-ppt(read_skill、open_deck)。没有就先别做,把这两步转告我:
    - 装上并打开 Orca PPT 桌面应用:${PROJECT}
-   - 应用开着时,在终端里把它连到你身上(Claude Code):
-     claude mcp add --transport http orca-ppt ${MCP_URL}
-     (Codex:codex mcp add orca-ppt --url ${MCP_URL};其他支持 MCP 的助手加这个地址)
+   - 应用开着时,把 MCP 地址 ${MCP_URL} 加到你身上(名字填 orca-ppt),比如
+     Claude Code:claude mcp add --transport http orca-ppt ${MCP_URL}
+     Codex:codex mcp add orca-ppt --url ${MCP_URL}
    连上之后再从第 1 步开始。不要凭印象做。
 1. 调 read_skill 读 \`recipes/README.md\`,再读 \`${dir}/RECIPE.md\`,按配方的顺序做。
    样稿在 \`${sample}/index.html\`,是给你看手法和分寸的,不是让你改字。
