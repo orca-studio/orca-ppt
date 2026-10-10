@@ -67,7 +67,10 @@ jobs:
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "$TAG 已经发布过,不覆盖" >&2; exit 1
           fi
-          gh release create "$TAG" "$DMG" "$ZIP" SHA256SUMS.txt \
+          # 再传一份不带版本号的 dmg:官网的下载按钮指向 releases/latest/download/ 下这个固定名字,
+          # 发新版不用改官网。和带版本号的那份是同一个文件
+          cp "$DMG" OrcaPPT-mac-arm64.dmg
+          gh release create "$TAG" "$DMG" OrcaPPT-mac-arm64.dmg "$ZIP" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Orca PPT $VERSION" \
             --notes "Orca PPT $VERSION(macOS,Apple Silicon)。下载 \`$DMG\` 安装;已安装的版本会自动更新。"
