@@ -43,8 +43,8 @@ export const AgentError = {
   skillNotFound: () =>
     say(
       'SKILL_NOT_FOUND',
-      '找不到 orca-ppt-skill,没有模板和规范可用',
-      '让用户安装 orca-ppt-skill,或者设置环境变量 ORCA_PPT_SKILL 指向它;doctor 能看它在哪些位置找过',
+      '找不到随应用附带的规范(skill),没有模板和规范可用',
+      '发布版请用户重装 Orca PPT;开发时确认仓内 skill/ 在,或者设置环境变量 ORCA_PPT_SKILL 指向它;doctor 能看它在哪些位置找过',
     ),
 }
 

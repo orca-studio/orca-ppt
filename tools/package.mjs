@@ -1,34 +1,33 @@
 import { execFileSync } from 'node:child_process'
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir, homedir } from 'node:os'
+import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { packager } from '@electron/packager'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const lock = JSON.parse(await readFile(join(root, 'tools/skill-lock.json'), 'utf8'))
-const source =
-  process.env.ORCA_PPT_SKILL_SOURCE || join(homedir(), 'ghq/github.com/zhenwusw/orca-ppt-skill')
 const stage = await mkdtemp(join(tmpdir(), 'orca-package-'))
 const app = join(stage, 'app'),
   skill = join(stage, 'skill')
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit' })
 try {
   await mkdir(skill, { recursive: true })
-  // Archive the pinned commit, never the developer's modified working tree.
-  run(
-    'git',
-    ['archive', '--format=tar', '--output=' + join(stage, 'skill.tar'), lock.revision],
-    source,
-  )
+  // skill 在本仓的 skill/ 里:取当前提交里的那一份,不取工作区 —— 改了没提交的不进安装包。
+  const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim()
+  run('git', [
+    'archive',
+    '--format=tar',
+    '--output=' + join(stage, 'skill.tar'),
+    `${revision}:skill`,
+  ])
   run('tar', ['-xf', join(stage, 'skill.tar'), '-C', skill])
   await readFile(join(skill, 'SKILL.md'))
   run('npm', ['ci', '--omit=dev', '--ignore-scripts'], skill)
   const metadata = JSON.parse(await readFile(join(root, 'apps/desktop/package.json'), 'utf8'))
   await writeFile(
     join(skill, 'bundle-manifest.json'),
-    JSON.stringify({ appVersion: metadata.version, ...lock }, null, 2),
+    JSON.stringify({ appVersion: metadata.version, revision }, null, 2),
   )
   await mkdir(app, { recursive: true })
   await writeFile(

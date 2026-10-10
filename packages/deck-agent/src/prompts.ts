@@ -21,7 +21,7 @@ export interface PhaseContext {
 const COMMON = (context: PhaseContext): string => {
   const skill = context.skillPath
     ? `转场规范、主题、版式模板都在 \`${context.skillPath}\`。先调用 read_skill 读取 SKILL.md；引用资料通过 list_skill / read_skill 按相对路径获取，按 next 继续分页。无需宿主直接读本地文件。`
-    : '找不到 orca-ppt-skill —— 先说明这一点,不要凭印象编一套规范出来。'
+    : '找不到随应用附带的规范(skill)—— 先说明这一点,不要凭印象编一套规范出来。'
   return `你在一个演示稿工程目录里工作,当前目录就是这份 deck。\n${skill}`
 }
 

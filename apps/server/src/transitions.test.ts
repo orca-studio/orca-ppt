@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { fromPlan, parsePlanComment, readTransitionPlan } from './transitions.js'
 
@@ -87,7 +87,8 @@ describe('readTransitionPlan', () => {
 
 /** 拿真实的稿子验一遍 —— 格式是人手写的,只测自己编的样例说明不了问题。 */
 describe('真实示例', () => {
-  const skill = join(homedir(), 'ghq/github.com/zhenwusw/orca-ppt-skill')
+  // 仓内的 skill/(并仓之前读的是 ghq 下的独立仓)
+  const skill = fileURLToPath(new URL('../../../skill', import.meta.url))
   const cases: Array<[string, number]> = [
     ['forest-timeline', 3],
     ['emerald-editorial', 4],

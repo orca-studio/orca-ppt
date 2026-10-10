@@ -90,7 +90,7 @@ export async function recordPreview(job: PreviewJob): Promise<void> {
         tick()
       })`,
     )
-    if (!ready) throw new Error('样稿没有录制接口(不是 orca-ppt-skill 的稿子?)')
+    if (!ready) throw new Error('样稿没有录制接口(不是用 skill 的引擎做的稿子?)')
     await deck.webContents.executeJavaScript('document.fonts.ready.then(() => true)')
 
     const snap = async (): Promise<NativeImage> => {

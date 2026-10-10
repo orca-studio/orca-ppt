@@ -27,7 +27,7 @@ agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的
 
 ```bash
 # 开发时直接开一份稿子
-ORCA_PPT_DECK=~/ghq/github.com/zhenwusw/orca-ppt-skill/examples/forest-timeline pnpm dev
+ORCA_PPT_DECK=$PWD/skill/examples/forest-timeline pnpm dev
 ```
 
 ## 为什么
@@ -42,6 +42,7 @@ ORCA_PPT_DECK=~/ghq/github.com/zhenwusw/orca-ppt-skill/examples/forest-timeline 
 
 ```bash
 pnpm install
+(cd skill && npm ci) # skill 的运行时依赖(reveal.js、GSAP),稿子按相对路径引它们
 pnpm dev          # 起 server + 渲染层 + Electron 壳
 pnpm typecheck
 pnpm test
@@ -60,14 +61,14 @@ pnpm test
 
 ## 内容层
 
-规范、主题、版式、录制脚本不在本仓,从 skill 读:
+规范、主题、版式、同款配方、录制脚本都在 [`skill/`](./skill)(原 `orca-ppt-skill` 仓,
+2026-10-10 带着历史并进来)。agent 通过 MCP 的 `read_skill` 读它,不需要单独安装。
 
-- [orca-ppt-skill](https://github.com/zhenwusw/orca-ppt-skill) — 转场、主题、版式、`capture.mjs`
 - [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) — 场景内部的 MG 动画。
-  可选件,app 不读它;稿子页面自己加载它时,ppt-skill 的 engine 在转场后播放场景
+  可选件,app 不读它;稿子页面自己加载它时,skill 的 engine 在转场后播放场景
 - [ppt.orca-studio.ai](https://ppt.orca-studio.ai) — 示例库
 
-发布版的 skill 跟着 app 一起发,版本和 app 一致;开发时读本地仓。
+发布版的 skill 跟着 app 一起发,版本和 app 一致。
 见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)「交付形态」。
 
 ## 致谢

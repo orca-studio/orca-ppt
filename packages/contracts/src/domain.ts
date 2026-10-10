@@ -35,7 +35,7 @@ export const Slide = z.object({
 })
 export type Slide = z.infer<typeof Slide>
 
-/** 转场手法。名字对齐 orca-ppt-skill 的 references/transitions.md。 */
+/** 转场手法。名字对齐 skill/references/transitions.md。 */
 export const Technique = z.enum([
   'shared-element',
   'morph',
