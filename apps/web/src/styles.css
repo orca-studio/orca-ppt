@@ -324,8 +324,37 @@ select:focus-visible {
 
 .shell {
   display: grid;
-  grid-template-columns: var(--pane-left) 1fr var(--pane-right);
+  /*
+   * 两个方向都写死 minmax(0, …)。不写行的话隐式行是 auto,按内容长高:左栏缩略图一多、
+   * 窗口一矮,整排就比窗口还高,画布按撑高后的高度居中,稿子被推到窗口下面、切掉半截。
+   * 列同理:1fr 默认最小是内容宽,窄窗口里会把右栏挤出窗口。
+   */
+  grid-template-columns: var(--pane-left) minmax(0, 1fr) var(--pane-right);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
+}
+
+/*
+ * 窗口窄了先让两栏变窄,再窄就收起左栏(不改记住的开关,宽回来它自己回来)。
+ * 画布是这个界面的主角,它至少要留出能看清一页的宽度。
+ */
+@media (max-width: 1200px) {
+  :root {
+    --pane-left: 200px;
+    --pane-right: 300px;
+  }
+}
+
+@media (max-width: 900px) {
+  :root {
+    --pane-left: 0px;
+    --pane-right: 260px;
+  }
+
+  .shell .pane--nav {
+    border-right: 0;
+    overflow: hidden;
+  }
 }
 
 /*
@@ -396,6 +425,7 @@ select:focus-visible {
 
 .pane {
   min-width: 0;
+  min-height: 0;
   border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -742,7 +772,7 @@ select:focus-visible {
 /* ── 左栏开合 ─────────────────────────────────────────────────────── */
 
 .shell[data-nav='off'] {
-  grid-template-columns: 0 1fr var(--pane-right);
+  grid-template-columns: 0 minmax(0, 1fr) var(--pane-right);
 }
 
 .shell[data-nav='off'] .pane--nav {
