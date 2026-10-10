@@ -2,7 +2,7 @@
 
 **和 AI 一起，把想法做成演示稿。**
 
-![Orca PPT](./docs/brand/launch-banner-1920x1080.png)
+![Orca PPT](./docs/brand/social-card-1200x630.png)
 
 Orca PPT 是一个桌面应用，让你用自己的 AI 助手（比如 Claude Code）做出**会动的演示稿**：
 翻页时，标题会滑到新的位置，卡片会展开成整页，数字会变成图表 —— 像发布会上那样连贯，

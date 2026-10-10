@@ -121,7 +121,8 @@ function mediaKey(recipe) {
   const hash = createHash('sha256')
   for (const base of [recipe.dir, join(SKILL, 'runtime')]) {
     for (const f of walk(base).sort()) {
-      if (f.endsWith('.mp4')) continue
+      // 录好的视频和给 agent 读的说明不影响画面,不算进键
+      if (/\.(mp4|md)$/.test(f)) continue
       hash.update(relative(SKILL, f)).update(readFileSync(f))
     }
   }

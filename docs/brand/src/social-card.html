@@ -1,0 +1,107 @@
+<!doctype html>
+<!-- 分享卡片 / README 横幅的排版源文件。改文案后用浏览器按 1200×630 截图,存成 ../social-card-1200x630.png。
+     画面用的是两个同款样片的封面帧(still-*.jpg),图标是 ../orca-app-icon.png 裁到底板的 256 派生 -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        width: 1200px;
+        height: 630px;
+      }
+      body {
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(160deg, #ffffff 0%, #f1f8f3 100%);
+        color: #151918;
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .copy {
+        position: absolute;
+        left: 72px;
+        top: 76px;
+        width: 520px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      .brand img {
+        width: 56px;
+        height: 56px;
+      }
+      h1 {
+        margin-top: 56px;
+        font-size: 54px;
+        line-height: 1.22;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin-top: 24px;
+        font-size: 22px;
+        line-height: 1.6;
+        color: #3c4441;
+      }
+      .url {
+        position: absolute;
+        left: 72px;
+        bottom: 64px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #12833c;
+        letter-spacing: 0.02em;
+      }
+      .shot {
+        position: absolute;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #0f1211;
+        box-shadow:
+          0 30px 60px -24px rgba(21, 25, 24, 0.45),
+          0 0 0 1px rgba(21, 25, 24, 0.08);
+      }
+      .shot i {
+        display: block;
+        height: 26px;
+        background: #1b1f1e;
+      }
+      .shot img {
+        display: block;
+        width: 100%;
+      }
+      .back {
+        left: 690px;
+        top: 70px;
+        width: 470px;
+        transform: rotate(4deg);
+      }
+      .front {
+        left: 630px;
+        top: 250px;
+        width: 500px;
+        transform: rotate(-3deg);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="copy">
+      <div class="brand"><img src="orca-icon.png" alt="" />Orca PPT</div>
+      <h1>和 AI 一起，<br />把想法做成演示稿。</h1>
+      <p>连上你的 AI 助手，做出会动的演示稿。<br />看到喜欢的效果，一键做同款。</p>
+    </div>
+    <div class="url">ppt.orca-studio.ai</div>
+    <div class="shot back"><i></i><img src="still-neo-grid.jpg" alt="" /></div>
+    <div class="shot front"><i></i><img src="still-story-circle.jpg" alt="" /></div>
+  </body>
+</html>
