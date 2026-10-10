@@ -1,0 +1,40 @@
+/* 主题：Ledger（账本）
+ * 标签：report
+ * 一句话：经营汇报、财报 —— 纸白底上一块深海军蓝，数字用无衬线大字，标题用衬线，刻度用等宽
+ * 默认配色：ledger
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 数字是主角：.t-metric 和 .t-display 用 Inter 600、收紧字距，读起来像报表里的数，
+ * 不像海报标题；.t-h1 .t-h2 用 Source Serif 4，给页面一点读物感；页眉、单位、出处用 JetBrains Mono。
+ * 圆角很小（2 / 4 / 8），面板像表格里的一格，不像卡片。
+ *
+ * 本主题不新增类。
+ * 覆盖的类：
+ *   .t-label  等宽小标签，24px：页眉、单位、坐标轴刻度、数据来源。不转大写 —— 文件名和单元格范围要原样 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 2px;
+  --radius-m: 4px;
+  --radius-l: 8px;
+
+  --font: "Source Serif 4", Georgia, "Songti SC", serif;
+  --font-sans: "Inter", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, "PingFang SC", monospace;
+}
+
+.t-display, .t-metric { font-family: var(--font-sans); font-weight: 600; }
+.t-display { letter-spacing: -0.03em; }
+.t-metric { letter-spacing: -0.045em; }
+.t-h1, .t-h2 { font-weight: 500; }
+.t-body { font-family: var(--font-sans); }
+
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1;
+  white-space: nowrap;
+}

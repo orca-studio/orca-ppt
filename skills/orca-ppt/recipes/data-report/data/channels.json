@@ -1,0 +1,30 @@
+{
+  "source": {
+    "file": "operations-2026.xlsx",
+    "range": "渠道!A2:C6",
+    "note": "各渠道收入（万元）和占比，占比是表里的公式",
+    "readAt": "2026-10-11"
+  },
+  "values": {
+    "直销团队": {
+      "revenue": 4610,
+      "share": 0.38
+    },
+    "合作伙伴与集成商": {
+      "revenue": 3150,
+      "share": 0.26
+    },
+    "自助订阅": {
+      "revenue": 2430,
+      "share": 0.2
+    },
+    "应用市场": {
+      "revenue": 1210,
+      "share": 0.1
+    },
+    "海外代理": {
+      "revenue": 730,
+      "share": 0.06
+    }
+  }
+}

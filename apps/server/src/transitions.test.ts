@@ -90,16 +90,18 @@ describe('真实示例', () => {
   // 仓内的 skills/orca-ppt/(并仓之前读的是 ghq 下的独立仓)
   const skill = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
   const cases: Array<[string, number]> = [
-    ['forest-timeline', 6],
-    ['emerald-editorial', 6],
-    ['story-circle', 5],
-    ['spec-wall', 6],
+    ['examples/forest-timeline', 6],
+    ['examples/emerald-editorial', 6],
+    ['examples/story-circle', 5],
+    ['examples/spec-wall', 6],
+    // 计划注释后面跟着「数据来源」那几行 —— 它们不该被读成翻页
+    ['recipes/data-report', 6],
   ]
 
   it.each(cases)('%s 解析出 %i 次翻页,每条都有关系和手法', async (name, count) => {
     let html: string
     try {
-      html = await readFile(join(skill, 'examples', name, 'index.html'), 'utf8')
+      html = await readFile(join(skill, name, 'index.html'), 'utf8')
     } catch {
       // skill 没装在默认位置就跳过 —— 这条是环境依赖的,不该让整套测试红
       return

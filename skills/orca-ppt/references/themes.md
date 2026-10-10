@@ -14,6 +14,7 @@
 | `editorial-tri-tone.css` | 腮红粉画布，酒红深面板，奶油黄卡片；胶囊标签 + 大圆角卡片；Bricolage Grotesque + Instrument Serif + JetBrains Mono | beautiful-html-templates/editorial-tri-tone |
 | `cobalt-grid.css` | 米色纸面 + 一种钴蓝，严格双色；方格纸底、扫描线纹理，圆角全零；Newsreader + Hanken Grotesk + DM Mono。默认配色 `cobalt` | beautiful-html-templates/cobalt-grid |
 | `neo-grid.css` | 墨黑 / 纸白 / 荧光柠檬黄的网格面板，圆角全零；全大写粗体标题 + 等宽小标签，棋盘格小方块；Space Grotesk + JetBrains Mono。默认配色 `lemon` | beautiful-html-templates/neo-grid-bold |
+| `ledger.css` | 纸白底 + 深海军蓝面板 + 一点赤橙；数字 Inter 600、标题 Source Serif 4、刻度和出处 JetBrains Mono，小圆角。默认配色 `ledger` | 本 skill 自己的，给经营汇报（同款 `recipes/data-report`） |
 
 ## 使用主题
 

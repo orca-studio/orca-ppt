@@ -22,6 +22,7 @@
 | `soft-editorial` | 三色卡片收成图表 | 三条并列的洞察，最后收进一张对比图表 | [soft-editorial/RECIPE.md](soft-editorial/RECIPE.md) |
 | `forest-timeline` | 一条线走完全稿 | 回顾和规划：时间线、占比、关键数字由同一条线串起来 | [forest-timeline/RECIPE.md](forest-timeline/RECIPE.md) |
 | `spec-wall` | 实拍接进参数墙 | 产品介绍：从一段实拍视频接到参数一览 | [spec-wall/RECIPE.md](spec-wall/RECIPE.md) |
+| `data-report` | 一张表做成汇报稿 | 用户给了表格：读数、做图、标出处，总览的一格展开成图表 | [data-report/RECIPE.md](data-report/RECIPE.md) |
 
 ## 怎么用一个同款
 

@@ -1,0 +1,30 @@
+/* 配色：账本
+ * 一句话：纸白 + 深海军蓝 + 一点赤橙。像一份印出来的经营报告,浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          纸白                --surface     深海军蓝（大面板、整页蓝底、普通横条）
+ *   --surface-2   浅蓝灰（蓝面板上的普通柱）  --accent      赤橙（重点柱、坐标轴、重点条）
+ *   --accent-soft 浅杏（highlight 格、对比页强调的一侧）
+ *   --text / --text-dim  海军蓝 / 灰蓝
+ *   --text-on-surface    纸白（蓝底上的文字）
+ *   --text-on-accent     深海军蓝（赤橙、浅杏上的文字）
+ *
+ * 赤橙只给「这一个数最重要」：一页一处重点柱或一条重点条，加上坐标轴。
+ * 可以互变的颜色：accent ↔ accent-soft（赤橙 ↔ 浅杏，同色系）。
+ * surface（深蓝）和 surface-2（浅蓝灰）明度差太大，不能互变。
+ * 背景是浅色：满屏深蓝用「整页 ↔ 卡片」组合里的整页形状做。
+ */
+
+:root {
+  --bg: #f5f3ee;
+  --surface: #1b2a44;
+  --surface-2: #c9d3e1;
+  --text: #1b2a44;
+  --text-dim: #5a6478;
+  --text-on-surface: #f5f3ee;
+  --accent: #e2703a;
+  --accent-soft: #f4c9ad;
+  --text-on-accent: #1b2a44;
+  --accent-text: #b04a17;
+}

@@ -1,0 +1,25 @@
+{
+  "source": {
+    "file": "operations-2026.xlsx",
+    "range": "汇总!A2:B10",
+    "note": "全年汇总：营收、同比、毛利率和四个季度，演示用的虚构数据",
+    "readAt": "2026-10-11"
+  },
+  "values": {
+    "revenue": 12130,
+    "lastYear": 9050,
+    "yoy": 0.3403,
+    "cost": 4610,
+    "grossMargin": 0.62,
+    "Q1": 2220,
+    "Q2": 2740,
+    "Q3": 3190,
+    "Q4": 3980
+  },
+  "display": {
+    "revenue": "1.21",
+    "lastYear": "0.91",
+    "yoy": "34%",
+    "grossMargin": "62%"
+  }
+}

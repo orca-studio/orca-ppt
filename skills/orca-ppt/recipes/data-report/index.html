@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 一张表做成汇报稿</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/ledger.css">
+  <link rel="stylesheet" href="../../runtime/palettes/ledger.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Ledger，配色 ledger，版式 standard）
+1→2  关系：封面的深蓝整页收成总览里「全年营收」那一格，1.21 跟着落进格子          手法：形态变换  共享：page, rev
+2→3  关系：「季度营收」那一格展开成数据页的图表面板，34% 从小格飞成关键数字          手法：形态变换  共享：chart, yoy
+3→4  关系：第四季度那根柱子拆成十、十一、十二三个月                               手法：一变多    分：q4
+4→5  关系：图表的坐标轴变成渠道排行里最长的那一条                                 手法：形态变换  共享：axis
+5→6  关系：换话题，从收入转到客户                                                 手法：遮挡剪辑  方向：up
+6→7  关系：2025 那块深蓝面板撑满整页，成为结尾的底，和封面首尾呼应                  手法：形态变换  共享：page
+数据全是虚构的示例：一家不存在的「北岸软件」的 2026 年经营数据。
+数据来源：data/operations-2026.xlsx（calcgrid 读取，2026-10-11）
+  汇总!A2:B10 → data/summary.json（全年营收、同比、毛利率、四个季度）
+  月度收入!A11:B13 → data/q4-months.json（第四季度三个月）
+  渠道!A2:C6 → data/channels.json（各渠道收入和占比）
+  客户!A2:C3 → data/customers.json（付费客户、净收入留存）
+  一次 get 读完四个范围；1.21 / 0.91 / 34% / 62% 用 calcgrid eval 的 TEXT() 定格式；34% 的出处用 explain 核过。
+柱高按数据比例：第 3 页最高 440 = 3980 万元，第 4 页最高 440 = 1460 万元；第 5 页最长 880 = 4610 万元。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：深蓝整页，全年营收是主角 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <div data-id="page" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p class="t-label t-on-surface" style="left:120px; top:120px;">北岸软件 · 2026 年度经营汇报</p>
+    <p class="t-label t-on-surface" style="left:1400px; top:120px; width:400px; text-align:right;">FY2026</p>
+    <p class="t-h1 t-on-surface" style="left:120px; top:320px;">全年营收</p>
+    <p data-id="rev" class="t-metric t-on-surface" style="left:120px; top:440px;">1.21</p>
+    <p class="t-h2 t-on-surface" style="left:120px; top:760px; width:1200px;">亿元，比上年增长三分之一。</p>
+  </section>
+
+  <!-- 2 总览：整页收成 hero 格，四个小格各放一个数 -->
+  <section data-page="bento" data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="page" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">一年的数字</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:280px;">全年营收 · 亿元</p>
+    <p data-id="rev" class="t-metric t-on-surface" style="left:160px; top:440px;">1.21</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:800px; width:720px;">上年 0.91 亿元，营业成本 0.46 亿元。</p>
+
+    <div class="s-surface" data-auto-animate-delay="0.8" style="left:1000px; top:240px; width:360px; height:360px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:1040px; top:280px;">同比增长</p>
+    <p data-id="yoy" class="t-display t-on-surface" data-auto-animate-delay="1.0" style="left:1040px; top:400px;">34</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.0" style="left:1240px; top:485px;">%</p>
+
+    <div class="s-accent-soft" data-auto-animate-delay="0.88" style="left:1440px; top:240px; width:360px; height:360px;"></div>
+    <p class="t-label t-on-accent" data-auto-animate-delay="1.08" style="left:1480px; top:280px;">毛利率</p>
+    <p class="t-display t-on-accent" data-auto-animate-delay="1.08" style="left:1480px; top:400px;">62</p>
+    <p class="t-h2 t-on-accent" data-auto-animate-delay="1.08" style="left:1680px; top:485px;">%</p>
+
+    <div class="s-surface" data-auto-animate-delay="0.96" style="left:1000px; top:640px; width:360px; height:360px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.16" style="left:1040px; top:680px;">付费客户 · 家</p>
+    <p class="t-h1 t-on-surface" data-auto-animate-delay="1.16" style="left:1040px; top:780px;">2,140</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.16" style="left:1040px; top:900px; width:280px;">上年 1,630</p>
+
+    <div data-id="chart" class="s-surface" data-auto-animate-delay="1.04" style="left:1440px; top:640px; width:360px; height:360px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.24" style="left:1480px; top:680px;">按季度 · 万元</p>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.3" style="left:1480px; top:848px; width:40px; height:112px;"></div>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.38" style="left:1560px; top:822px; width:40px; height:138px;"></div>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.46" style="left:1640px; top:800px; width:40px; height:160px;"></div>
+    <div class="s-accent" data-enter="grow-up" data-auto-animate-delay="1.54" style="left:1720px; top:760px; width:40px; height:200px;"></div>
+  </section>
+
+  <!-- 3 季度营收：那一格展开成图表面板 -->
+  <section data-page="data" data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">季度营收</p>
+    <p data-id="yoy" class="t-metric" style="left:120px; top:320px;">34</p>
+    <p class="t-h1 t-accent" data-auto-animate-delay="1.0" style="left:480px; top:483px;">%</p>
+    <p class="t-h2" data-auto-animate-delay="1.0" style="left:120px; top:680px;">全年营收同比增长</p>
+    <p class="t-body" data-auto-animate-delay="1.08" style="left:120px; top:760px; width:800px;">从 9,050 万元涨到 12,130 万元。</p>
+    <div data-id="chart" class="s-surface" style="left:1000px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:1040px; top:280px;">单位：万元</p>
+    <div data-id="axis" class="s-accent" data-enter="grow-right" data-auto-animate-delay="1.0" style="left:1040px; top:880px; width:720px; height:4px;"></div>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.1" style="left:1080px; top:635px; width:100px; height:245px;"></div>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.2" style="left:1260px; top:577px; width:100px; height:303px;"></div>
+    <div class="s-surface-2" data-enter="grow-up" data-auto-animate-delay="1.3" style="left:1440px; top:527px; width:100px; height:353px;"></div>
+    <div data-split="q4" class="s-accent" data-enter="grow-up" data-auto-animate-delay="1.4" style="left:1620px; top:440px; width:100px; height:440px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1040px; top:595px; width:180px; text-align:center;">2,220</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1220px; top:537px; width:180px; text-align:center;">2,740</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1400px; top:487px; width:180px; text-align:center;">3,190</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1580px; top:400px; width:180px; text-align:center;">3,980</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.78" style="left:1040px; top:900px; width:180px; text-align:center;">Q1</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.78" style="left:1220px; top:900px; width:180px; text-align:center;">Q2</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.78" style="left:1400px; top:900px; width:180px; text-align:center;">Q3</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.78" style="left:1580px; top:900px; width:180px; text-align:center;">Q4</p>
+  </section>
+
+  <!-- 4 第四季度按月：Q4 那根柱子拆成三个月 -->
+  <section data-page="data" data-st="split" data-st-split="q4" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">第四季度，按月</p>
+    <p class="t-metric" style="left:120px; top:320px;">1,460</p>
+    <p class="t-h2" style="left:120px; top:680px;">万元，12 月单月营收</p>
+    <p class="t-body" style="left:120px; top:760px; width:800px;">一月比一月高，三个月合计 3,980 万元。</p>
+    <div data-id="chart" class="s-surface" style="left:1000px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-label t-on-surface" style="left:1040px; top:280px;">单位：万元</p>
+    <div data-id="axis" class="s-accent" style="left:1040px; top:880px; width:720px; height:4px;"></div>
+    <div data-split="q4" class="s-accent-soft" style="left:1080px; top:512px; width:120px; height:368px;"></div>
+    <div data-split="q4" class="s-accent-soft" style="left:1340px; top:488px; width:120px; height:392px;"></div>
+    <div data-split="q4" class="s-accent" style="left:1600px; top:440px; width:120px; height:440px;"></div>
+    <p class="t-label t-on-surface" data-enter-delay="1.0" style="left:1010px; top:472px; width:260px; text-align:center;">1,220</p>
+    <p class="t-label t-on-surface" data-enter-delay="1.0" style="left:1270px; top:448px; width:260px; text-align:center;">1,300</p>
+    <p class="t-label t-on-surface" data-enter-delay="1.0" style="left:1530px; top:400px; width:260px; text-align:center;">1,460</p>
+    <p class="t-body t-on-surface" data-enter-delay="1.08" style="left:1010px; top:900px; width:260px; text-align:center;">10 月</p>
+    <p class="t-body t-on-surface" data-enter-delay="1.08" style="left:1270px; top:900px; width:260px; text-align:center;">11 月</p>
+    <p class="t-body t-on-surface" data-enter-delay="1.08" style="left:1530px; top:900px; width:260px; text-align:center;">12 月</p>
+  </section>
+
+  <!-- 5 渠道：坐标轴变成最长的那一条 -->
+  <section data-page="bars" data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">收入从哪来</p>
+    <p class="t-h2" data-auto-animate-delay="0.8" style="left:120px; top:236px; width:480px;">直销团队</p>
+    <div data-id="axis" class="s-accent" style="left:680px; top:240px; width:880px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="1.4" style="left:1600px; top:236px;">38%</p>
+    <p class="t-h2" data-auto-animate-delay="0.88" style="left:120px; top:356px; width:480px;">合作伙伴与集成商</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="0.98" style="left:680px; top:360px; width:601px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="1.48" style="left:1600px; top:356px;">26%</p>
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:120px; top:476px; width:480px;">自助订阅</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.06" style="left:680px; top:480px; width:464px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="1.56" style="left:1600px; top:476px;">20%</p>
+    <p class="t-h2" data-auto-animate-delay="1.04" style="left:120px; top:596px; width:480px;">应用市场</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.14" style="left:680px; top:600px; width:231px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="1.64" style="left:1600px; top:596px;">10%</p>
+    <p class="t-h2" data-auto-animate-delay="1.12" style="left:120px; top:716px; width:480px;">海外代理</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.22" style="left:680px; top:720px; width:139px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="1.72" style="left:1600px; top:716px;">6%</p>
+    <p class="t-label" data-auto-animate-delay="1.8" style="left:120px; top:880px;">占全年营收 12,130 万元</p>
+  </section>
+
+  <!-- 6 留存：换话题，两年对照 -->
+  <section data-page="compare" data-st="mask" data-st-direction="up" data-auto-animate data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">老客户买得更多</p>
+    <div data-id="page" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-label t-on-surface" style="left:160px; top:280px;">2025 · 净收入留存</p>
+    <p class="t-display t-on-surface" style="left:160px; top:440px;">104%</p>
+    <p class="t-body t-on-surface" style="left:160px; top:760px; width:720px;">老客户第二年平均多付 4%。</p>
+    <div class="s-accent-soft" style="left:1000px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-label t-on-accent" style="left:1040px; top:280px;">2026 · 净收入留存</p>
+    <p class="t-display t-on-accent" style="left:1040px; top:440px;">118%</p>
+    <p class="t-body t-on-accent" style="left:1040px; top:760px; width:720px;">多付 18%；付费客户从 1,630 家增加到 2,140 家。</p>
+  </section>
+
+  <!-- 7 结尾：深蓝面板撑满整页，写明数据来源 -->
+  <section data-page="closing" data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="page" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p class="t-display t-on-surface" data-auto-animate-delay="0.8" style="left:360px; top:400px; width:1200px; text-align:center;">谢谢</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:360px; top:600px; width:1200px; text-align:center;">页面上的每个数，都来自同一份表格。</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.1" style="left:120px; top:880px;">数据来源 · data/operations-2026.xlsx · 虚构的示例数据 · calcgrid 读取于 2026-10-11</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.18" style="left:120px; top:920px;">营收 汇总!B2:B10 · 第四季度 月度收入!B11:B13 · 渠道 渠道!A2:C6 · 客户 客户!B2:C3</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>
