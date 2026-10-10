@@ -1,0 +1,27 @@
+/* 配色：钴蓝（借自 beautiful-html-templates/cobalt-grid,MIT）
+ * 一句话：米色纸面 + 一种电光钴蓝。严格双色，像双色印刷的趋势报告,浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          米色纸面            --surface     钴蓝（大面板、整页蓝底）
+ *   --surface-2   深一档的米色         --accent      钴蓝（细线、扫描线、柱子、强调）
+ *   --accent-soft 浅钴蓝              --text / --text-dim  钴蓝 / 浅钴蓝
+ *   --text-on-surface / --text-on-accent  米色（蓝底上的文字）
+ *
+ * 文字、线条、图形全是钴蓝 —— 这套配色只有一种墨色，不要再加强调色。
+ * 可以互变的颜色：accent ↔ accent-soft（同是钴蓝）。surface（蓝）和 surface-2（米）不能互变。
+ * 背景是浅色：满屏蓝用「整页 ↔ 卡片」组合里的整页形状做。
+ */
+
+:root {
+  --bg: #f0ebde;
+  --surface: #1f2be0;
+  --surface-2: #e6e0ce;
+  --text: #1f2be0;
+  --text-dim: #4b55d6;
+  --text-on-surface: #f0ebde;
+  --accent: #1f2be0;
+  --accent-soft: #4c57e3;         /* 原模板的 ink-soft 是 #5560e5,米色字压上去只有 4.21:1,深一点到 4.67:1 */
+  --text-on-accent: #f0ebde;
+  --accent-text: #1f2be0;
+}

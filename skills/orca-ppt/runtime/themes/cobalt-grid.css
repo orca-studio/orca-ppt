@@ -1,0 +1,60 @@
+/* 主题：Cobalt Grid（配色、字体和方格纸、扫描线的样子借自 beautiful-html-templates/cobalt-grid,MIT）
+ * 标签：editorial
+ * 一句话：数据年报、趋势报告 —— 双色印刷的杂志感，米色纸面上只有一种钴蓝
+ * 默认配色：cobalt
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 平面、没有圆角、没有阴影；层次靠细线和方格纸。标题衬线（Newsreader）只用一个字重，
+ * 靠字号分层级；正文无衬线（Hanken Grotesk）；页码、标签、刻度用等宽（DM Mono）。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .s-grid   方格纸：40px 一格的钴蓝细格，铺满整页，写成每页的第一个元素，每页同一位置（翻页不动）
+ *   .s-scan   扫描线：每块固定 8 根钴蓝竖线。封面的阶梯装饰和柱状图的柱子用它 ——
+ *             同一个 data-id 从阶梯变成柱子，纹理跟着块走，观众认得出是同一样东西
+ * 覆盖的类：
+ *   .t-label  等宽小标签，24px：页眉、页脚、编号、坐标轴刻度 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+
+  --font: "Newsreader", Georgia, "Songti SC", serif;
+  --font-sans: "Hanken Grotesk", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, Menlo, monospace;
+}
+
+.t-display, .t-metric, .t-h1, .t-h2 { font-weight: 400; }
+.t-display { line-height: 0.92; letter-spacing: -0.01em; }
+.t-metric { letter-spacing: -0.015em; }
+.t-body { font-family: var(--font-sans); }
+
+/* 等宽小标签：页眉、页脚、编号、坐标轴 */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 方格纸：每页的底，40px 一格，和稿子的 40px 基线网格对齐 */
+.s-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* 扫描线：每块固定 8 根竖线，线宽是格宽的 32%。按比例算而不是写死像素:
+ * 共享元素靠缩放改变尺寸,纹理会跟着缩放;写死像素的话,转场中途线条变粗、落定那一帧又跳回细线。
+ * 按比例的纹理缩放前后长得一样,所以没有这一跳。代价是越宽的块线越粗 —— 正好是原模板的像素感 */
+.s-scan {
+  background-image: linear-gradient(90deg, var(--accent) 0 32%, transparent 32%);
+  background-size: 12.5% 100%;
+  background-repeat: repeat-x;
+}

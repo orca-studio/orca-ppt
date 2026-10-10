@@ -122,6 +122,10 @@ async function createWindow(): Promise<void> {
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
+    // 最窄也要放得下首页的一列同款卡片:卡片最窄 420(styles.css 的 gallery-grid--recipes)
+    // + 左右各 32 的边距,再留点余量
+    minWidth: 520,
+    minHeight: 480,
     backgroundColor: '#0b0b0c',
     // macOS 上窗口不用它(图标归 Dock 管),Windows / Linux 的任务栏靠它。
     icon: ICON,

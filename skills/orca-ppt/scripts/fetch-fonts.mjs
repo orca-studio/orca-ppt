@@ -38,6 +38,10 @@ const FAMILIES = [
   'Bodoni+Moda:opsz,wght@6..96,400;6..96,700;6..96,800;6..96,900',
   'Manrope:wght@500;700;800',
   'Source+Serif+4:opsz,wght@8..60,400;8..60,500',
+  // Cobalt Grid(同款 cobalt-grid):衬线标题 + 人文无衬线正文 + 等宽小字
+  'Newsreader:opsz,wght@6..72,400;6..72,500',
+  'Hanken+Grotesk:wght@400;600',
+  'DM+Mono:wght@400;500',
 ]
 
 /**

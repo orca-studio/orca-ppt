@@ -14,6 +14,7 @@
 | --- | --- | --- | --- |
 | `recap-credits` | 电影级回顾片尾 | 结尾页：回顾整份稿子 + 感谢幕后成员 | [recap-credits/RECIPE.md](recap-credits/RECIPE.md) |
 | `drink-showcase` | 四栏产品切换 | 四个平级产品逐个亮相，最后展开主推款 | [drink-showcase/RECIPE.md](drink-showcase/RECIPE.md) |
+| `cobalt-grid` | 扫描线变柱状图 | 年报、季报：一组随时间变化的数，封面装饰直接长成图表 | [cobalt-grid/RECIPE.md](cobalt-grid/RECIPE.md) |
 
 ## 怎么用一个同款
 
