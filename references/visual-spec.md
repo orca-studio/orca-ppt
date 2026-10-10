@@ -134,6 +134,7 @@ id 见 `runtime/pages.json`。
 | 9 条等权，没有主次 | Bento 三栏版 | 有明显主次时，主角会被淹没。其中一格放汇总数字（highlight）不算主次 |
 | 一段实拍素材 | 整页视频 | 往上压字。画面亮部读不出来，要说话就用下一页 |
 | 收尾 | 结尾页 | 一份稿子只有一个 |
+| 收尾，要回顾整份稿子、感谢幕后成员 | 结尾页 · 回顾片尾（同款 `recipes/recap-credits`） | 一个人做的稿子（名单撑不起滚动）；可回顾的页少于 3 页 |
 | 一页一张照片讲演变 | 故事稿（`story-mode.md`） | 混进汇报稿的页面类型 |
 
 **按项数选**，凑数和砍数都会露馅：
@@ -369,6 +370,12 @@ ffmpeg -sseof -0.1 -i clip.mp4 -frames:v 1 last.png
 ### 结尾页
 - `.t-display`：水平居中，`top:400`
 - 一行 `.t-body`：`top:600`，`width:1200 text-align:center left:360`
+
+### 结尾页 · 回顾片尾
+- 底：整页 `.s-surface`（`left:0 top:0 width:1920 height:1080 border-radius:0`），写在屏幕前面
+- 屏幕 `.s-recap`：`left:120 top:220 width:1120 height:630`（16:9）
+- 名单 `.t-credits`：`left:1320 top:120 width:480 height:840`，行高 80。压在 `.s-surface` 上加 `.t-on-surface`
+- 名单条目写 `<li><span>职责</span><b>姓名</b></li>`，不许加别的结构
 
 ## 为转场预留
 

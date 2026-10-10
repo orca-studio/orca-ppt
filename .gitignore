@@ -52,3 +52,7 @@ runtime/themes/samples/*--*.jpg
 !examples/drink-showcase/
 examples/drink-showcase/index.mp4
 examples/drink-showcase/capture-report.json
+
+# 同款：保留配方和样稿，不提交录制产物
+recipes/*/index.mp4
+recipes/*/capture-report.json

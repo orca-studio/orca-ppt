@@ -14,6 +14,9 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | **汇报稿** | 工作汇报、产品介绍、数据复盘。页面由文字、数字、面板组成 | `references/visual-spec.md` + `references/transitions.md` |
 | **故事稿** | 讲演变、讲历史。一页一张照片，靠照片里形状的呼应串起来 | `references/story-mode.md` + `references/transitions.md` 的「核心原则」「自检标准」 |
 
+**用户拿来一个参考说「做个同款」时**（一段视频、别人的稿子、「像 XX 那样的结尾页」），
+先读 `recipes/README.md`，有现成同款就照它的 `RECIPE.md` 做；没有的就按通用规范做，别临场发明配方。
+
 **用户要某种配色、字体风格时**（「米色纸面加墨绿」「像杂志」「换成浅色」），
 读 `references/themes.md`：先看有没有现成主题，没有就按规范新建一个。不要在稿子里改颜色。
 
@@ -99,6 +102,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | `scripts/check-palettes.mjs` | 核配色的对比度（`npm run palettes`），新建配色必须跑 |
 | `templates/starter.html` | 汇报稿起始文件 |
 | `templates/story-starter.html` | 故事稿起始文件 |
+| `recipes/` | 同款：参考作品的内容结构 + 动效原则，整理成能照着复刻的配方 |
 | `examples/story-circle/` | 故事模式示例（电话 → 相机 → 电视） |
 | `examples/editorial-forest/` | 主题 + 「整页 ↔ 卡片」示例（封面 → 目录 → 数据页） |
 | `examples/soft-editorial/` | 主题 + 形态变换换布局 + 多合一示例（洞察卡 → 数据面板 → 图表卡） |

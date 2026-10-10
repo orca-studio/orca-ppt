@@ -6,6 +6,7 @@
 //                         以及元素级的原地替换（data-swap）和文字级匹配（data-text）
 //   目标页写 data-st="…" 的 → 本文件的 builders：
 //     汇报稿：carry（元素交接）/ split（一变多）/ merge（多合一）/ match-move（匹配放大）/ match-cut（匹配剪辑，硬切）/ zoom-through（整页推近）/ zoom-into（放大进元素内部）/ mask（遮挡剪辑）
+//     结尾页：recap（回顾片尾，配合 .s-recap 回顾屏和 .t-credits 名单）
 //     故事稿：zoom-match（推近匹配）/ iris（遮挡变形）
 //     旧版：speed-match，规范已不再使用，只为兼容旧示例保留
 //
@@ -16,6 +17,8 @@
 // 录制模式（URL 带 ?capture）：动画全部暂停，由 scripts/capture.mjs 调 __capture.seek(ms) 逐帧推进。
 (() => {
   const CAPTURE = new URLSearchParams(location.search).has("capture");
+  // 被回顾屏（.s-recap）嵌着放的那一份：不接键盘，不再嵌自己。总是和 ?capture 一起出现
+  const EMBED = new URLSearchParams(location.search).has("embed");
   // 减少动效。**显式开关**:URL 带 ?calm,或 <html> / <body> 上写 data-motion="calm"。
   // 不跟系统的 prefers-reduced-motion 走 —— 放映时是演讲者电脑上的设置在决定观众看到什么,
   // 观众并没有选过;自动退化等于演讲者不知情地把稿子的价值关掉了。录制模式忽略它。
@@ -26,7 +29,7 @@
     (new URLSearchParams(location.search).has("calm") ||
       document.documentElement.dataset.motion === "calm" ||
       document.body?.dataset.motion === "calm");
-  const CALM_REPLACE = new Set(["zoom-through", "zoom-into", "zoom-match"]);
+  const CALM_REPLACE = new Set(["zoom-through", "zoom-into", "zoom-match", "recap"]);
   const CALM_FADE_S = 0.4;
   const W = 1920;
   const H = 1080;
@@ -1353,6 +1356,209 @@
       .to(newCaps, { autoAlpha: 1, y: 0, duration: 0.5, ease: "power2.out", stagger: 0.06 }, d - 0.4);
   };
 
+  // ───────── 回顾片尾（.s-recap）─────────
+  // 结尾页上放一块倾斜的「屏幕」，里面把这份稿子自己的某一段页（data-recap="2-6"）按真转场自动放一遍，
+  // 旁边 .t-credits 的名单同步滚动。屏幕是一个指向本文件的 iframe（?embed&capture），所以：
+  //   - 回顾里放的是真转场，不是导出再导回的视频；稿子改了，回顾跟着变；
+  //   - 内层一直处于录制模式（动画全冻住），由外层按毫秒 seek —— 放映和录制走同一条路，
+  //     名单和回顾逐帧对得上，capture.mjs 录出来也是确定的。
+  // 内外层只用 postMessage 说话：file:// 打开时两层是不同源，碰不了对方的 DOM。
+  // 内层（embed）不再创建自己的 .s-recap iframe，否则无限套娃。
+  const RECAP_TILT = 26;        // 透视右：左边缘离观众近，右边缘退远
+  const RECAP_PERSPECTIVE = 1800;
+  const recapTransform = (frame) => ({
+    transformOrigin: "0% 50%",
+    transformPerspective: RECAP_PERSPECTIVE,
+    rotationY: +(frame.dataset.recapTilt ?? RECAP_TILT),
+  });
+  function recapRange(frame) {
+    const m = /^(\d+)\s*-\s*(\d+)$/.exec(frame.dataset.recap || "");
+    if (!m) return null;
+    return { from: +m[1] - 1, to: +m[2] - 1 }; // 写的是页号（从 1 数），内部用下标
+  }
+  function prepareRecaps() {
+    for (const frame of document.querySelectorAll(".reveal .slides .s-recap")) {
+      gsap.set(frame, recapTransform(frame));
+      if (EMBED) continue;
+      const range = recapRange(frame);
+      if (!range) {
+        console.error(`[orca-transition-skill] .s-recap 需要 data-recap="起页-止页"（页号从 1 数），比如 data-recap="2-6"`);
+        continue;
+      }
+      const iframe = document.createElement("iframe");
+      iframe.src = `${location.pathname}?embed&capture#/${range.from}`;
+      iframe.setAttribute("tabindex", "-1");
+      iframe.setAttribute("aria-hidden", "true");
+      frame.append(iframe);
+      // 内层可能在这一页被翻到之前很久就就绪了，所以现在就开始等它的 ready
+      const ready = new Promise((resolve) => recapReady.set(iframe.contentWindow, resolve));
+      frame.__recap = { iframe, range, ready, hold: +(frame.dataset.recapHold ?? 0.7) * 1000 };
+    }
+    // 名单：把条目包进一层，滚动只动这一层，外框负责裁切和上下渐隐
+    for (const list of document.querySelectorAll(".reveal .slides .t-credits")) {
+      const roll = document.createElement("div");
+      roll.className = "st-roll";
+      roll.append(...list.childNodes);
+      list.append(roll);
+    }
+  }
+
+  // 外层 → 内层的一问一答。内层就绪前发的消息会丢，所以先等它报 ready
+  const recapPending = new Map();
+  let recapMsgSeq = 0;
+  const recapReady = new Map(); // iframe.contentWindow → resolve
+  window.addEventListener("message", (e) => {
+    const d = e.data;
+    if (!d || typeof d !== "object") return;
+    if (d.orcaRecapReady) {
+      for (const [win, done] of recapReady) if (win === e.source) done();
+    } else if (d.orcaRecapReply !== undefined) {
+      recapPending.get(d.orcaRecapReply)?.(d);
+      recapPending.delete(d.orcaRecapReply);
+    }
+  });
+  function ask(iframe, msg) {
+    return new Promise((resolve) => {
+      const id = recapMsgSeq++;
+      recapPending.set(id, resolve);
+      iframe.contentWindow.postMessage({ ...msg, orcaRecapAsk: id }, "*");
+    });
+  }
+
+  // 每块回顾屏一个控制器：time(ms) 把内层回顾和名单一起拨到这一刻
+  function recapController(slide) {
+    const frame = slide.querySelector(".s-recap");
+    if (!frame?.__recap) return null;
+    if (frame.__ctl) return frame.__ctl;
+    const { iframe, range, hold, ready } = frame.__recap;
+    const list = slide.querySelector(".t-credits");
+    const roll = list?.querySelector(":scope > .st-roll");
+    const ctl = { total: 0, roll: null, busy: null };
+    ctl.ready = ready.then(async () => {
+      const { total } = await ask(iframe, { op: "measure", from: range.from, to: range.to, hold });
+      ctl.total = total;
+      if (roll) {
+        // 从框下沿进，滚到最后一条落在框里为止；条目少于一框时停在顶上
+        const boxH = list.clientHeight;
+        const endY = Math.min(0, boxH - roll.scrollHeight);
+        ctl.roll = gsap.timeline({ paused: true }).fromTo(roll, { y: boxH }, { y: endY, duration: total / 1000, ease: "none" });
+      }
+      return ctl;
+    });
+    ctl.time = async (ms) => {
+      await ctl.ready;
+      const t = Math.max(0, Math.min(ms, ctl.total));
+      ctl.roll?.time(t / 1000);
+      await ask(iframe, { op: "seek", t });
+    };
+    frame.__ctl = ctl;
+    return ctl;
+  }
+
+  // 放映：转场结束后按真实时间往前拨。上一帧的 seek 还没回来就跳过这一帧，别堆积
+  let recap = null;
+  let recapTick = null;
+  function stopRecap() {
+    if (recapTick) gsap.ticker.remove(recapTick);
+    recapTick = null;
+    recap = null;
+  }
+  function startRecap(slide, delay) {
+    stopRecap();
+    recap = recapController(slide);
+    if (!recap) return;
+    recap.time(0);
+    if (CAPTURE) return;
+    const ctl = recap;
+    const t0 = performance.now() + delay * 1000;
+    let busy = false;
+    recapTick = () => {
+      const t = performance.now() - t0;
+      if (t < 0 || busy) return;
+      busy = true;
+      ctl.time(t).then(() => { busy = false; });
+      if (ctl.total && t > ctl.total) stopRecap();
+    };
+    gsap.ticker.add(recapTick);
+  }
+
+  // 进入回顾页的转场：上一页整页缩小、倾斜，落进回顾屏，再淡出露出回顾的第一页
+  builders.recap = (section, ghost, enter) => {
+    const frame = enter.querySelector(".s-recap");
+    if (!frame) {
+      console.error(`[orca-transition-skill] data-st="recap" 的页上要有一块 .s-recap`);
+      return timeline().to(ghost, { autoAlpha: 0, duration: 0.4 }, 0);
+    }
+    const d = +section.dataset.stDuration || 1.4;
+    const w = frame.offsetWidth;
+    const h = frame.offsetHeight;
+    const s = W / w;
+    frame.append(ghost);
+    gsap.set(ghost, { width: W, height: H, transformOrigin: "0 0", scale: 1 / s });
+    // 写在回顾屏前面的是底（转场时就在，屏缩小后露出来），后面的（名单、标题）在转场末尾淡入
+    const kids = [...enter.children];
+    const rest = kids.slice(kids.indexOf(frame) + 1);
+    const end = recapTransform(frame);
+    gsap.set(rest, { autoAlpha: 0 });
+    return timeline()
+      .fromTo(frame,
+        { ...end, x: -frame.offsetLeft, y: H / 2 - frame.offsetTop - h / 2, scale: s, rotationY: 0 },
+        { ...end, x: 0, y: 0, scale: 1, duration: d, ease: "power2.inOut" }, 0)
+      .to(ghost, { autoAlpha: 0, duration: 0.35, ease: "power1.inOut" }, d)
+      .to(rest, { autoAlpha: 1, duration: 0.6, ease: "power2.out", stagger: 0.06 }, d - 0.3);
+  };
+
+  // 内层（被回顾屏嵌着的那一份）：量出这一段每页的转场时长，按外层给的毫秒数 seek
+  function serveRecap() {
+    let segs = [];
+    let cur = -1;
+    let chain = Promise.resolve();
+    // 往回跳、隔页跳时 reveal 的 auto-animate 也会动（倒着放），这种不算转场，直接拨到终点
+    const SETTLED = 1e7;
+    const go = async (i) => {
+      const forward = i === cur + 1;
+      await window.__capture.go(i);
+      cur = i;
+      if (!forward) await window.__capture.seek(SETTLED);
+    };
+    const handlers = {
+      async measure({ from, to, hold }) {
+        segs = [];
+        let at = 0;
+        for (let i = from; i <= to; i++) {
+          const { transition } = await window.__capture.go(i);
+          const trans = i === from ? 0 : transition;
+          if (!trans) await window.__capture.seek(SETTLED);
+          segs.push({ i, start: at, trans });
+          at += trans + hold;
+        }
+        await go(from);
+        return { total: at };
+      },
+      async seek({ t }) {
+        if (!segs.length) return {};
+        let k = 0;
+        while (k + 1 < segs.length && segs[k + 1].start <= t) k++;
+        const seg = segs[k];
+        if (seg.i !== cur) {
+          // 往前一页：正常翻，转场由 go 建好；跳着走或往回：先硬切到前一页，再翻过来
+          if (seg.i !== cur + 1 && k > 0) await go(segs[k - 1].i);
+          await go(seg.i);
+        }
+        await window.__capture.seek(seg.trans ? Math.min(t - seg.start, seg.trans) : SETTLED);
+        return {};
+      },
+    };
+    window.addEventListener("message", (e) => {
+      const d = e.data;
+      if (!d || typeof d !== "object" || d.orcaRecapAsk === undefined) return;
+      const run = handlers[d.op];
+      if (!run) return;
+      chain = chain.then(() => run(d)).then((r) => e.source.postMessage({ ...r, orcaRecapReply: d.orcaRecapAsk }, "*"));
+    });
+    Promise.all([document.fonts.ready]).then(() => parent.postMessage({ orcaRecapReady: true }, "*"));
+  }
+
   let current = null;
   let lastIndex = null;
 
@@ -1432,6 +1638,7 @@
 
   function onSlide(e) {
     stopScene();
+    stopRecap();
     // 先把新页的场景图形建出来（停在第 0 秒），转场才能拿场景里生成的元素当锚点
     const next = sceneFor(e.currentSlide);
     next?.pause(0);
@@ -1440,6 +1647,7 @@
     const delay = played ? transitionSeconds(e.currentSlide) : 0;
     startScene(e.currentSlide, delay, next);
     playVideos(e.currentSlide, delay);
+    startRecap(e.currentSlide, delay);
   }
 
   function runTransition({ currentSlide, previousSlide, indexh }) {
@@ -1523,6 +1731,7 @@
   prepare();
   prepareStory();
   prepareVideos();
+  prepareRecaps();
   Reveal.initialize({
     width: W,
     height: H,
@@ -1536,12 +1745,18 @@
     autoAnimateDuration: 0.9,
     autoAnimateEasing: "cubic-bezier(0.65, 0, 0.35, 1)",
     // 往前翻的键都交给 advance（见上）。往回翻不管：往回本来就是硬切。
-    keyboard: { 32: advance, 34: advance, 39: advance, 76: advance, 78: advance },
+    // ↓ / ↑ 也翻页：稿子没有纵向的页，reveal 默认的上下导航在这里什么都不做，
+    // 而 OrcaPPT 的页胶片是竖着排的，人会顺手按上下。
+    keyboard: EMBED
+      ? false
+      : { 32: advance, 34: advance, 39: advance, 40: advance, 76: advance, 78: advance, 38: () => Reveal.prev() },
   });
   Reveal.on("ready", (e) => {
     lastIndex = e.indexh;
     startScene(e.currentSlide, 0);
     playVideos(e.currentSlide, 0);
+    startRecap(e.currentSlide, 0);
+    if (EMBED) serveRecap();
   });
   Reveal.on("slidechanged", onSlide);
 
@@ -1580,14 +1795,22 @@
         videoMs = Math.max(videoMs, v.duration * 1000);
       }
       if (videoMs) hold = Math.max(hold, videoMs);
+      // 有回顾屏时：停留至少要放完回顾，再定格 1.5 秒看清名单
+      let recapMs = 0;
+      if (recap) {
+        await recap.ready;
+        recapMs = recap.total;
+        hold = Math.max(hold, recapMs + 1500);
+      }
       sceneOffset = end;
-      return { transition: end, hold, scene: sceneMs, video: videoMs };
+      return { transition: end, hold, scene: sceneMs || recapMs, video: videoMs };
     },
     async seek(ms) {
       for (const a of captured) a.currentTime = Math.min(ms, a.effect.getComputedTiming().endTime);
       current?.time(ms / 1000);
       scene?.time(Math.max(0, ms - sceneOffset) / 1000);
       await Promise.all(videos.map((v) => seekVideo(v, Math.max(0, ms - sceneOffset) / 1000)));
+      await recap?.time(Math.max(0, ms - sceneOffset));
     },
     count: () => Reveal.getTotalSlides(),
     // 放映时转场没放完就按下一页,剩下的在这么多毫秒里快进放完(见 advance)。

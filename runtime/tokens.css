@@ -110,3 +110,21 @@ html, body, .reveal { background: var(--bg); }
 .st-guide { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); z-index: 5; pointer-events: none; overflow: visible; }
 .st-guide path { stroke: var(--accent); stroke-width: 10; stroke-linejoin: round; fill: none; }
 .st-scrim { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 40%); pointer-events: none; }
+
+/* 回顾片尾：一块倾斜的屏幕，里面把这份稿子的某一段页按真转场自动放一遍（见 engine.js「回顾片尾」）。
+   写 left/top/width/height 定屏幕位置，宽高比 16:9。透视和倾斜由 engine.js 设，不要自己写 transform。
+   底下的倒影是屏幕本身的反射，跟着屏幕一起倾斜。 */
+.s-recap   { overflow: hidden; border-radius: var(--radius-s);
+             -webkit-box-reflect: below 12px linear-gradient(transparent 62%, rgba(255, 255, 255, 0.22)); }
+.s-recap > iframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.s-recap > .st-ghost { right: auto; bottom: auto; z-index: 1; will-change: transform; } /* iframe 自成合成层，不提层的话 ghost 会被它盖住 */
+
+/* 片尾名单：<ol class="t-credits"><li><span>职责</span><b>姓名</b></li>…</ol>。
+   写 left/top/width/height 定滚动框，名单从框下沿滚进来，和回顾同时放完。上下沿渐隐。
+   颜色跟着文字色走：压在 .s-surface 上时加 .t-on-surface。 */
+.t-credits { list-style: none; padding: 0; overflow: hidden;
+             -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+             mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.t-credits li { display: flex; align-items: baseline; gap: 40px; height: 80px; }
+.t-credits span { width: 45%; text-align: right; font-size: 24px; letter-spacing: 0.14em; opacity: 0.6; white-space: nowrap; }
+.t-credits b { font-size: var(--type-body); font-weight: 600; white-space: nowrap; }
