@@ -1,92 +1,82 @@
-# orca-ppt
+# Orca PPT
 
-> 一个演示稿工作台。先是给人用的;MCP 把它的操作接口开放给 agent,让 agent 代你执行。
+**和 AI 一起，把想法做成演示稿。**
 
-左边阶段栏和页胶片,中间**真在跑的那份 deck**(reveal.js + GSAP 在放,不是截图),
-右边待办队列。
+![Orca PPT](./docs/brand/launch-banner-1920x1080.png)
 
-你在画布上点中一个标题、写一句「这儿太挤」,它带着页号、CSS 选择器、1920×1080 设计坐标和
-一张裁切图挂进队列;跟你的 agent 说一声,它调 `take_requests` 取走 —— **拿到的是坐标,
-不是形容词**。
+Orca PPT 是一个桌面应用，让你用自己的 AI 助手（比如 Claude Code）做出**会动的演示稿**：
+翻页时，标题会滑到新的位置，卡片会展开成整页，数字会变成图表 —— 像发布会上那样连贯，
+而不是一页一页地硬切。
 
-**我们不驱动模型。** 你已经有 agent 了(Claude Code、Cursor、……),让它连进来,
-比我们再造一个 agent 客户端强。
+你不用学排版，也不用调动画。告诉 AI 你要讲什么，它来做；哪里不满意，在画面上指给它看。
 
-**状态:MCP 已接通。** 放映、检视锚、五阶段(定题 → 选主题 → 列页面 → 写转场 → 出稿)、
-产物校验都在,agent 通过 MCP 驱动。还没有转场时间轴和录制。
+## 你可以用它做什么
 
-```bash
-# 应用开着的时候,MCP 就挂在这儿
-claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
-```
+### 看到喜欢的效果，就「做同款」
 
-agent 能打开 deck、驱动画布跳页、取走你挂起的锚、拿阶段的做法、跑产物校验,
-还能 **`capture_slide` 自己截一张图看效果** —— 稿子好不好只有放映能回答。
+打开 Orca PPT，首页就是一排同款。鼠标停在卡片上，就能看到这个效果动起来的样子。
 
-细节见 [MCP.md](./docs/MCP.md)。
+喜欢哪个，点卡片右上角的「做同款」，把那段话复制给你的 AI 助手，再补上你自己的内容
+（主题、每页要讲什么、名单……），它就会照着这个效果做出你的版本。
 
-```bash
-# 开发时直接开一份稿子
-ORCA_PPT_DECK=$PWD/skills/orca-ppt/examples/forest-timeline pnpm dev
-```
+点卡片本身，可以打开样稿一页页翻着看：每两页之间是怎么衔接的，旁边都写着。
 
-## 为什么
+> 第一个同款是「电影级回顾片尾」：结尾不再只写「谢谢观看」，而是把整份稿子装进一块
+> 倾斜的屏幕里快速回顾一遍，旁边滚动幕后名单。
 
-演示稿是一个**必须被放映才能评判的对象**,而 agent 工作流里没有放映这一步。转场对不对,
-只有翻页的那 600 毫秒能回答;一页挤不挤,只有满屏 1920×1080 能回答。截图回答不了,文字
-更回答不了。完整论述见 [VISION.md](./docs/VISION.md)。
+### 自己给主题，从头做一份
 
-## 开发
+不挑同款也行。直接跟你的 AI 助手说「帮我做一份介绍 Q3 增长的演示稿，给投资人看，五分钟」，
+它会按 Orca PPT 内置的设计规范来做：配色、排版、每一页怎么接到下一页，都有讲究。
 
-需要 Node 24 LTS 和 pnpm。
+### 指给 AI 看，而不是描述给它听
 
-```bash
-pnpm install
-(cd skills/orca-ppt && npm ci) # skill 的运行时依赖(reveal.js、GSAP),稿子按相对路径引它们
-pnpm dev          # 起 server + 渲染层 + Electron 壳
-pnpm typecheck
-pnpm test
-```
+稿子在 Orca PPT 里实时放映。觉得哪里不对，直接在画面上点那个位置，写一句「这儿太挤了」，
+AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右边那个标题」。
 
-## 文档
+文字要改，双击就能改；改错了可以撤销。
 
-| 文档                                   | 内容                                  |
-| -------------------------------------- | ------------------------------------- |
-| [Vision](./docs/VISION.md)             | 要解决什么,不做什么                   |
-| [Architecture](./docs/ARCHITECTURE.md) | 系统形状与决策(含否掉了什么)          |
-| [Deck Mode](./docs/DECK-MODE.md)       | 垂直闭环:阶段、产物契约、检视锚、自检 |
-| [MCP](./docs/MCP.md)                   | 工具表、方向、怎么接进你的 agent      |
-| [Roadmap](./docs/ROADMAP.md)           | 里程碑与验收                          |
-| [AGENTS.md](./AGENTS.md)               | 在这个仓里干活的规矩                  |
+### 做完直接放映
 
-## 内容层
+成品是你电脑上的一个普通文件夹，用浏览器打开就能放映，方向键翻页。
+在 Orca PPT 里也可以全屏放映。
 
-规范、主题、版式、同款配方、录制脚本都在 [`skills/orca-ppt/`](./skills/orca-ppt)(原 `orca-ppt-skill` 仓,
-2026-10-10 带着历史并进来)。agent 通过 MCP 的 `read_skill` 读它,不需要单独安装。
+## 怎么开始
 
-- [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) — 场景内部的 MG 动画。
-  可选件,app 不读它;稿子页面自己加载它时,skill 的 engine 在转场后播放场景
-- [ppt.orca-studio.ai](https://ppt.orca-studio.ai) — 示例库
+1. **准备一个 AI 助手。** Orca PPT 自己不带 AI，而是连接你已经在用的。目前推荐
+   [Claude Code](https://claude.com/claude-code)，其他支持 MCP 的助手也可以。
+2. **运行 Orca PPT。** 暂时还没有现成的安装包，需要从源码运行，步骤见
+   [开发者文档](./docs/DEVELOPMENT.md)。目前在 macOS 上开发和测试。
+3. **把 AI 助手连上 Orca PPT。** 应用开着的时候，在终端里运行一次：
 
-不装应用、只想让 agent 用这套规范的话,按 skill 的惯例把目录链进 agent 的 skills 目录即可:
+   ```bash
+   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
+   ```
 
-```bash
-ln -s "$PWD/skills/orca-ppt" ~/.claude/skills/orca-ppt
-(cd skills/orca-ppt && npm ci)
-```
+4. **挑一个同款，点「做同款」**，把复制的那段话贴给 AI 助手，补上你的内容。
 
-发布版的 skill 跟着 app 一起发,版本和 app 一致。
-见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)「交付形态」。
+## 常见问题
 
-## 致谢
+**需要会写代码吗？**
+不需要。你只要会跟 AI 助手说话。从源码运行那一步目前需要一点命令行操作，之后会提供安装包。
 
-形状借自 [TasteCode](https://github.com/Leonxlnx/tastecode):本地 server 拥有状态、适配器
-驱动官方 CLI、渲染层是薄客户端,以及「真正的差异化是上面那个垂直 Mode」这个判断。
+**能导出成 PowerPoint 吗？**
+不能。成品是网页形式的演示稿，用浏览器放映。这样才能做出 PowerPoint 做不到的连贯动效。
 
-## 品牌素材
+**要付费吗？**
+Orca PPT 是开源的，MIT 许可，免费使用。你用的 AI 助手按它自己的方式收费。
 
-Logo、正方形头像和宣传图见 [品牌素材包](./docs/brand/README.md)。
+**稿子存在哪里？会上传吗？**
+存在你电脑上你选的文件夹里，就是普通的文件。Orca PPT 只在你自己的电脑上运行，不会上传你的稿子；
+你交给 AI 助手的内容，按那个助手自己的方式处理。
 
-## License
+**哪里能看到更多效果？**
+[ppt.orca-studio.ai](https://ppt.orca-studio.ai) 有在线示例，点开就能翻页。
+
+## 给开发者
+
+架构、MCP 工具、从源码运行、内置的设计规范（skill）都在 [开发者文档](./docs/DEVELOPMENT.md)。
+
+## 许可
 
 [MIT](LICENSE)
