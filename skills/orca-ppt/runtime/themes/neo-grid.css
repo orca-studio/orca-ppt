@@ -1,0 +1,46 @@
+/* 主题：Neo-Grid（配色、字体和网格面板的样子借自 beautiful-html-templates/neo-grid-bold,MIT）
+ * 标签：dynamic
+ * 一句话：路演、数据亮点 —— 海报式的网格面板，墨黑、纸白、荧光柠檬黄三色拼版
+ * 默认配色：lemon
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 整页是一格格面板拼起来的：面板之间留 24px 缝，没有圆角、没有阴影、没有描边。
+ * 标题用 Space Grotesk 粗体，**文字直接写成大写**（主题不改大小写，宽度估算按实际字形算）；
+ * 标签、页码、刻度用 JetBrains Mono。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .s-check  棋盘格小方块：墨色和纸色交替的 4×4 格，宽高相等，当装饰角标
+ * 覆盖的类：
+ *   .t-label  等宽大写小标签，24px：页眉、页脚、编号、刻度 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+
+  --font: "Space Grotesk", "Helvetica Neue", "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+.t-display, .t-metric, .t-h1 { font-weight: 700; letter-spacing: -0.02em; }
+.t-display { line-height: 0.92; }
+.t-h2 { font-weight: 700; letter-spacing: -0.01em; }
+
+/* 等宽小标签 */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 棋盘格：4×4 交替的墨色和纸色 */
+.s-check {
+  background:
+    conic-gradient(var(--text) 25%, transparent 0 50%, var(--text) 0 75%, transparent 0)
+    0 0 / 50% 50%;
+}

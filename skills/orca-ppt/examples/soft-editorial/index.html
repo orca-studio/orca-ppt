@@ -12,39 +12,57 @@
 <body>
 <div class="reveal">
 
-<!-- 转场计划（主题 Soft Editorial，粉 / 黄绿 / 桃三种颜色贯穿三页，版式 standard）
-1→2  关系：三张洞察卡还是那三张，换了布局：黄绿那张长成放 68% 的大面板，粉和桃缩到右侧   手法：形态变换   共享：c1, c2, c3
-2→3  关系：三块数据面板合成一张图表卡，卡里三条留存曲线沿用这三种颜色，依次画出来       手法：多合一     合并：panel
+<!-- 转场计划（主题 Soft Editorial，粉 / 黄绿 / 桃三种颜色贯穿六页，版式 standard；内容是一份虚构的用户研究汇报）
+1→2  关系：封面那枚黄绿胶囊（这次研究）一分为三，散开成三张洞察卡              手法：一变多         拆分：cards
+2→3  关系：三张洞察卡还是那三张，换了布局：黄绿那张长成放 68% 的大面板，粉和桃缩到右侧   手法：形态变换       共享：c1, c2, c3
+3→4  关系：三块数据面板合成一张图表卡，卡里三条留存曲线沿用这三种颜色，依次画出来       手法：多合一         合并：panel
+4→5  关系：粉色那条线（留存最高的一组）终点的圆点就是下一页：钻进这一组看它拿到了什么   手法：放大进元素内部 from：top
+5→6  关系：三块事实条还是粉、黄绿、桃那三块，回到第 2 页三张卡的位置，变成三项实验      手法：形态变换       共享：c1, c2, c3
 -->
 
 <div class="slides">
 
-  <!-- 1 三条洞察 -->
-  <section data-auto-animate data-hold="2.5" data-page="cover">
-    <p class="t-label t-dim" style="left:120px; top:96px;">Insights</p>
-    <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">02</p>
+  <!-- 1 封面：一枚黄绿胶囊 = 这次研究 -->
+  <section data-hold="2" data-page="cover">
+    <p class="t-label t-dim" style="left:120px; top:96px;">User research</p>
+    <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">01</p>
 
-    <div data-id="c1" class="s-accent" style="left:120px; top:200px; width:520px; height:680px;"></div>
-    <div data-id="c2" class="s-surface" style="left:680px; top:200px; width:520px; height:680px;"></div>
-    <div data-id="c3" class="s-accent-soft" style="left:1240px; top:200px; width:520px; height:680px;"></div>
+    <p class="t-display" style="left:120px; top:400px; width:1680px; text-align:center;">Field Notes</p>
+    <p class="t-body" style="left:360px; top:600px; width:1200px; text-align:center;">What 28 customers told us about their first week.</p>
 
-    <p class="t-label" style="left:160px; top:256px;">Insight #1</p>
-    <p class="t-h2" style="left:160px; top:300px; width:440px;">Trust is the onboarding.</p>
-    <p class="t-body" style="left:160px; top:560px; width:440px;">Customers don't churn on day one. They churn because the first three emails feel like a stranger.</p>
-
-    <p class="t-label" style="left:720px; top:256px;">Insight #2</p>
-    <p class="t-h2" style="left:720px; top:300px; width:440px;">Power users dread upgrades.</p>
-    <p class="t-body" style="left:720px; top:560px; width:440px;">The people we asked to love new features want fewer surprises, not bigger ones.</p>
-
-    <p class="t-label" style="left:1280px; top:256px;">Insight #3</p>
-    <p class="t-h2" style="left:1280px; top:300px; width:440px;">Support is product.</p>
-    <p class="t-body" style="left:1280px; top:560px; width:440px;">Half of "feature requests" in the inbox are discovery problems dressed as roadmap items.</p>
+    <div data-split="cards" class="s-surface" style="left:760px; top:720px; width:400px; height:80px;"></div>
+    <p class="t-label t-on-surface" style="left:760px; top:748px; width:400px; text-align:center;">Vol. III · Spring cohort</p>
 
     <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
     <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
   </section>
 
-  <!-- 2 数字：三张卡换布局 -->
+  <!-- 2 三条洞察：胶囊散开成三张卡 -->
+  <section data-st="split" data-st-split="cards" data-auto-animate data-hold="2.5">
+    <p class="t-label t-dim" data-enter-delay="0.7" style="left:120px; top:96px;">Insights</p>
+    <p class="t-label t-dim" data-enter-delay="0.7" style="left:1600px; top:96px; width:200px; text-align:right;">02</p>
+
+    <div data-id="c1" data-split="cards" class="s-accent" style="left:120px; top:200px; width:520px; height:680px;"></div>
+    <div data-id="c2" data-split="cards" class="s-surface" style="left:680px; top:200px; width:520px; height:680px;"></div>
+    <div data-id="c3" data-split="cards" class="s-accent-soft" style="left:1240px; top:200px; width:520px; height:680px;"></div>
+
+    <p class="t-label t-on-accent" data-enter-delay="0.9" style="left:160px; top:256px;">Insight #1</p>
+    <p class="t-h2 t-on-accent" data-enter-delay="0.9" style="left:160px; top:300px; width:440px;">Trust is the onboarding.</p>
+    <p class="t-body t-on-accent" data-enter-delay="0.9" style="left:160px; top:560px; width:440px;">Customers don't churn on day one. They churn because the first three emails feel like a stranger.</p>
+
+    <p class="t-label t-on-surface" data-enter-delay="0.98" style="left:720px; top:256px;">Insight #2</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="0.98" style="left:720px; top:300px; width:440px;">Power users dread upgrades.</p>
+    <p class="t-body t-on-surface" data-enter-delay="0.98" style="left:720px; top:560px; width:440px;">The people we asked to love new features want fewer surprises, not bigger ones.</p>
+
+    <p class="t-label t-on-accent" data-enter-delay="1.06" style="left:1280px; top:256px;">Insight #3</p>
+    <p class="t-h2 t-on-accent" data-enter-delay="1.06" style="left:1280px; top:300px; width:440px;">Support is product.</p>
+    <p class="t-body t-on-accent" data-enter-delay="1.06" style="left:1280px; top:560px; width:440px;">Half of "feature requests" in the inbox are discovery problems dressed as roadmap items.</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+  <!-- 3 数字：三张卡换布局 -->
   <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
     <p class="t-label t-dim" data-auto-animate-delay="0.84" style="left:120px; top:96px;">By the numbers</p>
     <p class="t-label t-dim" data-auto-animate-delay="0.84" style="left:1600px; top:96px; width:200px; text-align:right;">03</p>
@@ -53,20 +71,20 @@
     <div data-id="c1" data-merge="panel" class="s-accent" style="left:1200px; top:200px; width:600px; height:320px;"></div>
     <div data-id="c3" data-merge="panel" class="s-accent-soft" style="left:1200px; top:560px; width:600px; height:320px;"></div>
 
-    <p class="t-body" data-auto-animate-delay="0.92" style="left:160px; top:248px; width:640px;">of new accounts open the third email, up from 41% last quarter.</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="0.92" style="left:160px; top:248px; width:640px;">of new accounts open the third email, up from 41% last quarter.</p>
     <p class="t-metric t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:560px;">68%</p>
 
-    <p class="t-display" data-auto-animate-delay="1.0" style="left:1240px; top:232px;">28</p>
-    <p class="t-body" data-auto-animate-delay="1.08" style="left:1240px; top:420px; width:520px;">customer interviews</p>
+    <p class="t-display t-on-accent" data-auto-animate-delay="1.0" style="left:1240px; top:232px;">28</p>
+    <p class="t-body t-on-accent" data-auto-animate-delay="1.08" style="left:1240px; top:420px; width:520px;">customer interviews</p>
 
-    <p class="t-display" data-auto-animate-delay="1.0" style="left:1240px; top:592px;">9</p>
-    <p class="t-body" data-auto-animate-delay="1.08" style="left:1240px; top:780px; width:520px;">teams shadowed a week</p>
+    <p class="t-display t-on-accent" data-auto-animate-delay="1.0" style="left:1240px; top:592px;">9</p>
+    <p class="t-body t-on-accent" data-auto-animate-delay="1.08" style="left:1240px; top:780px; width:520px;">teams shadowed a week</p>
 
     <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
     <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
   </section>
 
-  <!-- 3 留存：三块面板合成一张图表卡 -->
+  <!-- 4 留存：三块面板合成一张图表卡 -->
   <section data-st="merge" data-st-merge="panel" data-hold="3">
     <p class="t-label t-dim" style="left:120px; top:96px;">Retention, by cohort</p>
     <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">04</p>
@@ -86,9 +104,10 @@
       <path class="l-surface" d="M0.0,20.0 C19.0,29.2 76.2,56.7 114.3,75.0 C152.4,93.3 190.5,113.5 228.6,130.0 C266.7,146.5 304.8,161.2 342.9,174.0 C381.0,186.8 419.0,196.9 457.1,207.0 C495.2,217.1 533.3,226.3 571.4,234.5 C609.5,242.8 647.6,251.0 685.7,256.5 C723.8,262.0 781.0,265.7 800.0,267.5"/>
       <path class="l-accent" d="M0.0,20.0 C19.0,25.5 76.2,42.0 114.3,53.0 C152.4,64.0 190.5,75.9 228.6,86.0 C266.7,96.1 304.8,105.3 342.9,113.5 C381.0,121.8 419.0,129.1 457.1,135.5 C495.2,141.9 533.3,147.4 571.4,152.0 C609.5,156.6 647.6,159.3 685.7,163.0 C723.8,166.7 781.0,172.2 800.0,174.0"/>
     </svg>
-    <p class="t-label" data-enter-delay="2.0" style="left:1736px; top:669px;">38%</p>
-    <p class="t-label" data-enter-delay="2.15" style="left:1736px; top:576px;">55%</p>
-    <p class="t-label" data-enter-delay="2.3" style="left:1736px; top:482px;">72%</p>
+    <p class="t-label" data-enter-delay="2.0" style="left:1744px; top:669px;">38%</p>
+    <p class="t-label" data-enter-delay="2.15" style="left:1744px; top:576px;">55%</p>
+    <p class="t-label" data-enter-delay="2.3" style="left:1744px; top:482px;">72%</p>
+    <div data-zoom="top" class="s-accent" data-enter="pop" data-enter-delay="2.3" style="left:1708px; top:482px; width:24px; height:24px; border-radius:50%;"></div>
     <p class="t-label t-dim" data-enter-delay="1.2" style="left:920px; top:808px;">Day 0</p>
     <p class="t-label t-dim" data-enter-delay="1.2" style="left:1411px; top:808px; width:160px; text-align:center;">Day 30</p>
     <p class="t-label t-dim" data-enter-delay="1.2" style="left:1560px; top:808px; width:160px; text-align:right;">Day 90</p>
@@ -99,6 +118,58 @@
     <p class="t-label" data-enter-delay="1.28" style="left:184px; top:764px;">Written welcome</p>
     <svg data-enter-delay="1.36" style="left:120px; top:812px; width:48px; height:24px;" viewBox="0 0 48 24"><path class="l-accent" d="M3,12 H45"/></svg>
     <p class="t-label" data-enter-delay="1.36" style="left:184px; top:812px;">Written welcome + human reply</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+  <!-- 5 留存最高的一组：从粉线终点的圆点钻进来 -->
+  <section data-st="zoom-into" data-st-direction="in" data-st-from="top" data-auto-animate data-hold="3">
+    <p class="t-label t-dim" style="left:120px; top:96px;">Inside the top cohort</p>
+    <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">05</p>
+
+    <p class="t-label" style="left:120px; top:200px;">Written welcome + human reply · 72% at day 90</p>
+    <p class="t-h1" style="left:120px; top:280px;">&ldquo;I replied expecting a bot.</p>
+    <p class="t-h1" style="left:120px; top:360px;">A person answered,</p>
+    <p class="t-h1" style="left:120px; top:440px;">so I stayed.&rdquo;</p>
+    <p class="t-body" style="left:120px; top:580px; width:760px;">Participant 14, admin at a six-person studio, interviewed on day 41. Every quote in this report is anonymised.</p>
+
+    <div data-id="c1" class="s-accent" style="left:1000px; top:200px; width:800px; height:200px;"></div>
+    <div data-id="c2" class="s-surface" style="left:1000px; top:440px; width:800px; height:200px;"></div>
+    <div data-id="c3" class="s-accent-soft" style="left:1000px; top:680px; width:800px; height:200px;"></div>
+
+    <p class="t-h1 t-on-accent" style="left:1040px; top:260px;">24h</p>
+    <p class="t-body t-on-accent" style="left:1240px; top:251px; width:520px;">until a person replied to the very first email</p>
+    <p class="t-h1 t-on-surface" style="left:1040px; top:500px;">3</p>
+    <p class="t-body t-on-surface" style="left:1240px; top:491px; width:520px;">welcome emails, each one written by hand</p>
+    <p class="t-h1 t-on-accent" style="left:1040px; top:740px;">48</p>
+    <p class="t-body t-on-accent" style="left:1240px; top:731px; width:520px;">accounts, each with a named contact instead of a queue</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+  <!-- 6 三项实验：三块事实条回到第 2 页三张卡的位置 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-label t-dim" data-auto-animate-delay="0.8" style="left:120px; top:96px;">Next quarter</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.8" style="left:1600px; top:96px; width:200px; text-align:right;">06</p>
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:180px;">Three experiments, one per insight.</p>
+
+    <div data-id="c1" class="s-accent" style="left:120px; top:320px; width:520px; height:560px;"></div>
+    <div data-id="c2" class="s-surface" style="left:680px; top:320px; width:520px; height:560px;"></div>
+    <div data-id="c3" class="s-accent-soft" style="left:1240px; top:320px; width:520px; height:560px;"></div>
+
+    <p class="t-label t-on-accent" data-auto-animate-delay="1.0" style="left:160px; top:376px;">Experiment 01</p>
+    <p class="t-h2 t-on-accent" data-auto-animate-delay="1.0" style="left:160px; top:420px; width:440px;">Write the first three emails by hand.</p>
+    <p class="t-body t-on-accent" data-auto-animate-delay="1.0" style="left:160px; top:640px; width:440px;">Every new account hears from the team that built what they bought.</p>
+
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.08" style="left:720px; top:376px;">Experiment 02</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.08" style="left:720px; top:420px; width:440px;">Ship changes with a preview week.</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.08" style="left:720px; top:640px; width:440px;">Power users see what's changing seven days early, and can choose to wait.</p>
+
+    <p class="t-label t-on-accent" data-auto-animate-delay="1.16" style="left:1280px; top:376px;">Experiment 03</p>
+    <p class="t-h2 t-on-accent" data-auto-animate-delay="1.16" style="left:1280px; top:420px; width:440px;">Route discovery questions to product.</p>
+    <p class="t-body t-on-accent" data-auto-animate-delay="1.16" style="left:1280px; top:640px; width:440px;">Inbox threads tagged "feature request" go to the team that owns that screen.</p>
 
     <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
     <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>

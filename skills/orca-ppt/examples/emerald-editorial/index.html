@@ -16,7 +16,9 @@
 1→2  关系：封面底部的深蓝横条裂成议程的四个序号块               手法：一变多              键：chapters
 2→3  关系：从议程第 01 行的深蓝序号块钻进去，进入第一章          手法：整页推近            from：ch1 → to：panel
 3→4  关系：章节页左半幅的深蓝面板撑满整个画面，成为数据页底色    手法：形态变换（卡片 → 整页）共享：panel, num
-4→5  关系：数据讲完，换到结尾，没有视觉联系                     手法：遮挡剪辑（燕麦米色块上扫）
+4→5  关系：数据页的整页蓝底收拢、裂成第一章的三张主题卡           手法：一变多              键：themes
+5→6  关系：三个主题收成一块面板，面板里是要拍板的两件事           手法：多合一              键：decide
+6→7  关系：第一章讲完，换到结尾，没有视觉联系                     手法：遮挡剪辑（燕麦米色块上扫）
 -->
 
 <div class="slides">
@@ -68,9 +70,9 @@
   <!-- 3 章节页：左半幅深蓝面板 + 巨大序号，右半仍是翡翠绿 -->
   <section data-st="zoom-through" data-st-from="ch1" data-st-to="panel" data-auto-animate data-hold="3">
     <div data-id="panel" data-zoom="panel" class="s-surface" style="left:0px; top:0px; width:960px; height:1080px;"></div>
-    <p data-id="num" class="t-display t-on-surface" style="left:0px; top:440px; width:960px; text-align:center;">01</p>
-    <p class="t-label t-on-surface" style="left:80px; top:80px;">Section opener</p>
-    <p class="t-label t-on-surface" style="left:80px; top:960px;">Eight minutes</p>
+    <p data-id="num" class="t-display t-on-surface" style="left:120px; top:440px; width:720px; text-align:center;">01</p>
+    <p class="t-label t-on-surface" style="left:120px; top:80px;">Section opener</p>
+    <p class="t-label t-on-surface" style="left:120px; top:960px;">Eight minutes</p>
 
     <p class="t-label" style="left:1040px; top:120px;">A reading of the period</p>
     <p class="t-h1" style="left:1040px; top:200px;">The quarter,<br>in review.</p>
@@ -85,7 +87,7 @@
 
   <!-- 4 数据页：深蓝面板撑满全屏，大数字落在蓝面板上 -->
   <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
-    <div data-id="panel" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <div data-id="panel" data-split="themes" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
     <p data-id="num" class="t-label t-on-surface" style="left:120px; top:80px;">01</p>
     <p class="t-h1 t-on-surface" data-auto-animate-delay="0.8" style="left:120px; top:160px;">By the numbers.</p>
     <p class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:120px; top:280px; width:760px;">Revenue by quarter, this year against last.</p>
@@ -104,7 +106,51 @@
     <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1640px; top:920px;">Q4</p>
   </section>
 
-  <!-- 5 结尾：燕麦米色块上扫，回到翡翠绿 -->
+  <!-- 5 三个主题：整页蓝底裂成三张蓝卡，翡翠绿重新露出来 -->
+  <section data-st="split" data-st-split="themes" data-hold="3">
+    <p class="t-label" data-enter-delay="0.6" style="left:120px; top:80px;">Chapter 01</p>
+    <p class="t-h1" data-enter-delay="0.6" style="left:120px; top:140px;">Three themes.</p>
+    <p class="t-body t-dim" data-enter-delay="0.68" style="left:1000px; top:140px; width:800px;">What moved the quarter, in the order we will take them.</p>
+    <div class="s-rule" data-enter="grow-right" data-enter-delay="0.6" style="left:120px; top:300px; width:1680px;"></div>
+
+    <div data-split="themes" data-merge="decide" class="s-surface" style="left:120px; top:360px; width:520px; height:600px;"></div>
+    <div data-split="themes" data-merge="decide" class="s-surface" style="left:680px; top:360px; width:520px; height:600px;"></div>
+    <div data-split="themes" data-merge="decide" class="s-surface" style="left:1240px; top:360px; width:520px; height:600px;"></div>
+
+    <p class="t-label t-on-surface" data-enter-delay="0.8" style="left:160px; top:400px;">Theme 01</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="0.8" style="left:160px; top:460px; width:440px;">Demand moved upmarket.</p>
+    <p class="t-body t-on-surface" data-enter-delay="0.8" style="left:160px; top:700px; width:440px;">Orders shifted to the premium tier while volume held flat.</p>
+
+    <p class="t-label t-on-surface" data-enter-delay="0.88" style="left:720px; top:400px;">Theme 02</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="0.88" style="left:720px; top:460px; width:440px;">Delivery held, just.</p>
+    <p class="t-body t-on-surface" data-enter-delay="0.88" style="left:720px; top:700px; width:440px;">Lead times stayed on target, with little slack left in the network.</p>
+
+    <p class="t-label t-on-surface" data-enter-delay="0.96" style="left:1280px; top:400px;">Theme 03</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="0.96" style="left:1280px; top:460px; width:440px;">Costs ran ahead.</p>
+    <p class="t-body t-on-surface" data-enter-delay="0.96" style="left:1280px; top:700px; width:440px;">New-market spend grew faster than the revenue it brought in.</p>
+  </section>
+
+  <!-- 6 两个决定：三张主题卡收成一块整宽面板，页眉和结构线原地不动 -->
+  <section data-st="merge" data-st-merge="decide" data-hold="3">
+    <p class="t-label" style="left:120px; top:80px;">Chapter 01</p>
+    <p class="t-h1" data-enter-delay="0.7" style="left:120px; top:140px;">Two decisions.</p>
+    <p class="t-body t-dim" data-enter-delay="0.78" style="left:1000px; top:140px; width:800px;">What we ask the leadership team to approve today.</p>
+    <div class="s-rule" style="left:120px; top:300px; width:1680px;"></div>
+
+    <div data-merge="decide" class="s-surface" style="left:120px; top:360px; width:1680px; height:600px;"></div>
+
+    <p class="t-label t-on-surface" data-enter-delay="1.0" style="left:200px; top:440px;">Decision A</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="1.0" style="left:200px; top:500px; width:680px;">Fund the premium tier first.</p>
+    <p class="t-body t-on-surface" data-enter-delay="1.08" style="left:200px; top:700px; width:680px;">Move next quarter's launch budget to where the demand already is.</p>
+
+    <div class="s-accent" data-enter="grow-up" data-enter-delay="1.0" style="left:958px; top:440px; width:4px; height:440px;"></div>
+
+    <p class="t-label t-on-surface" data-enter-delay="1.08" style="left:1040px; top:440px;">Decision B</p>
+    <p class="t-h2 t-on-surface" data-enter-delay="1.08" style="left:1040px; top:500px; width:680px;">Pause one new market.</p>
+    <p class="t-body t-on-surface" data-enter-delay="1.16" style="left:1040px; top:700px; width:680px;">Hold the expansion until cost per order is back under plan.</p>
+  </section>
+
+  <!-- 7 结尾：燕麦米色块上扫，回到翡翠绿 -->
   <section data-st="mask" data-st-direction="up" data-hold="2.5">
     <p class="t-display" style="left:120px; top:340px; width:1680px; text-align:center;">THANK YOU</p>
     <div class="s-rule-double" style="left:360px; top:560px; width:1200px; height:11px;"></div>

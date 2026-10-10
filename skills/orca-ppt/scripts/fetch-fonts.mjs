@@ -42,6 +42,10 @@ const FAMILIES = [
   'Newsreader:opsz,wght@6..72,400;6..72,500',
   'Hanken+Grotesk:wght@400;600',
   'DM+Mono:wght@400;500',
+  // Neo-Grid Bold、Pin & Paper(同款 neo-grid / pin-and-paper):粗体无衬线标题
+  'Space+Grotesk:wght@400;500;700',
+  // Pin & Paper:手写批注
+  // Sakura Chroma(同款 sakura-chroma):窄体粗标题 + 无衬线正文
 ]
 
 /**

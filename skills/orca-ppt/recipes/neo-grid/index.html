@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 网格面板重排</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/neo-grid.css">
+  <link rel="stylesheet" href="../../runtime/palettes/lemon.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Neo-Grid，配色 lemon，版式 standard）
+1→2  关系：封面的四块面板就是数据页的四个格子，各自移位、改尺寸，换上数字      手法：形态变换              共享：panel-ink, panel-lemon, panel-paper, panel-base
+2→3  关系：柠檬黄那格装着最大的数，撑满整页成为结论，数字从格子里放大成主角     手法：形态变换（卡片 → 整页）  共享：panel-lemon, big
+3→4  关系：同一块整页柠檬黄，Q1 的实际值往后走到年底的目标，内容整体流过去      手法：元素交接（方向 left）    交接：title, metric, caption（柠檬黄和棋盘格不动）
+4→5  关系：整页柠檬黄缩回下一步的标题格                                      手法：形态变换（整页 → 卡片）  共享：panel-lemon
+5→6  关系：下一步的四块面板重新拼成一张海报，和封面首尾呼应                    手法：形态变换              共享：panel-lemon, panel-ink, panel-paper, panel-paper-2
+每块面板始终是同一个颜色：墨黑和纸白不能互变，只改位置和大小。每页最多一块柠檬黄面板。
+公司名 ACME 和所有数字都是虚构的占位。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：四块面板拼成海报 -->
+  <section data-auto-animate data-hold="2">
+    <div data-id="panel-ink" class="s-surface" style="left:120px; top:80px; width:384px; height:920px;"></div>
+    <div data-id="panel-lemon" class="s-accent" style="left:528px; top:80px; width:832px; height:560px;"></div>
+    <div data-id="panel-paper" class="s-surface-2" style="left:1384px; top:80px; width:416px; height:560px;"></div>
+    <div data-id="panel-base" class="s-surface" style="left:528px; top:664px; width:1272px; height:336px;"></div>
+    <p class="t-label t-on-surface" style="left:160px; top:120px;">ACME · 01</p>
+    <div class="s-check" style="left:568px; top:120px; width:64px; height:64px;"></div>
+    <p class="t-h1 t-on-accent" style="left:568px; top:360px;">THE FUTURE OF<br>DATA-DRIVEN<br>FINANCE</p>
+    <p class="t-label" style="left:1424px; top:120px;">Snapshot · Q1 2026</p>
+    <p class="t-body" style="left:1424px; top:440px; width:336px;">A data platform for finance teams.</p>
+    <p class="t-h2 t-on-surface" style="left:568px; top:704px;">INVESTOR PREVIEW</p>
+    <p class="t-label t-on-surface" style="left:568px; top:920px;">©2026 ACME · Fictional sample</p>
+  </section>
+
+  <!-- 2 数据页：同样四块面板重排成数字格 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel-ink" class="s-surface" style="left:120px; top:80px; width:280px; height:920px;"></div>
+    <div data-id="panel-paper" class="s-surface-2" style="left:424px; top:80px; width:640px; height:440px;"></div>
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.8" style="left:1088px; top:80px; width:344px; height:440px;"></div>
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.88" style="left:1456px; top:80px; width:344px; height:440px;"></div>
+    <div data-id="panel-base" class="s-surface" style="left:424px; top:544px; width:640px; height:456px;"></div>
+    <div data-id="panel-lemon" class="s-accent" style="left:1088px; top:544px; width:712px; height:456px;"></div>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.8" style="left:160px; top:120px;">+98.7%</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.9" style="left:160px; top:920px;">Penetration</p>
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:464px; top:120px;">ACME<br>IN NUMBERS</p>
+    <p class="t-body" data-auto-animate-delay="0.9" style="left:464px; top:360px; width:560px;">Two years since launch.</p>
+    <p class="t-h2" data-auto-animate-delay="1.0" style="left:1128px; top:120px;">12.8M</p>
+    <p class="t-label" data-auto-animate-delay="1.0" style="left:1128px; top:200px;">Transactions</p>
+    <p class="t-h2" data-auto-animate-delay="1.08" style="left:1496px; top:120px;">41M</p>
+    <p class="t-label" data-auto-animate-delay="1.08" style="left:1496px; top:200px;">Revenue impacted</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.0" style="left:464px; top:584px;">15.4M</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:464px; top:664px;">Users engaged</p>
+    <p class="t-label t-on-accent" data-auto-animate-delay="1.0" style="left:1128px; top:584px;">Data points analyzed</p>
+    <p data-id="big" class="t-display t-on-accent" data-auto-animate-delay="1.1" style="left:1128px; top:800px;">85.6M</p>
+  </section>
+
+  <!-- 3 结论页：柠檬黄那格撑满整页 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="panel-lemon" class="s-accent" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <p data-carry="title" class="t-label t-on-accent" data-auto-animate-delay="0.9" style="left:120px; top:120px;">Data points analyzed · Q1 2026</p>
+    <div class="s-check" data-enter="pop" data-auto-animate-delay="0.9" style="left:1680px; top:120px; width:120px; height:120px;"></div>
+    <p data-id="big" data-carry="metric" class="t-metric t-on-accent" style="left:120px; top:360px;">85.6M</p>
+    <p data-carry="caption" class="t-h2 t-on-accent" data-auto-animate-delay="1.0" style="left:120px; top:720px; width:1200px;">Every number on the last page, in one place.</p>
+  </section>
+
+  <!-- 4 目标页：同一块整页柠檬黄，内容往后流到年底目标 -->
+  <section data-st="carry" data-st-direction="left" data-auto-animate data-hold="2.5">
+    <div data-id="panel-lemon" class="s-accent" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <p data-carry="title" class="t-label t-on-accent" style="left:120px; top:120px;">Target · Q4 2026</p>
+    <div class="s-check" style="left:1680px; top:120px; width:120px; height:120px;"></div>
+    <p data-carry="metric" class="t-metric t-on-accent" style="left:120px; top:360px;">240M</p>
+    <p data-carry="caption" class="t-h2 t-on-accent" style="left:120px; top:720px; width:1200px;">Three moves get us there by year end.</p>
+  </section>
+
+  <!-- 5 下一步：柠檬黄缩回标题格 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="panel-lemon" class="s-accent" style="left:120px; top:80px; width:1056px; height:296px;"></div>
+    <div class="s-surface" data-enter="pop" data-auto-animate-delay="0.8" style="left:1200px; top:80px; width:600px; height:296px;"></div>
+    <div data-id="panel-paper" class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.88" style="left:120px; top:400px; width:544px; height:600px;"></div>
+    <div data-id="panel-paper-2" class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.96" style="left:688px; top:400px; width:544px; height:600px;"></div>
+    <div data-id="panel-ink" class="s-surface" data-enter="pop" data-auto-animate-delay="1.04" style="left:1256px; top:400px; width:544px; height:600px;"></div>
+    <p class="t-h1 t-on-accent" data-auto-animate-delay="0.9" style="left:160px; top:240px;">NEXT STEPS</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:1240px; top:120px;">Three things away</p>
+    <div class="s-check" data-enter="pop" data-auto-animate-delay="1.0" style="left:1680px; top:256px; width:80px; height:80px;"></div>
+    <p class="t-label" data-auto-animate-delay="1.1" style="left:160px; top:440px;">01 · This week</p>
+    <p class="t-h2" data-auto-animate-delay="1.1" style="left:160px; top:500px; width:464px;">PILOT ONE WORKFLOW</p>
+    <p class="t-label" data-auto-animate-delay="1.18" style="left:728px; top:440px;">02 · Next month</p>
+    <p class="t-h2" data-auto-animate-delay="1.18" style="left:728px; top:500px; width:464px;">SCALE THE WEDGE</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.26" style="left:1296px; top:440px;">03 · This quarter</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.26" style="left:1296px; top:500px; width:464px;">MAKE IT THE DEFAULT</p>
+  </section>
+
+  <!-- 6 结尾：同一组面板重新拼成海报，和封面首尾呼应 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="panel-lemon" class="s-accent" style="left:120px; top:80px; width:1240px; height:560px;"></div>
+    <div data-id="panel-ink" class="s-surface" style="left:1384px; top:80px; width:416px; height:920px;"></div>
+    <div data-id="panel-paper" class="s-surface-2" style="left:120px; top:664px; width:608px; height:336px;"></div>
+    <div data-id="panel-paper-2" class="s-surface-2" style="left:752px; top:664px; width:608px; height:336px;"></div>
+    <p class="t-label t-on-accent" data-auto-animate-delay="0.8" style="left:160px; top:120px;">ACME · 06</p>
+    <div class="s-check" data-enter="pop" data-auto-animate-delay="0.8" style="left:1240px; top:120px; width:80px; height:80px;"></div>
+    <p class="t-display t-on-accent" data-auto-animate-delay="0.9" style="left:160px; top:440px;">LET'S TALK</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.9" style="left:1424px; top:120px;">Pilot program</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.0" style="left:1424px; top:840px; width:336px;">OPEN FOR<br>PILOTS</p>
+    <p class="t-label" data-auto-animate-delay="1.0" style="left:160px; top:704px;">Contact</p>
+    <p class="t-h2" data-auto-animate-delay="1.08" style="left:160px; top:904px;">hello@acme.example</p>
+    <p class="t-label" data-auto-animate-delay="1.0" style="left:792px; top:704px;">Full deck</p>
+    <p class="t-h2" data-auto-animate-delay="1.08" style="left:792px; top:904px;">acme.example/q1</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

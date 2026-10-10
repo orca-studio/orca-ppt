@@ -13,6 +13,7 @@
 | `emerald-editorial.css` | 饱和翡翠绿画布，深海军蓝反转面板，燕麦米交替面；圆角全零，4px 结构线；Bodoni Moda 900 + Manrope | beautiful-html-templates/emerald-editorial |
 | `editorial-tri-tone.css` | 腮红粉画布，酒红深面板，奶油黄卡片；胶囊标签 + 大圆角卡片；Bricolage Grotesque + Instrument Serif + JetBrains Mono | beautiful-html-templates/editorial-tri-tone |
 | `cobalt-grid.css` | 米色纸面 + 一种钴蓝，严格双色；方格纸底、扫描线纹理，圆角全零；Newsreader + Hanken Grotesk + DM Mono。默认配色 `cobalt` | beautiful-html-templates/cobalt-grid |
+| `neo-grid.css` | 墨黑 / 纸白 / 荧光柠檬黄的网格面板，圆角全零；全大写粗体标题 + 等宽小标签，棋盘格小方块；Space Grotesk + JetBrains Mono。默认配色 `lemon` | beautiful-html-templates/neo-grid-bold |
 
 ## 使用主题
 

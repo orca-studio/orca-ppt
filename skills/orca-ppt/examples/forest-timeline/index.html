@@ -13,10 +13,14 @@
 <div class="reveal">
 
 <!-- 转场计划（主题 Editorial Forest，版式 standard）
-1→2  关系：封面标题下那条装饰横线长成时间线的轴        手法：形态变换            共享：axis
-2→3  关系：同一条轴，换一组节点内容，轴和圆点原地不动    手法：元素交接
-3→4  关系：轴长成条形图里最长的那条                     手法：形态变换            共享：axis
+1→2  关系：封面标题下那条装饰横线长成时间线的轴              手法：形态变换            共享：axis
+2→3  关系：同一条轴，换一组节点内容，轴和圆点原地不动          手法：元素交接
+3→4  关系：轴长成条形图里最长的那条                           手法：形态变换            共享：axis
+4→5  关系：最长那条的名字和 41% 被拎出来，41% 放大成关键数字，条子收成数字下的粗线   手法：共享元素 + 形态变换  共享：pct, name, axis
+5→6  关系：换话题，从回顾转到明年的计划                         手法：遮挡剪辑            方向：up
+6→7  关系：明年的轴缩回封面那条装饰线的位置，首尾呼应           手法：形态变换            共享：axis
 注：本稿验证两个新页面类型 —— 横向时间线页、横向条形图页（grow-right 此前只用来画坐标轴，没画过条子）。
+    所有数字、事件都是虚构的占位内容。
 -->
 
 <div class="slides">
@@ -85,12 +89,12 @@
   </section>
 
   <!-- 4 横向条形图：轴长成最长的那条 -->
-  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4" data-page="bars">
     <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">时间花在哪。</p>
 
-    <p class="t-h2" data-auto-animate-delay="0.9" style="left:120px; top:236px; width:480px;">写规范和文档</p>
+    <p data-id="name" class="t-h2" data-auto-animate-delay="0.9" style="left:120px; top:236px; width:480px;">写规范和文档</p>
     <div data-id="axis" class="s-accent" style="left:680px; top:240px; width:880px; height:56px;"></div>
-    <p class="t-h2 t-accent" data-auto-animate-delay="0.9" style="left:1600px; top:236px;">41%</p>
+    <p data-id="pct" class="t-h2 t-accent" data-auto-animate-delay="0.9" style="left:1600px; top:236px;">41%</p>
 
     <p class="t-h2" data-auto-animate-delay="0.98" style="left:120px; top:356px; width:480px;">做示例稿</p>
     <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="0.98" style="left:680px; top:360px; width:558px; height:56px;"></div>
@@ -109,6 +113,57 @@
     <p class="t-h2" data-auto-animate-delay="1.22" style="left:1600px; top:716px;">5%</p>
 
     <p class="t-label t-dim" data-auto-animate-delay="1.5" style="left:120px; top:900px;">按投入的工作日估算</p>
+  </section>
+
+  <!-- 5 关键数字：最长那条的名字和数值被拎出来，条子收成数字下的粗线 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3.5" data-page="data">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">最大的一块。</p>
+
+    <p data-id="pct" class="t-metric" style="left:120px; top:320px;">41%</p>
+    <div data-id="axis" class="s-accent" style="left:120px; top:640px; width:560px; height:8px;"></div>
+    <p data-id="name" class="t-h2" style="left:120px; top:680px; width:800px;">写规范和文档</p>
+    <p class="t-body" data-auto-animate-delay="1.0" style="left:120px; top:760px; width:800px;">比做示例稿多出一半。没写下来的约定，过一个月就走样。</p>
+
+    <div class="s-surface" data-auto-animate-delay="0.8" style="left:1000px; top:240px; width:800px; height:760px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:1080px; top:320px;">Note</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.08" style="left:1080px; top:400px; width:640px;">这一年最贵的一件事，也是最值的一件事：把做法写成别人能照着做的规范。</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.16" style="left:1080px; top:880px;">全年五项合计 100%</p>
+  </section>
+
+  <!-- 6 换话题：明年的四站。遮挡剪辑扫过去，轴重新铺满 -->
+  <section data-st="mask" data-st-direction="up" data-hold="4" data-page="timeline">
+    <p class="t-h1" style="left:120px; top:80px;">明年的四站。</p>
+
+    <div data-id="axis" class="s-accent" style="left:120px; top:560px; width:1680px; height:4px;"></div>
+
+    <div class="s-dot" style="left:120px; top:542px; width:40px; height:40px;"></div>
+    <p class="t-h2" style="left:120px; top:440px; width:360px;">放出去</p>
+    <p class="t-body t-dim" style="left:120px; top:620px; width:360px;">二月</p>
+    <p class="t-body" style="left:120px; top:680px; width:360px;">模板公开，先让人用起来。</p>
+
+    <div class="s-dot" style="left:560px; top:542px; width:40px; height:40px;"></div>
+    <p class="t-h2" style="left:560px; top:440px; width:360px;">第二套</p>
+    <p class="t-body t-dim" style="left:560px; top:620px; width:360px;">五月</p>
+    <p class="t-body" style="left:560px; top:680px; width:360px;">换一个主题，规范不改一个字。</p>
+
+    <div class="s-dot" style="left:1000px; top:542px; width:40px; height:40px;"></div>
+    <p class="t-h2" style="left:1000px; top:440px; width:360px;">一起写</p>
+    <p class="t-body t-dim" style="left:1000px; top:620px; width:360px;">九月</p>
+    <p class="t-body" style="left:1000px; top:680px; width:360px;">规范交给更多人一起改。</p>
+
+    <div class="s-dot" style="left:1440px; top:542px; width:40px; height:40px;"></div>
+    <p class="t-h2" style="left:1440px; top:440px; width:360px;">再数一次</p>
+    <p class="t-body t-dim" style="left:1440px; top:620px; width:360px;">十二月</p>
+    <p class="t-body" style="left:1440px; top:680px; width:360px;">看 41% 降下来没有。</p>
+  </section>
+
+  <!-- 7 结尾：轴缩回封面那条装饰线的位置，版式和封面同构 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3" data-page="closing">
+    <p class="t-label" data-auto-animate-delay="0.8" style="left:120px; top:80px;">See you next year</p>
+    <p class="t-label" data-auto-animate-delay="0.8" style="left:1000px; top:80px; width:800px; text-align:right;">Vol. VI</p>
+    <p class="t-display" data-auto-animate-delay="0.8" style="left:120px; top:300px;">Next<br>Stop</p>
+    <div data-id="axis" class="s-accent" style="left:120px; top:700px; width:600px; height:4px;"></div>
+    <p class="t-body" data-auto-animate-delay="1.0" style="left:120px; top:760px; width:900px;">谢谢。明年这时候，再回来数一次。</p>
   </section>
 
 </div>

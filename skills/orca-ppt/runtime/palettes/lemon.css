@@ -1,0 +1,27 @@
+/* 配色：柠檬（借自 beautiful-html-templates/neo-grid-bold,MIT）
+ * 一句话：米灰底 + 墨黑面板 + 纸白面板 + 荧光柠檬黄。海报感、响亮,浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          米灰底              --surface     墨黑（反白面板）
+ *   --surface-2   纸白（普通面板）      --accent      荧光柠檬黄（信号面板、重点柱）
+ *   --accent-soft 浅柠檬              --text / --text-dim  墨黑 / 暖灰
+ *   --text-on-surface 纸白（黑面板上的字）  --text-on-accent 墨黑
+ *   --accent-text 深橄榄（柠檬黄在浅底上当字看不见,用同色相的深档）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（同是柠檬黄）。
+ * surface（黑）和 surface-2（纸白）不能互变：形态变换时面板保持原来的颜色，只改位置和大小。
+ */
+
+:root {
+  --bg: #ecece8;
+  --surface: #0a0a0a;
+  --surface-2: #f5f4ef;
+  --text: #0a0a0a;
+  --text-dim: #55554f;
+  --text-on-surface: #f5f4ef;
+  --accent: #e6ff3d;
+  --accent-soft: #f0ff8f;
+  --text-on-accent: #0a0a0a;
+  --accent-text: #5a6800;
+}

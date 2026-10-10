@@ -15,8 +15,11 @@
 <!-- 转场计划（主题 Cobalt Grid，配色 cobalt，版式 standard）
 1→2  关系：封面右下角的扫描线阶梯就是四个季度的数据，四级各自移位、变高，成为柱状图  手法：共享元素  共享：q1, q2, q3, q4
 2→3  关系：第四季度那根柱子展开成右侧的大竖条，82% 从数据页的标注放大成关键数字    手法：形态变换  共享：q4, figure
-3→4  关系：竖条缩回阶梯的最后一级，前三级回来，回到封面的构图                        手法：形态变换  共享：q4
+3→4  关系：同一个版式的下一个关键数字，大竖条不动，标签、数字、说明整体流过去        手法：元素交接  方向：left（大竖条前后一样，原地不动）
+4→5  关系：第四季度的大竖条分成明年的四个季度，变成路线图上四个一样大的方块        手法：一变多    分：next（q4 大竖条 → q1…q4 四块）
+5→6  关系：路线图的四个方块各自移位、长高，回到封面的阶梯，首尾呼应               手法：共享元素  共享：q1, q2, q3, q4
 方格纸和上下两条细线每页同一位置，翻页时不动。
+数据全是虚构的占位：一份不存在的季刊的读者数据（季度打开率、每期阅读时长）和明年的计划。
 -->
 
 <div class="slides">
@@ -65,22 +68,55 @@
     <div class="s-grid" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
     <div class="s-accent" style="left:120px; top:80px; width:1680px; height:2px;"></div>
     <div class="s-accent" style="left:120px; top:1000px; width:1680px; height:2px;"></div>
-    <p class="t-label" data-auto-animate-delay="0.8" style="left:120px; top:120px;">04 · Headline figure</p>
-    <p data-id="figure" class="t-metric" style="left:120px; top:320px;">82%</p>
-    <p class="t-h2" data-auto-animate-delay="1.0" style="left:120px; top:680px; width:960px;">of readers opened every issue in the last quarter.</p>
+    <p data-carry="label" class="t-label" data-auto-animate-delay="0.8" style="left:120px; top:120px;">04 · Headline figure</p>
+    <p data-id="figure" data-carry="metric" class="t-metric" style="left:120px; top:320px;">82%</p>
+    <p data-carry="caption" class="t-h2" data-auto-animate-delay="1.0" style="left:120px; top:680px; width:960px;">of readers opened every issue in the last quarter.</p>
     <div data-id="q4" class="s-scan" style="left:1240px; top:120px; width:560px; height:840px;"></div>
   </section>
 
-  <!-- 4 结尾页：回到封面的构图 -->
+  <!-- 4 第二个关键数字：同一版式，大竖条不动，文字流过去 -->
+  <section data-st="carry" data-st-direction="left" data-auto-animate data-hold="2.5">
+    <div class="s-grid" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <div class="s-accent" style="left:120px; top:80px; width:1680px; height:2px;"></div>
+    <div class="s-accent" style="left:120px; top:1000px; width:1680px; height:2px;"></div>
+    <p data-carry="label" class="t-label" style="left:120px; top:120px;">05 · Time spent</p>
+    <p data-carry="metric" class="t-metric" style="left:120px; top:320px;">6.4</p>
+    <p data-carry="caption" class="t-h2" style="left:120px; top:680px; width:960px;">minutes per issue in the last quarter, up from 4.1 in Q1.</p>
+    <div data-id="q4" data-split="next" class="s-scan" style="left:1240px; top:120px; width:560px; height:840px;"></div>
+  </section>
+
+  <!-- 5 明年的路线图：大竖条分成四个季度 -->
+  <section data-st="split" data-st-split="next" data-auto-animate data-hold="3">
+    <div class="s-grid" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <div class="s-accent" style="left:120px; top:80px; width:1680px; height:2px;"></div>
+    <div class="s-accent" style="left:120px; top:1000px; width:1680px; height:2px;"></div>
+    <p class="t-label" style="left:120px; top:120px;">06 · The year ahead</p>
+    <p class="t-h1" style="left:120px; top:200px;">Four quarters, four plans.</p>
+    <div class="s-accent" style="left:120px; top:600px; width:1680px; height:2px;"></div>
+    <div data-id="q1" data-split="next" class="s-scan" style="left:120px; top:440px; width:80px; height:160px;"></div>
+    <div data-id="q2" data-split="next" class="s-scan" style="left:560px; top:440px; width:80px; height:160px;"></div>
+    <div data-id="q3" data-split="next" class="s-scan" style="left:1000px; top:440px; width:80px; height:160px;"></div>
+    <div data-id="q4" data-split="next" class="s-scan" style="left:1440px; top:440px; width:80px; height:160px;"></div>
+    <p class="t-label" style="left:120px; top:640px;">Q1 · 2027</p>
+    <p class="t-label" style="left:560px; top:640px;">Q2 · 2027</p>
+    <p class="t-label" style="left:1000px; top:640px;">Q3 · 2027</p>
+    <p class="t-label" style="left:1440px; top:640px;">Q4 · 2027</p>
+    <p class="t-h2" style="left:120px; top:700px; width:360px;">Rebuild the archive.</p>
+    <p class="t-h2" style="left:560px; top:700px; width:360px;">Launch an audio edition.</p>
+    <p class="t-h2" style="left:1000px; top:700px; width:360px;">Ask every reader.</p>
+    <p class="t-h2" style="left:1440px; top:700px; width:360px;">Print the first annual.</p>
+  </section>
+
+  <!-- 6 结尾页：四个方块长回封面的阶梯 -->
   <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2">
     <div class="s-grid" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
     <div class="s-accent" style="left:120px; top:80px; width:1680px; height:2px;"></div>
     <div class="s-accent" style="left:120px; top:1000px; width:1680px; height:2px;"></div>
     <p class="t-display" data-auto-animate-delay="0.8" style="left:120px; top:320px;">Thank you<br>for reading.</p>
     <p class="t-label" data-auto-animate-delay="1.0" style="left:120px; top:920px;">Next issue · Spring 2027</p>
-    <div data-id="q1" class="s-scan" data-auto-animate-delay="0.8" style="left:1240px; top:760px; width:120px; height:200px;"></div>
-    <div data-id="q2" class="s-scan" data-auto-animate-delay="0.88" style="left:1380px; top:600px; width:120px; height:360px;"></div>
-    <div data-id="q3" class="s-scan" data-auto-animate-delay="0.96" style="left:1520px; top:440px; width:120px; height:520px;"></div>
+    <div data-id="q1" class="s-scan" style="left:1240px; top:760px; width:120px; height:200px;"></div>
+    <div data-id="q2" class="s-scan" style="left:1380px; top:600px; width:120px; height:360px;"></div>
+    <div data-id="q3" class="s-scan" style="left:1520px; top:440px; width:120px; height:520px;"></div>
     <div data-id="q4" class="s-scan" style="left:1660px; top:280px; width:120px; height:680px;"></div>
   </section>
 
