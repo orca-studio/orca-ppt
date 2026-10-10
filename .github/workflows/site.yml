@@ -1,0 +1,50 @@
+# 官网 ppt.orca-studio.ai:main 上的官网或同款样稿一变就重新构建、部署到 Cloudflare。
+# 同款列表和样稿都从 skills/orca-ppt/ 读;样片在这里现录(要 Chrome 和 ffmpeg),
+# 录过的按内容缓存,样稿没变就不重录。
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - site/**
+      - skills/orca-ppt/examples/**
+      - skills/orca-ppt/recipes/**
+      - skills/orca-ppt/runtime/**
+      - .github/workflows/site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      # ffmpeg 转码截片段;中文字体给录制用的 Chrome(稿子里的中文回退到系统字体)
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - run: npm ci --no-audit --no-fund
+        working-directory: skills/orca-ppt
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: site/.cache
+          key: site-media-${{ hashFiles('skills/orca-ppt/examples/**', 'skills/orca-ppt/recipes/**', 'skills/orca-ppt/runtime/**') }}
+          restore-keys: site-media-
+      - run: node site/build.mjs --media
+      - name: Deploy
+        run: npx --yes wrangler@4.149.0 deploy --config site/wrangler.jsonc
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

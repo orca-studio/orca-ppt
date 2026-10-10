@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <title>Orca PPT — AI presentation workbench</title>
+  <rect width="96" height="96" rx="24" fill="#ffffff"/>
+  <rect x="10" y="29" width="64" height="48" rx="10" fill="#ccebd6"/>
+  <rect x="18" y="21" width="64" height="48" rx="10" fill="#151918"/>
+  <path d="M30 36H47M30 45H41" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+  <path d="M30 57H37M46 57H53M62 57H69" stroke="#4ade80" stroke-width="5" stroke-linecap="round"/>
+  <path d="M72 8C75 20 78 23 90 26C78 29 75 32 72 44C69 32 66 29 54 26C66 23 69 20 72 8Z" fill="#16a34a" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
+</svg>

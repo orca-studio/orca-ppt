@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Orca PPT · 和 AI 一起，把想法做成演示稿</title>
+    <meta
+      name="description"
+      content="Orca PPT 是 Mac 上的演示稿工作台：连上你已经在用的 AI 助手，它来做稿，翻页时标题滑走、卡片展开成整页、数字长成图表。看到喜欢的效果，一键做同款。免费开源。"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="brand/orca-mark.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Orca PPT · 和 AI 一起，把想法做成演示稿" />
+    <meta
+      property="og:description"
+      content="连上你的 AI 助手，做出会动的演示稿。看到喜欢的效果，一键做同款。"
+    />
+    <meta property="og:image" content="https://ppt.orca-studio.ai/brand/social-card-1200x630.png" />
+    <meta property="og:url" content="https://ppt.orca-studio.ai/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="styles.css" />
+    <!--GA-->
+  </head>
+  <body>
+    <a class="skip" href="#main">跳到正文</a>
+
+    <header class="nav" data-nav>
+      <div class="wrap nav-inner">
+        <a class="brand" href="./" aria-label="Orca PPT 首页">
+          <img src="brand/orca-mark.svg" alt="" width="28" height="28" />
+          <span>Orca PPT</span>
+        </a>
+        <nav class="nav-links" aria-label="页面导航">
+          <a href="#recipes">做同款</a>
+          <a href="#start">怎么开始</a>
+          <a href="#faq">常见问题</a>
+        </nav>
+        <div class="nav-actions">
+          <a
+            class="icon-link"
+            href="https://github.com/orca-studio/orca-ppt"
+            target="_blank"
+            rel="noopener"
+            aria-label="GitHub 上的源码"
+          >
+            <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"
+              />
+            </svg>
+          </a>
+          <a
+            class="btn btn-solid btn-sm"
+            href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
+            data-download
+            >下载 Mac 版</a
+          >
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero">
+        <div class="wrap hero-copy">
+          <p class="eyebrow">Mac 上的 AI 演示稿工作台</p>
+          <h1>和 AI 一起，<br />把想法做成演示稿。</h1>
+          <p class="lede">
+            连上你已经在用的 AI 助手，它来做稿。翻页时标题滑到新位置，卡片展开成整页，数字长成图表
+            —— 像发布会那样连贯，不是一页一页地硬切。
+          </p>
+          <div class="cta-row">
+            <a
+              class="btn btn-solid"
+              href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
+              data-download
+              >下载 Mac 版 <span aria-hidden="true">↓</span></a
+            >
+            <a class="btn btn-ghost" href="#recipes">先看看同款</a>
+          </div>
+          <p class="fineprint">免费开源 · macOS 12 以上 · Apple Silicon</p>
+        </div>
+
+        <figure class="wrap hero-shot">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true">
+              <i></i><i></i><i></i><span><!--HERO_TITLE--></span>
+            </div>
+            <div class="window-stage"><!--HERO--></div>
+          </div>
+          <figcaption>
+            这一份就是同款样稿，<a href="<!--HERO_PATH-->" target="_blank" rel="noopener"
+              >在浏览器里翻页看 ↗</a
+            >
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="band" aria-labelledby="why-title">
+        <div class="wrap split">
+          <div>
+            <p class="eyebrow">为什么是会动的稿子</p>
+            <h2 id="why-title">翻页不是换一张图，<br />是同一样东西在动。</h2>
+          </div>
+          <ul class="points">
+            <li>
+              <strong>观众跟得上</strong
+              ><span
+                >上一页的标题滑成下一页的页眉，那一格展开成整页。眼睛不用重新找，注意力一直在你讲的东西上。</span
+              >
+            </li>
+            <li>
+              <strong>关系自己说话</strong
+              ><span
+                >封面上的阶梯长成柱状图，小卡片放大成细节页。前后两页是什么关系，动起来就看懂了，不用多一句旁白。</span
+              >
+            </li>
+            <li>
+              <strong>不用你调动画</strong
+              ><span>页面之间怎么接、接多快，写在内置的设计规范里，AI 照着做。你只管讲什么。</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="recipes" class="section" aria-labelledby="recipes-title">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow">做同款</p>
+            <h2 id="recipes-title">看到喜欢的效果，<br />就做一份同款。</h2>
+            <p>
+              鼠标停在卡片上看它动起来，点开可以一页页翻。在 Orca PPT
+              首页点「做同款」，把那段话交给你的 AI
+              助手，再补上你自己的内容，它就照着这个效果做出你的版本。
+            </p>
+          </div>
+          <ul class="cards">
+            <!--RECIPES-->
+          </ul>
+        </div>
+      </section>
+
+      <section id="start" class="section section-tint" aria-labelledby="start-title">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow">怎么开始</p>
+            <h2 id="start-title">三步，做出第一份。</h2>
+            <p>
+              Orca PPT 自己不带 AI，连接的是你已经在用的那个。推荐
+              <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a
+              >，Codex 和其他支持 MCP 的助手也可以。还没有 AI 助手？可以试试
+              <a href="https://jevbot.dev" target="_blank" rel="noopener">Jevbot</a>。
+            </p>
+          </div>
+          <ol class="steps">
+            <li>
+              <span class="step-n">01</span>
+              <h3>装上 Orca PPT</h3>
+              <p>下载后把应用拖进「应用程序」，打开它。之后有新版本会自动更新。</p>
+              <a
+                class="text-link"
+                href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
+                data-download
+                >下载 Mac 版 ↓</a
+              >
+            </li>
+            <li>
+              <span class="step-n">02</span>
+              <h3>连上你的 AI 助手</h3>
+              <p>应用开着的时候，在终端里运行一次：</p>
+              <div class="copy" data-copy>
+                <code>claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp</code>
+                <button type="button" aria-label="复制命令">复制</button>
+              </div>
+              <p class="hint">
+                用 Codex：<code>codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp</code>
+              </p>
+            </li>
+            <li>
+              <span class="step-n">03</span>
+              <h3>挑一个同款</h3>
+              <p>
+                在 Orca PPT 首页点卡片右上角的「做同款」，把复制的那段话贴给 AI
+                助手，补上主题和每页要讲的内容。不挑同款，直接说「帮我做一份介绍 Q3
+                增长的稿子，给投资人看」也行。
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="control-title">
+        <div class="wrap">
+          <div class="section-head">
+            <p class="eyebrow">你说了算</p>
+            <h2 id="control-title">AI 动手，<br />你来决定精彩。</h2>
+          </div>
+          <ul class="features">
+            <li>
+              <span class="feature-icon" aria-hidden="true">◎</span>
+              <h3>指给它看</h3>
+              <p>
+                稿子在 Orca PPT
+                里实时放映。哪里不对，直接在画面上点那个位置，写一句「这儿太挤了」。AI
+                拿到的是确切的位置，不用你费劲形容「第三页右边那个标题」。
+              </p>
+            </li>
+            <li>
+              <span class="feature-icon" aria-hidden="true">✎</span>
+              <h3>字自己改</h3>
+              <p>
+                文字双击就能改，改错了可以撤销。AI
+                改稿的时候你不会同时动到它，你接手的时候它会停下。
+              </p>
+            </li>
+            <li>
+              <span class="feature-icon" aria-hidden="true">▢</span>
+              <h3>稿子是你的</h3>
+              <p>
+                成品是你电脑上的一个普通文件夹，浏览器打开就能放映，方向键翻页。不上传、不锁在应用里，拿去别的工具接着改也行。
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="faq" class="section section-tint" aria-labelledby="faq-title">
+        <div class="wrap split">
+          <div>
+            <p class="eyebrow">常见问题</p>
+            <h2 id="faq-title">开始之前。</h2>
+          </div>
+          <div class="faq">
+            <details>
+              <summary>需要会写代码吗？</summary>
+              <p>
+                不需要，你只要会跟 AI 助手说话。连接 AI 助手时要在终端里粘贴运行一行命令，只做一次。
+              </p>
+            </details>
+            <details>
+              <summary>能导出成 PowerPoint 吗？</summary>
+              <p>
+                不能。成品是网页形式的演示稿，用浏览器放映。这样才做得出 PowerPoint
+                做不到的连贯动效。
+              </p>
+            </details>
+            <details>
+              <summary>要付费吗？</summary>
+              <p>Orca PPT 免费、开源（MIT 许可）。AI 助手按它自己的方式收费，和 Orca PPT 无关。</p>
+            </details>
+            <details>
+              <summary>稿子存在哪里？会上传吗？</summary>
+              <p>
+                存在你电脑上你选的文件夹里，就是普通的文件。Orca PPT
+                只在你自己的电脑上运行，不会上传你的稿子。AI
+                助手读到的内容，按你所用助手的规则处理。
+              </p>
+            </details>
+            <details>
+              <summary>支持 Windows 吗？</summary>
+              <p>现在只有 Mac 版（Apple Silicon）。Windows 版在计划里，出了会在这里提供下载。</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap">
+          <div class="final">
+            <img src="brand/orca-mark.svg" alt="" width="56" height="56" />
+            <h2>下一份稿子，<br />让它动起来。</h2>
+            <p>从一个同款开始，补上你的内容。</p>
+            <div class="cta-row cta-center">
+              <a
+                class="btn btn-solid"
+                href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
+                data-download
+                >下载 Mac 版 <span aria-hidden="true">↓</span></a
+              >
+              <a
+                class="btn btn-ghost"
+                href="https://github.com/orca-studio/orca-ppt"
+                target="_blank"
+                rel="noopener"
+                >GitHub 上的源码 ↗</a
+              >
+            </div>
+            <p class="fineprint">
+              macOS 12 以上 · Apple Silicon ·
+              <a
+                href="https://github.com/orca-studio/orca-ppt/releases"
+                target="_blank"
+                rel="noopener"
+                >所有版本</a
+              >
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="./"
+          ><img src="brand/orca-mark.svg" alt="" width="22" height="22" /><span>Orca PPT</span></a
+        >
+        <nav aria-label="页脚链接">
+          <a href="https://github.com/orca-studio/orca-ppt" target="_blank" rel="noopener"
+            >GitHub</a
+          >
+          <a href="https://github.com/orca-studio/orca-ppt/releases" target="_blank" rel="noopener"
+            >版本</a
+          >
+          <a href="https://github.com/orca-studio/orca-ppt/issues" target="_blank" rel="noopener"
+            >反馈问题</a
+          >
+        </nav>
+        <span class="footer-note">MIT 许可 · Orca Studio</span>
+      </div>
+    </footer>
+
+    <script src="main.js" defer></script>
+  </body>
+</html>
