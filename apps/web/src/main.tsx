@@ -34,6 +34,7 @@ declare global {
         outPath: string
         posterPath: string
         coverAt?: number
+        range?: { from: number; to: number }
       }) => Promise<boolean>
       renderThumbnails?: (input: {
         previewUrl: string

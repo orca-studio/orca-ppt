@@ -30,15 +30,20 @@ export async function previewFiles(
   id: string,
   dir: string,
   entry: string,
+  /** 录制参数(页范围、封面时间)也算进键:改了 frontmatter 就该重录。 */
+  options = '',
   env = process.env,
 ): Promise<PreviewFiles> {
-  const key = await previewKey(dir, entry)
+  const key = await previewKey(dir, entry, options)
   const base = join(previewDir(env), id, key)
   return { key, video: `${base}.webm`, poster: `${base}.jpg` }
 }
 
-export async function previewKey(dir: string, entry: string): Promise<string> {
-  const hash = createHash('sha256').update(await deckRevision(dir))
+export async function previewKey(dir: string, entry: string, options = ''): Promise<string> {
+  const hash = createHash('sha256')
+    .update(await deckRevision(dir))
+    .update('\0')
+    .update(options)
   const html = await readFile(entry, 'utf8').catch(() => '')
   for (const ref of localRefs(html)) {
     const file = resolve(dirname(entry), ref)

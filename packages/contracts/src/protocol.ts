@@ -899,8 +899,16 @@ export const pushes = {
     previewUrl: z.string(),
     outPath: z.string(),
     posterPath: z.string(),
-    /** 封面取第几秒。不给就取全片 75% 处。 */
+    /** 封面取样片第几秒。不给就取 75% 处。 */
     coverAt: z.number().nonnegative().optional(),
+    /**
+     * 只录这几页(下标,从 0 数,含两头)。样片要的是这个同款的看点,不是整份稿子 ——
+     * 回顾片尾的看点只在最后一页。从 `from` 页的静止画面起,不录进入它的转场。
+     * 不给就录整份。
+     */
+    range: z
+      .object({ from: z.number().int().nonnegative(), to: z.number().int().nonnegative() })
+      .optional(),
   }),
   /** 同款列表变了(样片录好了)。首页重新拉一次 catalog.recipes。 */
   'recipes.changed': z.object({}),

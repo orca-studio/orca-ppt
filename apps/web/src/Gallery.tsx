@@ -74,7 +74,8 @@ function RecipeCard({ recipe, onPresent }: { recipe: Recipe; onPresent: () => vo
       el.pause()
       el.load()
     }
-  }, [hover])
+    // 样片换了(缓存刚录好)也要重新判断:鼠标正停在卡片上时,新换上来的元素该接着播
+  }, [hover, recipe.preview])
 
   return (
     <article

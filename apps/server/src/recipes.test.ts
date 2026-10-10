@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { frontmatter, listRecipes, recipeEntry } from './recipes.js'
+import { frontmatter, listRecipes, pageRange, recipeEntry } from './recipes.js'
 
 const recipe = (id: string, extra = '') => `---
 id: ${id}
@@ -54,6 +54,20 @@ describe('recipeEntry', () => {
       join(skill, 'recipes/recap-credits/index.html'),
     )
     expect(await recipeEntry(skill, '../recipes/recap-credits')).toBeUndefined()
+  })
+})
+
+describe('pageRange', () => {
+  it('页号从 1 数、含两头,转成下标', () => {
+    expect(pageRange('4-5')).toEqual({ from: 3, to: 4 })
+    expect(pageRange('2 - 2')).toEqual({ from: 1, to: 1 })
+  })
+
+  it('写错了就录整份,不猜', () => {
+    expect(pageRange(undefined)).toBeUndefined()
+    expect(pageRange('5-4')).toBeUndefined()
+    expect(pageRange('0-3')).toBeUndefined()
+    expect(pageRange('last')).toBeUndefined()
   })
 })
 

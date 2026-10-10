@@ -18,11 +18,15 @@ export interface PreviewJob {
   outPath: string
   posterPath: string
   coverAt?: number | undefined
+  /** 只录这几页(下标,含两头)。从 from 页的静止画面起,不录进入它的转场。 */
+  range?: { from: number; to: number } | undefined
 }
 
 const FPS = 24
 const WIDTH = 960
 const HEIGHT = 540
+/** 只录一段时,开头那页的静止画面停多久 —— 让人先看清「从哪页开始」,再看转场。 */
+const LEAD_IN_US = 600_000
 /** 停留帧不逐帧录:一张图挂这么久,中间补一个关键帧,拖进度条时不用从头解。 */
 const HOLD_STEP_US = 500_000
 
@@ -115,8 +119,19 @@ export async function recordPreview(job: PreviewJob): Promise<void> {
 
     const frameUs = Math.round(1_000_000 / FPS)
     const count: number = await deck.webContents.executeJavaScript('__capture.count()')
+    const first = Math.min(job.range?.from ?? 0, count - 1)
+    const lastPage = Math.min(job.range?.to ?? count - 1, count - 1)
     let last: NativeImage | undefined
-    for (let i = 0; i < count; i++) {
+    if (first > 0) {
+      // 从中间起:直接定位到起始页,拨到转场终点(隔页跳时 auto-animate 也会动),停一小会儿
+      await step(`定位第 ${first + 1} 页`, async () => {
+        await deck.webContents.executeJavaScript(`__capture.go(${first})`)
+        await seek(10_000_000)
+      })
+      last = await snap()
+      await add(last, LEAD_IN_US, true)
+    }
+    for (let i = first > 0 ? first + 1 : 0; i <= lastPage; i++) {
       const page: { transition: number; hold: number; scene?: number; video?: number } = await step(
         `定位第 ${i + 1} 页`,
         () => deck.webContents.executeJavaScript(`__capture.go(${i})`),

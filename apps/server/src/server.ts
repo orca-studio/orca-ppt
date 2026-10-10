@@ -48,7 +48,7 @@ import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
-import { listRecipes, recipeEntry } from './recipes.js'
+import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
 import { ensureDir, exists, previewDir, previewFiles, pruneOthers } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 
@@ -225,7 +225,13 @@ export async function startServer(
   // 录一段样片要逐帧 seek 二三十秒的稿子,给足时间
   const previewRenders = new Roundtrip<
     true,
-    { previewUrl: string; outPath: string; posterPath: string; coverAt?: number }
+    {
+      previewUrl: string
+      outPath: string
+      posterPath: string
+      coverAt?: number
+      range?: { from: number; to: number }
+    }
   >((payload) => bus.broadcast('preview.request', payload), 240_000)
 
   const queue = new RequestQueue((deckId, pending) =>
@@ -360,6 +366,10 @@ export async function startServer(
   const queuedPreviews = new Set<string>()
   const failedPreviews = new Set<string>()
   let previewTail: Promise<void> = Promise.resolve()
+  /** 录制参数进缓存键:改了 frontmatter 的 preview / cover 就重录。 */
+  const previewOptions = (found: RecipeSource) =>
+    JSON.stringify({ coverAt: found.coverAt, range: found.range })
+
   function queuePreview(id: string, key: string) {
     const tag = `${id}:${key}`
     if (queuedPreviews.has(tag) || failedPreviews.has(tag)) return
@@ -370,7 +380,7 @@ export async function startServer(
       try {
         const found = await recipeEntry(catalog.skillPath, id)
         if (!found) return
-        const files = await previewFiles(id, found.dir, found.entry)
+        const files = await previewFiles(id, found.dir, found.entry, previewOptions(found))
         if (files.key !== key || (await exists(files.video))) return
         await ensureDir(dirname(files.video))
         const mount = previews.mount(planPreview(found.dir, found.entry))
@@ -380,6 +390,7 @@ export async function startServer(
           outPath: files.video,
           posterPath: files.poster,
           ...(found.coverAt !== undefined ? { coverAt: found.coverAt } : {}),
+          ...(found.range ? { range: found.range } : {}),
         })
         if (!(await exists(files.video))) throw new Error('壳说录好了,但样片文件不在')
         await pruneOthers(files)
@@ -705,7 +716,12 @@ export async function startServer(
             recipes.map(async (recipe) => {
               const found = await recipeEntry(catalog.skillPath, recipe.id)
               if (!found) return recipe
-              const files = await previewFiles(recipe.id, found.dir, found.entry)
+              const files = await previewFiles(
+                recipe.id,
+                found.dir,
+                found.entry,
+                previewOptions(found),
+              )
               if (await exists(files.video)) {
                 return {
                   ...recipe,

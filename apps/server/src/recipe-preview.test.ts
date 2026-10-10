@@ -40,6 +40,13 @@ describe('previewKey', () => {
     expect(await previewKey(dir, entry)).not.toBe(before)
   })
 
+  it('录制参数改了,键也变 —— 只录看点那几页和录整份是两段不同的样片', async () => {
+    const { dir, entry } = await fixture()
+    expect(await previewKey(dir, entry, '{"range":{"from":3,"to":4}}')).not.toBe(
+      await previewKey(dir, entry),
+    )
+  })
+
   it('引擎改了,键也变 —— 同一份样稿换了引擎录出来就不一样', async () => {
     const { skill, dir, entry } = await fixture()
     const before = await previewKey(dir, entry)
@@ -53,7 +60,7 @@ describe('previewFiles / pruneOthers', () => {
     const { dir, entry } = await fixture()
     const cache = await mkdtemp(join(tmpdir(), 'cache-'))
     const env = { ORCA_PPT_PREVIEW_DIR: cache }
-    const files = await previewFiles('a', dir, entry, env)
+    const files = await previewFiles('a', dir, entry, '', env)
     expect(files.video).toBe(join(cache, 'a', `${files.key}.webm`))
     await mkdir(join(cache, 'a'), { recursive: true })
     await writeFile(files.video, 'v')

@@ -208,6 +208,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
             outPath: data.outPath,
             posterPath: data.posterPath,
             ...(data.coverAt !== undefined ? { coverAt: data.coverAt } : {}),
+            ...(data.range ? { range: data.range } : {}),
           })
           await next.request('preview.result', { requestId: data.requestId })
         } catch (cause) {

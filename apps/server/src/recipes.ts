@@ -48,15 +48,41 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
 export async function recipeEntry(
   skillPath: string | undefined,
   id: string,
-): Promise<{ dir: string; entry: string; title: string; coverAt: number | undefined } | undefined> {
+): Promise<RecipeSource | undefined> {
   const known = (await listRecipes(skillPath)).find((item) => item.id === id)
   if (!skillPath || !known) return undefined
   const dir = join(skillPath, 'recipes', id)
   const entry = await existing(join(dir, 'index.html'))
   if (!entry) return undefined
-  // 封面取第几秒(frontmatter 的 cover)。写错了不猜,交给录制器取默认
-  const cover = Number(frontmatter(await readFile(join(dir, 'RECIPE.md'), 'utf8')).cover)
-  return { dir, entry, title: known.title, coverAt: Number.isFinite(cover) ? cover : undefined }
+  const meta = frontmatter(await readFile(join(dir, 'RECIPE.md'), 'utf8'))
+  // 封面取样片第几秒(cover)。写错了不猜,交给录制器取默认
+  const cover = Number(meta.cover)
+  return {
+    dir,
+    entry,
+    title: known.title,
+    coverAt: Number.isFinite(cover) ? cover : undefined,
+    range: pageRange(meta.preview),
+  }
+}
+
+export interface RecipeSource {
+  dir: string
+  entry: string
+  title: string
+  /** 封面取样片第几秒。 */
+  coverAt: number | undefined
+  /** 样片只录这几页(下标,含两头)。 */
+  range: { from: number; to: number } | undefined
+}
+
+/** 样片录哪几页:`preview: 4-5`(页号从 1 数,含两头)→ 下标。写错了就录整份。 */
+export function pageRange(value: string | undefined): { from: number; to: number } | undefined {
+  const match = value?.match(/^(\d+)\s*-\s*(\d+)$/)
+  if (!match) return undefined
+  const from = Number(match[1]) - 1
+  const to = Number(match[2]) - 1
+  return from >= 0 && to >= from ? { from, to } : undefined
 }
 
 /** 只认最简单的 `键: 值` 一行一个,不引 YAML 库。值里的冒号保留。 */
