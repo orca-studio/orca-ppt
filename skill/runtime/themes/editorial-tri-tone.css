@@ -1,0 +1,57 @@
+/* 主题：Editorial Tri-Tone（字体取自 beautiful-html-templates/editorial-tri-tone）
+ * 标签：creative
+ * 一句话：品牌介绍、创意提案 —— 刊物感，有态度
+ * 默认配色：blush
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 原作是三色闭环（粉 / 黄 / 酒红），本主题多两个深黄（accent / accent-soft），都是奶油黄的暗档。
+ * 分成三档是因为规范要求 .s-accent 和 .s-surface-2 能区分 —— 同一个色值会让强调色面积上限失去意义。
+ * --text-dim 用的是酒红的半透明版，不是第四个颜色 —— 原作在深底上的分隔线也是这么做的。
+ *
+ * 背景是浅色（粉）：满屏酒红用「整页 ↔ 卡片」组合里的整页形状做。
+ * 遮挡剪辑写 data-st-mask-color="surface"，满屏酒红，戏剧性比默认的黄色强得多。
+ *
+ * --radius-s 是 999px：.s-accent 因此是胶囊形 —— 胶囊是原作的通用标签组件，
+ * 页与页之间用元素交接（carry）让它平移，是本主题最顺的一种转场。
+ *
+ * 字体：Bricolage Grotesque 管正文和展示字，JetBrains Mono 管标签，
+ * Instrument Serif 斜体只用在「有人味的时刻」—— 章节数字、年份、引号、单位符号，
+ * 绝不用在正文上。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .t-label  JetBrains Mono 大写小标签，24px：§ 章节标记、页脚、图例
+ *   .t-serif  换成 Instrument Serif 斜体，不带字号 —— 叠加在已有字号类上用，
+ *             比如 class="t-display t-serif" 做章节数字，class="t-h2 t-serif" 做年份。
+ *             章节数字配文字级匹配（data-text）做 01 → 02 → 03，是本主题的招牌转场 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 999px;
+  --radius-m: 28px;
+  --radius-l: 32px;
+
+  --font: "Bricolage Grotesque", "PingFang SC", -apple-system, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, "Songti SC", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+/* 展示字：大字重 + 负字距；正文不加字距 */
+.t-display { font-weight: 700; letter-spacing: -0.04em; line-height: 0.86; }
+.t-metric  { font-weight: 700; letter-spacing: -0.05em; line-height: 0.82; }
+.t-h1      { font-weight: 700; letter-spacing: -0.025em; line-height: 1; }
+.t-h2      { font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+.t-body    { font-weight: 400; line-height: 1.4; }
+
+/* 等宽大写小标签：§ 章节标记、页脚、图例 */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 表现性衬线斜体。不带字号，叠加在已有字号类上用 */
+.t-serif { font-family: var(--font-serif); font-style: italic; font-weight: 400; letter-spacing: 0; }

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="216" height="576" viewBox="0 0 216 576" role="img" aria-label="Rambutan Flavour demonstration bottle">
+<defs>
+ <linearGradient id="glass"><stop stop-color="#8075ad"/><stop offset=".12" stop-color="#cbc7ec"/><stop offset=".28" stop-color="#fff" stop-opacity=".7"/><stop offset=".4" stop-color="#cbc7ec"/><stop offset=".72" stop-color="#cbc7ec"/><stop offset=".91" stop-color="#fff" stop-opacity=".8"/><stop offset="1" stop-color="#8075ad"/></linearGradient>
+ <linearGradient id="liquid" x2=".1" y2="1"><stop stop-color="#cbc7ec" stop-opacity=".6"/><stop offset=".7" stop-color="#cbc7ec"/><stop offset="1" stop-color="#8075ad"/></linearGradient>
+ <linearGradient id="label"><stop stop-color="#e4e4dd"/><stop offset=".3" stop-color="#fffef6"/><stop offset=".7" stop-color="#fffef6"/><stop offset="1" stop-color="#d9e1dc"/></linearGradient>
+ <linearGradient id="metal" x2="0" y2="1"><stop stop-color="#fff"/><stop offset=".4" stop-color="#cad5d4"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#8b9d9b"/></linearGradient>
+ <clipPath id="body"><path d="M65 40 Q63 34 68 30 L148 30 Q153 34 151 40 L148 53 L148 97 C148 173 178 259 194 324 C211 387 207 459 188 535 Q184 557 166 563 Q108 575 50 563 Q31 557 28 535 C9 459 5 387 22 324 C38 259 68 173 68 97 L68 53Z"/></clipPath>
+</defs>
+<ellipse cx="108" cy="565" rx="69" ry="8" fill="#8075ad" opacity=".2"/>
+<g clip-path="url(#body)">
+ <path fill="url(#glass)" d="M0 0H216V576H0Z"/>
+ <path d="M12 147 Q108 157 204 147 V576 H12Z" fill="url(#liquid)"/>
+ <path d="M74 62 C82 203 40 300 36 410 Q31 510 52 549" fill="none" stroke="#fff" stroke-width="8" opacity=".5"/>
+ <path d="M143 64 C140 204 178 303 185 402 Q190 503 169 550" fill="none" stroke="#fff" stroke-width="4" opacity=".65"/>
+ <path d="M12 327 Q108 337 204 327 L203 475 Q108 489 13 475Z" fill="url(#label)"/>
+ <g fill="none" stroke="#cbc7ec" opacity=".2" stroke-width="2"><circle cx="37" cy="372" r="20"/><circle cx="177" cy="433" r="28"/><path d="M15 429 Q61 389 90 455 T193 386"/></g>
+ <text x="108" y="351" text-anchor="middle" font-family="Georgia,serif" font-size="10" fill="#bd8c59" letter-spacing="3">ORCA STUDIO</text>
+ <text x="108" y="380" text-anchor="middle" font-family="Georgia,serif" font-size="23" fill="#182d31">BOTANIC WATER</text>
+ <text x="108" y="394" text-anchor="middle" font-family="Arial" font-size="6" fill="#526d70" letter-spacing="2">SPARKLING FRUIT INFUSION</text>
+ <path d="M76 408 H141 L108 445Z" fill="none" stroke="#8075ad" stroke-width="5"/>
+ <path d="M90 408 L108 432 L126 408" fill="none" stroke="#cbc7ec" stroke-width="4"/>
+ <text x="108" y="464" text-anchor="middle" font-family="Arial" font-size="8" fill="#657577">RAMBUTAN FLAVOUR · 500 ML</text>
+ <path d="M22 554 Q108 582 193 550" fill="none" stroke="#8075ad" stroke-width="12" opacity=".7"/>
+</g>
+<rect x="66" y="55" width="84" height="31" rx="3" fill="url(#label)"/>
+<path d="M98 63 H119 L108 77Z M102 64 L108 72 L115 64" fill="none" stroke="#b9ad7b" stroke-width="1.5"/>
+<path d="M60 13 Q62 4 78 4 H139 Q155 4 157 13 L158 24 H59Z" fill="url(#metal)" stroke="#abb9b7"/>
+<path d="M64 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M71 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M78 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M85 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M92 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M99 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M106 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M113 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M120 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M127 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M134 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M141 10v12" stroke="#8b9d9b" stroke-width="2"/><path d="M148 10v12" stroke="#8b9d9b" stroke-width="2"/>
+<path d="M66 30 Q108 20 152 30 M66 39 Q108 31 150 39 M70 46 H146" fill="none" stroke="#8075ad" stroke-width="4"/>
+</svg>

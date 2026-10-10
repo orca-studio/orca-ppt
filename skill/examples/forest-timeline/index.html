@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>Four Stops · Editorial Forest · 时间线与条形图</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/editorial-forest.css">
+  <link rel="stylesheet" href="../../runtime/palettes/forest.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Editorial Forest，版式 standard）
+1→2  关系：封面标题下那条装饰横线长成时间线的轴        手法：形态变换            共享：axis
+2→3  关系：同一条轴，换一组节点内容，轴和圆点原地不动    手法：元素交接
+3→4  关系：轴长成条形图里最长的那条                     手法：形态变换            共享：axis
+注：本稿验证两个新页面类型 —— 横向时间线页、横向条形图页（grow-right 此前只用来画坐标轴，没画过条子）。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" data-page="cover">
+    <p class="t-label" style="left:120px; top:80px;">A presentation template</p>
+    <p class="t-label" style="left:1000px; top:80px; width:800px; text-align:right;">Vol. V</p>
+    <p class="t-display" style="left:120px; top:300px;">Four<br>Stops</p>
+    <div data-id="axis" class="s-accent" style="left:120px; top:700px; width:600px; height:4px;"></div>
+    <p class="t-body" style="left:120px; top:760px; width:900px;">一年走过的四站，和每一站留下的东西。</p>
+  </section>
+
+  <!-- 2 横向时间线：轴从封面那条装饰线长出来 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4" data-page="timeline">
+    <p data-carry="title" class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">走过的四站。</p>
+
+    <div data-id="axis" class="s-accent" style="left:120px; top:560px; width:1680px; height:4px;"></div>
+
+    <div data-zoom="node-1" class="s-dot" data-enter="pop" data-auto-animate-delay="0.9" style="left:120px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" data-auto-animate-delay="0.9" style="left:120px; top:440px; width:360px;">立项</p>
+    <p data-carry="node" class="t-body t-dim" data-auto-animate-delay="0.9" style="left:120px; top:620px; width:360px;">一月</p>
+    <p data-carry="node" class="t-body" data-auto-animate-delay="0.9" style="left:120px; top:680px; width:360px;">三个人，一页纸。</p>
+
+    <div data-zoom="node-2" class="s-dot" data-enter="pop" data-auto-animate-delay="0.98" style="left:560px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" data-auto-animate-delay="0.98" style="left:560px; top:440px; width:360px;">试做</p>
+    <p data-carry="node" class="t-body t-dim" data-auto-animate-delay="0.98" style="left:560px; top:620px; width:360px;">三月</p>
+    <p data-carry="node" class="t-body" data-auto-animate-delay="0.98" style="left:560px; top:680px; width:360px;">第一版扔掉了。</p>
+
+    <div data-zoom="node-3" class="s-dot" data-enter="pop" data-auto-animate-delay="1.06" style="left:1000px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" data-auto-animate-delay="1.06" style="left:1000px; top:440px; width:360px;">定型</p>
+    <p data-carry="node" class="t-body t-dim" data-auto-animate-delay="1.06" style="left:1000px; top:620px; width:360px;">六月</p>
+    <p data-carry="node" class="t-body" data-auto-animate-delay="1.06" style="left:1000px; top:680px; width:360px;">规范写完了。</p>
+
+    <div data-zoom="node-4" class="s-dot" data-enter="pop" data-auto-animate-delay="1.14" style="left:1440px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" data-auto-animate-delay="1.14" style="left:1440px; top:440px; width:360px;">盘点</p>
+    <p data-carry="node" class="t-body t-dim" data-auto-animate-delay="1.14" style="left:1440px; top:620px; width:360px;">十二月</p>
+    <p data-carry="node" class="t-body" data-auto-animate-delay="1.14" style="left:1440px; top:680px; width:360px;">就是这一页。</p>
+  </section>
+
+  <!-- 3 同一条轴，换一组内容。轴和圆点前后完全一样，不写 data-carry，原地不动 -->
+  <section data-st="carry" data-auto-animate data-hold="4" data-page="timeline">
+    <p data-carry="title" class="t-h1" style="left:120px; top:80px;">每一站学到的。</p>
+
+    <div data-id="axis" class="s-accent" style="left:120px; top:560px; width:1680px; height:4px;"></div>
+
+    <div class="s-dot" style="left:120px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" style="left:120px; top:440px; width:360px;">写下来</p>
+    <p data-carry="node" class="t-body t-dim" style="left:120px; top:620px; width:360px;">一月</p>
+    <p data-carry="node" class="t-body" style="left:120px; top:680px; width:360px;">口头说定的都会走样。</p>
+
+    <div class="s-dot" style="left:560px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" style="left:560px; top:440px; width:360px;">先扔一版</p>
+    <p data-carry="node" class="t-body t-dim" style="left:560px; top:620px; width:360px;">三月</p>
+    <p data-carry="node" class="t-body" style="left:560px; top:680px; width:360px;">第一版是用来扔的。</p>
+
+    <div class="s-dot" style="left:1000px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" style="left:1000px; top:440px; width:360px;">写进规范</p>
+    <p data-carry="node" class="t-body t-dim" style="left:1000px; top:620px; width:360px;">六月</p>
+    <p data-carry="node" class="t-body" style="left:1000px; top:680px; width:360px;">没写下来的约定不存在。</p>
+
+    <div class="s-dot" style="left:1440px; top:542px; width:40px; height:40px;"></div>
+    <p data-carry="node" class="t-h2" style="left:1440px; top:440px; width:360px;">回头数</p>
+    <p data-carry="node" class="t-body t-dim" style="left:1440px; top:620px; width:360px;">十二月</p>
+    <p data-carry="node" class="t-body" style="left:1440px; top:680px; width:360px;">数得出来才算做过。</p>
+  </section>
+
+  <!-- 4 横向条形图：轴长成最长的那条 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">时间花在哪。</p>
+
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:120px; top:236px; width:480px;">写规范和文档</p>
+    <div data-id="axis" class="s-accent" style="left:680px; top:240px; width:880px; height:56px;"></div>
+    <p class="t-h2 t-accent" data-auto-animate-delay="0.9" style="left:1600px; top:236px;">41%</p>
+
+    <p class="t-h2" data-auto-animate-delay="0.98" style="left:120px; top:356px; width:480px;">做示例稿</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="0.98" style="left:680px; top:360px; width:558px; height:56px;"></div>
+    <p class="t-h2" data-auto-animate-delay="0.98" style="left:1600px; top:356px;">26%</p>
+
+    <p class="t-h2" data-auto-animate-delay="1.06" style="left:120px; top:476px; width:480px;">调转场引擎</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.06" style="left:680px; top:480px; width:386px; height:56px;"></div>
+    <p class="t-h2" data-auto-animate-delay="1.06" style="left:1600px; top:476px;">18%</p>
+
+    <p class="t-h2" data-auto-animate-delay="1.14" style="left:120px; top:596px; width:480px;">做展示站</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.14" style="left:680px; top:600px; width:215px; height:56px;"></div>
+    <p class="t-h2" data-auto-animate-delay="1.14" style="left:1600px; top:596px;">10%</p>
+
+    <p class="t-h2" data-auto-animate-delay="1.22" style="left:120px; top:716px; width:480px;">其他</p>
+    <div class="s-surface" data-enter="grow-right" data-auto-animate-delay="1.22" style="left:680px; top:720px; width:107px; height:56px;"></div>
+    <p class="t-h2" data-auto-animate-delay="1.22" style="left:1600px; top:716px;">5%</p>
+
+    <p class="t-label t-dim" data-auto-animate-delay="1.5" style="left:120px; top:900px;">按投入的工作日估算</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

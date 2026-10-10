@@ -1,0 +1,27 @@
+/* 配色：森林
+ * 一句话：燕麦米底 + 森林绿大面板 + 灰粉强调。沉静、读物感,浅底。
+ * 在主题之后引入 —— 它只定义那 8 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          燕麦米色纸面        --surface     森林绿（大面板、整页绿底）
+ *   --surface-2   米色二级面          --accent      灰粉（强调、图表重点柱）
+ *   --accent-soft 深粉               --text / --text-dim  墨色 / 灰绿
+ *   --text-on-surface 米色（绿底上的文字）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（粉 ↔ 深粉）。
+ * surface（绿）和 surface-2（米）不是同色系，不能互变，也不能用一变多从一个分成另一个。
+ * 背景是浅色：满屏绿用「整页 ↔ 卡片」组合里的整页形状做。
+ */
+
+:root {
+  --bg: #efe7d4;
+  --surface: #2e4a2a;
+  --surface-2: #e6dcc4;
+  --text: #1a1a17;
+  --text-dim: #5d6a57;
+  --accent: #e89cb1;
+  --accent-soft: #d27e96;
+  --text-on-accent: #1a1a17;
+  --accent-text: #b92b52;         /* 灰粉的深档 */
+  --text-on-surface: #efe7d4;
+}

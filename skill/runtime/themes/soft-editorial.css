@@ -1,0 +1,33 @@
+/* 主题：Soft Editorial（字体取自 frontend-slides bold-template-pack/soft-editorial）
+ * 标签：minimal
+ * 一句话：内部分享、复盘随记 —— 柔和，没有压迫感
+ * 默认配色：sage
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 字体：标题、数字用 Cormorant Garamond；.t-body 用 Work Sans。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .t-label  无衬线小标签，24px：页眉、页脚、卡片编号、图表标题 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 28px;
+  --radius-m: 28px;
+  --radius-l: 36px;
+
+  --font: "Cormorant Garamond", Garamond, "Songti SC", serif;
+  --font-sans: "Work Sans", "PingFang SC", -apple-system, sans-serif;
+}
+
+.t-display, .t-metric, .t-h1, .t-h2 { font-weight: 500; }
+.t-metric { letter-spacing: -0.03em; }
+.t-body { font-family: var(--font-sans); line-height: 1.35; }
+
+.t-label {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}

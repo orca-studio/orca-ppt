@@ -1,0 +1,22 @@
+/* 配色：Fruit soda；饮料展示的四种产品识别色。
+ * 橙→粉→紫→青属于本参考案例的相邻产品切换；不要推广成任意品牌色都适合直接插值。
+ * 正文深色确保浅色产品面板可读；白色只给被瓶子遮挡的装饰性 LYCHEE 大字。
+ * --product-* 是 product-showcase 主题专用；其余十个变量保持普通主题的颜色接口。 */
+:root {
+  --bg: #ffffff;
+  --surface: #6fd5ef;
+  --surface-2: #cbc7ec;
+  --text: #111820;
+  --text-dim: #3e4650;
+  --text-on-surface: #111820;
+  --accent: #fba941;
+  --accent-soft: #f6c481;
+  --text-on-accent: #111820;
+  --accent-text: #8b4800;
+  --product-orange: #fba941;
+  --product-rose: #f2a3c1;
+  --product-pulasan: #cbc7ec;
+  --product-lychee: #6fd5ef;
+  --product-ink: #15333d;
+  --product-display: #ffffff;
+}

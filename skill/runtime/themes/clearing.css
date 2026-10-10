@@ -1,0 +1,17 @@
+/* 主题：Clearing（取自一段 Remotion 日历产品动效：饱和群青底 + 白色半透明图形 + 一个黄色主角）
+ * 标签：business
+ * 一句话：产品发布、方案提案 —— 明快直给，有推进感
+ * 默认配色：ultramarine
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 本主题没有新增类。场景里的图形类（.mo-*）由 orca-motion-skill 的 motion.css 提供，也只用这些变量。 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 6px;
+  --radius-m: 14px;
+  --radius-l: 32px;
+
+  --font: "Inter", -apple-system, "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}

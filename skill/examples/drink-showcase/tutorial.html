@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>五页，让产品动起来 · 动画拆解</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><main>
+<header><a href="../../">ORCA / 动画案例</a><div class="swatches" aria-hidden="true"><i></i><i></i><i></i><i></i></div></header>
+<div class="intro"><div><p class="eyebrow">共享元素 · 从四栏到全屏</p><h1>五页，让产品动起来。</h1></div><p>先摆好每一页的状态，再让同一个元素移动过去。<br>用自然语言告诉 AI 什么留下、什么离开。</p></div>
+<div class="stage"><iframe src="./" title="五页产品展示动画" id="deck"></iframe></div>
+<div class="controls"><button id="play" class="primary">从头播放</button><button id="next">下一步 →</button><label>速度 <select id="speed"><option value="1">正常</option><option value="2">慢放 2 倍</option></select></label><span id="status" role="status">正在载入…</span><a href="./" target="_blank" rel="noopener">单独打开 slides ↗</a></div>
+<nav class="states" aria-label="查看页面状态"><button data-page="0" aria-pressed="true">01 橙味</button><button data-page="1" aria-pressed="false">02 玫瑰</button><button data-page="2" aria-pressed="false">03 红毛丹</button><button data-page="3" aria-pressed="false">04 荔枝</button><button data-page="4" aria-pressed="false">05 全屏详情</button></nav>
+<section class="explain"><div><p class="eyebrow" id="step-label">状态 01</p><h2 id="step-title">先摆好四栏。</h2><p id="step-body">第一栏显示瓶子，其他三栏显示编号、名称和按钮。下一只瓶子先放在画面下方，等下一页移动进来。</p></div><div class="rule"><span>这一例只用一个思路</span><h3>同一个元素，<br>在下一页换个位置。</h3><p>色块还是那个色块，荔枝瓶还是那只瓶。不要把前后两页做成两张截图。</p></div></section>
+<section class="prompt"><div class="section-heading"><h2>把这段话交给 AI。</h2><button id="copy">复制提示词</button></div><p>把方括号里的内容换成自己的素材。图片以透明背景、接近一致的外接框为佳。</p><textarea id="prompt" spellcheck="false" aria-label="可复制的制作提示词">使用 orca-ppt skill，参考 examples/drink-showcase 的五页产品展示案例，生成 HTML slides。
+
+素材：[四张产品图的路径]
+产品名称：[名称 1、名称 2、名称 3、名称 4]
+四种配色：[颜色 1、颜色 2、颜色 3、颜色 4]
+最后一页的大字：[产品英文名或短标题]
+
+前四页始终是四个等宽竖栏，每一页只展示一只主角产品。翻到下一页时，背景色块向右移动到下一栏；旧产品向上离开，新产品从画面下方进入。名称和按钮随激活状态上下换位，其他栏原地不动。
+
+第五页把第四栏的色块向左扩展到全屏。同一只产品移到画面中央并放大，前三栏文字退场，产品大字在瓶子后面出现，容量选项在右侧出现。
+
+沿用案例的共享元素配对和五页状态结构，用我提供的内容替换素材。先列转场计划，再生成和检查。不要把整页截图或视频当成动画结果。</textarea><p class="hint" id="copy-status" role="status">想调慢一点，可以补一句：“保留运动关系，把每次转场放慢到 1.2 秒。”</p></section>
+<footer><p>素材是本案例自制的 SVG 演示瓶，可直接替换。配色、字体与产品图允许变化；学习重点是前后页之间的关系。</p><a href="README.md">制作说明与验收记录 ↗</a></footer>
+</main><script src="tutorial.js"></script></body></html>

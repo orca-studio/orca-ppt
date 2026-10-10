@@ -1,0 +1,130 @@
+/* orca-transition-skill 视觉规范 · 设计变量
+ * 画布固定 1920×1080。所有坐标都是 40 的倍数（40px 基线网格）。
+ * 每页的直接子元素都绝对定位，用 style="left:…; top:…" 摆放。 */
+:root {
+  --canvas-w: 1920px;
+  --canvas-h: 1080px;
+  --margin-x: 120px;
+  --margin-top: 80px;
+  --grid: 40px;
+
+  /* 字号阶梯，只能用这五档 */
+  --type-display: 160px;  /* 封面标题、章节标题 */
+  --type-metric: 280px;   /* 关键数字 */
+  --type-h1: 72px;        /* 内容页标题 */
+  --type-h2: 48px;        /* 条目、小标题 */
+  --type-body: 36px;      /* 说明文字 */
+
+  /* 颜色：一个背景、两个面、两级文字、一个强调色、一个强调色的弱化版 */
+  --bg: #0b0b0f;
+  --surface: #1a1a22;
+  --surface-2: #26262f;
+  --text: #f5f5f7;
+  --text-dim: #8e8e98;
+  --text-on-surface: #f5f5f7;  /* .s-surface 上的文字 */
+  --text-on-accent: #1c1c1e;   /* .s-accent / .s-accent-soft 上的文字 */
+  --accent: #ff7a1a;        /* 色块底色：.s-accent / .s-dot / 强调条 */
+  --accent-soft: #3a2415;
+  /* 强调色的「文字档」：直接落在 --bg 上、要读得动的强调文字（.t-accent / .t-metric）。
+     和 --accent 必须分开 —— 一个色值当不了两个角色：色块底色要浅(好压深字)，
+     落在浅底上的文字要深，两个要求在同一个值上互斥。blush 的奶油黄压在腮红粉上
+     只有 1.02:1（亮度几乎相同，只剩色相差），缩略图和投影里那行字直接消失。
+     见 scripts/check-palettes.mjs。 */
+  --accent-text: #ff9d52;
+  /* 镂空聚焦的幕布颜色，压暗但不全黑 */
+  --scrim: rgba(0, 0, 0, 0.72);
+
+  --radius-s: 8px;
+  --radius-m: 24px;
+  --radius-l: 40px;
+  --radius-full: 9999px;
+
+  --font: "PingFang SC", -apple-system, "Helvetica Neue", sans-serif;
+}
+
+html, body, .reveal { background: var(--bg); }
+.reveal { font-family: var(--font); color: var(--text); }
+.reveal .slides { text-align: left; }
+.reveal .slides > section { width: var(--canvas-w); height: var(--canvas-h); padding: 0; }
+.reveal .slides > section > *,
+.st-layer > * { position: absolute; margin: 0; }
+.st-layer { position: absolute; inset: 0; }
+
+/* 文字 */
+.t-display { font-size: var(--type-display); font-weight: 700; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+.t-metric  { font-size: var(--type-metric); font-weight: 700; line-height: 1; letter-spacing: -0.04em; color: var(--accent-text); white-space: nowrap; }
+.t-h1      { font-size: var(--type-h1); font-weight: 700; line-height: 1.1; white-space: nowrap; }
+.t-h2      { font-size: var(--type-h2); font-weight: 600; line-height: 1.2; }
+.t-body    { font-size: var(--type-body); line-height: 1.4; color: var(--text-dim); }
+/* 小标签:页眉、页脚、编号、坐标轴刻度。**这条在 tokens 里而不是各主题里** ——
+   版式片段(templates/layouts/*)是跨主题共用的，只能用这里保证有的类；
+   放在主题里的话，没定义它的主题一打开那个版式就漏样式（clearing 就漏过）。
+   主题可以照常覆盖字体、字重、字距。 */
+.t-label   { font-size: 24px; font-weight: 500; letter-spacing: 0.14em; line-height: 1;
+             text-transform: uppercase; white-space: nowrap; }
+/* 强调色的文字档，不是 --accent —— 理由见上面 --accent-text。
+   压在强调色块上的文字是另一回事，用 .t-on-accent。 */
+.t-accent  { color: var(--accent-text); }
+.t-dim     { color: var(--text-dim); }
+.t-on-surface { color: var(--text-on-surface); }
+/* 强调色块（.s-accent / .s-accent-soft）上的文字。Bento 的 highlight 格必须用它 ——
+   全局只有一个文字色的话，总有一套配色的字会在强调色上消失（clearing 的白字压在
+   浅黄上只有 1.24:1）。见 scripts/check-palettes.mjs。 */
+.t-on-accent { color: var(--text-on-accent); }
+
+/* 形状 */
+.s-surface { background: var(--surface); border-radius: var(--radius-l); }
+.s-surface-2 { background: var(--surface-2); border-radius: var(--radius-m); }
+.s-accent  { background: var(--accent); border-radius: var(--radius-s); }
+.s-accent-soft { background: var(--accent-soft); border-radius: var(--radius-m); }
+.s-dot     { background: var(--accent); border-radius: 50%; }
+/* 镂空聚焦：一块压暗全屏的幕布，中间挖一个洞。写 left/top/width/height 定的是洞的位置和大小，
+   幕布由 box-shadow 往外铺满（比画布大得多，所以移动时不会露边）。
+   同一个 data-id 在下一页换个位置，洞就平滑地移到下一个重点上 —— 相当于 PowerPoint 里
+   「插入矩形 + 圆形 → 合并形状 → 剪除」再用平滑移动。
+   洞是圆的 —— 圆才有「打光打在这一块」的感觉，方的看着像把卡片抠下来。宽高写相等。
+   洞沿带一圈强调色描边：洞压在纯色底（尤其是纯黑）上时，洞里洞外一个样，
+   没有描边就看不出这是个圆，只看得见卡片自己的边。 */
+.s-spot    { border-radius: 50%; border: 3px solid var(--accent); box-shadow: 0 0 0 4000px var(--scrim); }
+
+/* 整页视频：铺满画布。录制时由 capture.mjs 逐帧 seek，不靠真实播放 */
+.v-full    { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); object-fit: cover; }
+
+/* 匹配用的隐形锚：画面里那个形状在视频像素里、DOM 里没有对应元素时，
+   用一个看不见的框把它的位置和大小标出来，给 match-cut 当锚。
+   它不参与圆角校验（本来就没有轮廓），也不会被观众看到。 */
+.s-anchor  { opacity: 0; pointer-events: none; }
+
+/* 折线：写在 <svg> 里的 path / polyline 上。svg 本身绝对定位，viewBox 和宽高一致（单位就是像素） */
+.l-accent, .l-surface, .l-text, .l-dim { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.l-accent  { stroke: var(--accent); }
+.l-surface { stroke: var(--surface); }
+.l-text    { stroke: var(--text); }
+.l-dim     { stroke: var(--text-dim); stroke-width: 2; }
+
+/* 遮挡剪辑用的色块，由 engine.js 创建 */
+.st-mask { position: absolute; left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); background: var(--accent); z-index: 10; }
+
+/* 故事模式：照片和引导框，由 engine.js 定位 */
+.reveal .st-photo { left: 0; top: 0; max-width: none; max-height: none; margin: 0; }
+.st-guide { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); z-index: 5; pointer-events: none; overflow: visible; }
+.st-guide path { stroke: var(--accent); stroke-width: 10; stroke-linejoin: round; fill: none; }
+.st-scrim { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 40%); pointer-events: none; }
+
+/* 回顾片尾：一块倾斜的屏幕，里面把这份稿子的某一段页按真转场自动放一遍（见 engine.js「回顾片尾」）。
+   写 left/top/width/height 定屏幕位置，宽高比 16:9。透视和倾斜由 engine.js 设，不要自己写 transform。
+   底下的倒影是屏幕本身的反射，跟着屏幕一起倾斜。 */
+.s-recap   { overflow: hidden; border-radius: var(--radius-s);
+             -webkit-box-reflect: below 12px linear-gradient(transparent 62%, rgba(255, 255, 255, 0.22)); }
+.s-recap > iframe { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.s-recap > .st-ghost { right: auto; bottom: auto; z-index: 1; will-change: transform; } /* iframe 自成合成层，不提层的话 ghost 会被它盖住 */
+
+/* 片尾名单：<ol class="t-credits"><li><span>职责</span><b>姓名</b></li>…</ol>。
+   写 left/top/width/height 定滚动框，名单从框下沿滚进来，和回顾同时放完。上下沿渐隐。
+   颜色跟着文字色走：压在 .s-surface 上时加 .t-on-surface。 */
+.t-credits { list-style: none; padding: 0; overflow: hidden;
+             -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+             mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent); }
+.t-credits li { display: flex; align-items: baseline; gap: 40px; height: 80px; }
+.t-credits span { width: 45%; text-align: right; font-size: 24px; letter-spacing: 0.14em; opacity: 0.6; white-space: nowrap; }
+.t-credits b { font-size: var(--type-body); font-weight: 600; white-space: nowrap; }

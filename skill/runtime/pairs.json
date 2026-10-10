@@ -1,0 +1,224 @@
+{
+  "_": [
+    "颜色配对表：规范里**哪个类会压在哪个类上**、**哪两个色块会挨着**。",
+    "`scripts/check-palettes.mjs` 读它来核每套配色的对比度。",
+    "",
+    "**为什么要有这份文件**：上一版的配对是手抄在校验器里的一个数组 —— 人照着",
+    "`references/visual-spec.md` 的散文凭记忆列组合，于是两种错都犯了：第一版多列了三对",
+    "(把五个已发布主题全判挂)，改完又漏了这里的 `chart-bar` 和 `line-chart`(九套配色",
+    "全部违反而无人知晓,其中 `.l-surface` 压在 `.s-surface` 上是 1.00:1 —— 那条线",
+    "在任何配色下都不存在)。规范是散文,人能读机器不能,中间那道手抄就是漏洞的来源。",
+    "",
+    "**fg / bg 写类名**(`.t-accent`、`.s-surface`),不写变量 —— 类到变量的映射由",
+    "`runtime/tokens.css` 说了算,校验器从那儿解析。这样改一个类绑的变量,校验自动跟上,",
+    "不用再同步一遍。页面底没有类,它就是 `--bg`,所以允许直接写变量名。",
+    "",
+    "**kind** 决定阈值的来历,不决定数值(数值写在 need 里):",
+    "  text      文字压在底色上。4.5:1 —— 这个数字对应「离屏幕两米还读得动」。",
+    "  adjacent  两个色块挨着,要能分出是两块。3:1,WCAG 对非文字图形的线。",
+    "  graphic   线条、细轴这类功能性图形压在底上。同样 3:1。",
+    "",
+    "**level**:",
+    "  hard  不达标就判失败(退出码 1)。",
+    "  soft  只提醒。用在两种地方 —— 一是本来就该淡一档的东西(次要文字),",
+    "        二是**已知欠账**:规范和现有九套配色对不上,修它要动色值或改规范,",
+    "        不该由一次校验器改动顺手决定。欠账在 debt 字段里写明原委。",
+    "",
+    "**where** 指向规范出处。加一对之前先去那儿确认规范真的这么要求 ——",
+    "这份表的价值全在于它是规范的派生物,不是又一份凭感觉列的清单。"
+  ],
+
+  "pairs": [
+    {
+      "fg": "--text",
+      "bg": "--bg",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "正文 / 页面底",
+      "where": "themes.md 变量表：`--text` 在 `--bg` 上清楚可读"
+    },
+    {
+      "fg": ".t-body",
+      "bg": "--bg",
+      "kind": "text",
+      "need": 3,
+      "level": "soft",
+      "what": "说明文字 / 页面底",
+      "where": "visual-spec.md 文字表：`.t-body` 说明文字，暗色",
+      "why": "次要文字本来就该淡一档，3:1 是底线不是目标。"
+    },
+    {
+      "fg": ".t-on-surface",
+      "bg": ".s-surface",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "面板上的文字 / 面板",
+      "where": "visual-spec.md「颜色和形状」：放在 `.s-surface` 形状上面的文字用它",
+      "why": "`--text-on-surface` 这个变量存在的全部意义就是「在 --surface 上清楚可读」。"
+    },
+    {
+      "fg": ".t-on-accent",
+      "bg": ".s-accent",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "强调块上的文字 / 强调色",
+      "where": "visual-spec.md「颜色和形状」：强调块上的文字一律加 `.t-on-accent`",
+      "why": "全局只有一个文字色的话，总有一套配色的字会在强调色上消失 —— clearing 的白字压在浅黄上只有 1.24:1，这条抓到过。"
+    },
+    {
+      "fg": ".t-on-accent",
+      "bg": ".s-accent-soft",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "强调块上的文字 / 次强调色",
+      "where": "visual-spec.md「颜色和形状」；Bento 的 highlight 格是 `.s-accent-soft` 铺底 + `.t-display .t-on-accent`"
+    },
+    {
+      "fg": ".t-accent",
+      "bg": "--bg",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "强调文字 / 页面底",
+      "where": "visual-spec.md 数据页「排行」数值 `.t-h2 .t-accent`；横向条形图页数值 `.t-h2 .t-accent`",
+      "why": "上一版把这对整个豁免了，理由是「`.t-accent` 的大字是有意的低对比装饰」。那个豁免只对封面那种 160px 的 `.t-display` 成立，而规范把排行榜的**数值**也写成 `.t-accent` —— 那是要读的数字。blush 当时量出来 1.02:1。"
+    },
+    {
+      "fg": ".t-metric",
+      "bg": "--bg",
+      "kind": "text",
+      "need": 4.5,
+      "level": "hard",
+      "what": "关键数字 / 页面底",
+      "where": "visual-spec.md 数据页：数字 `.t-metric` `left:120 top:320`，直接落在页面底上",
+      "why": "落在面板上的 `.t-metric` 不走这条 —— 规范要求那时再加 `.t-on-surface`，由上面那对负责。"
+    },
+
+    {
+      "fg": ".s-surface",
+      "bg": "--bg",
+      "kind": "adjacent",
+      "need": 3,
+      "level": "soft",
+      "what": "大面板 / 页面底",
+      "where": "themes.md 变量表：`--surface` 和 `--bg` 明显区分",
+      "debt": "这条一度标成 hard，结果判挂了 macaron / morandi / sage / ultramarine —— 其中 ultramarine 是 clearing 的默认配色，已经发布。和上一版「第一版多列三对、把五个已发布主题全判挂」是同一个信号：**检查对是错的，不是配色全坏**。规范只说「明显区分」，没给数值，而面板和页面底本来也可以靠圆角和边界区分，不一定靠亮度差。3:1 是这里假设的，先记账。"
+    },
+    {
+      "fg": ".s-surface-2",
+      "bg": "--bg",
+      "kind": "adjacent",
+      "need": 3,
+      "level": "soft",
+      "what": "小卡片 / 页面底",
+      "where": "themes.md 变量表：`--surface-2` 和 `--surface`、`--bg` 都能区分",
+      "debt": "规范要求「能区分」但没给数值。现有配色多数把 surface-2 做成贴着底色的一档浅色块（图表普通柱就是要退到背景里），按 3:1 量会大面积不过。先记账，等确定「能区分」到底是几比几再升 hard。"
+    },
+    {
+      "fg": ".s-surface-2",
+      "bg": ".s-surface",
+      "kind": "adjacent",
+      "need": 3,
+      "level": "soft",
+      "what": "小卡片 / 大面板",
+      "where": "themes.md 变量表：`--surface-2` 和 `--surface`、`--bg` 都能区分；visual-spec.md：`.s-surface-2` 用在面板里面的小卡片",
+      "debt": "同上，「能区分」没有数值。"
+    },
+    {
+      "fg": ".s-accent",
+      "bg": ".s-surface-2",
+      "kind": "adjacent",
+      "need": 3,
+      "level": "soft",
+      "what": "重点柱 / 普通柱（数据页柱状图）",
+      "where": "visual-spec.md 数据页柱状图：普通柱 `.s-surface-2`，重点柱 `.s-accent`",
+      "debt": "九套配色**全部**不达标（最高 ultramarine 2.89，最低 morandi 1.03）—— 柱状图的重点柱和普通柱在所有配色下都分不开。这是这份配对表抓到的第一个洞。修它要动 `--surface-2` 或 `--accent` 的色值，会改变配色外观，得单独决定，不该由加校验这一步顺手改掉。"
+    },
+    {
+      "fg": ".s-accent",
+      "bg": ".s-surface",
+      "kind": "adjacent",
+      "need": 3,
+      "level": "soft",
+      "what": "重点条 / 普通条（横向条形图页）",
+      "where": "visual-spec.md 横向条形图页：普通条 `.s-surface`，重点条 `.s-accent`",
+      "debt": "和上一条同源。注意横条页的普通条用的是 `.s-surface`，数据页柱状图的普通柱用的是 `.s-surface-2` —— 两种页面类型对「普通」的取色不一样，修的时候要一起看。"
+    },
+
+    {
+      "fg": ".t-dim",
+      "bg": ".s-surface-2",
+      "kind": "text",
+      "need": 4.5,
+      "level": "soft",
+      "what": "面板上的次要文字 / 二级面板",
+      "where": "examples/soft-editorial 折线图页：`.t-label .t-dim` 的图表标题和坐标轴刻度，压在 `.s-surface-2` 面板（`left:840 top:200 960×680`）上",
+      "debt": "**规范缺一条规则，不是配色的错。** 上一版校验器把「文字 / 二级面板」豁免掉，理由是「规范没有为 `--surface-2` 指定文字色，这对组合是我假设的」—— 结论反了：示例实际就是这么用的，规范没规定，于是实现自由发挥。washi 配色下量出来 1.00:1，录像里那排标签整排消失（图表标题和 DAY 0/30/90 全没了）。要么规范给 `--surface-2` 指定文字色（像 `--text-on-surface` 那样加一个 `--text-on-surface-2`），要么规定面板上的文字一律用 `.t-on-surface` 并让它对两级面板都成立。"
+    },
+    {
+      "fg": ".l-accent",
+      "bg": ".s-surface-2",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "折线图重点线 / 二级面板",
+      "where": "examples/soft-editorial：折线图画在 `.s-surface-2` 面板上，重点线 `.l-accent`",
+      "debt": "九套配色**全部**不达标（1.03–2.89）。注意这和下面那条 `.l-accent / .s-surface` 是两回事：`visual-spec.md` 的数据页规定折线图画在 `.s-surface` 面板里，而唯一一份实现折线图的示例用的是 `.s-surface-2` —— **规范和实现对不上**，两种都得查，修的时候要先决定哪个才是对的。"
+    },
+    {
+      "fg": ".l-accent",
+      "bg": ".s-surface",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "折线图重点线 / 面板",
+      "where": "visual-spec.md 数据页折线图：`<svg>` `left:1040 top:320 720×480`，整个落在右侧面板 `.s-surface`（`left:1000 top:240 800×760`）里",
+      "debt": "折线图的三条线全部画在面板上，之前没有任何检查覆盖这一组。"
+    },
+    {
+      "fg": ".l-surface",
+      "bg": ".s-surface",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "折线图次要线 / 面板",
+      "where": "visual-spec.md 数据页折线图：每条线一个 `<path>`，类用 `.l-accent`（重点线）`.l-surface` `.l-text`",
+      "debt": "**这不是配色问题，是规范自己的 bug**：`.l-surface` 的 stroke 就是 `--surface`，而折线图画在 `--surface` 的面板上 —— 任何配色下都是 1.00:1，那条线不存在。要么规范里把它从折线图的可选类里去掉，要么给线条类一套专门的取色。"
+    },
+    {
+      "fg": ".l-text",
+      "bg": ".s-surface",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "折线图第三条线 / 面板",
+      "where": "同上",
+      "debt": "`.l-text` 的 stroke 是 `--text`，那是配 `--bg` 的文字色，不是配 `--surface` 的（配面板的是 `--text-on-surface`）。和 `.l-surface` 同一类问题，一起修。"
+    },
+
+    {
+      "fg": ".s-accent",
+      "bg": "--bg",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "细轴、装饰横条 / 页面底",
+      "where": "visual-spec.md 横向时间线页：轴 `.s-accent` `left:120 top:560 width:1680 height:4`；封面装饰横条",
+      "debt": "同一个类两种用途,规范对它们的要求相反:时间线的轴是**功能性**的(4px 细线,看不见就是信息缺失),封面那条横条是**有意的低对比装饰**。校验器分不开这两者 —— 分开要先给装饰条一个单独的类。"
+    },
+    {
+      "fg": ".s-dot",
+      "bg": "--bg",
+      "kind": "graphic",
+      "need": 3,
+      "level": "soft",
+      "what": "圆点、时间线节点 / 页面底",
+      "where": "visual-spec.md 横向时间线页：节点 `.s-dot` `40×40`；封面装饰",
+      "debt": "和上一条同源。"
+    }
+  ]
+}

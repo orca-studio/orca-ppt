@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>Q3 Overview · Emerald Editorial · Bento</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/emerald-editorial.css">
+  <link rel="stylesheet" href="../../runtime/palettes/emerald.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Emerald Editorial，版式 bento）
+1→2  关系：封面那块深蓝方块长成 bento 的 hero 格        手法：形态变换            共享：hero
+2→3  关系：同一个 bento 版式，五格内容整体流过去        手法：元素交接
+3→4  关系：hero 格撑满整个画面，成为数据页底色          手法：形态变换（卡片 → 整页）共享：hero
+-->
+
+<div class="slides">
+
+  <!-- 1 封面 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" data-page="cover">
+    <p class="t-label" style="left:120px; top:80px;">Prepared by the planning office</p>
+    <p class="t-label" style="left:1000px; top:80px; width:800px; text-align:right;">November · MMXXV</p>
+
+    <p class="t-display" style="left:120px; top:240px; width:1680px; text-align:center;">THE QUARTER</p>
+    <div class="s-rule-double" style="left:360px; top:460px; width:1200px; height:11px;"></div>
+    <p class="t-display" style="left:120px; top:520px; width:1680px; text-align:center;">IN FIVE TILES</p>
+
+    <div data-id="hero" class="s-surface" style="left:880px; top:760px; width:160px; height:160px;"></div>
+  </section>
+
+  <!-- 2 Bento 总览：hero + stat + badge + quote + category，五种类型 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3.5">
+    <p data-carry="title" class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">Where we are.</p>
+
+    <div data-id="hero" data-zoom="hero" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+    <p data-carry="hero" class="t-display t-on-surface" data-auto-animate-delay="0.9" style="left:160px; top:320px;">Overview</p>
+    <p data-carry="hero" class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:560px; width:720px;">What changed, what held steady, and where the team's attention is most needed in the weeks to come.</p>
+
+    <div data-id="cell-1" data-zoom="cell-1" data-split="cells" data-merge="cells" data-enter="rise" data-auto-animate-delay="0.98" class="s-surface-2" style="left:1000px; top:240px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-display" data-auto-animate-delay="0.98" style="left:1040px; top:300px;">42</p>
+    <p data-carry="cells" class="t-label" data-auto-animate-delay="0.98" style="left:1040px; top:520px;">Live experiments</p>
+
+    <div data-id="cell-2" data-zoom="cell-2" data-split="cells" data-merge="cells" data-enter="rise" data-auto-animate-delay="0.98" class="s-surface" style="left:1440px; top:240px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-label t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:290px;">Shipped</p>
+    <p data-carry="cells" class="t-display t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:360px;">7</p>
+    <p data-carry="cells" class="t-label t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:520px;">This quarter</p>
+
+    <div data-id="cell-3" data-zoom="cell-3" data-split="cells" data-merge="cells" data-enter="rise" data-auto-animate-delay="1.06" class="s-surface" style="left:1000px; top:640px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-h2 t-on-surface" data-auto-animate-delay="1.06" style="left:1040px; top:700px; width:280px;">Fewer, larger bets.</p>
+    <p data-carry="cells" class="t-label t-on-surface" data-auto-animate-delay="1.06" style="left:1040px; top:920px;">Planning office</p>
+
+    <div data-id="cell-4" data-zoom="cell-4" data-split="cells" data-merge="cells" data-enter="rise" data-auto-animate-delay="1.06" class="s-surface-2" style="left:1440px; top:640px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-label t-dim" data-auto-animate-delay="1.06" style="left:1480px; top:700px;">Focus</p>
+    <p data-carry="cells" class="t-h2" data-auto-animate-delay="1.06" style="left:1480px; top:760px; width:280px;">Latency.</p>
+    <p data-carry="cells" class="t-body" data-auto-animate-delay="1.06" style="left:1480px; top:880px; width:280px;">Cache rewrite landed.</p>
+  </section>
+
+  <!-- 3 同一个 bento 版式，内容整体交接过去 -->
+  <section data-st="carry" data-auto-animate data-hold="3.5">
+    <p data-carry="title" class="t-h1" style="left:120px; top:80px;">Where we are going.</p>
+
+    <div data-id="hero" data-zoom="hero" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+    <p data-carry="hero" class="t-display t-on-surface" style="left:160px; top:320px;">Outlook</p>
+    <p data-carry="hero" class="t-body t-on-surface" style="left:160px; top:560px; width:720px;">Two decisions are due before the year closes. Everything else follows from them.</p>
+
+    <div data-id="cell-1" data-zoom="cell-1" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1000px; top:240px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-display" style="left:1040px; top:300px;">86</p>
+    <p data-carry="cells" class="t-label" style="left:1040px; top:520px;">Per cent on plan</p>
+
+    <div data-id="cell-2" data-zoom="cell-2" data-split="cells" data-merge="cells" class="s-surface" style="left:1440px; top:240px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-label t-on-surface" style="left:1480px; top:290px;">Due</p>
+    <p data-carry="cells" class="t-display t-on-surface" style="left:1480px; top:360px;">3</p>
+    <p data-carry="cells" class="t-label t-on-surface" style="left:1480px; top:520px;">Decisions</p>
+
+    <div data-id="cell-3" data-zoom="cell-3" data-split="cells" data-merge="cells" class="s-surface" style="left:1000px; top:640px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-h2 t-on-surface" style="left:1040px; top:700px; width:280px;">Ship, then measure.</p>
+    <p data-carry="cells" class="t-label t-on-surface" style="left:1040px; top:920px;">Engineering</p>
+
+    <div data-id="cell-4" data-zoom="cell-4" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1440px; top:640px; width:360px; height:360px;"></div>
+    <p data-carry="cells" class="t-label t-dim" style="left:1480px; top:700px;">Focus</p>
+    <p data-carry="cells" class="t-h2" style="left:1480px; top:760px; width:280px;">Onboarding.</p>
+    <p data-carry="cells" class="t-body" style="left:1480px; top:880px; width:280px;">Two screens, not six.</p>
+  </section>
+
+  <!-- 4 hero 格撑满成整页深蓝的数据页 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="hero" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.8" style="left:120px; top:80px;">Overview</p>
+    <p class="t-h1 t-on-surface" data-auto-animate-delay="0.8" style="left:120px; top:160px;">By the numbers.</p>
+
+    <p class="t-metric t-on-surface" data-auto-animate-delay="1.0" style="left:120px; top:440px;">18.6</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:120px; top:760px;">Per cent growth, year over year</p>
+
+    <div class="s-accent" data-enter="grow-right" data-auto-animate-delay="1.0" style="left:1040px; top:880px; width:760px; height:4px;"></div>
+    <div class="s-accent-soft" data-enter="grow-up" data-auto-animate-delay="1.1" style="left:1080px; top:660px; width:120px; height:220px;"></div>
+    <div class="s-accent-soft" data-enter="grow-up" data-auto-animate-delay="1.2" style="left:1280px; top:580px; width:120px; height:300px;"></div>
+    <div class="s-accent-soft" data-enter="grow-up" data-auto-animate-delay="1.3" style="left:1480px; top:500px; width:120px; height:380px;"></div>
+    <div class="s-accent" data-enter="grow-up" data-auto-animate-delay="1.4" style="left:1680px; top:420px; width:120px; height:460px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1040px; top:920px;">Q1</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1240px; top:920px;">Q2</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1440px; top:920px;">Q3</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.7" style="left:1640px; top:920px;">Q4</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+本目录下的 .woff2 由 scripts/fetch-fonts.mjs 从 Google Fonts 取得,随包分发。
+
+下列字体均以 SIL Open Font License 1.1 发布,允许随作品捆绑、再分发:
+
+  Bodoni Moda          © owncanvas / Indestructible Type
+  Bricolage Grotesque  © Mathieu Triay
+  Cormorant Garamond   © Catharsis Fonts
+  Instrument Serif     © Instrument
+  Inter                © The Inter Project Authors
+  JetBrains Mono       © JetBrains s.r.o.
+  Manrope              © Mikhail Sharanda
+  Source Serif 4       © Adobe Systems Incorporated
+  Work Sans            © Wei Huang
+
+OFL 全文:https://openfontlicense.org/
+
+OFL 的两条硬性约束,改字体时要守住:
+  1. 字体文件本身不能单独卖钱(随作品分发不受限);
+  2. 修改过的字体不能沿用原名。

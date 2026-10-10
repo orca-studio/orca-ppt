@@ -1,0 +1,50 @@
+/* 主题：Emerald Editorial（字体取自 beautiful-html-templates/emerald-editorial）
+ * 标签：premium
+ * 一句话：对外路演、品牌年鉴 —— 高对比，记得住
+ * 默认配色：emerald
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * .t-metric 自带 --accent（深燕麦米），压在翡翠绿底上对比不足。
+ * 本主题的大数字一律放进深蓝面板里，并加 .t-on-surface 改成翡翠绿 ——
+ * 这正是原作的规则「巨大数字只活在反转的蓝面板上」。
+ *
+ * 圆角全部归零，这是本主题的签名。tokens.css 里 .s-dot / .s-spot 的正圆写死在类里，
+ * 不受圆角变量影响 —— 本主题下少用 .s-dot（一个圆点会破掉「全是直角」的印象），
+ * .s-spot 的镂空聚焦照常可用（那是一束光，不是形状）。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .t-label       Manrope 大写小标签，24px：页眉、页脚、眉题、编号
+ *   .s-rule        4px 海军蓝实线（上边框）：段落分隔、列表行线、卡片顶线。用时写 width，不写 height
+ *   .s-rule-double 上下各一条 4px 实线，中间留 3px：原作的双横线装饰。用时写 width 和 height:11px */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+
+  --font: "Bodoni Moda", Didot, "Bodoni 72", "Songti SC", serif;
+  --font-sans: "Manrope", "PingFang SC", -apple-system, sans-serif;
+}
+
+/* 展示字一律 900 字重 + 负字距 + 紧行高，这三样一起才是这个系统的声音 */
+.t-display, .t-metric, .t-h1 { font-weight: 900; letter-spacing: -0.02em; line-height: 0.92; }
+.t-h2 { font-weight: 800; letter-spacing: -0.015em; line-height: 1.05; }
+.t-body { font-family: var(--font-sans); font-weight: 500; line-height: 1.45; }
+
+/* 大写小标签：页眉、页脚、眉题、编号 */
+.t-label {
+  font-family: var(--font-sans);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 4px 结构线。写 width，高度由边框本身给 */
+.s-rule { border-top: 4px solid var(--text); }
+
+/* 双横线装饰：写 width 和 height:11px（4 + 3 + 4） */
+.s-rule-double { border-top: 4px solid var(--text); border-bottom: 4px solid var(--text); }

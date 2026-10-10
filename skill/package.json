@@ -1,0 +1,25 @@
+{
+  "name": "orca-transition-skill",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent skill for HTML presentation decks with cinematic slide transitions (reveal.js + GSAP), recordable to video.",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/gallery.mjs && npx serve .",
+    "gallery": "node scripts/gallery.mjs",
+    "capture": "node scripts/capture.mjs",
+    "fonts": "node scripts/fetch-fonts.mjs",
+    "palettes": "node scripts/check-palettes.mjs",
+    "deck": "node scripts/check-deck.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhenwusw/orca-transition-skill.git"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "gsap": "3.15.0",
+    "playwright-core": "1.63.0",
+    "reveal.js": "6.0.2"
+  }
+}

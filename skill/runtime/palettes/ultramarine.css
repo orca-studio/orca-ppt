@@ -1,0 +1,26 @@
+/* 配色：群青
+ * 一句话：群青蓝底 + 一个黄色主角。明快、推进感强,深底。
+ * 在主题之后引入 —— 它只定义那 8 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          群青底              --surface     浅一级的蓝（大面板）
+ *   --surface-2   再浅一级的蓝         --accent      黄（主角：空出来的时间）
+ *   --accent-soft 浅黄               --text / --text-dim  白 / 淡蓝白
+ *   --text-on-surface 白
+ *
+ * 可以互变的颜色：surface ↔ surface-2（同是蓝），accent ↔ accent-soft（同是黄）。蓝和黄之间不能互变。
+ * 黄色只给主角用：整条片子里它代表同一个东西，不要拿来装饰。
+ */
+
+:root {
+  --bg: #2d3de0;
+  --surface: #4453e8;
+  --surface-2: #6470ee;
+  --text: #ffffff;
+  --text-dim: #c4c9fa;
+  --accent: #ffd43b;
+  --accent-soft: #ffe68a;
+  --text-on-accent: #2d3de0;
+  --accent-text: #ffd43b;         /* 深底上强调色本身就够亮，沿用 --accent */
+  --text-on-surface: #ffffff;
+}

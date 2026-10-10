@@ -1,0 +1,17 @@
+{
+  "name": "ppt",
+  "compatibility_date": "2025-04-01",
+  "assets": {
+    // build-site.mjs 的产物，不进版本库
+    "directory": "site",
+    // 示例稿里用的是相对路径（photos/、../../vendor/、../../runtime/）。
+    // 落在没有尾斜杠的地址上时，浏览器会拿上一级当基准，资源全 404。
+    "html_handling": "force-trailing-slash"
+  },
+  "routes": [
+    {
+      "pattern": "ppt.orca-studio.ai",
+      "custom_domain": true
+    }
+  ]
+}

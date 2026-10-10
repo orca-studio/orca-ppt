@@ -1,0 +1,36 @@
+/* 主题：Editorial Forest（字体取自 frontend-slides bold-template-pack/editorial-forest）
+ * 标签：editorial
+ * 一句话：年度复盘、研究汇报 —— 沉静，有读物的分量
+ * 默认配色：forest
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .t-label  等宽大写小标签，24px：页眉、页脚、编号、坐标轴刻度
+ *   .s-ring   粉色描边圆，宽高相等：圆章 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 3px;
+  --radius-m: 6px;
+  --radius-l: 6px;
+
+  --font: "Source Serif 4", "Source Serif Pro", Georgia, "Songti SC", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+.t-display, .t-metric, .t-h1, .t-h2 { font-weight: 500; }
+.t-display { line-height: 0.92; }
+
+/* 等宽小标签：页眉、页脚、编号、坐标轴 */
+.t-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 描边圆章 */
+.s-ring { border: 2px solid var(--accent); border-radius: 50%; }

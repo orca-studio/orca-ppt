@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>Field Notes · Soft Editorial</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/soft-editorial.css">
+  <link rel="stylesheet" href="../../runtime/palettes/sage.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Soft Editorial，粉 / 黄绿 / 桃三种颜色贯穿三页，版式 standard）
+1→2  关系：三张洞察卡还是那三张，换了布局：黄绿那张长成放 68% 的大面板，粉和桃缩到右侧   手法：形态变换   共享：c1, c2, c3
+2→3  关系：三块数据面板合成一张图表卡，卡里三条留存曲线沿用这三种颜色，依次画出来       手法：多合一     合并：panel
+-->
+
+<div class="slides">
+
+  <!-- 1 三条洞察 -->
+  <section data-auto-animate data-hold="2.5" data-page="cover">
+    <p class="t-label t-dim" style="left:120px; top:96px;">Insights</p>
+    <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">02</p>
+
+    <div data-id="c1" class="s-accent" style="left:120px; top:200px; width:520px; height:680px;"></div>
+    <div data-id="c2" class="s-surface" style="left:680px; top:200px; width:520px; height:680px;"></div>
+    <div data-id="c3" class="s-accent-soft" style="left:1240px; top:200px; width:520px; height:680px;"></div>
+
+    <p class="t-label" style="left:160px; top:256px;">Insight #1</p>
+    <p class="t-h2" style="left:160px; top:300px; width:440px;">Trust is the onboarding.</p>
+    <p class="t-body" style="left:160px; top:560px; width:440px;">Customers don't churn on day one. They churn because the first three emails feel like a stranger.</p>
+
+    <p class="t-label" style="left:720px; top:256px;">Insight #2</p>
+    <p class="t-h2" style="left:720px; top:300px; width:440px;">Power users dread upgrades.</p>
+    <p class="t-body" style="left:720px; top:560px; width:440px;">The people we asked to love new features want fewer surprises, not bigger ones.</p>
+
+    <p class="t-label" style="left:1280px; top:256px;">Insight #3</p>
+    <p class="t-h2" style="left:1280px; top:300px; width:440px;">Support is product.</p>
+    <p class="t-body" style="left:1280px; top:560px; width:440px;">Half of "feature requests" in the inbox are discovery problems dressed as roadmap items.</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+  <!-- 2 数字：三张卡换布局 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <p class="t-label t-dim" data-auto-animate-delay="0.84" style="left:120px; top:96px;">By the numbers</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.84" style="left:1600px; top:96px; width:200px; text-align:right;">03</p>
+
+    <div data-id="c2" data-merge="panel" class="s-surface" style="left:120px; top:200px; width:1040px; height:680px;"></div>
+    <div data-id="c1" data-merge="panel" class="s-accent" style="left:1200px; top:200px; width:600px; height:320px;"></div>
+    <div data-id="c3" data-merge="panel" class="s-accent-soft" style="left:1200px; top:560px; width:600px; height:320px;"></div>
+
+    <p class="t-body" data-auto-animate-delay="0.92" style="left:160px; top:248px; width:640px;">of new accounts open the third email, up from 41% last quarter.</p>
+    <p class="t-metric t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:560px;">68%</p>
+
+    <p class="t-display" data-auto-animate-delay="1.0" style="left:1240px; top:232px;">28</p>
+    <p class="t-body" data-auto-animate-delay="1.08" style="left:1240px; top:420px; width:520px;">customer interviews</p>
+
+    <p class="t-display" data-auto-animate-delay="1.0" style="left:1240px; top:592px;">9</p>
+    <p class="t-body" data-auto-animate-delay="1.08" style="left:1240px; top:780px; width:520px;">teams shadowed a week</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+  <!-- 3 留存：三块面板合成一张图表卡 -->
+  <section data-st="merge" data-st-merge="panel" data-hold="3">
+    <p class="t-label t-dim" style="left:120px; top:96px;">Retention, by cohort</p>
+    <p class="t-label t-dim" style="left:1600px; top:96px; width:200px; text-align:right;">04</p>
+
+    <p class="t-h1" style="left:120px; top:200px;">The curve bends</p>
+    <p class="t-h1" style="left:120px; top:280px;">around day three.</p>
+    <p class="t-body" style="left:120px; top:400px; width:600px;">Cohorts that got a written welcome and a human reply within 24 hours keep almost twice as many accounts at day 90.</p>
+
+    <div data-merge="panel" class="s-surface-2" style="left:840px; top:200px; width:960px; height:680px;"></div>
+    <p class="t-label t-dim" data-enter-delay="1.0" style="left:920px; top:256px;">% of cohort still active, by day</p>
+    <svg data-enter-delay="1.0" style="left:920px; top:320px; width:800px; height:480px;" viewBox="0 0 800 480">
+      <path class="l-dim" d="M0,460 H800"/>
+      <path class="l-dim" d="M0,240 H800" stroke-dasharray="4 10"/>
+    </svg>
+    <svg data-enter="draw" data-enter-delay="1.1" style="left:920px; top:320px; width:800px; height:480px;" viewBox="0 0 800 480">
+      <path class="l-text" d="M0.0,20.0 C19.0,32.8 76.2,69.5 114.3,97.0 C152.4,124.5 190.5,159.3 228.6,185.0 C266.7,210.7 304.8,232.7 342.9,251.0 C381.0,269.3 419.0,282.2 457.1,295.0 C495.2,307.8 533.3,318.8 571.4,328.0 C609.5,337.2 647.6,344.5 685.7,350.0 C723.8,355.5 781.0,359.2 800.0,361.0"/>
+      <path class="l-surface" d="M0.0,20.0 C19.0,29.2 76.2,56.7 114.3,75.0 C152.4,93.3 190.5,113.5 228.6,130.0 C266.7,146.5 304.8,161.2 342.9,174.0 C381.0,186.8 419.0,196.9 457.1,207.0 C495.2,217.1 533.3,226.3 571.4,234.5 C609.5,242.8 647.6,251.0 685.7,256.5 C723.8,262.0 781.0,265.7 800.0,267.5"/>
+      <path class="l-accent" d="M0.0,20.0 C19.0,25.5 76.2,42.0 114.3,53.0 C152.4,64.0 190.5,75.9 228.6,86.0 C266.7,96.1 304.8,105.3 342.9,113.5 C381.0,121.8 419.0,129.1 457.1,135.5 C495.2,141.9 533.3,147.4 571.4,152.0 C609.5,156.6 647.6,159.3 685.7,163.0 C723.8,166.7 781.0,172.2 800.0,174.0"/>
+    </svg>
+    <p class="t-label" data-enter-delay="2.0" style="left:1736px; top:669px;">38%</p>
+    <p class="t-label" data-enter-delay="2.15" style="left:1736px; top:576px;">55%</p>
+    <p class="t-label" data-enter-delay="2.3" style="left:1736px; top:482px;">72%</p>
+    <p class="t-label t-dim" data-enter-delay="1.2" style="left:920px; top:808px;">Day 0</p>
+    <p class="t-label t-dim" data-enter-delay="1.2" style="left:1411px; top:808px; width:160px; text-align:center;">Day 30</p>
+    <p class="t-label t-dim" data-enter-delay="1.2" style="left:1560px; top:808px; width:160px; text-align:right;">Day 90</p>
+
+    <svg data-enter-delay="1.2" style="left:120px; top:716px; width:48px; height:24px;" viewBox="0 0 48 24"><path class="l-text" d="M3,12 H45"/></svg>
+    <p class="t-label" data-enter-delay="1.2" style="left:184px; top:716px;">Templated welcome</p>
+    <svg data-enter-delay="1.28" style="left:120px; top:764px; width:48px; height:24px;" viewBox="0 0 48 24"><path class="l-surface" d="M3,12 H45"/></svg>
+    <p class="t-label" data-enter-delay="1.28" style="left:184px; top:764px;">Written welcome</p>
+    <svg data-enter-delay="1.36" style="left:120px; top:812px; width:48px; height:24px;" viewBox="0 0 48 24"><path class="l-accent" d="M3,12 H45"/></svg>
+    <p class="t-label" data-enter-delay="1.36" style="left:184px; top:812px;">Written welcome + human reply</p>
+
+    <p class="t-label t-dim" style="left:120px; top:960px;">April 29, 2026</p>
+    <p class="t-label t-dim" style="left:1300px; top:960px; width:500px; text-align:right;">Field Notes · Vol. III</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

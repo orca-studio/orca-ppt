@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+<meta charset="utf-8">
+<title>主题样张</title>
+<!--
+  主题样张 —— 给 scripts/theme-samples.mjs 用,**这一份内容对每个主题都完全一样**。
+
+  为什么要一模一样:选主题时人要比的是设计,不是内容。内容各不相同的话,人只能一份份
+  浏览,没法把五个摆在一起比 —— Keynote 的主题选择器全部用同一句 Lorem Ipsum,
+  就是这个道理。
+
+  **只用 tokens.css 保证有的那套词汇**:五个字号类、强调/淡化/面板上的文字色、
+  两级面板底色、强调块和圆点。**底色留给 --bg**:整页铺 s-surface 的话,用 --text 的
+  文字会和面板底色撞上看不见(--text 是配 --bg 的,配面板的是 --text-on-surface)。
+  不用 .t-label 这类主题自己新增的类,也不用 --font-mono
+  这种只有一部分主题定义的变量 —— 它们在别的主题里会退化成别的样子,那就不是
+  「同一份内容」了,比出来的差别有一部分是缺失造成的,不是设计造成的。
+-->
+<link rel="stylesheet" href="../../../node_modules/reveal.js/dist/reset.css">
+<link rel="stylesheet" href="../../../node_modules/reveal.js/dist/reveal.css">
+<link rel="stylesheet" href="../../tokens.css">
+<link rel="stylesheet" href="{{THEME}}">
+<link rel="stylesheet" href="{{PALETTE}}">
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+  <section>
+    <p class="t-body t-accent" style="left:120px; top:88px;">A presentation theme</p>
+    <p class="t-body t-dim" style="left:1500px; top:88px; width:300px; text-align:right;">01 / 05</p>
+
+    <!-- 两行 t-display:看字形,也看行距。字号固定 160px,留到 x=1040 为止。 -->
+    <p class="t-display" style="left:120px; top:190px;">Fewer,</p>
+    <p class="t-display t-accent" style="left:120px; top:350px;">finer.</p>
+
+    <p class="t-body" style="left:120px; top:570px; width:820px;">
+      Aa Bb Cc 汉字样张 —— 同一句话,换个主题看字形、字距和行高怎么变。
+    </p>
+
+    <p class="t-h1" style="left:120px; top:740px;">Nine rooms, one plan</p>
+
+    <div class="s-dot" style="left:120px; top:900px; width:24px; height:24px;"></div>
+    <p class="t-body t-dim" style="left:176px; top:892px;">Studio placeholder</p>
+
+    <!--
+      右栏。**文字色和底色的配对按 visual-spec.md 来**:.t-on-surface 是配 .s-surface 的,
+      不是配 .s-surface-2 —— 用错的话,浅色面板的主题里那行字就看不见了(踩过)。
+      所以 --surface-2 在这儿用它本来的用途:图表的普通柱,纯色块,上面不放字。
+
+      `.t-metric` 落在面板上**必须再加 .t-on-surface**:它自己的颜色是 --accent-text
+      (强调色的文字档,是给页面底准备的深色),压在深面板上就是深字压深底。
+      这条规范早就写着,样张漏了 —— 以前没露馅是因为当时 .t-metric 绑的是亮色 --accent。
+    -->
+    <div class="s-surface" style="left:1100px; top:180px; width:700px; height:460px;"></div>
+    <p class="t-metric t-on-surface" style="left:1150px; top:230px;">68%</p>
+    <p class="t-body t-on-surface" style="left:1150px; top:540px; width:600px;">of accounts opened</p>
+
+    <div class="s-accent-soft" style="left:1100px; top:700px; width:700px; height:150px;"></div>
+    <p class="t-h2" style="left:1150px; top:746px; width:600px;">Slow looking.</p>
+
+    <div class="s-surface-2" style="left:1100px; top:990px; width:150px; height:50px;"></div>
+    <div class="s-surface-2" style="left:1290px; top:930px; width:150px; height:110px;"></div>
+    <div class="s-surface-2" style="left:1480px; top:960px; width:150px; height:80px;"></div>
+    <div class="s-accent" style="left:1670px; top:890px; width:130px; height:150px;"></div>
+  </section>
+
+</div>
+</div>
+<!--
+  必须让 reveal 跑起来:它的 CSS 默认把所有 section 隐藏,靠 JS 给当前页加 .present
+  才显示。不跑的话截出来只有一张底色。
+
+  但**只跑 reveal**,不加载 gsap 和 engine.js —— 样张要的是静止的第一屏,
+  越少动的东西越确定。
+-->
+<script src="../../../node_modules/reveal.js/dist/reveal.js"></script>
+<script>
+  // 画布尺寸必须和 engine.js 一致 —— 不给的话 reveal 用它自己的默认值(960×700),
+  // 会把 1920 的页面放大一倍,样张就成了局部特写。
+  Reveal.initialize({
+    width: 1920,
+    height: 1080,
+    margin: 0,
+    center: false,
+    controls: false,
+    progress: false,
+    hash: false,
+    transition: 'none',
+    backgroundTransition: 'none',
+  })
+</script>
+</body>
+</html>

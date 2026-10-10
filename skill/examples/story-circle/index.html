@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="story">
+<head>
+  <meta charset="utf-8">
+  <title>圆一直都在</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（故事线：圆一直都在，版式 story）
+1→2  关系：拨号盘和镜头都是圆，同位置同大小       手法：推近式匹配剪辑   锚点：dial → lens
+2→3  关系：圆变成了屏幕                         手法：遮挡 + 形态变换   锚点：lens → screen
+-->
+
+<div class="slides">
+
+  <section data-guide="dial" data-hold="1.5" data-page="cover">
+    <img class="st-photo" src="photos/photo-01.png" width="1536" height="1024"
+         data-anchors="dial:642,522,122">
+    <p class="t-body" style="left:120px; top:820px;">No.01</p>
+    <p class="t-h1" style="left:120px; top:880px;">转盘电话</p>
+  </section>
+
+  <section data-st="zoom-match" data-st-from="dial" data-st-to="lens" data-guide="lens" data-hold="1.5">
+    <img class="st-photo" src="photos/photo-02.png" width="1536" height="1024"
+         data-anchors="lens:671,502,146">
+    <p class="t-body" style="left:120px; top:820px;">No.02</p>
+    <p class="t-h1" style="left:120px; top:880px;">胶片相机</p>
+  </section>
+
+  <section data-st="iris" data-st-from="lens" data-st-to="screen" data-guide="screen" data-hold="2">
+    <img class="st-photo" src="photos/photo-03.png" width="1536" height="1024"
+         data-anchors="screen:335,312,420,340">
+    <p class="t-body" style="left:120px; top:820px;">No.03</p>
+    <p class="t-h1" style="left:120px; top:880px;">显像管电视</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

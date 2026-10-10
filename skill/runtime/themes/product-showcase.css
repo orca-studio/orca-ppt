@@ -1,0 +1,21 @@
+/* 主题：Product showcase；默认配色：fruit-soda。
+ * 仅用于 data-demo="product-showcase" 的参考动画教学，见 references/product-showcase.md。
+ * 四栏全出血、产品字号与画外待命是此案例的局部规则，不改变汇报稿的字号和安全区。
+ * 新增 t-product-* 文字角色、s-product-* 产品色块；位置与尺寸仍由 HTML 的前后页状态描述。
+ * 没有自写动画，所有运动仍由 engine.js 的共享元素实现。 */
+html[data-demo="product-showcase"] { --font: Arial, "PingFang SC", sans-serif; }
+[data-demo="product-showcase"] .reveal .slides > section { overflow: hidden; }
+[data-demo="product-showcase"] .reveal img { max-width: none; max-height: none; }
+[data-demo="product-showcase"] .s-product-orange { background: var(--product-orange); }
+[data-demo="product-showcase"] .s-product-rose { background: var(--product-rose); }
+[data-demo="product-showcase"] .s-product-pulasan { background: var(--product-pulasan); }
+[data-demo="product-showcase"] .s-product-lychee { background: var(--product-lychee); }
+[data-demo="product-showcase"] .t-product-number { font-size: 60px; font-weight: 700; line-height: 1.2; }
+[data-demo="product-showcase"] .t-product-name { font-size: 36px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+[data-demo="product-showcase"] .t-product-caption { font-size: 24px; line-height: 1.2; }
+[data-demo="product-showcase"] .t-product-button { font-size: 21px; line-height: 1; border: 1px solid currentColor; border-radius: 40px; display: flex; align-items: center; justify-content: space-around; box-sizing: border-box; }
+[data-demo="product-showcase"] .t-product-button span { font-size: 32px; }
+[data-demo="product-showcase"] .t-product-hero { font-family: Impact, "Arial Narrow", sans-serif; font-size: 470px; font-weight: 900; line-height: 1; color: var(--product-display); }
+[data-demo="product-showcase"] .t-product-on-color { color: var(--product-ink); }
+[data-demo="product-showcase"] .t-product-capacity { font-size: 23px; line-height: 1.2; border: 1px solid currentColor; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-align: center; }
+[data-demo="product-showcase"] .t-product-capacity.is-selected { background: var(--product-ink); color: var(--product-lychee); }

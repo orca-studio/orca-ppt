@@ -1,0 +1,90 @@
+<!-- Bento 网格页 · 版式片段
+     坐标和 data-id 已经写好，整段复制进稿子，只换文字和卡片类型。
+     这一页的 <section> 要标 data-page="bento"。用了这一页的稿子，在 <html> 上
+     加 data-tags="bento"。
+     **不要动 data-layout** —— Bento 是汇报稿里的一种页型，不是和「汇报稿/故事稿」
+     并列的第三种模式。页型是叠加的：一份稿子可以既是汇报稿、又有 bento 页、
+     还有时间线页，它该同时出现在这几处。
+     规格见 references/visual-spec.md 的「Bento 网格页」。
+     卡片类型系统借自 hubeiqiao/apple-bento-grid（七种卡片），坐标是本 skill 自己的 40 网格。
+
+     格位（4 列 × 2 行，列 120/560/1000/1440 宽 360，行 240/640 高 360，横向间距 80，纵向 40）
+       hero   left:120  top:240  width:800 height:760   占左两列两行
+       cell-1 left:1000 top:240  width:360 height:360
+       cell-2 left:1440 top:240  width:360 height:360
+       cell-3 left:1000 top:640  width:360 height:360
+       cell-4 left:1440 top:640  width:360 height:360
+     合并变体（把相邻格并成一格，用来填满没内容的位置）
+       竖长 width:360 height:760   横长 width:800 height:360   大方 width:800 height:760
+
+     锚点已经写在片段里，不要改名：
+       hero 格   data-id="hero"   data-zoom="hero"
+       四个小格  data-id="cell-N" data-zoom="cell-N"，并且都带 data-split / data-merge="cells"
+     所以下面这些转场不用再想怎么接：
+       bento → bento        两页都用本片段，格子自动同 id（下面第二段就是）
+       hero → 下一页底色    目标页整页形状写 data-id="hero"，走「整页 ↔ 卡片」
+       某一格 → 细节页      目标页写 data-st="zoom-into" data-st-direction="in" data-st-from="cell-2"
+       一张总卡 → 四格      目标页写 data-st="split" data-st-split="cells"
+       四格 → 一张总卡      目标页写 data-st="merge" data-st-merge="cells"
+-->
+
+<!-- 第一页 bento -->
+<section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+  <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">页标题。</p>
+
+  <!-- hero 格：hero 类型（标题 + 副题）。也可以放 highlight（.t-metric 大数字） -->
+  <div data-id="hero" data-zoom="hero" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+  <p class="t-display t-on-surface" data-auto-animate-delay="0.9" style="left:160px; top:320px;">主角</p>
+  <p class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:560px; width:720px;">副题，一到两句。hero 格是这一页唯一的主角，其余四格是它的佐证。</p>
+
+  <!-- cell-1：stat 类型（大数字 + 说明）。数字最多 3 个字符 -->
+  <div data-id="cell-1" data-zoom="cell-1" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1000px; top:240px; width:360px; height:360px;"></div>
+  <p class="t-display" data-auto-animate-delay="0.98" style="left:1040px; top:300px;">42</p>
+  <p class="t-label" data-auto-animate-delay="0.98" style="left:1040px; top:520px;">说明</p>
+
+  <!-- cell-2：badge 类型（小标签 + 数字） -->
+  <div data-id="cell-2" data-zoom="cell-2" data-split="cells" data-merge="cells" class="s-surface" style="left:1440px; top:240px; width:360px; height:360px;"></div>
+  <p class="t-label t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:290px;">标签</p>
+  <p class="t-display t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:360px;">7</p>
+  <p class="t-label t-on-surface" data-auto-animate-delay="0.98" style="left:1480px; top:520px;">说明</p>
+
+  <!-- cell-3：quote 类型（深底引文） -->
+  <div data-id="cell-3" data-zoom="cell-3" data-split="cells" data-merge="cells" class="s-surface" style="left:1000px; top:640px; width:360px; height:360px;"></div>
+  <p class="t-h2 t-on-surface" data-auto-animate-delay="1.06" style="left:1040px; top:700px; width:280px;">一句短引文。</p>
+  <p class="t-label t-on-surface" data-auto-animate-delay="1.06" style="left:1040px; top:920px;">出处</p>
+
+  <!-- cell-4：category 类型（名称 + 说明） -->
+  <div data-id="cell-4" data-zoom="cell-4" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1440px; top:640px; width:360px; height:360px;"></div>
+  <p class="t-label t-dim" data-auto-animate-delay="1.06" style="left:1480px; top:700px;">分类</p>
+  <p class="t-h2" data-auto-animate-delay="1.06" style="left:1480px; top:760px; width:280px;">名称。</p>
+  <p class="t-body" data-auto-animate-delay="1.06" style="left:1480px; top:880px; width:280px;">一句说明。</p>
+</section>
+
+<!-- 第二页 bento：版式完全相同，内容整体流过去。
+     格子和 hero 前后一样（同位置同尺寸同颜色类），不写 data-carry，它们原地不动；
+     只有文字写 data-carry，按阅读顺序 hero → stat → 其余。 -->
+<section data-st="carry" data-auto-animate data-hold="3">
+  <p data-carry="title" class="t-h1" style="left:120px; top:80px;">下一组。</p>
+
+  <div data-id="hero" data-zoom="hero" class="s-surface" style="left:120px; top:240px; width:800px; height:760px;"></div>
+  <p data-carry="hero" class="t-display t-on-surface" style="left:160px; top:320px;">新主角</p>
+  <p data-carry="hero" class="t-body t-on-surface" style="left:160px; top:560px; width:720px;">新副题。</p>
+
+  <div data-id="cell-1" data-zoom="cell-1" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1000px; top:240px; width:360px; height:360px;"></div>
+  <p data-carry="cells" class="t-display" style="left:1040px; top:300px;">86</p>
+  <p data-carry="cells" class="t-label" style="left:1040px; top:520px;">说明</p>
+
+  <div data-id="cell-2" data-zoom="cell-2" data-split="cells" data-merge="cells" class="s-surface" style="left:1440px; top:240px; width:360px; height:360px;"></div>
+  <p data-carry="cells" class="t-label t-on-surface" style="left:1480px; top:290px;">标签</p>
+  <p data-carry="cells" class="t-display t-on-surface" style="left:1480px; top:360px;">3</p>
+  <p data-carry="cells" class="t-label t-on-surface" style="left:1480px; top:520px;">说明</p>
+
+  <div data-id="cell-3" data-zoom="cell-3" data-split="cells" data-merge="cells" class="s-surface" style="left:1000px; top:640px; width:360px; height:360px;"></div>
+  <p data-carry="cells" class="t-h2 t-on-surface" style="left:1040px; top:700px; width:280px;">另一句。</p>
+  <p data-carry="cells" class="t-label t-on-surface" style="left:1040px; top:920px;">出处</p>
+
+  <div data-id="cell-4" data-zoom="cell-4" data-split="cells" data-merge="cells" class="s-surface-2" style="left:1440px; top:640px; width:360px; height:360px;"></div>
+  <p data-carry="cells" class="t-label t-dim" style="left:1480px; top:700px;">分类</p>
+  <p data-carry="cells" class="t-h2" style="left:1480px; top:760px; width:280px;">另一个。</p>
+  <p data-carry="cells" class="t-body" style="left:1480px; top:880px; width:280px;">一句说明。</p>
+</section>

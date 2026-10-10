@@ -1,0 +1,37 @@
+name: 部署 ppt.orca-studio.ai
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "runtime/**"
+      - "scripts/gallery.mjs"
+      - "scripts/build-site.mjs"
+      - "wrangler.jsonc"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # 缩略图要 ffmpeg，取时长要 ffprobe（同一个包）
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - run: npm ci
+
+      - run: node scripts/build-site.mjs
+
+      - name: 部署
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

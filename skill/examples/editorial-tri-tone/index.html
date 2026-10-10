@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>Studio &amp; Salon · Editorial Tri-Tone</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/editorial-tri-tone.css">
+  <link rel="stylesheet" href="../../runtime/palettes/blush.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Editorial Tri-Tone，腮红粉纸面上用酒红形状当「酒红页」，版式 standard）
+1→2  关系：封面巨大的刊名缩到左上角，变成页眉                    手法：共享元素            共享：mark
+2→3  关系：原则墙里的第 01 张卡是下一页的细节                      手法：放大进元素内部      from：p1
+3→4  关系：同一版式的下一条原则，章节号 01 → 02，标题和正文原地换掉  手法：共享元素 + 文字级匹配 + 原地替换
+4→5  关系：再下一条原则，版式完全相同，整页内容整体流过去            手法：元素交接（胶囊一起滑走）
+5→6  关系：整页酒红收成结尾页中间的一张酒红卡                      手法：形态变换（整页 → 卡片）共享：page
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：腮红粉底，奶油黄胶囊标签云 + 巨大刊名 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" data-page="cover">
+    <p class="t-label t-dim" style="left:1000px; top:80px; width:800px; text-align:right;">VOL. 04 — EDITORIAL BRIEF</p>
+
+    <div class="s-accent" style="left:120px; top:200px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:120px; top:220px; width:360px; text-align:center;">focus</p>
+    <div class="s-accent" style="left:560px; top:200px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:560px; top:220px; width:360px; text-align:center;">coworking</p>
+    <div class="s-accent" style="left:1000px; top:200px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:1000px; top:220px; width:360px; text-align:center;">community</p>
+    <div class="s-accent" style="left:1440px; top:200px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:1440px; top:220px; width:360px; text-align:center;">coffee</p>
+
+    <div class="s-accent" style="left:120px; top:340px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:120px; top:360px; width:360px; text-align:center;">workshops</p>
+    <div class="s-accent" style="left:560px; top:340px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:560px; top:360px; width:360px; text-align:center;">studio</p>
+    <div class="s-accent" style="left:1000px; top:340px; width:360px; height:96px;"></div>
+    <p class="t-h2" style="left:1000px; top:360px; width:360px; text-align:center;">inspiration</p>
+
+    <p data-id="mark" class="t-display" style="left:120px; top:700px; width:1680px; text-align:center;">Studio &amp; Salon</p>
+    <p class="t-label t-dim" style="left:120px; top:960px;">FW · 2026</p>
+  </section>
+
+  <!-- 2 原则墙：八张卡片交替酒红 / 奶油黄 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="mark" class="t-label" style="left:120px; top:80px;">Studio &amp; Salon</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.8" style="left:1000px; top:80px; width:800px; text-align:right;">§ 01 — PRINCIPLES</p>
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:140px;">Eight principles, loosely held.</p>
+
+    <div data-zoom="p1" class="s-surface" data-enter="pop" data-auto-animate-delay="0.9" style="left:120px; top:280px; width:360px; height:320px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.9" style="left:160px; top:320px;">/ 01</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.9" style="left:160px; top:400px; width:280px;">Slow looking</p>
+
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.9" style="left:560px; top:280px; width:360px; height:320px;"></div>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:600px; top:320px;">/ 02</p>
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:600px; top:400px; width:280px;">Open kitchen</p>
+
+    <div class="s-surface" data-enter="pop" data-auto-animate-delay="0.98" style="left:1000px; top:280px; width:360px; height:320px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.98" style="left:1040px; top:320px;">/ 03</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.98" style="left:1040px; top:400px; width:280px;">Borrowed light</p>
+
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="0.98" style="left:1440px; top:280px; width:360px; height:320px;"></div>
+    <p class="t-label t-dim" data-auto-animate-delay="0.98" style="left:1480px; top:320px;">/ 04</p>
+    <p class="t-h2" data-auto-animate-delay="0.98" style="left:1480px; top:400px; width:280px;">Quiet defaults</p>
+
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="1.06" style="left:120px; top:640px; width:360px; height:320px;"></div>
+    <p class="t-label t-dim" data-auto-animate-delay="1.06" style="left:160px; top:680px;">/ 05</p>
+    <p class="t-h2" data-auto-animate-delay="1.06" style="left:160px; top:760px; width:280px;">Fewer, finer</p>
+
+    <div class="s-surface" data-enter="pop" data-auto-animate-delay="1.06" style="left:560px; top:640px; width:360px; height:320px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.06" style="left:600px; top:680px;">/ 06</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.06" style="left:600px; top:760px; width:280px;">Generous edges</p>
+
+    <div class="s-surface-2" data-enter="pop" data-auto-animate-delay="1.14" style="left:1000px; top:640px; width:360px; height:320px;"></div>
+    <p class="t-label t-dim" data-auto-animate-delay="1.14" style="left:1040px; top:680px;">/ 07</p>
+    <p class="t-h2" data-auto-animate-delay="1.14" style="left:1040px; top:760px; width:280px;">Hand in it</p>
+
+    <div class="s-surface" data-enter="pop" data-auto-animate-delay="1.14" style="left:1440px; top:640px; width:360px; height:320px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.14" style="left:1480px; top:680px;">/ 08</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.14" style="left:1480px; top:760px; width:280px;">To be added</p>
+  </section>
+
+  <!-- 3 第一条原则：整页酒红，衬线斜体章节号 -->
+  <section data-st="zoom-into" data-st-direction="in" data-st-from="p1" data-auto-animate data-hold="3">
+    <div data-id="page" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p data-id="mark" class="t-label t-on-surface" style="left:120px; top:80px;">Studio &amp; Salon</p>
+    <p data-swap="sec" class="t-label t-on-surface" style="left:1000px; top:80px; width:800px; text-align:right;">§ 01 — PRINCIPLES</p>
+    <p data-text="num" class="t-display t-serif t-on-surface" style="left:120px; top:200px;">01</p>
+    <p data-swap="title" class="t-h1 t-on-surface" style="left:120px; top:460px;">Slow looking.</p>
+    <p data-swap="body" class="t-body t-on-surface" style="left:120px; top:580px; width:880px;">A short paragraph describing the principle in plain language. Two sentences is plenty.</p>
+  </section>
+
+  <!-- 4 第二条原则：版式不动，章节号滚到 02，标题和正文原地换掉 -->
+  <section data-auto-animate data-hold="3">
+    <div data-id="page" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p data-id="mark" class="t-label t-on-surface" style="left:120px; top:80px;">Studio &amp; Salon</p>
+    <p data-swap="sec" data-carry="sec" class="t-label t-on-surface" style="left:1000px; top:80px; width:800px; text-align:right;">§ 02 — PRINCIPLES</p>
+    <p data-text="num" data-carry="num" class="t-display t-serif t-on-surface" style="left:120px; top:200px;">02</p>
+    <p data-swap="title" data-carry="title" class="t-h1 t-on-surface" style="left:120px; top:460px;">Open kitchen.</p>
+    <p data-swap="body" data-carry="body" class="t-body t-on-surface" style="left:120px; top:580px; width:880px;">Process in public. Show the seams, the sketches, the half-formed thoughts before they harden.</p>
+
+    <div data-carry="tags" class="s-accent" data-auto-animate-delay="0.7" style="left:120px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" data-auto-animate-delay="0.7" style="left:120px; top:840px; width:360px; text-align:center;">process</p>
+    <div data-carry="tags" class="s-accent" data-auto-animate-delay="0.78" style="left:560px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" data-auto-animate-delay="0.78" style="left:560px; top:840px; width:360px; text-align:center;">public</p>
+    <div data-carry="tags" class="s-accent" data-auto-animate-delay="0.86" style="left:1000px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" data-auto-animate-delay="0.86" style="left:1000px; top:840px; width:360px; text-align:center;">sketches</p>
+  </section>
+
+  <!-- 5 第三条原则：版式完全相同，整页内容交接着流过去（胶囊一起滑走） -->
+  <section data-st="carry" data-auto-animate data-hold="3">
+    <div data-id="page" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p data-id="mark" class="t-label t-on-surface" style="left:120px; top:80px;">Studio &amp; Salon</p>
+    <p data-carry="sec" class="t-label t-on-surface" style="left:1000px; top:80px; width:800px; text-align:right;">§ 03 — PRINCIPLES</p>
+    <p data-carry="num" class="t-display t-serif t-on-surface" style="left:120px; top:200px;">03</p>
+    <p data-carry="title" class="t-h1 t-on-surface" style="left:120px; top:460px;">Borrowed light.</p>
+    <p data-carry="body" class="t-body t-on-surface" style="left:120px; top:580px; width:880px;">Cite generously. The best ideas always belong to a lineage; name the room you walked into.</p>
+
+    <div data-carry="tags" class="s-accent" style="left:120px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" style="left:120px; top:840px; width:360px; text-align:center;">citation</p>
+    <div data-carry="tags" class="s-accent" style="left:560px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" style="left:560px; top:840px; width:360px; text-align:center;">lineage</p>
+    <div data-carry="tags" class="s-accent" style="left:1000px; top:820px; width:360px; height:96px;"></div>
+    <p data-carry="tags" class="t-h2" style="left:1000px; top:840px; width:360px; text-align:center;">credit</p>
+  </section>
+
+  <!-- 6 结尾：整页酒红收成一张卡片 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="page" class="s-surface" style="left:120px; top:240px; width:1680px; height:640px;"></div>
+    <p data-id="mark" class="t-label" style="left:120px; top:80px;">Studio &amp; Salon</p>
+
+    <p class="t-metric" data-auto-animate-delay="0.8" style="left:120px; top:380px; width:1680px; text-align:center;">08</p>
+    <p class="t-h1 t-serif t-on-surface" data-auto-animate-delay="0.9" style="left:120px; top:720px; width:1680px; text-align:center;">principles, loosely held</p>
+    <p class="t-label t-dim" data-auto-animate-delay="1.0" style="left:120px; top:960px; width:1680px; text-align:center;">FW · 2026</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

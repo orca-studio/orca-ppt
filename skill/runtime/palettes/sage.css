@@ -1,0 +1,27 @@
+/* 配色：柔绿
+ * 一句话：米底 + 橄榄黄面板 + 柔粉强调。柔和、没有压迫感,浅底。
+ * 在主题之后引入 —— 它只定义那 8 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          奶油纸面            --surface     柠檬黄绿（大面板）
+ *   --surface-2   半透白（图表卡）     --accent      灰粉（强调、卡片）
+ *   --accent-soft 桃色（卡片）         --text / --text-dim  墨色 / 暖灰
+ *   --text-on-surface 墨色（浅色面板上的文字）
+ *
+ * 可以互变的颜色：surface / surface-2 / accent / accent-soft 任意两个之间都可以。
+ * 它们都是高明度的浅色，中间色不会发灰发棕，所以形态变换、一变多、多合一都不受同色系限制。
+ * 所有面板都是浅色，文字一律是墨色；.t-metric 在面板上要加 .t-on-surface，否则是粉字压浅底。
+ */
+
+:root {
+  --bg: #f2eedf;
+  --surface: #d6dd63;
+  --surface-2: #fbf9f1;
+  --text: #2a241b;
+  --text-dim: #5c5345;
+  --accent: #e1a4c2;
+  --accent-soft: #e8c9b6;
+  --text-on-accent: #2a241b;
+  --accent-text: #b13b75;         /* 柔粉的深档 */
+  --text-on-surface: #2a241b;
+}

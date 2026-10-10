@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en" data-layout="standard" data-tags="product-showcase" data-demo="product-showcase">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Drink showcase · 四栏到全屏</title>
+<link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+<link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+<link rel="stylesheet" href="../../runtime/tokens.css">
+<link rel="stylesheet" href="../../runtime/themes/product-showcase.css">
+<link rel="stylesheet" href="../../runtime/palettes/fruit-soda.css">
+</head><body><div class="reveal">
+<!-- 转场计划
+1→2  关系：同一组产品里把主角从橙味换成玫瑰味，面板向右、两瓶上下交接  手法：共享元素
+2→3  关系：主角继续向右，玫瑰味换成红毛丹味  手法：共享元素
+3→4  关系：主角继续向右，红毛丹味换成荔枝味  手法：共享元素
+4→5  关系：荔枝栏就是下一页详情的底色，瓶子留在视野里移到中央  手法：共享元素 + 形态变换
+特例范围：references/product-showcase.md。瓶子 SVG 为自制演示素材，未打包参考视频的品牌图片。
+-->
+<div class="slides">
+<!-- 状态 1：Orange Smoothie 激活 -->
+<section data-auto-animate data-auto-animate-duration="0.7333333333333333" data-auto-animate-easing="cubic-bezier(0.42,0,0.58,1)" data-hold="0.9" aria-label="Orange Smoothie">
+  <div data-id="active-panel" class="s-product-orange" style="left:0px;top:0px;width:480px;height:1080px;"></div>
+  <img data-id="bottle-orange" src="assets/orange.svg" alt="Orange Smoothie" style="left:120px;top:129px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-orange" class="t-product-number" style="left:180px;top:1110px;width:120px;text-align:center;opacity:1;">01</p>
+  <p data-id="name-orange" class="t-product-name t-product-on-color" style="left:90px;top:777px;width:375px;opacity:1;">Orange Smoothie</p>
+  <p data-id="flavor-orange" class="t-product-caption t-product-on-color" style="left:90px;top:828px;width:375px;opacity:1;">Orange flavour</p>
+  <p data-id="button-orange" class="t-product-button t-product-on-color" style="left:96px;top:912px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-rose" src="assets/rose.svg" alt="Rose Smoothie" style="left:614px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-rose" class="t-product-number" style="left:660px;top:342px;width:120px;text-align:center;opacity:1;">02</p>
+  <p data-id="name-rose" class="t-product-name " style="left:591px;top:473px;width:375px;opacity:1;">Rose Smoothie</p>
+  <p data-id="flavor-rose" class="t-product-caption " style="left:591px;top:524px;width:375px;opacity:1;">Guava flavour</p>
+  <p data-id="button-rose" class="t-product-button " style="left:597px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-pulasan" src="assets/pulasan.svg" alt="Pulasan Drink" style="left:1080px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-pulasan" class="t-product-number" style="left:1140px;top:342px;width:120px;text-align:center;opacity:1;">03</p>
+  <p data-id="name-pulasan" class="t-product-name " style="left:1090px;top:473px;width:375px;opacity:1;">Pulasan Drink</p>
+  <p data-id="flavor-pulasan" class="t-product-caption " style="left:1090px;top:524px;width:375px;opacity:1;">Rambutan Flavour</p>
+  <p data-id="button-pulasan" class="t-product-button " style="left:1096px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-lychee" src="assets/lychee.svg" alt="lychee Juice" style="left:1574px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-lychee" class="t-product-number" style="left:1620px;top:342px;width:120px;text-align:center;opacity:1;">04</p>
+  <p data-id="name-lychee" class="t-product-name " style="left:1578px;top:473px;width:270px;opacity:1;">lychee Juice</p>
+  <p data-id="flavor-lychee" class="t-product-caption " style="left:1578px;top:524px;width:270px;opacity:1;">Lychee Flavour</p>
+  <p data-id="button-lychee" class="t-product-button " style="left:1584px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+</section>
+
+<!-- 状态 2：Rose Smoothie 激活 -->
+<section data-auto-animate data-auto-animate-duration="0.7333333333333333" data-auto-animate-easing="cubic-bezier(0.42,0,0.58,1)" data-hold="0.5666666666666667" aria-label="Rose Smoothie">
+  <div data-id="active-panel" class="s-product-rose" style="left:480px;top:0px;width:480px;height:1080px;"></div>
+  <img data-id="bottle-orange" src="assets/orange.svg" alt="Orange Smoothie" style="left:120px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-orange" class="t-product-number" style="left:180px;top:342px;width:120px;text-align:center;opacity:1;">01</p>
+  <p data-id="name-orange" class="t-product-name " style="left:90px;top:473px;width:375px;opacity:1;">Orange Smoothie</p>
+  <p data-id="flavor-orange" class="t-product-caption " style="left:90px;top:524px;width:375px;opacity:1;">Orange flavour</p>
+  <p data-id="button-orange" class="t-product-button " style="left:96px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-rose" src="assets/rose.svg" alt="Rose Smoothie" style="left:614px;top:129px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-rose" class="t-product-number" style="left:660px;top:1110px;width:120px;text-align:center;opacity:1;">02</p>
+  <p data-id="name-rose" class="t-product-name t-product-on-color" style="left:591px;top:777px;width:375px;opacity:1;">Rose Smoothie</p>
+  <p data-id="flavor-rose" class="t-product-caption t-product-on-color" style="left:591px;top:828px;width:375px;opacity:1;">Guava flavour</p>
+  <p data-id="button-rose" class="t-product-button t-product-on-color" style="left:597px;top:912px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-pulasan" src="assets/pulasan.svg" alt="Pulasan Drink" style="left:1080px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-pulasan" class="t-product-number" style="left:1140px;top:342px;width:120px;text-align:center;opacity:1;">03</p>
+  <p data-id="name-pulasan" class="t-product-name " style="left:1090px;top:473px;width:375px;opacity:1;">Pulasan Drink</p>
+  <p data-id="flavor-pulasan" class="t-product-caption " style="left:1090px;top:524px;width:375px;opacity:1;">Rambutan Flavour</p>
+  <p data-id="button-pulasan" class="t-product-button " style="left:1096px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-lychee" src="assets/lychee.svg" alt="lychee Juice" style="left:1574px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-lychee" class="t-product-number" style="left:1620px;top:342px;width:120px;text-align:center;opacity:1;">04</p>
+  <p data-id="name-lychee" class="t-product-name " style="left:1578px;top:473px;width:270px;opacity:1;">lychee Juice</p>
+  <p data-id="flavor-lychee" class="t-product-caption " style="left:1578px;top:524px;width:270px;opacity:1;">Lychee Flavour</p>
+  <p data-id="button-lychee" class="t-product-button " style="left:1584px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+</section>
+
+<!-- 状态 3：Pulasan Drink 激活 -->
+<section data-auto-animate data-auto-animate-duration="0.7333333333333333" data-auto-animate-easing="cubic-bezier(0.42,0,0.58,1)" data-hold="0.6" aria-label="Pulasan Drink">
+  <div data-id="active-panel" class="s-product-pulasan" style="left:960px;top:0px;width:480px;height:1080px;"></div>
+  <img data-id="bottle-orange" src="assets/orange.svg" alt="Orange Smoothie" style="left:120px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-orange" class="t-product-number" style="left:180px;top:342px;width:120px;text-align:center;opacity:1;">01</p>
+  <p data-id="name-orange" class="t-product-name " style="left:90px;top:473px;width:375px;opacity:1;">Orange Smoothie</p>
+  <p data-id="flavor-orange" class="t-product-caption " style="left:90px;top:524px;width:375px;opacity:1;">Orange flavour</p>
+  <p data-id="button-orange" class="t-product-button " style="left:96px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-rose" src="assets/rose.svg" alt="Rose Smoothie" style="left:614px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-rose" class="t-product-number" style="left:660px;top:342px;width:120px;text-align:center;opacity:1;">02</p>
+  <p data-id="name-rose" class="t-product-name " style="left:591px;top:473px;width:375px;opacity:1;">Rose Smoothie</p>
+  <p data-id="flavor-rose" class="t-product-caption " style="left:591px;top:524px;width:375px;opacity:1;">Guava flavour</p>
+  <p data-id="button-rose" class="t-product-button " style="left:597px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-pulasan" src="assets/pulasan.svg" alt="Pulasan Drink" style="left:1080px;top:129px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-pulasan" class="t-product-number" style="left:1140px;top:1110px;width:120px;text-align:center;opacity:1;">03</p>
+  <p data-id="name-pulasan" class="t-product-name t-product-on-color" style="left:1090px;top:777px;width:375px;opacity:1;">Pulasan Drink</p>
+  <p data-id="flavor-pulasan" class="t-product-caption t-product-on-color" style="left:1090px;top:828px;width:375px;opacity:1;">Rambutan Flavour</p>
+  <p data-id="button-pulasan" class="t-product-button t-product-on-color" style="left:1096px;top:912px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-lychee" src="assets/lychee.svg" alt="lychee Juice" style="left:1574px;top:1120px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-lychee" class="t-product-number" style="left:1620px;top:342px;width:120px;text-align:center;opacity:1;">04</p>
+  <p data-id="name-lychee" class="t-product-name " style="left:1578px;top:473px;width:270px;opacity:1;">lychee Juice</p>
+  <p data-id="flavor-lychee" class="t-product-caption " style="left:1578px;top:524px;width:270px;opacity:1;">Lychee Flavour</p>
+  <p data-id="button-lychee" class="t-product-button " style="left:1584px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+</section>
+
+<!-- 状态 4：lychee Juice 激活 -->
+<section data-auto-animate data-auto-animate-duration="0.7333333333333333" data-auto-animate-easing="cubic-bezier(0.42,0,0.58,1)" data-hold="0.5333333333333333" aria-label="lychee Juice">
+  <div data-id="active-panel" class="s-product-lychee" style="left:1440px;top:0px;width:480px;height:1080px;"></div>
+  <img data-id="bottle-orange" src="assets/orange.svg" alt="Orange Smoothie" style="left:120px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-orange" class="t-product-number" style="left:180px;top:342px;width:120px;text-align:center;opacity:1;">01</p>
+  <p data-id="name-orange" class="t-product-name " style="left:90px;top:473px;width:375px;opacity:1;">Orange Smoothie</p>
+  <p data-id="flavor-orange" class="t-product-caption " style="left:90px;top:524px;width:375px;opacity:1;">Orange flavour</p>
+  <p data-id="button-orange" class="t-product-button " style="left:96px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-rose" src="assets/rose.svg" alt="Rose Smoothie" style="left:614px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-rose" class="t-product-number" style="left:660px;top:342px;width:120px;text-align:center;opacity:1;">02</p>
+  <p data-id="name-rose" class="t-product-name " style="left:591px;top:473px;width:375px;opacity:1;">Rose Smoothie</p>
+  <p data-id="flavor-rose" class="t-product-caption " style="left:591px;top:524px;width:375px;opacity:1;">Guava flavour</p>
+  <p data-id="button-rose" class="t-product-button " style="left:597px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-pulasan" src="assets/pulasan.svg" alt="Pulasan Drink" style="left:1080px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-pulasan" class="t-product-number" style="left:1140px;top:342px;width:120px;text-align:center;opacity:1;">03</p>
+  <p data-id="name-pulasan" class="t-product-name " style="left:1090px;top:473px;width:375px;opacity:1;">Pulasan Drink</p>
+  <p data-id="flavor-pulasan" class="t-product-caption " style="left:1090px;top:524px;width:375px;opacity:1;">Rambutan Flavour</p>
+  <p data-id="button-pulasan" class="t-product-button " style="left:1096px;top:666px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-lychee" src="assets/lychee.svg" alt="lychee Juice" style="left:1574px;top:129px;width:216px;height:576px;" data-auto-animate-duration="0.7">
+  <p data-id="number-lychee" class="t-product-number" style="left:1620px;top:1110px;width:120px;text-align:center;opacity:1;">04</p>
+  <p data-id="name-lychee" class="t-product-name t-product-on-color" style="left:1578px;top:777px;width:270px;opacity:1;">lychee Juice</p>
+  <p data-id="flavor-lychee" class="t-product-caption t-product-on-color" style="left:1578px;top:828px;width:270px;opacity:1;">Lychee Flavour</p>
+  <p data-id="button-lychee" class="t-product-button t-product-on-color" style="left:1584px;top:912px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+</section>
+
+<!-- 状态 5：青色栏展开全屏 -->
+<section data-auto-animate data-auto-animate-duration="0.8" data-auto-animate-easing="cubic-bezier(0.42,0,0.58,1)" data-hold="0.43333333333333335" aria-label="Lychee full screen">
+  <div data-id="active-panel" class="s-product-lychee" style="left:0px;top:0px;width:1920px;height:1080px;"></div>
+  <p class="t-product-hero" data-auto-animate-delay="0.23" style="left:300px;top:280px;width:1330px;">LYCHEE</p>
+  <img data-id="bottle-orange" src="assets/orange.svg" alt="Orange Smoothie" style="left:120px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.8">
+  <p data-id="number-orange" class="t-product-number" style="left:180px;top:342px;width:120px;text-align:center;opacity:0;">01</p>
+  <p data-id="name-orange" class="t-product-name " style="left:90px;top:473px;width:375px;opacity:0;">Orange Smoothie</p>
+  <p data-id="flavor-orange" class="t-product-caption " style="left:90px;top:524px;width:375px;opacity:0;">Orange flavour</p>
+  <p data-id="button-orange" class="t-product-button " style="left:96px;top:666px;width:194px;height:56px;opacity:0;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-rose" src="assets/rose.svg" alt="Rose Smoothie" style="left:614px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.8">
+  <p data-id="number-rose" class="t-product-number" style="left:660px;top:342px;width:120px;text-align:center;opacity:0;">02</p>
+  <p data-id="name-rose" class="t-product-name " style="left:591px;top:473px;width:375px;opacity:0;">Rose Smoothie</p>
+  <p data-id="flavor-rose" class="t-product-caption " style="left:591px;top:524px;width:375px;opacity:0;">Guava flavour</p>
+  <p data-id="button-rose" class="t-product-button " style="left:597px;top:666px;width:194px;height:56px;opacity:0;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-pulasan" src="assets/pulasan.svg" alt="Pulasan Drink" style="left:1080px;top:-720px;width:216px;height:576px;" data-auto-animate-duration="0.8">
+  <p data-id="number-pulasan" class="t-product-number" style="left:1140px;top:342px;width:120px;text-align:center;opacity:0;">03</p>
+  <p data-id="name-pulasan" class="t-product-name " style="left:1090px;top:473px;width:375px;opacity:0;">Pulasan Drink</p>
+  <p data-id="flavor-pulasan" class="t-product-caption " style="left:1090px;top:524px;width:375px;opacity:0;">Rambutan Flavour</p>
+  <p data-id="button-pulasan" class="t-product-button " style="left:1096px;top:666px;width:194px;height:56px;opacity:0;">View more <span aria-hidden="true">→</span></p>
+  <img data-id="bottle-lychee" src="assets/lychee.svg" alt="lychee Juice" style="left:834px;top:170px;width:285px;height:760px;" data-auto-animate-duration="0.8">
+  <p data-id="number-lychee" class="t-product-number" style="left:1620px;top:1110px;width:120px;text-align:center;opacity:1;">04</p>
+  <p data-id="name-lychee" class="t-product-name t-product-on-color" style="left:108px;top:777px;width:375px;opacity:1;">lychee Juice</p>
+  <p data-id="flavor-lychee" class="t-product-caption t-product-on-color" style="left:108px;top:828px;width:375px;opacity:1;">Lychee Flavour</p>
+  <p data-id="button-lychee" class="t-product-button t-product-on-color" style="left:116px;top:912px;width:194px;height:56px;opacity:1;">View more <span aria-hidden="true">→</span></p>
+  <p class="t-product-caption t-product-on-color" data-auto-animate-delay="0.25" style="left:520px;top:62px;width:830px;">Orange　　　 Rose　　　 Rambutan　　　 Pulasan</p>
+  <p class="t-product-capacity t-product-on-color is-selected" data-auto-animate-delay="0.25" style="left:1740px;top:323px;width:108px;height:108px;">500<br>ML</p>
+  <p class="t-product-capacity t-product-on-color " data-auto-animate-delay="0.25" style="left:1740px;top:458px;width:108px;height:108px;">250<br>ML</p>
+  <p class="t-product-capacity t-product-on-color " data-auto-animate-delay="0.25" style="left:1740px;top:593px;width:108px;height:108px;">125<br>ML</p>
+  <p class="t-product-capacity t-product-on-color" data-auto-animate-delay="0.25" style="left:1740px;top:860px;width:108px;height:108px;">ORCA<br>WATER</p>
+</section>
+</div></div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body></html>
