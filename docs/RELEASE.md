@@ -39,8 +39,9 @@ semver tag 的 Release),有新版就下载,下次启动替换。只在发布版�
 
 和 Compositor 用同一个 Apple 团队和 Developer ID 证书(同一个团队的应用可以共用)。
 
-在本仓 **Settings → Environments** 建一个 `release` Environment(建议限制只能从 `main` 部署、
-加上必须审批),把下面这些配进去:
+在本仓 **Settings → Environments** 建一个 `release` Environment(限制只能从 `main` 部署),
+把下面这些配进去。不加审批人:两个工作流都是手动触发,要仓库写权限才点得了,fork 和路人触发不了,
+fork 来的 PR 也拿不到这些 Secret。
 
 | 类型     | 名称                           | 内容                                            |
 | -------- | ------------------------------ | ----------------------------------------------- |
