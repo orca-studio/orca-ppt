@@ -1,178 +1,184 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RequestResult } from '@orca-ppt/contracts'
-import { BrandMark } from './BrandMark.js'
-import { Button, buttonClass } from './ui/Button.js'
+import { Button } from './ui/Button.js'
 import { assetUrl } from './assets.js'
-import { sectionsOf } from './facets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
-export type Template = RequestResult<'catalog.templates'>['templates'][number]
+export type Recipe = RequestResult<'catalog.recipes'>['recipes'][number]
 
 /**
- * 没有打开稿子时的首屏:选个起头。
+ * 没有打开稿子时的首屏:**同款画廊**。看样片,在卡片右上角复制「做同款」的提示词,贴进
+ * 自己的 agent —— agent 读 skill 里的配方、照着做,做完在这里打开。
  *
- * **先选主题,不是先选示例。** 主题就是场景 —— 用这个产品的人都带着自己的场合来:
- * 年度复盘、对外路演、内部分享。所以主题卡上写的是「它适合什么场合」,不只是长什么样。
- *
- * 五张主题样张的**内容完全一样**,只有设计不同(skill 的 scripts/theme-samples.mjs
- * 生成)。内容各不相同的话人只能一份份浏览,没法把几个摆在一起比。
- *
- * 示例收在下面:它们是「别人怎么用的」,是参考,不是起点 —— 从一份别人的成稿开始改,
- * 改到后来常常还是别人的稿子。
+ * 界面不从同款建稿:同款是配方,不是起始文件。通用的设计原则和审美(主题、配色、内容
+ * 组织、逐页动效)内化在 skill 里,在 agent 侧用,不在这儿做成选择。
+ * 打开已有的稿子走应用菜单。
  */
 export interface GalleryProps {
-  themes: Theme[]
-  /** 最近用过的主题(文件名),最近的在前。**不是标签** —— 系统算出来的一个视图。 */
-  recent: string[]
-  /** 标签 id → 显示名。词表在 skill 里,界面只负责显示 label。 */
-  tagLabel: (id: string) => string
-  templates: Template[]
-  busy: boolean
+  recipes: Recipe[]
+  /** 点卡片:在工作台里打开这个同款的样稿(只读)。 */
+  onPresent: (id: string) => void
   error: string | undefined
-  /** 从空白起始文件 + 一个主题新建。 */
-  onCreate: (template: Template, title: string, theme: string) => void
-  onOpen: () => void
+}
+
+export function Gallery({ recipes, onPresent, error }: GalleryProps) {
+  return (
+    <div className="gallery">
+      {/* 不放标题:首页只有同款卡片,「做同款」卡片上已经写着。这一条只当窗口拖动区 */}
+      <header aria-hidden="true" />
+
+      <div className="gallery-body">
+        {recipes.length === 0 ? (
+          <p className="gallery-empty">
+            skill 里还没有同款。同款在 skill 的 <code>recipes/</code>{' '}
+            目录下，写好之后重开首页就会出现。
+          </p>
+        ) : (
+          <div className="gallery-grid gallery-grid--recipes">
+            {recipes.map((item) => (
+              <RecipeCard key={item.id} recipe={item} onPresent={() => onPresent(item.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {error && <p className="gallery-error">{error}</p>}
+    </div>
+  )
 }
 
 /**
- * 模式。这个轴恰好互斥(两个起始文件),所以做成一个下拉 —— 互斥不等于它是分类:
- * 它只是这个轴上恰好只有一个值。页型(Bento、时间线)是叠加的,走另一条路。
+ * 样片悬停才播:一屏好几段视频同时放,既吵又费电。触屏没有悬停(点一下会误触发),
+ * 用户开了减少动效也不自动播 —— 封面已经说明了这个同款长什么样。
  */
-const MODES: Array<{ key: string; title: string; hint: string }> = [
-  { key: 'standard', title: '汇报稿', hint: '工作汇报、产品介绍、数据复盘' },
-  { key: 'story', title: '故事稿', hint: '一页一张照片,讲演变' },
-]
+const canPreview = () =>
+  matchMedia('(hover: hover) and (pointer: fine)').matches &&
+  !matchMedia('(prefers-reduced-motion: reduce)').matches
 
-export function Gallery({
-  themes,
-  recent,
-  tagLabel,
-  templates,
-  busy,
-  error,
-  onCreate,
-  onOpen,
-}: GalleryProps) {
-  const [mode, setMode] = useState('standard')
-  const [theme, setTheme] = useState<string | undefined>()
-  const [title, setTitle] = useState('')
+/** 一张同款卡。 */
+function RecipeCard({ recipe, onPresent }: { recipe: Recipe; onPresent: () => void }) {
+  const video = useRef<HTMLVideoElement>(null)
+  const [hover, setHover] = useState(false)
+  const [open, setOpen] = useState(false)
 
-  // **没样张的主题不显示** —— 一张白卡片,人看不出自己在挑什么。新主题做好样张自然出现。
-  const shown = useMemo(() => themes.filter((item) => item.sample), [themes])
-
-  const themeSections = useMemo(
-    () =>
-      sectionsOf(shown, {
-        // 「最近使用」排最前,而且**不从 tags 里读** —— 它不是标签。
-        derived: [
-          {
-            title: '最近使用',
-            items: recent
-              .map((name) => shown.find((item) => item.name === name))
-              .filter((item): item is Theme => item !== undefined),
-          },
-        ],
-        fallback: '全部主题',
-        label: tagLabel,
-      }),
-    [shown, recent, tagLabel],
-  )
-
-  const blank = templates.find((item) => item.mode === mode)
-  const picked = theme ? blank : undefined
-  const pickedName = themes.find((item) => item.name === theme)?.title ?? ''
-
-  const create = () => {
-    if (!picked) return
-    // 没起名就用选中的那个名字,不拦着人往下走
-    if (!theme) return
-    onCreate(picked, title.trim() || pickedName, theme)
-  }
-
-  if (themes.length === 0 && templates.length === 0) {
-    return (
-      <div className="gallery">
-        <header>
-          <h1 className="gallery-brand">
-            <BrandMark size={36} />
-            新建演示稿
-          </h1>
-          <Button onClick={onOpen}>打开已有的…</Button>
-        </header>
-        <p className="gallery-empty">
-          找不到 orca-ppt-skill —— 主题和示例都在它里面。装上之后重开一次。
-        </p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    const el = video.current
+    if (!el) return
+    if (hover && canPreview()) {
+      void el.play().catch(() => {})
+      return
+    }
+    // 移开就回到封面:停在播到一半的那一帧,看着像卡住了。
+    // load() 把元素重置到初始状态,poster 重新露出来,下次悬停从头播。
+    if (!el.paused || el.currentTime > 0) {
+      el.pause()
+      el.load()
+    }
+  }, [hover])
 
   return (
-    <div className="gallery">
-      <header>
-        <h1 className="gallery-brand">
-          <BrandMark size={36} />
-          选取主题
-        </h1>
-        <div className="gallery-head-right">
-          {/* 版式是第二个、很小的选择:它决定稿子的结构,不决定长什么样。 */}
-          <select
-            className={buttonClass()}
-            value={mode}
-            onChange={(event) => setMode(event.target.value)}
-            aria-label="模式"
-          >
-            {MODES.map((item) => (
-              <option key={item.key} value={item.key}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-          <Button onClick={onOpen}>打开已有的…</Button>
-        </div>
-      </header>
-
-      <div className="gallery-body">
-        <p className="gallery-note">{MODES.find((item) => item.key === mode)?.hint}</p>
-
-        {themeSections.map((section) => (
-          <section key={section.title} className="gallery-themes">
-            <h2>{section.title}</h2>
-            <div className="gallery-grid gallery-grid--themes">
-              {section.items.map((item) => (
-                <button
-                  key={item.name}
-                  type="button"
-                  data-picked={theme === item.name}
-                  onClick={() => setTheme(item.name)}
-                >
-                  <img src={assetUrl(item.sample)} alt="" />
-                  <span className="gallery-title">{item.title}</span>
-                  {item.summary && <span className="gallery-scene">{item.summary}</span>}
-                  {item.tags.length > 0 && (
-                    <span className="gallery-style">{item.tags.map(tagLabel).join(' · ')}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
+    <article
+      className="gallery-recipe"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div className="gallery-media">
+        {/* 样片区整块是打开样稿的按钮;「做同款」压在右上角,和它是兄弟不是子元素(按钮里不能套按钮) */}
+        <button
+          type="button"
+          className="gallery-play"
+          onClick={onPresent}
+          // 不用 title:原生提示跟着鼠标,正好压在悬停预览上
+          aria-label={`打开「${recipe.title}」的样稿`}
+        >
+          {recipe.preview ? (
+            <video
+              // 样片换了(缓存录好了新的一份)就整个换掉元素,不然还播着旧的
+              key={recipe.preview}
+              ref={video}
+              src={assetUrl(recipe.preview)}
+              poster={assetUrl(recipe.poster)}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            />
+          ) : recipe.poster ? (
+            <img src={assetUrl(recipe.poster)} alt="" />
+          ) : (
+            <span className="gallery-placeholder">还没有样片</span>
+          )}
+        </button>
+        <Button
+          variant="primary"
+          size="sm"
+          className="gallery-copy"
+          on={open}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          onClick={() => setOpen((value) => !value)}
+        >
+          做同款
+        </Button>
+        {open && <PromptMenu prompt={recipe.prompt} onClose={() => setOpen(false)} />}
       </div>
+      <span className="gallery-title gallery-title--center">{recipe.title}</span>
+    </article>
+  )
+}
 
-      {picked && (
-        <footer>
-          <input
-            value={title}
-            placeholder={pickedName}
-            onChange={(event) => setTitle(event.target.value)}
-            onKeyDown={(event) => event.key === 'Enter' && create()}
-          />
-          <Button variant="primary" disabled={busy} onClick={create}>
-            {busy ? '建着…' : '创建'}
-          </Button>
-        </footer>
-      )}
+/**
+ * 「做同款」下面挂的菜单:先看清要复制的是什么,再复制。提示词可能比菜单长,
+ * 预览区自己滚动,复制按钮钉在底下不跟着滚走。
+ *
+ * 从按钮所在的右上角长出来(origin-aware),Esc 和点外面关掉。
+ */
+function PromptMenu({ prompt, onClose }: { prompt: string; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const copyButton = useRef<HTMLButtonElement>(null)
+  const [copied, setCopied] = useState(false)
+  const close = useRef(onClose)
+  close.current = onClose
 
-      {error && <p className="gallery-error">{error}</p>}
+  useEffect(() => {
+    copyButton.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close.current()
+    }
+    // 点「做同款」本身由按钮的 onClick 收起,这里只管菜单和按钮之外
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node
+      if (ref.current?.contains(target)) return
+      if ((target as HTMLElement).closest?.('.gallery-copy')) return
+      close.current()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 1600)
+    return () => clearTimeout(timer)
+  }, [copied])
+
+  const copy = () => void navigator.clipboard.writeText(prompt).then(() => setCopied(true))
+
+  return (
+    <div ref={ref} className="gallery-prompt" role="dialog" aria-label="做同款提示词">
+      <pre>{prompt}</pre>
+      <footer>
+        <Button ref={copyButton} variant="primary" size="sm" onClick={copy}>
+          {/* 换 key 让新文字重新入场:很短的 blur + 淡入,读起来是一个按钮变了状态,不是两段字硬换 */}
+          <span key={copied ? 'copied' : 'idle'} className="gallery-copy-label">
+            {copied ? '已复制' : '复制'}
+          </span>
+        </Button>
+      </footer>
     </div>
   )
 }

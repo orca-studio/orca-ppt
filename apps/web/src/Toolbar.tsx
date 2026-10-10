@@ -1,50 +1,40 @@
-import { useRef, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { HistoryState } from '@orca-ppt/contracts'
 import type { Layout } from './layout.js'
-import { ViewMenu } from './ViewMenu.js'
 import { Button } from './ui/Button.js'
 
 /** 窗口标题和视图切换，同时保留 macOS 窗口拖动区。 */
 export interface ToolbarProps {
   title: string | undefined
+  /** 回首页(关掉这份稿子)。 */
+  onHome: () => void
   children?: ReactNode
   layout: Layout
   onLayoutChange: (next: Partial<Layout>) => void
 }
 
-export function Toolbar({ title, layout, onLayoutChange, children }: ToolbarProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const viewRef = useRef<HTMLDivElement>(null)
-
+export function Toolbar({ title, layout, onLayoutChange, onHome, children }: ToolbarProps) {
   return (
     <header className="toolbar">
-      <div className="toolbar-view" ref={viewRef}>
+      {/* 首页和页胶片是一组:同款圆钮挨着放,不和一段文字混排 */}
+      <div className="toolbar-nav">
+        <Button variant="ghost" icon onClick={onHome} title="首页" aria-label="首页">
+          <HomeIcon />
+        </Button>
         <Button
           variant="ghost"
           icon
-          on={menuOpen || layout.nav !== 'off'}
-          onClick={() => setMenuOpen((open) => !open)}
-          title={menuOpen ? undefined : '视图'}
-          aria-label="视图"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
+          on={layout.nav}
+          onClick={() => onLayoutChange({ nav: !layout.nav })}
+          title={layout.nav ? '收起页胶片' : '显示页胶片'}
+          aria-label="页胶片"
+          aria-pressed={layout.nav}
         >
           <SidebarIcon />
         </Button>
-        {menuOpen && (
-          <ViewMenu
-            layout={layout}
-            containerRef={viewRef}
-            onChange={(next) => {
-              onLayoutChange(next)
-              // 选完就关,和 Keynote 一致 —— 开着会挡住刚切出来的视图。
-              setMenuOpen(false)
-            }}
-            onClose={() => setMenuOpen(false)}
-          />
-        )}
       </div>
 
+      {/* 标题居中,和 macOS 窗口标题一样;两边按钮多少变了它也不跟着挪 */}
       <span className="toolbar-title">{title ?? 'Orca PPT'}</span>
       <div className="toolbar-agent">{children}</div>
     </header>
@@ -52,16 +42,18 @@ export function Toolbar({ title, layout, onLayoutChange, children }: ToolbarProp
 }
 
 export interface CanvasControlsProps {
-  canPresent: boolean
-  onPresent: () => void
   /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
   history: HistoryState
+  /** 摆不摆撤销 / 重做。只读样稿上不摆。 */
+  showHistory: boolean
   /** agent 正拿着稿子。撤销 / 重做会改稿子,这时点不了(server 那头也会拒)。 */
   locked: boolean
   onUndo: () => void
   onRedo: () => void
   /** 进入取锚状态:点画布上一处,指给 agent 看。 */
   picking: boolean
+  /** 摆不摆「指给 agent 看」。只读样稿上不摆。 */
+  showPick: boolean
   canPick: boolean
   onPick: () => void
   slide: number
@@ -70,13 +62,13 @@ export interface CanvasControlsProps {
 }
 
 export function CanvasControls({
-  canPresent,
-  onPresent,
   history,
+  showHistory,
   locked,
   onUndo,
   onRedo,
   picking,
+  showPick,
   canPick,
   onPick,
   slide,
@@ -86,35 +78,43 @@ export function CanvasControls({
   return (
     <div className="canvas-controls" role="toolbar" aria-label="画布操作">
       <div className="canvas-controls-group">
-        {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
-        <Button
-          variant="ghost"
-          icon
-          onClick={onUndo}
-          disabled={!history.canUndo || locked}
-          title={
-            locked ? LOCKED_TITLE : history.undo ? `撤销:${history.undo}(⌘Z)` : '没有可以撤销的改动'
-          }
-          aria-label="撤销"
-        >
-          <UndoIcon />
-        </Button>
-        <Button
-          variant="ghost"
-          icon
-          onClick={onRedo}
-          disabled={!history.canRedo || locked}
-          title={
-            locked
-              ? LOCKED_TITLE
-              : history.redo
-                ? `重做:${history.redo}(⇧⌘Z)`
-                : '没有可以重做的改动'
-          }
-          aria-label="重做"
-        >
-          <UndoIcon flipped />
-        </Button>
+        {showHistory && (
+          <>
+            {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
+            <Button
+              variant="ghost"
+              icon
+              onClick={onUndo}
+              disabled={!history.canUndo || locked}
+              title={
+                locked
+                  ? LOCKED_TITLE
+                  : history.undo
+                    ? `撤销:${history.undo}(⌘Z)`
+                    : '没有可以撤销的改动'
+              }
+              aria-label="撤销"
+            >
+              <UndoIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              icon
+              onClick={onRedo}
+              disabled={!history.canRedo || locked}
+              title={
+                locked
+                  ? LOCKED_TITLE
+                  : history.redo
+                    ? `重做:${history.redo}(⇧⌘Z)`
+                    : '没有可以重做的改动'
+              }
+              aria-label="重做"
+            >
+              <UndoIcon flipped />
+            </Button>
+          </>
+        )}
       </div>
       <div className="canvas-controls-pages">
         <Button
@@ -125,7 +125,7 @@ export function CanvasControls({
           aria-label="上一页"
           title="上一页"
         >
-          <span aria-hidden="true">‹</span>
+          <ChevronIcon />
         </Button>
         <span className="canvas-controls-count">
           第 {slide + 1} / {slideCount} 页
@@ -138,31 +138,25 @@ export function CanvasControls({
           aria-label="下一页"
           title="下一页"
         >
-          <span aria-hidden="true">›</span>
+          <ChevronIcon flipped />
         </Button>
       </div>
       <div className="canvas-controls-group canvas-controls-primary">
-        {/* 指给 agent 看是次要动作:和播放一样是圆钮,开着的时候才上强调色。 */}
-        <Button
-          icon
-          on={picking}
-          aria-pressed={picking}
-          onClick={onPick}
-          disabled={!canPick}
-          title={picking ? '点画布上的元素,Esc 取消' : '指给 agent 看:点画布上一处'}
-          aria-label="指给 agent 看"
-        >
-          <TargetIcon />
-        </Button>
-        <Button
-          onClick={onPresent}
-          disabled={!canPresent}
-          title={canPresent ? '全屏放映(⌥⌘P,Esc 退出)' : '成品还没出来'}
-          aria-label="全屏放映"
-        >
-          <PlayIcon />
-          <span>放映</span>
-        </Button>
+        {/* 指给 agent 看:圆钮,开着的时候才上强调色。只读样稿上不摆 —— 指出来也没人能改。
+            放映不摆按钮:在工作台里翻页本身就是在放;全屏放映走应用菜单(⌥⌘P)。 */}
+        {showPick && (
+          <Button
+            icon
+            on={picking}
+            aria-pressed={picking}
+            onClick={onPick}
+            disabled={!canPick}
+            title={picking ? '点画布上的元素,Esc 取消' : '指给 agent 看:点画布上一处'}
+            aria-label="指给 agent 看"
+          >
+            <TargetIcon />
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -171,13 +165,6 @@ export function CanvasControls({
 const LOCKED_TITLE = 'agent 正在操作,等它停下再撤销'
 
 /** 用 SVG 不用「▶」:那个字符的字形本身偏右偏上,怎么摆都不在圆心上。 */
-function PlayIcon() {
-  return (
-    <svg width="9" height="10" viewBox="0 0 9 10" aria-hidden="true">
-      <path d="M1 1.2 L8 5 L1 8.8 Z" fill="currentColor" />
-    </svg>
-  )
-}
 
 /** 回转箭头。重做是它的镜像。 */
 function UndoIcon({ flipped = false }: { flipped?: boolean }) {
@@ -216,6 +203,46 @@ function TargetIcon() {
 }
 
 /** 和 macOS 侧栏开关一个意思:一个方框,左边那一竖是侧栏。 */
+function HomeIcon() {
+  return (
+    <svg width="15" height="14" viewBox="0 0 15 14" aria-hidden="true">
+      <path
+        d="M1.5 6.6 7.5 1.4l6 5.2M3.3 5.2v7.1h3V8.9h2.4v3.4h3V5.2"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * 翻页箭头。不用 ‹ › 字符:那两个字形在字框里偏下,和旁边的中文页码对不齐。
+ * 画成 SVG,几何上就是居中的。
+ */
+function ChevronIcon({ flipped = false }: { flipped?: boolean }) {
+  return (
+    <svg
+      width="8"
+      height="13"
+      viewBox="0 0 8 13"
+      aria-hidden="true"
+      style={flipped ? { transform: 'scaleX(-1)' } : undefined}
+    >
+      <path
+        d="M6.5 1.5 1.5 6.5l5 5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function SidebarIcon() {
   return (
     <svg width="15" height="13" viewBox="0 0 15 13" aria-hidden="true">

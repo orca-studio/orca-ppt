@@ -276,6 +276,11 @@ export const requests = {
        */
       theme: z.string().optional(),
       /**
+       * 只读。稿子目录落在 skill 里(同款样稿、示例)就是只读的:改字、改页、换图、
+       * 撤销重做服务端都会拒,界面也不给改。
+       */
+      readOnly: z.boolean().optional(),
+      /**
        * 稿子里真实的页数。skill 做出来的 deck 没有 outline.json,slides 为空,
        * 翻页和页码要靠这个数 —— 它来自 HTML 本身,永远是准的。
        */
@@ -336,6 +341,49 @@ export const requests = {
         }),
       ),
     }),
+  },
+  /**
+   * 同款:skill 里 `recipes/<id>/RECIPE.md` 的配方。首页就是同款画廊。
+   *
+   * 同款**不是起始文件**:界面不从它建稿,只给人看样片、复制 `prompt` 贴进自己的 agent ——
+   * agent 读配方、照着做。所以这里没有「从同款新建」的方法,也不该有。
+   */
+  'catalog.recipes': {
+    params: z.object({}),
+    result: z.object({
+      recipes: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          /** 汇报稿还是故事稿,原样取自配方。 */
+          mode: z.string(),
+          /** 一句话:什么场合用。 */
+          summary: z.string().optional(),
+          /** 样片缓存(webm)的绝对路径。还没录好就没有,录好后推 recipes.changed。 */
+          preview: z.string().optional(),
+          /** 样片封面的绝对路径。 */
+          poster: z.string().optional(),
+          /** 「做同款」的 agent 提示词,用户复制后贴进自己的 agent。 */
+          prompt: z.string(),
+        }),
+      ),
+    }),
+  },
+  /**
+   * 打开一个同款的样稿看。首页点卡片走它,agent 说「打开这个同款给我看」也走它。
+   *
+   * 进的是普通工作台(页胶片、画布、转场时间轴都在),只是**只读**:样稿在 skill 里,
+   * 发布版里那是 app 包内的文件。打开后和 `deck.open` 一样推 `deck.opened`,
+   * `deck.open` 的结果里 `readOnly` 为真。
+   */
+  'recipe.present': {
+    params: z.object({ id: z.string() }),
+    result: z.object({}),
+  },
+  /** 关掉这份稿子,回首页。工具栏左上角的「首页」走它。 */
+  'deck.close': {
+    params: z.object({ deckId: z.string() }),
+    result: z.object({}),
   },
   /** 跳到第几页。界面点页胶片走它,agent 说「你看第 4 页」也走它。 */
   'deck.showSlide': {
@@ -629,6 +677,11 @@ export const requests = {
     }),
     result: z.object({}),
   },
+  /** 壳把同款样片录好了(或者录失败了)。只有壳会调。 */
+  'preview.result': {
+    params: z.object({ requestId: z.string(), error: z.string().optional() }),
+    result: z.object({}),
+  },
   /** 壳把截好的图交回来。只有壳会调。 */
   'visual.prepare': { params: VisualRequest.extend({ deckId: z.string() }), result: VisualTarget },
   'visual.result': {
@@ -789,6 +842,8 @@ export const pushes = {
   'history.changed': HistoryState.extend({ deckId: z.string() }),
   /** 稿子换了人拿。界面据此切换只读、显示接管 / 交还。 */
   'control.changed': Control,
+  /** 稿子关了(回首页)。界面据此回到同款画廊。 */
+  'deck.closed': z.object({ deckId: z.string() }),
   /** 请壳开一个全屏窗口放映。只有壳做得到。 */
   'present.request': z.object({
     deckId: z.string(),
@@ -833,6 +888,22 @@ export const pushes = {
     /** 输出宽度。不给就是页胶片用的 320。 */
     width: z.number().int().positive().optional(),
   }),
+  /**
+   * 请壳录一段同款样片。样片是**按内容寻址的缓存**:`outPath` 里带着样稿和它引用的
+   * 运行时文件的摘要,内容不变就不会再录。壳逐帧 seek 录成 webm,顺手在 `coverAt` 秒
+   * 截一张封面写到 `posterPath`。
+   */
+  'preview.request': z.object({
+    deckId: z.string(),
+    requestId: z.string(),
+    previewUrl: z.string(),
+    outPath: z.string(),
+    posterPath: z.string(),
+    /** 封面取第几秒。不给就取全片 75% 处。 */
+    coverAt: z.number().nonnegative().optional(),
+  }),
+  /** 同款列表变了(样片录好了)。首页重新拉一次 catalog.recipes。 */
+  'recipes.changed': z.object({}),
   /** 有人要求跳页 —— 可能是 agent。画布跟着走。 */
   'deck.slide': z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),
 } as const

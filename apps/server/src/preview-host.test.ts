@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { realpath } from 'node:fs/promises'
 import { deckRevision } from './decks.js'
 import { planPreview } from './preview.js'
-import { PreviewHost } from './preview-host.js'
+import { PreviewHost, parseRange } from './preview-host.js'
 
 /**
  * `/asset` 是个文件服务,越界必须拒绝 —— 它服务的是用户机器上的绝对路径。
@@ -112,5 +112,20 @@ describe('preview version evidence', () => {
     const head = await fetch(base + mount.urlPath, { method: 'HEAD' })
     expect(await head.text()).toBe('')
     expect(head.headers.get('server-timing')).toBe(second.headers.get('server-timing'))
+  })
+})
+
+describe('parseRange', () => {
+  it('认单段的三种写法', () => {
+    expect(parseRange('bytes=0-99', 1000)).toEqual({ start: 0, end: 99 })
+    expect(parseRange('bytes=900-', 1000)).toEqual({ start: 900, end: 999 })
+    expect(parseRange('bytes=-100', 1000)).toEqual({ start: 900, end: 999 })
+    expect(parseRange('bytes=0-5000', 1000)).toEqual({ start: 0, end: 999 })
+  })
+
+  it('越界是 416,不认得的按整份回', () => {
+    expect(parseRange('bytes=1000-', 1000)).toBe('unsatisfiable')
+    expect(parseRange('bytes=0-1,5-9', 1000)).toBeUndefined()
+    expect(parseRange(undefined, 1000)).toBeUndefined()
   })
 })

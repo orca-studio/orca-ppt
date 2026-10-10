@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   CanvasElement,
   Control,
-  DeckPhase,
   HistoryState,
   PendingRequest,
   RequestResult,
@@ -10,23 +9,19 @@ import type {
 } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
-import { PhaseRail } from './PhaseRail.js'
-import { Gallery, type Theme } from './Gallery.js'
+import { Gallery, type Recipe, type Theme } from './Gallery.js'
 import { Inspector } from './Inspector.js'
 import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
-import { LightTable } from './LightTable.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
 import { idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
 import { CanvasControls, Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
-import { Button } from './ui/Button.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
-type Template = RequestResult<'catalog.templates'>['templates'][number]
 
 export function App({ serverUrl }: { serverUrl: string }) {
   const transport = useRef<Transport>(undefined)
@@ -53,24 +48,26 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
-  const [templates, setTemplates] = useState<Template[]>([])
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [themes, setThemes] = useState<Theme[]>([])
-  /** 最近用过的主题。**不是标签** —— 系统从使用记录算出来的,所以单独一个字段。 */
-  const [recent, setRecent] = useState<string[]>([])
-  /** 标签 id → 显示名。词表在 skill 里,界面只管显示。 */
-  const [tagLabels, setTagLabels] = useState<Record<string, string>>({})
   /** 页面类型 id → 显示名。和标签一样:文件里写 id,界面显示 label。 */
   const [pageLabels, setPageLabels] = useState<Record<string, string>>({})
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
-  const [creating, setCreating] = useState(false)
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [selection, setSelection] = useState<CanvasElement | null>(null)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
+  /**
+   * 正在打开的那份。`deck.open` 自己也会推 `deck.opened`,而且推送比响应先到 ——
+   * 不记下来的话,下面的订阅会把同一份再开一次,来回好几轮(缩略图跟着重渲好几次)。
+   */
+  const openingRef = useRef<string | undefined>(undefined)
+
   const openWith = useCallback(async (via: Transport, path: string) => {
-    if (!path) return
+    if (!path || openingRef.current === path) return
+    openingRef.current = path
     setError(undefined)
     try {
       const opened = await via.request('deck.open', { path })
@@ -86,6 +83,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setDeck(undefined)
       deckRef.current = undefined
       setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      if (openingRef.current === path) openingRef.current = undefined
     }
   }, [])
 
@@ -184,9 +183,48 @@ export function App({ serverUrl }: { serverUrl: string }) {
       stage.current?.autoplay(data.on)
     })
 
+    // 稿子关了就回首页 —— 人点了工具栏的「首页」,或者 agent 调了 close_deck。
+    next.subscribe('deck.closed', (data) => {
+      if (deckRef.current?.deck.id !== data.deckId) return
+      setDeck(undefined)
+      deckRef.current = undefined
+      setSelection(null)
+      setRequests([])
+      setThumbs([])
+    })
+
     // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
       void window.orca?.present?.({ previewUrl: data.previewUrl, slide: data.slide })
+    })
+
+    // 同款样片也只有壳录得了。录好之后 server 会推 recipes.changed。
+    next.subscribe('preview.request', (data) => {
+      void (async () => {
+        try {
+          if (!window.orca?.renderPreview) throw new Error('这个客户端录不了样片')
+          await window.orca.renderPreview({
+            previewUrl: data.previewUrl,
+            outPath: data.outPath,
+            posterPath: data.posterPath,
+            ...(data.coverAt !== undefined ? { coverAt: data.coverAt } : {}),
+          })
+          await next.request('preview.result', { requestId: data.requestId })
+        } catch (cause) {
+          await next
+            .request('preview.result', {
+              requestId: data.requestId,
+              error: cause instanceof Error ? cause.message : String(cause),
+            })
+            .catch(() => {})
+        }
+      })()
+    })
+    next.subscribe('recipes.changed', () => {
+      void next
+        .request('catalog.recipes', {})
+        .then((result) => setRecipes(result.recipes))
+        .catch(() => {})
     })
 
     // 缩略图也只有壳渲得了(隐藏窗口,不碰可见画布)。
@@ -390,18 +428,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
       }
     })
 
+    // 首页是同款画廊。
     void next
-      .request('catalog.templates', {})
-      .then((result) => setTemplates(result.templates))
-      .catch(() => setTemplates([]))
+      .request('catalog.recipes', {})
+      .then((result) => setRecipes(result.recipes))
+      .catch(() => setRecipes([]))
 
-    // 主题是选择器的主角 —— 主题就是场景,人带着自己的场合来。
+    // 主题名和页面类型的显示名:工具栏、页胶片要用。
     void next
       .request('catalog.list', {})
       .then((result) => {
         setThemes(result.themes)
-        setRecent(result.recent)
-        setTagLabels(Object.fromEntries(result.tags.map((tag) => [tag.id, tag.label])))
         setPageLabels(Object.fromEntries(result.pages.map((page) => [page.id, page.label])))
         // 标签不能自由决定:拼错的、没挂标签的都在这儿,不默默放过。
         if (result.tagIssues.length > 0) console.warn('标签有问题:', result.tagIssues)
@@ -410,6 +447,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     const initial = window.orca?.initialDeck
     if (initial) void openWith(next, initial)
+
+    return () => {
+      next.close()
+      if (transport.current === next) transport.current = undefined
+    }
   }, [serverUrl, openWith])
 
   /** 页胶片的缩略图。通过隐藏窗口生成，不驱动用户当前画布。 */
@@ -563,19 +605,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   )
 
   /** 点「跑」不直接驱动谁 —— 挂进待办队列,等 agent 来拉。 */
-  const requestPhase = useCallback((phase: DeckPhase) => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current) return
-    void active.request('requests.add', { deckId: current.deck.id, kind: 'phase', phase })
-  }, [])
-
-  const removeRequest = useCallback((id: string) => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current) return
-    void active.request('requests.remove', { deckId: current.deck.id, id })
-  }, [])
 
   const present = useCallback(() => {
     const active = transport.current
@@ -593,10 +622,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
   }, [])
 
-  /** 菜单里的「显示/隐藏页胶片」:在导航器和收起之间来回。 */
+  /** 菜单里的「显示/隐藏页胶片」。 */
   const toggleNav = useCallback(() => {
     setLayout((current) => {
-      const merged: Layout = { ...current, nav: current.nav === 'off' ? 'thumbs' : 'off' }
+      const merged: Layout = { ...current, nav: !current.nav }
       writeLayout(merged)
       return merged
     })
@@ -628,34 +657,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // 走协议:agent 说「自动放一遍」走的是同一条路。
     void active.request('deck.autoplay', { deckId: current.deck.id, on: !autoplay })
   }, [autoplay])
-
-  /** 选了模板就建、就打开 —— 中间不该再让人挑一次目录。 */
-  const create = useCallback(
-    async (template: Template, title: string, theme?: string) => {
-      const active = transport.current
-      if (!active) return
-      // 放哪儿:让人挑一次父目录。deck 是磁盘上的目录,得由他决定放在哪。
-      const parentDir = await window.orca?.pickDeck?.()
-      if (!parentDir) return
-
-      setCreating(true)
-      setError(undefined)
-      try {
-        const made = await active.request('deck.create', {
-          parentDir,
-          title,
-          from: template.id,
-          ...(theme ? { theme } : {}),
-        })
-        await openWith(active, made.path)
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : String(cause))
-      } finally {
-        setCreating(false)
-      }
-    },
-    [openWith],
-  )
 
   /** 重放一次翻页:先跳回上一页,再往后翻一次 —— 往后翻才播转场。 */
   const replay = useCallback((from: number) => {
@@ -727,18 +728,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   toggleAutoplayRef.current = toggleAutoplay
 
   /** 这一步该怎么做。上游不合规时 server 会拒绝并说清卡在哪 —— 那也是人要看的。 */
-  const loadPrompt = useCallback(async (phase: DeckPhase) => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current) return ''
-    const result = await active.request('phase.prompt', {
-      deckId: current.deck.id,
-      phase,
-      request: '',
-    })
-    if (result.prompt) return result.prompt
-    return `这一步还不能开始,卡在「${result.blockedBy}」:\n${result.issues.map((i) => `· ${i}`).join('\n')}`
-  }, [])
 
   const goto = useCallback((index: number) => {
     const active = transport.current
@@ -746,14 +735,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     if (!active || !current) return
     // 走协议而不是直接驱动画布:跳页是一个协议方法,agent 也能调它。
     void active.request('deck.showSlide', { deckId: current.deck.id, index })
-  }, [])
-
-  const openArtifact = useCallback(async (phase: DeckPhase) => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current) return
-    const { path } = await active.request('artifact.path', { deckId: current.deck.id, phase })
-    void window.orca?.openFile?.(path)
   }, [])
 
   /**
@@ -839,6 +820,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   // 没打开稿子时,整屏是模板选择器 —— 三栏都没有内容可放,摆在那儿只是空框。
   const agentHolds = control.holder === 'agent'
+  /** 改不了:agent 拿着,或者这份是 skill 里的只读样稿。 */
+  const readOnly = agentHolds || Boolean(deck?.readOnly)
 
   if (!deck) {
     // 选择器上不摆顶栏:播放、自动播放、视图切换在这儿全是灰的 —— 没有稿子可播、
@@ -846,14 +829,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
     return (
       <div className="app app--gallery">
         <Gallery
-          themes={themes}
-          recent={recent}
-          tagLabel={(id) => tagLabels[id] ?? id}
-          templates={templates}
-          busy={creating}
+          recipes={recipes}
           error={error}
-          onCreate={(template, title, theme) => void create(template, title, theme)}
-          onOpen={() => void pickDeck(open)}
+          onPresent={(id) => {
+            void transport.current
+              ?.request('recipe.present', { id })
+              .catch((cause: unknown) =>
+                setError(cause instanceof Error ? cause.message : String(cause)),
+              )
+          }}
         />
       </div>
     )
@@ -861,25 +845,29 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   return (
     <div className="app">
-      <Toolbar title={deck?.deck.title} layout={layout} onLayoutChange={changeLayout}>
+      <Toolbar
+        title={deck?.deck.title}
+        layout={layout}
+        onLayoutChange={changeLayout}
+        onHome={() => {
+          if (deck) void transport.current?.request('deck.close', { deckId: deck.deck.id })
+        }}
+      >
+        <Pending requests={requests} crops={crops} />
         <AgentStatus
           control={control}
+          server={state === 'open' ? undefined : TRANSPORT_LABEL[state]}
           connected={state === 'open' && agentLive}
           onTakeOver={() => setHolder('control.takeOver')}
           onStop={() => setHolder('control.stop')}
           onRelease={() => setHolder('control.release')}
         />
       </Toolbar>
-      <div className="shell" data-nav={layout.nav} data-maker={layout.maker}>
+      <div className="shell" data-nav={layout.nav ? 'on' : 'off'}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
-          {/*
-            非默认视图要标出来。不标的话「大纲」看起来就是「导航器坏了、缩略图没加载」——
-            两者只差一张图,分不出是模式还是故障。
-          */}
-          {layout.nav === 'outline' && <header className="pane-head">大纲</header>}
           <div className="pane-body">
-            {deck ? (
+            {deck && (
               <ol className="filmstrip">
                 {Array.from({ length: deck.slideCount }, (_, index) => (
                   <li key={index}>
@@ -892,83 +880,60 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       data-agent={agent.touched.get(index)?.kind}
                       onClick={() => goto(index)}
                     >
-                      {/*
-                        导航器只有图,大纲只有字。标题在缩略图里本来就看得清,
-                        旁边再写一遍是重复,还挤掉图的宽度。
-                      */}
-                      {layout.nav === 'thumbs' ? (
-                        thumbs[index] ? (
-                          <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
-                        ) : (
-                          <span className="filmstrip-thumb filmstrip-thumb--empty" />
-                        )
+                      {thumbs[index] ? (
+                        <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
                       ) : (
-                        <span className="filmstrip-title">{titleOf(index)}</span>
+                        <span className="filmstrip-thumb filmstrip-thumb--empty" />
                       )}
                     </button>
                     {index < deck.slideCount - 1 && (
                       <TransitionLink
                         note={deck.transitionPlan.find((t) => t.from === index)}
-                        onReplay={() => replay(index)}
-                        onFlag={() => flagTransition(index, index + 1)}
+                        {...(readOnly ? {} : { onFlag: () => flagTransition(index, index + 1) })}
                       />
                     )}
                   </li>
                 ))}
               </ol>
-            ) : (
-              <DeckPicker onPick={() => void pickDeck(open)} onPath={open} error={error} />
             )}
           </div>
         </section>
 
         <section className="pane pane--stage">
-          {deck && layout.lightTable ? (
-            <LightTable
-              count={deck.slideCount}
-              current={slide}
-              thumbs={thumbs}
-              onPick={(index) => {
-                goto(index)
-                changeLayout({ lightTable: false })
-              }}
-            />
-          ) : deck?.previewUrl ? (
+          {deck?.previewUrl ? (
             <Stage
               ref={stage}
               previewUrl={deck.previewUrl}
               initialSlide={slide}
-              autoplay={autoplay}
-              onToggleAutoplay={toggleAutoplay}
               onSlideChange={onSlideChange}
               onNavigate={(action) => {
                 void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
               }}
               onTextEdit={editText}
-              readOnly={agentHolds}
+              readOnly={readOnly}
+              navLocked={agentHolds}
               overlay={agentHolds && <div className="stage-lock" />}
             />
           ) : (
             <div className="stage">
               <div className="stage-canvas">
                 <div className="stage-frame">
-                  {deck
-                    ? '成品还没出来 —— 把阶段跑到「出稿」,它会在这里放映。'
-                    : '打开一个 deck 目录,它会在这里放映。'}
+                  成品还没出来 —— agent 写好 deck.html,它会在这里放映。
                 </div>
               </div>
             </div>
           )}
           {deck && (
             <CanvasControls
-              canPresent={Boolean(deck?.previewUrl)}
-              onPresent={present}
               history={history}
-              locked={agentHolds}
+              // 只读样稿上撤销 / 重做根本用不上,不摆;agent 拿着时照摆,只是灰着
+              showHistory={!deck.readOnly}
+              locked={readOnly}
               onUndo={() => void stepHistory('undo')}
               onRedo={() => void stepHistory('redo')}
               picking={picking}
-              canPick={Boolean(deck?.previewUrl) && !agentHolds}
+              showPick={!deck.readOnly}
+              canPick={Boolean(deck?.previewUrl) && !readOnly}
               onPick={() => {
                 if (!picking) return void pick()
                 stage.current?.cancelPick()
@@ -984,10 +949,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
         </section>
 
         <section className="pane">
-          {deck ? (
+          {deck && (
             <Inspector
               selection={selection}
-              locked={agentHolds}
+              locked={readOnly}
               onEditPages={editPages}
               onReplaceImage={replaceSelectedImage}
               onSelect={() => void selectElement()}
@@ -997,7 +962,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
               title={titleOf(slide)}
               info={slideInfo}
               note={deck.transitionPlan.find((row) => row.from === slide)}
-              phases={deck.phases}
               themeTitle={themeTitle}
               pageType={
                 deck.pageTypes[slide]
@@ -1006,32 +970,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
               }
               onReplay={() => replay(slide)}
               onFlag={() => flagTransition(slide, slide + 1)}
-              onOpenArtifact={(phase) => void openArtifact(phase)}
-              onLoadPrompt={loadPrompt}
             />
-          ) : (
-            <div className="pane-body">先打开一份 deck。</div>
           )}
         </section>
       </div>
-
-      {/*
-        状态栏横跨整个窗口。只横在中间一栏下面的话,它读起来像画布的一部分,
-        而它说的是整个应用的事:连没连上、刚指了哪儿。
-      */}
-      <footer className="status">
-        {/* 连着的时候只亮一个点;断了才说话 —— 常驻「open」这种词是内部状态漏到界面上。 */}
-        <span className="dot" data-off={state !== 'open'} title={TRANSPORT_LABEL[state]}>
-          ●
-        </span>
-        {state !== 'open' && <span>{TRANSPORT_LABEL[state]}</span>}
-
-        {/*
-          「已指给 agent · …」是刚发生了什么,归状态栏 —— 那个动作本身在工具栏上,
-          它的回执不该占着右栏一块地方。完全没有回执也不行:人分不清点中没有。
-        */}
-        <Pending requests={requests} crops={crops} />
-      </footer>
     </div>
   )
 }
@@ -1047,43 +989,4 @@ async function pickDeck(open: (path: string) => unknown): Promise<void> {
   // 界面不碰文件系统 —— 壳弹目录选择器,只把路径交回来。
   const path = await window.orca?.pickDeck?.()
   if (path) open(path)
-}
-
-function DeckPicker({
-  onPick,
-  onPath,
-  error,
-}: {
-  onPick: () => void
-  onPath: (path: string) => void
-  error?: string | undefined
-}) {
-  const [path, setPath] = useState('')
-  const canPick = Boolean(window.orca?.pickDeck)
-
-  return (
-    <div className="picker">
-      {canPick ? (
-        <Button onClick={onPick}>打开 deck 目录…</Button>
-      ) : (
-        // 浏览器里跑 `pnpm dev` 时没有壳,直接贴路径。
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            onPath(path)
-          }}
-        >
-          <input
-            value={path}
-            placeholder="deck 目录的绝对路径"
-            onChange={(event) => setPath(event.target.value)}
-          />
-        </form>
-      )}
-      <p className="muted">
-        认 <code>deck.html</code> 和 <code>index.html</code>,skill 做出来的稿子直接能开。
-      </p>
-      {error && <p className="picker-error">{error}</p>}
-    </div>
-  )
 }

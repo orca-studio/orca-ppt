@@ -17,6 +17,7 @@ import { paddedRect, type Rect } from './anchor-crop.js'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
+import { recordPreview, type PreviewJob } from './preview-recorder.js'
 
 /**
  * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
@@ -411,6 +412,17 @@ ipcMain.handle(
     })
   },
 )
+
+/**
+ * 同款样片。一次只录一个(两个隐藏窗口逐帧录二三十秒的稿子,并行只会互相拖慢)。
+ * 写到哪由 server 定(按内容寻址的缓存),录制器自己再守一道只写缓存目录。
+ */
+let previewTail: Promise<unknown> = Promise.resolve()
+ipcMain.handle('deck:preview', (_event, job: PreviewJob) => {
+  const run = previewTail.then(() => recordPreview(job))
+  previewTail = run.catch(() => {})
+  return run.then(() => true)
+})
 
 /**
  * 主题。`system` 让 Electron 自己跟着系统走,`light`/`dark` 是用户在应用里显式选的。

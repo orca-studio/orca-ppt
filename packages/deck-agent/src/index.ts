@@ -4,5 +4,6 @@
  */
 export * from './phases.js'
 export * from './prompts.js'
+export * from './recipes.js'
 export * from './self-check.js'
 export * from './validate.js'

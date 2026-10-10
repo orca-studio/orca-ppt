@@ -22,6 +22,7 @@ export class Transport {
   #pending = new Map<string, (response: unknown) => void>()
   #expectedSequence = 0
   #listeners = new Map<PushChannel, Set<(data: unknown) => void>>()
+  #closed = false
 
   onStateChange: (state: TransportState) => void = () => {}
   /** 发现丢帧。调用方据此重新拉一遍全量状态。 */
@@ -45,9 +46,26 @@ export class Transport {
     })
     socket.addEventListener('message', (event) => this.#receive(String(event.data)))
     socket.addEventListener('close', () => {
+      if (this.#closed) return this.#setState('closed')
       this.#setState('reconnecting')
-      setTimeout(() => this.connect(), 500)
+      setTimeout(() => {
+        if (!this.#closed) this.connect()
+      }, 500)
     })
+  }
+
+  /**
+   * 彻底关掉:不再重连,订阅全部作废。
+   *
+   * 不关的话旧连接会一直活着、照样响应推送 —— 开发时 StrictMode 把初始化跑两遍、
+   * 每次热更新再跑一遍,一个窗口里能攒出七八个连接:同一份稿子被打开好几次,
+   * 缩略图请求被好几个连接同时处理,其中被去重的那个先回了个空结果,页胶片就是空的。
+   */
+  close(): void {
+    this.#closed = true
+    this.#listeners.clear()
+    this.#queue = []
+    this.#socket?.close()
   }
 
   request<M extends RequestMethod>(method: M, params: RequestParams<M>): Promise<RequestResult<M>> {

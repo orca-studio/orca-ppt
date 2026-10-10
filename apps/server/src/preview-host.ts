@@ -137,17 +137,8 @@ export class PreviewHost {
         res.end(req.method === 'HEAD' ? undefined : bytes)
         return true
       }
-      res.writeHead(200, {
-        'content-type': contentTypeFor(real),
-        'content-length': info.size,
-        // 稿子在改,画布要看到最新的那一版。
-        'cache-control': 'no-store',
-      })
-      if (req.method === 'HEAD') {
-        res.end()
-        return true
-      }
-      createReadStream(real).pipe(res)
+      // 稿子在改,画布要看到最新的那一版。
+      sendFile(req, res, real, info.size)
     } catch {
       res.writeHead(404).end()
     }
@@ -210,22 +201,71 @@ export class PreviewHost {
         res.writeHead(404).end()
         return true
       }
-      res.writeHead(200, {
-        'content-type': contentTypeFor(real),
-        'content-length': info.size,
-        // 稿子一改缩略图就重渲,同名不同内容,不能缓存。
-        'cache-control': 'no-store',
-      })
-      if (req.method === 'HEAD') {
-        res.end()
-        return true
-      }
-      createReadStream(real).pipe(res)
+      // 稿子一改缩略图就重渲,同名不同内容,不能缓存。
+      sendFile(req, res, real, info.size)
     } catch {
       res.writeHead(404).end()
     }
     return true
   }
+}
+
+/**
+ * 回一个文件,认 `Range`。
+ *
+ * `<video>` 靠它:Chromium 要先探一段、再按需取后面的,`loop` 回到开头也是一次 seek。
+ * 不认 Range 时视频照样能「加载」,但不播、不循环 —— 首页样片悬停不动就是这个。
+ * 只认单段 `bytes=a-b` / `bytes=a-` / `bytes=-n`,多段请求按整份回。
+ */
+export function sendFile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  path: string,
+  size: number,
+): void {
+  const base = {
+    'content-type': contentTypeFor(path),
+    'accept-ranges': 'bytes',
+    'cache-control': 'no-store',
+  }
+  const range = parseRange(req.headers.range, size)
+  if (range === 'unsatisfiable') {
+    res.writeHead(416, { ...base, 'content-range': `bytes */${size}` }).end()
+    return
+  }
+  if (range) {
+    res.writeHead(206, {
+      ...base,
+      'content-length': range.end - range.start + 1,
+      'content-range': `bytes ${range.start}-${range.end}/${size}`,
+    })
+    if (req.method === 'HEAD') return void res.end()
+    createReadStream(path, range).pipe(res)
+    return
+  }
+  res.writeHead(200, { ...base, 'content-length': size })
+  if (req.method === 'HEAD') return void res.end()
+  createReadStream(path).pipe(res)
+}
+
+export function parseRange(
+  header: string | undefined,
+  size: number,
+): { start: number; end: number } | 'unsatisfiable' | undefined {
+  const match = header?.match(/^bytes=(\d*)-(\d*)$/)
+  if (!match || (match[1] === '' && match[2] === '')) return undefined
+  let start: number
+  let end: number
+  if (match[1] === '') {
+    // bytes=-n:最后 n 个字节
+    start = Math.max(0, size - Number(match[2]))
+    end = size - 1
+  } else {
+    start = Number(match[1])
+    end = match[2] === '' ? size - 1 : Math.min(Number(match[2]), size - 1)
+  }
+  if (start >= size || start > end) return 'unsatisfiable'
+  return { start, end }
 }
 
 function within(root: string, target: string): boolean {

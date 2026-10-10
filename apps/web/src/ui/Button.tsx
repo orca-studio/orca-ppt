@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, Ref } from 'react'
 
 /**
  * 界面里唯一的按钮。
@@ -29,6 +29,8 @@ export function buttonClass({ variant = 'secondary', size = 'md', icon = false }
 export interface ButtonProps extends ButtonLook, ButtonHTMLAttributes<HTMLButtonElement> {
   /** 开关类按钮的「开」。secondary 开了变强调色,ghost 开了补上底色。 */
   on?: boolean
+  /** React 19 起函数组件直接收 ref,跟着 rest 落到 <button> 上。 */
+  ref?: Ref<HTMLButtonElement>
 }
 
 export function Button({ variant, size, icon, on, className, type, ...rest }: ButtonProps) {

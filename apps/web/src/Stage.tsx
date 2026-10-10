@@ -97,10 +97,7 @@ export interface TextEdit {
 
 export interface StageProps {
   previewUrl: string
-  /** 自动播放是**放映方式**,归这儿 —— 工具栏放的是全局动作。 */
-  autoplay: boolean
-  onToggleAutoplay: () => void
-  /** 重新挂载时回到这一页 —— 从看片台切回来不该跳回第一页。 */
+  /** 重新挂载时回到这一页 —— 不该跳回第一页。 */
   initialSlide: number
   onNavigate: (action: 'next' | 'previous') => void
   onSlideChange: (index: number) => void
@@ -110,26 +107,21 @@ export interface StageProps {
    */
   onTextEdit: (edit: TextEdit) => Promise<string | undefined>
   /**
-   * agent 正拿着稿子。这时不接新的双击改字、不响应方向键 —— 改了也会被 server 拒掉,
-   * 翻页会和 agent 抢。已经在改的那处不收走:人打到一半的字直接没了,比被拒一次更糟。
+   * 改不了:agent 正拿着稿子,或者这是 skill 里的只读样稿。这时不接新的双击改字 ——
+   * 改了也会被 server 拒掉。已经在改的那处不收走:人打到一半的字直接没了,比被拒一次更糟。
    */
   readOnly: boolean
+  /**
+   * 不响应方向键:只在 agent 拿着稿子时 —— 翻页会和它抢。只读样稿照样能翻,
+   * 看同款本来就是一页页翻着看。
+   */
+  navLocked: boolean
   /** 盖在画布上的那一层(agent 拿着稿子时的遮罩)。 */
   overlay?: ReactNode
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  {
-    previewUrl,
-    initialSlide,
-    autoplay,
-    onToggleAutoplay,
-    onSlideChange,
-    onNavigate,
-    onTextEdit,
-    readOnly,
-    overlay,
-  },
+  { previewUrl, initialSlide, onSlideChange, onNavigate, onTextEdit, readOnly, navLocked, overlay },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -154,6 +146,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   onSlideChangeRef.current = onSlideChange
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
+  const navLockedRef = useRef(navLocked)
+  navLockedRef.current = navLocked
   /** 守候改字那一轮在不在跑。只读时停下,放开时从这里重新接上。 */
   const watching = useRef(false)
   const watchRef = useRef<() => void>(() => {})
@@ -276,7 +270,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       }
     }
     const onNavigation = (event: Event) => {
-      if (!(event as Event & { isInPlace?: boolean }).isInPlace) {
+      const nav = event as Event & { isInPlace?: boolean; isMainFrame?: boolean }
+      // 只认主框架的整页导航。稿子里的 iframe(比如回顾片尾的回顾屏)加载也会发这个事件,
+      // 把它当成整页重载的话 injected 会被清掉,而主框架不会再发 dom-ready 把它装回来 ——
+      // 之后所有跳页请求都在 goto 开头被丢掉。
+      if (nav.isMainFrame !== false && !nav.isInPlace) {
         loadEpoch.current += 1
         runtimeErrors.current = []
         injected.current = false
@@ -530,14 +528,14 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       // 用户正在输入框里打字,方向键归输入框。
       if (target?.closest('input, textarea, [contenteditable="true"]')) return
       // agent 拿着稿子:翻页是它的,人要翻先接管。
-      if (readOnlyRef.current) return
+      if (navLockedRef.current) return
 
-      const call =
-        event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' '
-          ? 'next'
-          : event.key === 'ArrowLeft' || event.key === 'PageUp'
-            ? 'previous'
-            : undefined
+      // 上下也翻:页胶片是竖着排的,↓ 就是往下一页
+      const call = ['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(event.key)
+        ? 'next'
+        : ['ArrowLeft', 'ArrowUp', 'PageUp'].includes(event.key)
+          ? 'previous'
+          : undefined
       if (!call) return
 
       event.preventDefault()
@@ -568,14 +566,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           贴在稿子正下方,不沉到画布底:离稿子两百像素的一行字读起来不属于任何东西。
           页数不写 —— 状态栏已经有「第几 / 共几页」。
         */}
-        <div className="stage-meta">
-          {/* agent 拿着稿子时这两件都做不了,胶囊上已经说了为什么 —— 这里不再写一遍反话。
-              控制状态不放这一行:和「自动播放」挤在一起,看不出那是一个控制状态。 */}
-          {!readOnly && <span>方向键翻页 · 双击改字</span>}
-          <Button size="sm" on={autoplay} aria-pressed={autoplay} onClick={onToggleAutoplay}>
-            {autoplay ? '自动播放中' : '自动播放'}
-          </Button>
-        </div>
       </div>
     </div>
   )

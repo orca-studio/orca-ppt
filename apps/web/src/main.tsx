@@ -28,6 +28,13 @@ declare global {
       /** 全屏放映。稿子好不好只有放映能回答。 */
       present?: (input: { previewUrl: string; slide: number }) => Promise<boolean>
       /** 离屏渲每一页的缩略图。不碰可见画布。 */
+      /** 录一段同款样片(按内容寻址的缓存,写到哪由 server 定)。 */
+      renderPreview?: (input: {
+        previewUrl: string
+        outPath: string
+        posterPath: string
+        coverAt?: number
+      }) => Promise<boolean>
       renderThumbnails?: (input: {
         previewUrl: string
         slideCount: number

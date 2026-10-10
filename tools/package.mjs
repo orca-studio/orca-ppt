@@ -58,6 +58,12 @@ try {
     })
   }
   await cp(join(root, 'apps/desktop/dist/preload.cjs'), join(app, 'apps/desktop/dist/preload.cjs'))
+  // 样片录制器在编码窗口里注入 webm-muxer;单文件打包后没有 node_modules,拷一份过去
+  await mkdir(join(app, 'apps/desktop/vendor'), { recursive: true })
+  await cp(
+    join(root, 'apps/desktop/node_modules/webm-muxer/build/webm-muxer.js'),
+    join(app, 'apps/desktop/vendor/webm-muxer.js'),
+  )
   await cp(join(root, 'apps/web/dist'), join(app, 'apps/web/dist'), { recursive: true })
   const electron = JSON.parse(
     await readFile(join(root, 'node_modules/electron/package.json'), 'utf8'),

@@ -20,6 +20,12 @@ export const AgentError = {
   multipleDecks: (paths: string[]) =>
     say('MULTIPLE_DECKS', `应用里开着好几份稿子:${paths.join('、')}`, '用 open_deck 指定是哪一份'),
   deckNotOpen: () => say('DECK_NOT_OPEN', '这份稿子还没打开', '先用 open_deck 打开它'),
+  readOnly: () =>
+    say(
+      'READ_ONLY',
+      '这是 skill 里的同款样稿或示例,只读',
+      '要做同款就新建一份自己的稿子,照 read_skill 读到的配方写',
+    ),
   noBuild: () =>
     say('NO_BUILD', '这份稿子还没有出稿文件', '先按 phase_prompt 走到「出稿」,生成 deck.html'),
   uiDisconnected: () =>

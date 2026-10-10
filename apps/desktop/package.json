@@ -9,7 +9,8 @@
     "start": "electron dist/main.js"
   },
   "dependencies": {
-    "@orca-ppt/contracts": "workspace:*"
+    "@orca-ppt/contracts": "workspace:*",
+    "webm-muxer": "5.1.4"
   },
   "productName": "Orca PPT"
 }

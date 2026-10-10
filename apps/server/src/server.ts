@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { basename, join, relative, isAbsolute, extname } from 'node:path'
+import { basename, dirname, join, relative, isAbsolute, extname } from 'node:path'
 import {
   CanvasEvidence,
   requests,
@@ -48,6 +48,8 @@ import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
+import { listRecipes, recipeEntry } from './recipes.js'
+import { ensureDir, exists, previewDir, previewFiles, pruneOthers } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 
 /**
@@ -79,6 +81,8 @@ export async function startServer(
   const previews = new PreviewHost()
   for (const root of options.allowRoots ?? []) await previews.allow(root)
   const openDecks = new Map<string, string>()
+  /** 只读的稿子(目录在 skill 里)。写操作在 dispatch 里统一拒。 */
+  const readOnlyDecks = new Set<string>()
   /** 每份稿子的改字记录。打开过就一直在,直到进程退出 —— 见 history.ts。 */
   const histories = new Map<string, EditHistory>()
   const historyOf = (deckId: string): EditHistory => {
@@ -218,6 +222,11 @@ export async function startServer(
     Array<string | null>,
     { previewUrl: string; slideCount: number; slides?: number[]; width?: number }
   >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
+  // 录一段样片要逐帧 seek 二三十秒的稿子,给足时间
+  const previewRenders = new Roundtrip<
+    true,
+    { previewUrl: string; outPath: string; posterPath: string; coverAt?: number }
+  >((payload) => bus.broadcast('preview.request', payload), 240_000)
 
   const queue = new RequestQueue((deckId, pending) =>
     bus.broadcast('requests.changed', { deckId, requests: pending }),
@@ -320,6 +329,7 @@ export async function startServer(
         captures.failAll(AgentError.uiDisconnected())
         canvases.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
+        previewRenders.failAll(AgentError.uiDisconnected())
       }
     })
   })
@@ -339,6 +349,71 @@ export async function startServer(
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
+  // 样片缓存也要能被首页卡片取到
+  await ensureDir(previewDir())
+  await previews.allow(previewDir())
+
+  /**
+   * 样片缓存的后台队列。一次只录一个(壳里一个隐藏窗口),同一份内容只排一次;
+   * 录失败的这一次运行里不再重试 —— 不然首页每拉一次列表就重录一遍。
+   */
+  const queuedPreviews = new Set<string>()
+  const failedPreviews = new Set<string>()
+  let previewTail: Promise<void> = Promise.resolve()
+  function queuePreview(id: string, key: string) {
+    const tag = `${id}:${key}`
+    if (queuedPreviews.has(tag) || failedPreviews.has(tag)) return
+    // 没有窗口就没有录制器;等界面连上、下次拉列表时再排
+    if (bus.connectionCount === 0) return
+    queuedPreviews.add(tag)
+    previewTail = previewTail.then(async () => {
+      try {
+        const found = await recipeEntry(catalog.skillPath, id)
+        if (!found) return
+        const files = await previewFiles(id, found.dir, found.entry)
+        if (files.key !== key || (await exists(files.video))) return
+        await ensureDir(dirname(files.video))
+        const mount = previews.mount(planPreview(found.dir, found.entry))
+        // 不 unmount:同一个入口共用一个挂载点,人可能正开着这份样稿
+        await previewRenders.request(`recipe:${id}`, {
+          previewUrl: `http://127.0.0.1:${port}${mount.urlPath}`,
+          outPath: files.video,
+          posterPath: files.poster,
+          ...(found.coverAt !== undefined ? { coverAt: found.coverAt } : {}),
+        })
+        if (!(await exists(files.video))) throw new Error('壳说录好了,但样片文件不在')
+        await pruneOthers(files)
+        bus.broadcast('recipes.changed', {})
+      } catch {
+        failedPreviews.add(tag)
+      } finally {
+        queuedPreviews.delete(tag)
+      }
+    })
+  }
+
+  /** 稿子目录在不在 skill 里。两边都 realpath 再比 —— 软链路径(/tmp → /private/tmp)这里踩过。 */
+  async function insideSkill(path: string): Promise<boolean> {
+    if (!catalog.skillPath) return false
+    const [root, target] = await Promise.all([
+      realpath(catalog.skillPath).catch(() => undefined),
+      realpath(path).catch(() => undefined),
+    ])
+    if (!root || !target) return false
+    const rel = relative(root, target)
+    return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
+  }
+
+  /** 这个目录是不是某个同款的样稿目录。 */
+  async function recipeAt(path: string) {
+    const target = await realpath(path).catch(() => undefined)
+    if (!target || !catalog.skillPath) return undefined
+    for (const recipe of await listRecipes(catalog.skillPath)) {
+      const dir = await realpath(join(catalog.skillPath, 'recipes', recipe.id)).catch(() => '')
+      if (dir === target) return recipe
+    }
+    return undefined
+  }
 
   function deckPathOf(deckId: string): string {
     const path = openDecks.get(deckId)
@@ -425,6 +500,8 @@ export async function startServer(
   async function dispatch(method: RequestMethod, raw: unknown): Promise<unknown> {
     if (!HUMAN_EDITS.has(method)) return dispatchUnlocked(method, raw)
     const key = (raw as { deckId?: string } | null)?.deckId ?? ''
+    // 只读稿子:和「agent 拿着」一样按没办成答,界面会把理由摆到人刚才动的那处
+    if (readOnlyDecks.has(key)) return { ok: false, reason: AgentError.readOnly() }
     const previous = editTails.get(key) ?? Promise.resolve()
     const pending = previous
       .catch(() => {})
@@ -539,6 +616,9 @@ export async function startServer(
         const opened = await openDeck(params.path)
 
         openDecks.set(opened.deck.id, opened.deck.path)
+        const readOnly = await insideSkill(opened.deck.path)
+        if (readOnly) readOnlyDecks.add(opened.deck.id)
+        else readOnlyDecks.delete(opened.deck.id)
         watcher.watch(opened.deck.id, opened.deck.path)
         if (lastOpened !== opened.deck.id) visibleSlides.delete(opened.deck.id)
         lastOpened = opened.deck.id
@@ -558,8 +638,10 @@ export async function startServer(
         // 它接着调 capture_slide 就只会等到超时。
         bus.broadcast('deck.opened', { deckId: opened.deck.id, path: opened.deck.path })
 
+        // 同款样稿的目录名是 id(recap-credits),标题用配方里给人看的那个
+        const recipe = readOnly ? await recipeAt(opened.deck.path) : undefined
         return {
-          deck: opened.deck,
+          deck: recipe ? { ...opened.deck, title: recipe.title } : opened.deck,
           slides: opened.slides,
           transitions: opened.transitions,
           slideCount: opened.slideCount,
@@ -569,7 +651,17 @@ export async function startServer(
           phases: await readPhaseStatus(opened.deck.path),
           previewUrl: mountPreview(opened),
           ...(theme ? { theme } : {}),
+          ...(readOnly ? { readOnly } : {}),
         }
+      }
+      case 'deck.close': {
+        const params = parseParams('deck.close', raw)
+        openDecks.delete(params.deckId)
+        readOnlyDecks.delete(params.deckId)
+        watcher.unwatch(params.deckId)
+        if (lastOpened === params.deckId) lastOpened = undefined
+        bus.broadcast('deck.closed', { deckId: params.deckId })
+        return {}
       }
       case 'deck.create': {
         const params = parseParams('deck.create', raw)
@@ -594,6 +686,39 @@ export async function startServer(
       case 'catalog.templates': {
         parseParams('catalog.templates', raw)
         return { templates: await listTemplates(catalog.skillPath) }
+      }
+      case 'recipe.present': {
+        const params = parseParams('recipe.present', raw)
+        const found = await recipeEntry(catalog.skillPath, params.id)
+        if (!found) throw new Error(`RECIPE_NOT_FOUND: 没有这个同款,或者它没有样稿:${params.id}`)
+        // 和 agent 调 open_deck 同一条路:打开、推 deck.opened,界面跟着进工作台。
+        // 样稿在 skill 里,deck.open 会把它认成只读。
+        await dispatchUnlocked('deck.open', { path: found.dir })
+        return {}
+      }
+      case 'catalog.recipes': {
+        parseParams('catalog.recipes', raw)
+        // 每次现读:写配方、改样稿时不用重启应用就能在首页看到。
+        const recipes = await listRecipes(catalog.skillPath)
+        return {
+          recipes: await Promise.all(
+            recipes.map(async (recipe) => {
+              const found = await recipeEntry(catalog.skillPath, recipe.id)
+              if (!found) return recipe
+              const files = await previewFiles(recipe.id, found.dir, found.entry)
+              if (await exists(files.video)) {
+                return {
+                  ...recipe,
+                  preview: files.video,
+                  ...((await exists(files.poster)) ? { poster: files.poster } : {}),
+                }
+              }
+              // 没命中:先只给标题(卡片显示占位),同时排进后台录一份
+              queuePreview(recipe.id, files.key)
+              return recipe
+            }),
+          ),
+        }
       }
       case 'deck.showSlide': {
         const params = parseParams('deck.showSlide', raw)
@@ -903,6 +1028,14 @@ export async function startServer(
             slideCount: opened.slideCount,
           }),
         }
+      }
+      case 'preview.result': {
+        const params = parseParams('preview.result', raw)
+        previewRenders.settle(
+          params.requestId,
+          params.error ? { error: params.error } : { value: true },
+        )
+        return {}
       }
       case 'thumbnails.result': {
         const params = parseParams('thumbnails.result', raw)

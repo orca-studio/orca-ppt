@@ -276,6 +276,26 @@ it('UI 切换稿子后拒绝沿用旧任务目标，不静默改另一份', asyn
   expect(await active.get(client)).toBe('/b')
 })
 
+it('MCP 列出首页同一份同款', async () => {
+  const { client, calls } = fakeClient({
+    'catalog.recipes': {
+      recipes: [{ id: 'recap-credits', title: '回顾片尾', mode: '汇报稿', prompt: 'p' }],
+    },
+  })
+  const { map } = toolsOf(client)
+  expect(textOf(await map.get('list_recipes')!.run({}))).toContain('recap-credits')
+  expect(calls).toContainEqual(['catalog.recipes', {}])
+  await map.get('present_recipe')!.run({ id: 'recap-credits' })
+  expect(calls).toContainEqual(['recipe.present', { id: 'recap-credits' }])
+})
+
+it('MCP 关掉稿子回首页', async () => {
+  const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
+  const { map } = toolsOf(client)
+  await map.get('close_deck')!.run({})
+  expect(calls).toContainEqual(['deck.close', { deckId: '/d' }])
+})
+
 it('MCP 新建透传 UI 的模板和主题，并提供同一个模板目录', async () => {
   const { client, calls } = fakeClient({
     'catalog.templates': { templates: [{ id: 'blank', title: '空白', mode: 'report' }] },

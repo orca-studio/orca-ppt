@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CanvasElement, DeckPhase, TransitionNote, RequestParams } from '@orca-ppt/contracts'
-import { PhaseRail, type PhaseRow } from './PhaseRail.js'
+import type { CanvasElement, TransitionNote, RequestParams } from '@orca-ppt/contracts'
 import type { SlideInfo } from './Stage.js'
 import { Button } from './ui/Button.js'
 import { Segmented } from './ui/Segmented.js'
@@ -42,7 +41,6 @@ export interface InspectorProps {
   info: SlideInfo | null
   /** 这一页之后那次转场。最后一页没有。 */
   note: TransitionNote | undefined
-  phases: PhaseRow[]
   /** 主题的人读名字。稿子没配主题时没有。 */
   themeTitle: string | undefined
   /**
@@ -55,8 +53,6 @@ export interface InspectorProps {
   pageType: string | undefined
   onReplay: () => void
   onFlag: () => void
-  onOpenArtifact: (phase: DeckPhase) => void
-  onLoadPrompt: (phase: DeckPhase) => Promise<string>
 }
 
 export function Inspector(props: InspectorProps) {
@@ -216,6 +212,7 @@ function TransitionScope({
   slide,
   note,
   last,
+  locked,
   onReplay,
   onFlag,
 }: InspectorProps & { last: boolean }) {
@@ -235,24 +232,18 @@ function TransitionScope({
 
       <div className="inspector-actions">
         <Button onClick={onReplay}>重放这次转场</Button>
-        <Button onClick={onFlag}>指着它说不对</Button>
+        {/* 只读样稿上指出来也没人能改 */}
+        {!locked && <Button onClick={onFlag}>指着它说不对</Button>}
       </div>
     </>
   )
 }
 
-function DeckScope({
-  slideCount,
-  themeTitle,
-  phases,
-  onOpenArtifact,
-  onLoadPrompt,
-}: InspectorProps) {
+function DeckScope({ slideCount, themeTitle }: InspectorProps) {
   return (
     <>
       <Row label="主题" value={themeTitle ?? '没配主题'} />
       <Row label="页数" value={`${slideCount} 页`} />
-      <PhaseRail rows={phases} onOpenArtifact={onOpenArtifact} onLoadPrompt={onLoadPrompt} />
     </>
   )
 }

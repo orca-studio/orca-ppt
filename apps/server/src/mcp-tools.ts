@@ -39,6 +39,11 @@ export class ActiveDeck {
     this.#id = id
   }
 
+  /** 稿子关了:下次按应用里正开着的那一份重新认。 */
+  clear(): void {
+    this.#id = undefined
+  }
+
   async get(call: ProtocolCaller): Promise<string> {
     const current = await call('deck.current', {})
     if (this.#id) {
@@ -257,6 +262,42 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         annotations: looking,
       },
       run: async () => json(await call('catalog.templates', {})),
+    },
+    {
+      name: 'list_recipes',
+      config: {
+        title: '查看同款',
+        description:
+          '列出首页展示的同款配方（参考作品的内容结构 + 动效原则），含每个同款的「做同款」提示词。配方正文用 read_skill 读 recipes/<id>/RECIPE.md。',
+        annotations: looking,
+      },
+      run: async () => json(await call('catalog.recipes', {})),
+    },
+    {
+      name: 'present_recipe',
+      activity: () => ({ kind: 'read', label: '放映同款样稿', slides: [] }),
+      config: {
+        title: '放映同款样稿',
+        annotations: looking,
+        description:
+          '在应用的工作台里打开某个同款的样稿（只读），和首页点卡片一样。id 来自 list_recipes。看完用 close_deck 回首页。',
+        inputSchema: { id: z.string().describe('list_recipes 返回的同款 id') },
+      },
+      run: async (args) => json(await call('recipe.present', { id: String(args.id) })),
+    },
+    {
+      name: 'close_deck',
+      activity: () => ({ kind: 'read', label: '回首页', slides: [] }),
+      config: {
+        title: '关掉稿子回首页',
+        description: '关掉当前稿子，应用回到同款首页。和工具栏左上角的「首页」一样。',
+        annotations: looking,
+      },
+      run: async () => {
+        await call('deck.close', { deckId: await active.get(call) })
+        active.clear()
+        return json({})
+      },
     },
     {
       name: 'navigate',
