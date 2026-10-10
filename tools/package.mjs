@@ -5,6 +5,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { packager } from '@electron/packager'
+import { flipFuses, FuseVersion, FuseV1Options } from '@electron/fuses'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const stage = await mkdtemp(join(tmpdir(), 'orca-package-'))
@@ -24,6 +25,9 @@ try {
   run('tar', ['-xf', join(stage, 'skill.tar'), '-C', skill])
   await readFile(join(skill, 'SKILL.md'))
   run('npm', ['ci', '--omit=dev', '--ignore-scripts'], skill)
+  // npm 给命令行工具生成的快捷方式(.bin)运行时用不到;里面有指向不存在文件的链接,
+  // codesign --strict 校验会因此失败
+  await rm(join(skill, 'node_modules/.bin'), { recursive: true, force: true })
   const metadata = JSON.parse(await readFile(join(root, 'apps/desktop/package.json'), 'utf8'))
   await writeFile(
     join(skill, 'bundle-manifest.json'),
@@ -67,12 +71,37 @@ try {
   const electron = JSON.parse(
     await readFile(join(root, 'node_modules/electron/package.json'), 'utf8'),
   )
+  // Finder / Dock 里的应用图标:从壳的 1024 图标(已按 macOS 规范留边、加投影)生成 .icns
+  const iconset = join(stage, 'icon.iconset')
+  await mkdir(iconset, { recursive: true })
+  for (const size of [16, 32, 128, 256, 512]) {
+    for (const scale of [1, 2]) {
+      const px = String(size * scale)
+      const name = `icon_${size}x${size}${scale === 2 ? '@2x' : ''}.png`
+      run('sips', [
+        '-z',
+        px,
+        px,
+        join(root, 'apps/desktop/assets/icon.png'),
+        '--out',
+        join(iconset, name),
+      ])
+    }
+  }
+  run('iconutil', ['-c', 'icns', iconset, '-o', join(stage, 'icon.icns')])
   const output = await packager({
     dir: app,
     out: join(root, 'release'),
     name: 'Orca PPT',
-    appBundleId: 'studio.orca.ppt',
+    // 和 Compositor 同一套命名(ai.orca-studio.compositor)。发版之后不能再改,自动更新认它
+    appBundleId: 'ai.orca-studio.ppt',
+    appCategoryType: 'public.app-category.productivity',
+    icon: join(stage, 'icon.icns'),
     appVersion: metadata.version,
+    // 构建号(「关于」里括号里那个):提交总数,每次发版自然递增,不用手动维护
+    buildVersion: execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: root })
+      .toString()
+      .trim(),
     electronVersion: electron.version,
     platform: process.platform,
     arch: process.arch,
@@ -81,6 +110,18 @@ try {
     overwrite: true,
     extraResource: [skill],
   })
+  // 签名之前关掉几个能被拿来往应用里注入代码的入口(改开关会改可执行文件,必须在签名前)。
+  // server 用 utilityProcess 起,不需要 RunAsNode;界面走 file://,file 协议的开关保持默认。
+  for (const dir of output) {
+    await flipFuses(join(dir, 'Orca PPT.app'), {
+      version: FuseVersion.V1,
+      resetAdHocDarwinSignature: process.arch === 'arm64',
+      [FuseV1Options.RunAsNode]: false,
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+      [FuseV1Options.EnableCookieEncryption]: true,
+    })
+  }
   console.log('Packaged:', output.join('\n'))
 } finally {
   await rm(stage, { recursive: true, force: true })

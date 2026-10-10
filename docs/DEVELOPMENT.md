@@ -32,7 +32,7 @@ pnpm lint
 ORCA_PPT_DECK=$PWD/skills/orca-ppt/examples/forest-timeline pnpm dev
 ```
 
-打包当前平台的应用:`pnpm package`,产物在 `release/`。
+打包当前平台的应用:`pnpm package`,产物在 `release/`。签名、公证、做 dmg 和发版见 [RELEASE.md](./RELEASE.md)。
 
 ## 接进你的 agent(MCP)
 
@@ -74,6 +74,7 @@ ln -s "$PWD/skills/orca-ppt" ~/.claude/skills/orca-ppt
 | [Deck Mode](./DECK-MODE.md)       | 垂直闭环:阶段、产物契约、检视锚、自检 |
 | [MCP](./MCP.md)                   | 工具表、方向、怎么接进你的 agent      |
 | [Roadmap](./ROADMAP.md)           | 里程碑与验收                          |
+| [Release](./RELEASE.md)           | 打包、签名、公证、发版、自动更新      |
 | [AGENTS.md](../AGENTS.md)         | 在这个仓里干活的规矩                  |
 | [品牌素材](./brand/README.md)     | Logo、头像、宣传图和文案口径          |
 

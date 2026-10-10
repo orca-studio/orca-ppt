@@ -1,0 +1,90 @@
+# 第一步:打包、签名、做 dmg 和 zip、提交 Apple 公证。不等公证结果。
+# 手动触发,填一个已经推送的版本 tag(和 apps/desktop/package.json 的 version 一致)。
+# 结构照 orca-studio/Compositor 的 release-build.yml,见 docs/RELEASE.md。
+name: Build and submit notarization
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已推送的版本 tag,和应用版本一致(例如 v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orca-ppt-release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: release
+    defaults:
+      run:
+        shell: bash
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      SOURCE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check tag format
+        run: '[[ "$SOURCE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+          # 构建号用提交总数,要完整历史
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install -g pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          (cd skills/orca-ppt && npm ci --no-audit --no-fund)
+      - name: Import signing certificate into a temporary keychain
+        env:
+          APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          PASSWORD="$(openssl rand -hex 32)"
+          echo "::add-mask::$PASSWORD"
+          security create-keychain -p "$PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN"
+          echo "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$PASSWORD" "$KEYCHAIN" >/dev/null
+          rm -f "$RUNNER_TEMP/certificate.p12"
+      - name: Build, sign and submit without waiting
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node tools/release-mac.mjs build
+      - name: Summary
+        run: |
+          {
+            echo "已提交 $SOURCE_TAG 的公证:\`$(node -p "require('./dist/release/release.json').submission_id")\`。"
+            echo "稍后运行 **Publish Orca PPT**,填这次的 Run ID \`$GITHUB_RUN_ID\`。还没有发布任何东西。"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Save pending artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: orca-ppt-pending-${{ github.run_id }}-${{ github.run_attempt }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove temporary keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" >/dev/null 2>&1 || true

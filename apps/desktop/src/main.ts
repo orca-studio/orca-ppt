@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -11,6 +12,7 @@ import {
   ipcMain,
   nativeTheme,
   shell,
+  utilityProcess,
   webContents,
 } from 'electron'
 import { paddedRect, type Rect } from './anchor-crop.js'
@@ -18,6 +20,7 @@ import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
 import { recordPreview, type PreviewJob } from './preview-recorder.js'
+import { UpdateSourceType, updateElectronApp } from 'update-electron-app'
 
 /**
  * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
@@ -29,7 +32,14 @@ app.setName(APP_NAME)
 app.setPath('userData', join(app.getPath('appData'), 'OrcaPPT'))
 
 const here = dirname(fileURLToPath(import.meta.url))
-const supervisor = new ServerSupervisor()
+// server 用 utilityProcess 起:独立进程、崩了不带走窗口,而且不依赖 RunAsNode fuse(见 server-supervisor.ts)
+const supervisor = new ServerSupervisor((entry, env) =>
+  utilityProcess.fork(entry, [], {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    env: { ...process.env, ...env },
+    serviceName: 'Orca PPT Server',
+  }),
+)
 const isMac = process.platform === 'darwin'
 
 /**
@@ -38,6 +48,14 @@ const isMac = process.platform === 'darwin'
  * 按 macOS 图标的留白缩到 824 居中、加了投影,不然在 Dock 里比别的图标大一圈。
  */
 const ICON = join(here, '../assets/icon.png')
+/**
+ * 应用版本。发布版取 bundle 里的(打包时来自 apps/desktop/package.json);开发时
+ * `electron dist/main.js` 跑的是 node_modules 里的 Electron.app,app.getVersion()
+ * 拿到的是 Electron 自己的版本(43.7.3),所以直接读 package.json —— 两边显示一致。
+ */
+const APP_VERSION: string = app.isPackaged
+  ? app.getVersion()
+  : (JSON.parse(readFileSync(join(here, '../package.json'), 'utf8')) as { version: string }).version
 
 /** 工作台窗口。菜单动作永远发给它,不管当前焦点在哪。 */
 let workbench: BrowserWindow | undefined
@@ -97,9 +115,7 @@ async function createWindow(): Promise<void> {
   const port = await supervisor.start(join(here, '../../server/dist/main.js'), {
     ...bundledSkill(),
     // 握手时报的版本号、doctor 里的版本都用它 —— server 自己不知道 app 是哪一版。
-    // 只在发布版传:开发时 `electron dist/main.js` 找不到应用的 package.json,
-    // app.getVersion() 退回成 Electron 自己的版本(实测 43.7.3),那比不传还误导人。
-    ...(app.isPackaged ? { ORCA_PPT_APP_VERSION: app.getVersion() } : {}),
+    ORCA_PPT_APP_VERSION: APP_VERSION,
   })
   serverPort = port
 
@@ -469,11 +485,28 @@ ipcMain.handle(
   },
 )
 
+/**
+ * 自动更新:Electron 官方的 update.electronjs.org 读本仓的 GitHub Releases(仓库是公开的才能用),
+ * 有新版就下载,弹窗问要不要重启。只在发布版里开 —— 开发时的应用没签名,Squirrel.Mac 也更新不了它。
+ * Release 里要有 `OrcaPPT-darwin-<arch>-<版本>.zip`(见 docs/RELEASE.md)。
+ */
+if (app.isPackaged) {
+  updateElectronApp({
+    updateSource: {
+      type: UpdateSourceType.ElectronPublicUpdateService,
+      repo: 'orca-studio/orca-ppt',
+    },
+    updateInterval: '1 hour',
+  })
+}
+
 app.whenReady().then(() => {
   applyMenu({ canPresent: false, theme: 'system' })
   app.setAboutPanelOptions({
     applicationName: APP_NAME,
-    applicationVersion: app.getVersion(),
+    applicationVersion: APP_VERSION,
+    // 不显示括号里的构建号:自动更新只认版本号,构建号对用户没意义(bundle 里照样有)
+    version: '',
     iconPath: ICON,
   })
   if (isMac) app.dock?.setIcon(ICON)

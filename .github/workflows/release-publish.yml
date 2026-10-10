@@ -1,0 +1,79 @@
+# 第二步:查一次公证结果。还在处理就正常结束,稍后再跑;通过就 staple、做 Gatekeeper 检查,
+# 把 dmg、zip、SHA256SUMS.txt 发到本仓的 GitHub Release(公开,不是草稿 —— 自动更新只认公开的)。
+# 结构照 orca-studio/Compositor 的 release-finalize.yml,见 docs/RELEASE.md。
+name: Publish Orca PPT
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 「Build and submit notarization」那次的 Run ID
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: orca-ppt-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: macos-15
+    timeout-minutes: 30
+    environment: release
+    defaults:
+      run:
+        shell: bash
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Download the pending artifact of that build run
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          pattern: orca-ppt-pending-${{ inputs.build_run_id }}-*
+          merge-multiple: true
+          path: dist/release
+      - name: Check notarization; staple when accepted
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: node tools/release-mac.mjs finalize
+      - name: Publish GitHub Release
+        run: |
+          set -euo pipefail
+          if [[ "$(cat dist/release/notarization-status.txt)" != accepted ]]; then
+            echo "Apple 还在处理,没有发布。稍后再运行这个工作流。" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cd dist/release
+          TAG="$(node -p "require('./release.json').tag")"
+          VERSION="$(node -p "require('./release.json').version")"
+          DMG="$(node -p "require('./release.json').dmg.name")"
+          ZIP="$(node -p "require('./release.json').zip.name")"
+          [[ "$TAG" == "v$VERSION" ]] || { echo "release.json 里 tag 和版本对不上" >&2; exit 1; }
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$TAG 已经发布过,不覆盖" >&2; exit 1
+          fi
+          gh release create "$TAG" "$DMG" "$ZIP" SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Orca PPT $VERSION" \
+            --notes "Orca PPT $VERSION(macOS,Apple Silicon)。下载 \`$DMG\` 安装;已安装的版本会自动更新。"
+          # 匿名下载回来对一遍摘要:确认发出去的就是公证过的那一份
+          mkdir -p ../verify && cd ../verify
+          curl -fsSL -o "$DMG" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$DMG"
+          curl -fsSL -o "$ZIP" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ZIP"
+          shasum -a 256 -c ../release/SHA256SUMS.txt
+          echo "已发布 [$TAG](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG)。" >> "$GITHUB_STEP_SUMMARY"
