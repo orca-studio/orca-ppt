@@ -83,6 +83,9 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 转场没放完就按下一页，会先把剩下的快进放完再翻，不会跳帧；嵌进别的应用放映时，往前翻调
 `window.__orcaAdvance()`，别直接调 `Reveal.next()`。
 
+**配套的 OrcaPPT 应用**（桌面端，可选）连不上、或者工具返回 `NO_DECK_OPEN`、`UI_DISCONNECTED`
+这类大写前缀的错误时，读 `references/install.md`：先告诉用户该做什么，别反复重试。
+
 **观众里有人会晕、给长辈看、用户说「动得太厉害」时**，打开减少动效：URL 加 `?calm`，或者
 `<body data-motion="calm">`。整页推近、放大进元素、推近匹配会换成短淡化，运动模糊关掉，
 其余手法照旧。默认不开，也不跟系统的「减少动效」设置走 —— 细节见 `references/transitions.md`
