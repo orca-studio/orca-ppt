@@ -1,6 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { basename, dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { BrowserWindow, type NativeImage } from 'electron'
 
 /**
@@ -187,7 +188,8 @@ export async function recordPreview(job: PreviewJob): Promise<void> {
 let muxer: string | undefined
 async function muxerSource(): Promise<string> {
   if (muxer) return muxer
-  const here = dirname(new URL(import.meta.url).pathname)
+  // fileURLToPath 而不是 URL.pathname:安装路径「Orca PPT.app」带空格,pathname 会是 %20
+  const here = dirname(fileURLToPath(import.meta.url))
   const vendored = join(here, '../vendor/webm-muxer.js')
   muxer = await readFile(vendored, 'utf8').catch(() =>
     // 包的 exports 只放出入口,require 条件下入口就是这份 UMD 构建
