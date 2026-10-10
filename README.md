@@ -103,8 +103,9 @@ Orca PPT 是开源的，MIT 许可，免费使用。
       <p><sub>扫码添加 · 点开放大</sub></p>
     </td>
     <td align="center" valign="top" width="33%">
+      <a href="docs/contact/wechat-group-qrcode.png"><img src="docs/contact/wechat-group-qrcode.png" width="140" height="140" alt="微信群二维码"></a>
       <p><strong>加入交流群</strong></p>
-      <p><sub>群二维码会定期更换，<br>最新的在 <a href="https://ppt.orca-studio.ai/#contact">官网</a></sub></p>
+      <p><sub>微信或企业微信扫码<br>2026 年 10 月 15 日前有效</sub></p>
     </td>
   </tr>
 </table>
