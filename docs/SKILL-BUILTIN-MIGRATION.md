@@ -6,6 +6,7 @@
 为父);第 4 节的边界和文档已改;整个仓库在原 `zhenwusw/orca-ppt-skill` 上开源(保留它的 star、
 fork),转到 `orca-studio/orca-ppt`,GitHub 的转移和改名会把旧地址自动跳过来 —— 这就是旧仓的
 「重定向」,不再另做墓碑归档。还没做的:本机旧路径的软链(第 5 节)、`deck.relink`、展示站的去留。
+随后按 skill 仓库的惯例把 `skill/` 挪到了 `skills/orca-ppt/`(下文的 `skill/` 都指它)。
 下面保留执行前的方案,备查。
 
 ## 1. 为什么

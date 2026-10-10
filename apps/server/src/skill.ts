@@ -6,14 +6,14 @@ import { readRecentThemes } from './recent.js'
 import { keepKnown, parseVocabulary, tagIssues, tagLine, type Vocabulary } from './tags.js'
 
 /**
- * 规范、主题、版式、录制脚本都从 skill 目录读。skill 就在本仓的 `skill/` 里
+ * 规范、主题、版式、录制脚本都从 skill 目录读。skill 就在本仓的 `skills/orca-ppt/` 里(skill 仓库的惯例布局)
  * (2026-10-10 并进来的,带着原仓的历史);发布版的 skill 是**跟着 app 一起发的那一份**
  * (见 docs/ARCHITECTURE.md「交付形态」),开发时读仓内这一份。
  *
- * 仓内 `skill/` 按这个文件的位置往上找(src 和 dist 都在 apps/server/ 下一层),
+ * 仓内的 skill 按这个文件的位置往上找(src 和 dist 都在 apps/server/ 下一层),
  * 不写死开发机路径。后面几条是并仓之前的老位置,本地还没清掉的话照样认。
  */
-const REPO_SKILL = fileURLToPath(new URL('../../../skill', import.meta.url))
+const REPO_SKILL = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
 const DEFAULT_LOCATIONS = [
   REPO_SKILL,
   join(homedir(), 'ghq/github.com/zhenwusw/orca-ppt-skill'),
@@ -28,7 +28,7 @@ const DEFAULT_LOCATIONS = [
  * 1. `ORCA_PPT_SKILL` —— 显式指定,开发时拿来试 skill 的改动。
  * 2. `ORCA_PPT_BUNDLED_SKILL` —— app 自带的那一份,壳在发布版里设。skill 跟着 app 发版,
  *    所以只要它在,就用它:版本一定和 app 对得上。
- * 3. 开发时仓内的 `skill/`,然后是并仓之前的老位置。
+ * 3. 开发时仓内的 `skills/orca-ppt/`,然后是并仓之前的老位置。
  */
 export interface SkillLocation {
   /** 找到的 skill 目录。没找到就没有。 */

@@ -125,7 +125,7 @@ _不做:_ **自动视觉自评**(抽关键帧调模型打分)和**自动修复�
 
 ## 与 skill 的关系
 
-skill 在本仓的 `skill/` 里(原 `orca-ppt-skill` 仓,2026-10-10 带着历史并进来),
+skill 在本仓的 `skills/orca-ppt/` 里(原 `orca-ppt-skill` 仓,2026-10-10 带着历史并进来),
 是**内容层**:规范文档、主题、版式模板、同款配方、`capture.mjs` 都从这里读。发布版读的是
 跟着 app 一起发的那一份,版本和 app 一致(见 ARCHITECTURE「交付形态」)。
 agent 通过 MCP `read_skill` 读,不单独分发。
@@ -134,7 +134,7 @@ agent 通过 MCP `read_skill` 读,不单独分发。
 一个按钮。
 
 _否掉:_ 把规范内容复制进 `packages/deck-agent`(立刻和 skill 分叉,两边都不对)。
-并仓之后这条照样成立:规范只在 `skill/` 一处。
+并仓之后这条照样成立:规范只在 `skills/orca-ppt/` 一处。
 
 `orca-motion-skill` 和产品没有直接关系:app 不读它的任何文件。它是 ppt-skill 旁边的一个
 可选件 —— 稿子页面自己加载了它的 `motion.js`、页里有 `.mo-scene` 时,ppt-skill 的

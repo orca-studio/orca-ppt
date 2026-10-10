@@ -84,7 +84,7 @@ critique 归人:演示稿哪里不对,人一眼就能判,不像设计工具那�
 
 | 资产                                                               | 作用                                              |
 | ------------------------------------------------------------------ | ------------------------------------------------- |
-| [`skill/`](../skill)(原 orca-ppt-skill)                            | 转场规范、主题、版式模板、同款配方、`capture.mjs` |
+| [`skills/orca-ppt/`](../skills/orca-ppt)(原 orca-ppt-skill)        | 转场规范、主题、版式模板、同款配方、`capture.mjs` |
 | [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill) | 场景内部的 MG 动画(可选件,app 不读它)             |
 | [ppt.orca-studio.ai](https://ppt.orca-studio.ai)                   | 示例库,也是参考锚定的素材来源                     |
 

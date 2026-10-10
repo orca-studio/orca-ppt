@@ -1,7 +1,8 @@
 # Orca PPT 的 skill
 
-> 2026-10-10 起，这个 skill 是 [Orca PPT](../README.md) 的一部分，住在仓库的 `skill/` 目录里，
-> 跟着应用一起发版，不再单独分发。agent 通过 Orca PPT 的 MCP 工具 `read_skill` 读它。
+> 2026-10-10 起，这个 skill 是 [Orca PPT](../../README.md) 的一部分，住在仓库的 `skills/orca-ppt/` 目录里，
+> 跟着应用一起发版。agent 通过 Orca PPT 的 MCP 工具 `read_skill` 读它；不装应用的话，
+> 把这个目录链进 agent 的 skills 目录也能用（见下面「怎么用」）。
 > 原来的 `zhenwusw/orca-ppt-skill` 仓库就是现在这个仓库，旧地址会自动跳转过来。
 
 一个给 AI Agent（Claude Code 等）用的 skill：生成**翻页时看得见连续运动**的 HTML 演示稿。
@@ -45,6 +46,13 @@
 
 装上 Orca PPT 桌面应用，把它的 MCP 接进你的 agent（见仓库根目录的 README），
 然后直接说「做一份 PPT」「要苹果发布会那样的切换」，或者在首页挑一个同款点「做同款」。
+
+不装应用、只想让 agent 用这套规范：
+
+```bash
+ln -s "$PWD/skills/orca-ppt" ~/.claude/skills/orca-ppt   # 在仓库根目录执行
+(cd skills/orca-ppt && npm ci)
+```
 
 要做场景**内部**的 MG 动画（格子依次亮起、卡片弹出、数字滚动），
 另配 [orca-motion-skill](https://github.com/zhenwusw/orca-motion-skill)。

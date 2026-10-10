@@ -121,7 +121,7 @@ _否掉(试过,是错的):_ 「按逃逸层数往上倒推一个公共服务根�
 | UI            | React 19                    |                                     |
 | 样式          | CSS token 层                | 主题、密度、动效归 app 所有         |
 | 操作记录      | JSONL,只追加                | `~/.orca-ppt/recording.jsonl`       |
-| deck 运行时   | reveal.js + GSAP            | 来自 `skill/`,原样复用              |
+| deck 运行时   | reveal.js + GSAP            | 来自 `skills/orca-ppt/`,原样复用    |
 | 录制          | playwright-core,逐帧 seek   | skill 的 `capture.mjs`,自检用       |
 | 测试          | Vitest                      |                                     |
 
@@ -222,10 +222,11 @@ server 找 skill 的顺序(`apps/server/src/skill.ts`):
 
 1. `ORCA_PPT_SKILL` —— 显式指定,开发时拿来试 skill 的改动;
 2. `ORCA_PPT_BUNDLED_SKILL` —— app 自带的那一份,壳在发布版里设;
-3. 开发时读仓内的 `skill/`,再往后是并仓之前的老位置(ghq 路径、旧的安装位置)。发布包内置目录缺失时直接报告 missing，不回退其他版本。
+3. 开发时读仓内的 `skills/orca-ppt/`,再往后是并仓之前的老位置(ghq 路径、旧的安装位置)。发布包内置目录缺失时直接报告 missing，不回退其他版本。
 
-**`skill/` 是规范内容的唯一来源。** 2026-10-10 起 skill 带着历史并进本仓(原 `orca-ppt-skill`);
-打包时从同一个提交取出 `skill/` 放进安装包。代价不变:改一处转场规范也要发一次 app。
+**`skills/orca-ppt/` 是规范内容的唯一来源。** 2026-10-10 起 skill 带着历史并进本仓(原 `orca-ppt-skill`),
+按 skill 仓库的惯例放在 `skills/<名字>/`,想单独给 agent 用就把这个目录链进它的 skills 目录;
+打包时从同一个提交取出它放进安装包。代价不变:改一处转场规范也要发一次 app。
 
 _否掉:_ skill 独立更新、app 读最新的那份(之前的做法,理由见上:接口一变老 app 就坏)·
 app 运行时从网上拉 skill(多一条网络依赖,版本照样对不上)。
@@ -276,12 +277,13 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 | 2026-09-20 | 自检只做确定性检查,产出锚并在界面上标出来,不自动修                                             | 目标不是全自动。PPT 的不合格人一眼能判,render → critique → revise 里的 critique 归人                     |
 | 2026-09-24 | skill 跟着 app 发版,打进安装包;推翻「skill 更新产品跟着更新,不两边同步」                       | 三件之间有接口约定,分开发版要维护兼容矩阵,skill 一改老 app 就坏;参照 ego-lite                            |
 | 2026-09-24 | 自带的 skill 链进 agent 的 skills 目录之前先问人,只链 `~/.agents/skills` 和 `~/.claude/skills` | 往用户的 agent 配置里写东西是用户该点头的事;不学 ego 往几十个目录撒软链、替没装的 agent 建空目录         |
+| 2026-10-10 | skill 目录按惯例挪到 `skills/orca-ppt/`                                                        | `skills/<名字>/SKILL.md` 是 skill 仓库的通行布局,用户直接链这个目录就能单独用                            |
 | 2026-10-10 | skill 带历史并进本仓 `skill/`;不再单独分发;整个仓库在原 skill 仓上开源                         | 同款画廊这类改动总是界面和规范一起动,分仓只剩手推 skill-lock 和跨仓对齐的成本;发布版本来就绑在一起       |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法       | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉 |
 
 ### 已实现的打包和按需读取
 
-`pnpm package` 构建桌面、server 和网页，使用 Electron Packager 输出当前平台应用到 `release/`。skill 取自当前提交的 `skill/`（`git archive HEAD:skill`），忽略工作区修改，并按 skill 的 package-lock.json 安装生产依赖。`Resources/skill/bundle-manifest.json` 记录应用版本和提交。
+`pnpm package` 构建桌面、server 和网页，使用 Electron Packager 输出当前平台应用到 `release/`。skill 取自当前提交的 `skills/orca-ppt/`（`git archive HEAD:skills/orca-ppt`），忽略工作区修改，并按 skill 的 package-lock.json 安装生产依赖。`Resources/skill/bundle-manifest.json` 记录应用版本和提交。
 
 MCP 的 `list_skill` / `read_skill` 按相对路径提供随附规范文本。它们走 contracts 的 skill.list / skill.read，支持分页并拒绝越界路径及外部软链。阶段提示词引导宿主调用这些工具，不要求它拥有文件工具。此读取路径不安装全局 Skill、不写宿主配置；上述软链安装仍是可选且未实现的引导。图片/视频资料暂不由 read_skill 返回；应用截图继续走 capture_slide。
 

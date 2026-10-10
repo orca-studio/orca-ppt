@@ -87,8 +87,8 @@ describe('readTransitionPlan', () => {
 
 /** 拿真实的稿子验一遍 —— 格式是人手写的,只测自己编的样例说明不了问题。 */
 describe('真实示例', () => {
-  // 仓内的 skill/(并仓之前读的是 ghq 下的独立仓)
-  const skill = fileURLToPath(new URL('../../../skill', import.meta.url))
+  // 仓内的 skills/orca-ppt/(并仓之前读的是 ghq 下的独立仓)
+  const skill = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
   const cases: Array<[string, number]> = [
     ['forest-timeline', 3],
     ['emerald-editorial', 4],

@@ -7,7 +7,7 @@
 - Codex：读取 Skill、列出模板、创建和打开独立测试 deck、修改标题、截图、撤销成功。
 - Claude：在修复后重新打包的应用上完成同样闭环；主题正确呈现，撤销恢复原 revision，初始 currentSlide 为 0。
 - DeepSeek Harness：在最终包上读取 Skill、模板、当前文档状态和截图成功；此轮仅做只读验证。
-- 打包应用 doctor 确认使用 bundled Skill；Skill 取自打包时那个提交的 `skill/`，不读取工作区里的未提交修改。
+- 打包应用 doctor 确认使用 bundled Skill；Skill 取自打包时那个提交的 `skills/orca-ppt/`，不读取工作区里的未提交修改。
 - 手动切换文档后，原 MCP 目标返回 DOCUMENT_CHANGED；显式 open_deck 后可以继续。
 - 用户点击接管后，Agent 导航返回 USER_IN_CONTROL；手动键盘翻页正常，交还后 MCP 读到 currentSlide 为 1。
 - MCP 重播执行成功，最终页面和上报页码一致。验收结束已 hand_off。

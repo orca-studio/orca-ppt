@@ -74,7 +74,7 @@ const SPOTLIGHT_TTL_MS = 8_000
 
 /**
  * 往前翻一页。走 skill 引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧
- * (见 skill/runtime/engine.js)。老稿子的引擎没有它,就退回 Reveal.next()。
+ * (见 skills/orca-ppt/runtime/engine.js)。老稿子的引擎没有它,就退回 Reveal.next()。
  */
 const ADVANCE = 'window.__orcaAdvance ? window.__orcaAdvance() : Reveal.next()'
 

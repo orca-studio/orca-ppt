@@ -13,13 +13,13 @@ const app = join(stage, 'app'),
 const run = (cmd, args, cwd = root) => execFileSync(cmd, args, { cwd, stdio: 'inherit' })
 try {
   await mkdir(skill, { recursive: true })
-  // skill 在本仓的 skill/ 里:取当前提交里的那一份,不取工作区 —— 改了没提交的不进安装包。
+  // skill 在本仓的 skills/orca-ppt/ 里:取当前提交里的那一份,不取工作区 —— 改了没提交的不进安装包。
   const revision = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root }).toString().trim()
   run('git', [
     'archive',
     '--format=tar',
     '--output=' + join(stage, 'skill.tar'),
-    `${revision}:skill`,
+    `${revision}:skills/orca-ppt`,
   ])
   run('tar', ['-xf', join(stage, 'skill.tar'), '-C', skill])
   await readFile(join(skill, 'SKILL.md'))
