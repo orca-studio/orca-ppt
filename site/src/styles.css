@@ -654,3 +654,59 @@ code {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- 联系方式(收尾区里) ---------- */
+.contact {
+  width: 100%;
+  max-width: 720px;
+  margin-top: 48px;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+}
+.contact-intro {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.contact-options {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.contact-options a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 8px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background-color 160ms ease;
+}
+.contact-options img {
+  width: 104px;
+  height: 104px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--line);
+}
+.contact-options strong {
+  font-size: 15px;
+}
+.contact-options span {
+  font-size: 12.5px;
+  color: var(--dim);
+}
+@media (hover: hover) and (pointer: fine) {
+  .contact-options a:hover {
+    background: rgba(255, 255, 255, 0.7);
+  }
+}
+@media (max-width: 640px) {
+  .contact-options {
+    grid-template-columns: 1fr;
+  }
+}

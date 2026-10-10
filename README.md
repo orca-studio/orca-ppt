@@ -2,6 +2,8 @@
 
 **和 AI 一起，把想法做成演示稿。**
 
+[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [官网](https://ppt.orca-studio.ai) · [关注更新](https://x.com/jevbot_dev) · [联系我们](#联系我们)
+
 ![Orca PPT](./docs/brand/social-card-1200x630.png)
 
 Orca PPT 是一个桌面应用，让你用自己的 AI 助手（比如 Claude Code）做出**会动的演示稿**：
@@ -77,6 +79,29 @@ Orca PPT 是开源的，MIT 许可，免费使用。
 
 **支持 Windows 吗？**
 现在只有 Mac 版。Windows 版在计划里。
+
+## 联系我们
+
+<table>
+  <tr>
+    <td align="center" valign="top" width="33%">
+      <a href="https://x.com/jevbot_dev"><img src="docs/contact/x-logo.png" width="140" height="140" alt="X"></a>
+      <p><a href="https://x.com/jevbot_dev"><strong>@jevbot_dev ↗</strong></a></p>
+      <p><sub>产品动态</sub></p>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <a href="docs/contact/wechat-qrcode.png"><img src="docs/contact/wechat-qrcode.png" width="140" height="140" alt="微信二维码"></a>
+      <p><strong>加微信</strong></p>
+      <p><sub>扫码添加 · 点开放大</sub></p>
+    </td>
+    <td align="center" valign="top" width="33%">
+      <p><strong>加入交流群</strong></p>
+      <p><sub>群二维码会定期更换，<br>最新的在 <a href="https://ppt.orca-studio.ai/#contact">官网</a></sub></p>
+    </td>
+  </tr>
+</table>
+
+使用中遇到问题，也可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
 
 ## 给开发者
 
