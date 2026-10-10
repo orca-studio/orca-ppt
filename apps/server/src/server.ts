@@ -420,7 +420,9 @@ export async function startServer(
     const target = await realpath(path).catch(() => undefined)
     if (!target || !catalog.skillPath) return undefined
     for (const recipe of await listRecipes(catalog.skillPath)) {
-      const dir = await realpath(join(catalog.skillPath, 'recipes', recipe.id)).catch(() => '')
+      // 样稿可能在配方目录里,也可能是 sample 指向的示例目录
+      const found = await recipeEntry(catalog.skillPath, recipe.id)
+      const dir = found ? await realpath(found.dir).catch(() => '') : ''
       if (dir === target) return recipe
     }
     return undefined

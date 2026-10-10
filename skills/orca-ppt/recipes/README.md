@@ -13,8 +13,7 @@
 | id | 名字 | 适合 | 入口 |
 | --- | --- | --- | --- |
 | `recap-credits` | 电影级回顾片尾 | 结尾页：回顾整份稿子 + 感谢幕后成员 | [recap-credits/RECIPE.md](recap-credits/RECIPE.md) |
-
-`references/product-showcase.md`（产品分栏 → 全屏详情）也是一个同款，还没按本目录的格式搬过来。
+| `drink-showcase` | 四栏产品切换 | 四个平级产品逐个亮相，最后展开主推款 | [drink-showcase/RECIPE.md](drink-showcase/RECIPE.md) |
 
 ## 怎么用一个同款
 
@@ -30,7 +29,7 @@
 | 文件 | 内容 |
 | --- | --- |
 | `RECIPE.md` | 配方。开头 frontmatter 给机器读（应用的同款列表靠它），正文给 agent 读 |
-| `index.html` | 能跑的样稿，用占位内容把整个配方演一遍 |
+| `index.html` | 能跑的样稿，用占位内容把整个配方演一遍。`examples/` 里已经有合适的稿子时不放这个，用 frontmatter 的 `sample` 指过去 |
 | 样片、封面 | 不用自己放。OrcaPPT 按样稿内容自动录一份缓存在应用数据目录，样稿、引擎或 `preview` / `cover` 一改就重录。样片只录 `preview` 指定的几页 —— 首页悬停是让人一眼看到看点，不是把整份稿子放一遍 |
 
 `RECIPE.md` 的 frontmatter：
@@ -40,6 +39,8 @@
 id: recap-credits          # 和目录名一致
 title: 电影级回顾片尾       # 给人看的名字
 mode: 汇报稿               # 汇报稿 / 故事稿
+order: 1                   # 首页排第几,小的在前。可省略(排在写了的后面)
+sample: ../../examples/x   # 样稿用 examples/ 里现成的那份（相对本目录，不能出 skill 目录）。可省略（用本目录的 index.html）
 summary: 一句话，什么场合用  # 不是标签
 preview: 4-5               # 样片只录这几页（页号从 1 数，含两头）：只放这个同款的看点。可省略（录整份）
 cover: 4.9                 # 首页封面取样片第几秒，可省略（默认 75% 处）

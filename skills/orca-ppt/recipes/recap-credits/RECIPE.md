@@ -2,6 +2,7 @@
 id: recap-credits
 title: 电影级回顾片尾
 mode: 汇报稿
+order: 1
 summary: 结尾页不写「谢谢观看」：一块倾斜的屏幕把整份稿子按真转场快放一遍，旁边滚动幕后名单
 preview: 4-5
 cover: 4.9

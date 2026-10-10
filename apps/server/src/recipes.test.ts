@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -54,6 +54,51 @@ describe('recipeEntry', () => {
       join(skill, 'recipes/recap-credits/index.html'),
     )
     expect(await recipeEntry(skill, '../recipes/recap-credits')).toBeUndefined()
+  })
+})
+
+describe('同款的顺序', () => {
+  it('order 小的在前,没写的排后面', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    for (const [id, order] of [
+      ['a', ''],
+      ['b', 'order: 2\n'],
+      ['c', 'order: 1\n'],
+    ]) {
+      await mkdir(join(skill, 'recipes', id!), { recursive: true })
+      await writeFile(
+        join(skill, 'recipes', id!, 'RECIPE.md'),
+        `---\nid: ${id}\ntitle: ${id}\n${order}---\n`,
+      )
+    }
+    expect((await listRecipes(skill)).map((item) => item.id)).toEqual(['c', 'b', 'a'])
+  })
+})
+
+describe('recipeEntry 的 sample', () => {
+  it('指向 skill 里现成的示例,不复制一份', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    await mkdir(join(skill, 'recipes/drink'), { recursive: true })
+    await mkdir(join(skill, 'examples/drink'), { recursive: true })
+    await writeFile(join(skill, 'examples/drink/index.html'), '')
+    await writeFile(
+      join(skill, 'recipes/drink/RECIPE.md'),
+      '---\nid: drink\ntitle: 产品分栏\nsample: ../../examples/drink\n---\n',
+    )
+    const found = await recipeEntry(skill, 'drink')
+    expect(found?.entry).toBe(join(await realpath(skill), 'examples/drink/index.html'))
+  })
+
+  it('sample 跑出 skill 目录就不认', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    const outside = await mkdtemp(join(tmpdir(), 'outside-'))
+    await writeFile(join(outside, 'index.html'), '')
+    await mkdir(join(skill, 'recipes/x'), { recursive: true })
+    await writeFile(
+      join(skill, 'recipes/x/RECIPE.md'),
+      `---\nid: x\ntitle: X\nsample: ${outside}\n---\n`,
+    )
+    expect(await recipeEntry(skill, 'x')).toBeUndefined()
   })
 })
 

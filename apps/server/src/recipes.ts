@@ -1,5 +1,5 @@
-import { readFile, readdir, stat } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile, readdir, realpath, stat } from 'node:fs/promises'
+import { isAbsolute, join, relative, resolve } from 'node:path'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { recipePrompt } from '@orca-ppt/deck-agent'
 
@@ -28,12 +28,14 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
     return []
   }
 
-  const recipes: Recipe[] = []
+  const recipes: Array<Recipe & { order: number }> = []
   for (const dir of dirs) {
     const text = await readFile(join(root, dir, 'RECIPE.md'), 'utf8').catch(() => '')
     const meta = frontmatter(text)
     if (!meta.id || !meta.title || meta.id !== dir) continue
+    const order = Number(meta.order)
     recipes.push({
+      order: Number.isFinite(order) ? order : Number.MAX_SAFE_INTEGER,
       id: meta.id,
       title: meta.title,
       mode: meta.mode ?? '汇报稿',
@@ -41,20 +43,31 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
       prompt: recipePrompt({ id: meta.id, title: meta.title, summary: meta.summary }),
     })
   }
+  // 首页的顺序:frontmatter 的 order 小的在前(首推的同款写 1),没写的排后面,再按目录名
   return recipes
+    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    .map(({ order: _order, ...recipe }) => recipe)
 }
 
-/** 同款样稿的入口文件。只认 listRecipes 认得的 id,不拿 id 拼路径去碰别的目录。 */
+/**
+ * 同款样稿的入口文件。只认 listRecipes 认得的 id,不拿 id 拼路径去碰别的目录。
+ *
+ * 样稿可以直接放在配方目录里(`recipes/<id>/index.html`),也可以用 frontmatter 的
+ * `sample` 指向 skill 里现成的示例(比如 `sample: ../../examples/drink-showcase`)——
+ * 示例还被展示站、测试和规范文档用着,不复制第二份。`sample` 必须落在 skill 目录以内。
+ */
 export async function recipeEntry(
   skillPath: string | undefined,
   id: string,
 ): Promise<RecipeSource | undefined> {
   const known = (await listRecipes(skillPath)).find((item) => item.id === id)
   if (!skillPath || !known) return undefined
-  const dir = join(skillPath, 'recipes', id)
+  const home = join(skillPath, 'recipes', id)
+  const meta = frontmatter(await readFile(join(home, 'RECIPE.md'), 'utf8'))
+  const dir = meta.sample ? await withinSkill(skillPath, resolve(home, meta.sample)) : home
+  if (!dir) return undefined
   const entry = await existing(join(dir, 'index.html'))
   if (!entry) return undefined
-  const meta = frontmatter(await readFile(join(dir, 'RECIPE.md'), 'utf8'))
   // 封面取样片第几秒(cover)。写错了不猜,交给录制器取默认
   const cover = Number(meta.cover)
   return {
@@ -83,6 +96,17 @@ export function pageRange(value: string | undefined): { from: number; to: number
   const from = Number(match[1]) - 1
   const to = Number(match[2]) - 1
   return from >= 0 && to >= from ? { from, to } : undefined
+}
+
+/** 真实路径落在 skill 目录以内才返回(先 realpath 再比,软链绕不出去)。 */
+async function withinSkill(skillPath: string, path: string): Promise<string | undefined> {
+  const [root, target] = await Promise.all([
+    realpath(skillPath).catch(() => undefined),
+    realpath(path).catch(() => undefined),
+  ])
+  if (!root || !target) return undefined
+  const rel = relative(root, target)
+  return rel && !rel.startsWith('..') && !isAbsolute(rel) ? target : undefined
 }
 
 /** 只认最简单的 `键: 值` 一行一个,不引 YAML 库。值里的冒号保留。 */
