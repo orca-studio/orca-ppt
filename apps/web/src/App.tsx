@@ -48,7 +48,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
-  const [recipes, setRecipes] = useState<Recipe[]>([])
+  // undefined = 还在加载：别先闪一下空状态
+  const [recipes, setRecipes] = useState<Recipe[] | undefined>(undefined)
   const [themes, setThemes] = useState<Theme[]>([])
   /** 页面类型 id → 显示名。和标签一样:文件里写 id,界面显示 label。 */
   const [pageLabels, setPageLabels] = useState<Record<string, string>>({})

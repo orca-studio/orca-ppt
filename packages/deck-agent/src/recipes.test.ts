@@ -23,6 +23,23 @@ describe('recipePrompt', () => {
     expect(prompt).toContain('不要编人名和数据')
   })
 
+  it('没连上 Orca PPT 时,先转告怎么装、怎么连', () => {
+    expect(prompt).toContain('https://github.com/orca-studio/orca-ppt')
+    expect(prompt).toContain('claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp')
+    expect(prompt).toContain('不要凭印象做')
+  })
+
+  it('样稿指到 examples 时,路径跟着走', () => {
+    expect(prompt).toContain('recipes/recap-credits/index.html')
+    const pointed = recipePrompt({
+      id: 'drink-showcase',
+      title: 'D',
+      sample: 'examples/drink-showcase',
+    })
+    expect(pointed).toContain('examples/drink-showcase/index.html')
+    expect(pointed).toContain('recipes/drink-showcase/RECIPE.md')
+  })
+
   it('没有 summary 也能生成', () => {
     expect(recipePrompt({ id: 'x', title: 'X' })).toContain('「X」')
   })

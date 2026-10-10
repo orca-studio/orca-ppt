@@ -90,10 +90,10 @@ describe('真实示例', () => {
   // 仓内的 skills/orca-ppt/(并仓之前读的是 ghq 下的独立仓)
   const skill = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
   const cases: Array<[string, number]> = [
-    ['forest-timeline', 3],
-    ['emerald-editorial', 4],
-    ['story-circle', 2],
-    ['spec-wall', 4],
+    ['forest-timeline', 6],
+    ['emerald-editorial', 6],
+    ['story-circle', 5],
+    ['spec-wall', 6],
   ]
 
   it.each(cases)('%s 解析出 %i 次翻页,每条都有关系和手法', async (name, count) => {

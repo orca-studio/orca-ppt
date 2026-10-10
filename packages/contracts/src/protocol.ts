@@ -363,6 +363,8 @@ export const requests = {
           preview: z.string().optional(),
           /** 样片封面的绝对路径。 */
           poster: z.string().optional(),
+          /** 样片重试几次都没录成。没有 preview 也没有这个,就是还在录。 */
+          previewFailed: z.boolean().optional(),
           /** 「做同款」的 agent 提示词,用户复制后贴进自己的 agent。 */
           prompt: z.string(),
         }),

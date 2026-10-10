@@ -86,3 +86,22 @@ export async function pruneOthers(files: PreviewFiles): Promise<void> {
 export async function ensureDir(path: string): Promise<void> {
   await mkdir(path, { recursive: true })
 }
+
+/**
+ * 上一份录好的样片(键已经过期)。样稿改了要重录时首页先放它,不让卡片空着;
+ * 新的录好后 pruneOthers 会删掉它。
+ */
+export async function stalePreview(
+  files: PreviewFiles,
+): Promise<{ preview: string; poster?: string } | undefined> {
+  const dir = dirname(files.video)
+  const names = await readdir(dir).catch(() => [] as string[])
+  const videos = names.filter((name) => name.endsWith('.webm') && join(dir, name) !== files.video)
+  for (const name of videos) {
+    const video = join(dir, name)
+    if (!(await exists(video))) continue
+    const poster = video.replace(/\.webm$/, '.jpg')
+    return { preview: video, ...((await exists(poster)) ? { poster } : {}) }
+  }
+  return undefined
+}

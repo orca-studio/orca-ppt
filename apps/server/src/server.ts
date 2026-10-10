@@ -49,7 +49,14 @@ import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
 import { instantiate, listTemplates } from './templates.js'
 import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
-import { ensureDir, exists, previewDir, previewFiles, pruneOthers } from './recipe-preview.js'
+import {
+  ensureDir,
+  exists,
+  previewDir,
+  previewFiles,
+  pruneOthers,
+  stalePreview,
+} from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 
 /**
@@ -360,11 +367,16 @@ export async function startServer(
   await previews.allow(previewDir())
 
   /**
-   * 样片缓存的后台队列。一次只录一个(壳里一个隐藏窗口),同一份内容只排一次;
-   * 录失败的这一次运行里不再重试 —— 不然首页每拉一次列表就重录一遍。
+   * 样片缓存的后台队列。一次只录一个(壳里一个隐藏窗口),同一份内容只排一次。
+   * 录失败了隔一会儿再试(录制器偶尔赶上窗口刚起来、稿子正在改),最多试几次;
+   * 不立刻重试 —— 不然首页每拉一次列表就重录一遍。
    */
+  const PREVIEW_ATTEMPTS = 3
+  const PREVIEW_RETRY_MS = 20_000
   const queuedPreviews = new Set<string>()
-  const failedPreviews = new Set<string>()
+  const failedPreviews = new Map<string, number>()
+  const previewGaveUp = (id: string, key: string) =>
+    (failedPreviews.get(`${id}:${key}`) ?? 0) >= PREVIEW_ATTEMPTS
   let previewTail: Promise<void> = Promise.resolve()
   /** 录制参数进缓存键:改了 frontmatter 的 preview / cover 就重录。 */
   const previewOptions = (found: RecipeSource) =>
@@ -372,7 +384,7 @@ export async function startServer(
 
   function queuePreview(id: string, key: string) {
     const tag = `${id}:${key}`
-    if (queuedPreviews.has(tag) || failedPreviews.has(tag)) return
+    if (queuedPreviews.has(tag) || previewGaveUp(id, key)) return
     // 没有窗口就没有录制器;等界面连上、下次拉列表时再排
     if (bus.connectionCount === 0) return
     queuedPreviews.add(tag)
@@ -395,8 +407,18 @@ export async function startServer(
         if (!(await exists(files.video))) throw new Error('壳说录好了,但样片文件不在')
         await pruneOthers(files)
         bus.broadcast('recipes.changed', {})
-      } catch {
-        failedPreviews.add(tag)
+      } catch (error) {
+        const attempts = (failedPreviews.get(tag) ?? 0) + 1
+        failedPreviews.set(tag, attempts)
+        console.error(
+          `[orca-ppt] 同款「${id}」的样片没录成(第 ${attempts} 次):`,
+          error instanceof Error ? error.message : error,
+        )
+        // 首页收到 recipes.changed 会重新拉列表:还能再试就借这一下重新排队,试满了卡片显示失败
+        setTimeout(
+          () => bus.broadcast('recipes.changed', {}),
+          attempts < PREVIEW_ATTEMPTS ? PREVIEW_RETRY_MS : 0,
+        ).unref()
       } finally {
         queuedPreviews.delete(tag)
       }
@@ -731,8 +753,11 @@ export async function startServer(
                   ...((await exists(files.poster)) ? { poster: files.poster } : {}),
                 }
               }
-              // 没命中:先只给标题(卡片显示占位),同时排进后台录一份
+              // 没命中:排进后台录一份。样稿改过的话上一份样片还在(录好新的才删),先放旧的
               queuePreview(recipe.id, files.key)
+              const stale = await stalePreview(files)
+              if (stale) return { ...recipe, ...stale }
+              if (previewGaveUp(recipe.id, files.key)) return { ...recipe, previewFailed: true }
               return recipe
             }),
           ),

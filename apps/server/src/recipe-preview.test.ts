@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { localRefs, previewFiles, previewKey, pruneOthers } from './recipe-preview.js'
+import { localRefs, previewFiles, previewKey, pruneOthers, stalePreview } from './recipe-preview.js'
 
 async function fixture() {
   const skill = await mkdtemp(join(tmpdir(), 'preview-'))
@@ -70,5 +70,21 @@ describe('previewFiles / pruneOthers', () => {
     expect((await readdir(join(cache, 'a'))).sort()).toEqual(
       [`${files.key}.jpg`, `${files.key}.webm`].sort(),
     )
+  })
+
+  it('重录期间先给上一份样片,当前这份不算', async () => {
+    const { dir, entry } = await fixture()
+    const cache = await mkdtemp(join(tmpdir(), 'cache-'))
+    const files = await previewFiles('a', dir, entry, '', { ORCA_PPT_PREVIEW_DIR: cache })
+    expect(await stalePreview(files)).toBeUndefined()
+    await mkdir(join(cache, 'a'), { recursive: true })
+    await writeFile(files.video, 'recording')
+    expect(await stalePreview(files)).toBeUndefined()
+    await writeFile(join(cache, 'a', 'old.webm'), 'x')
+    await writeFile(join(cache, 'a', 'old.jpg'), 'p')
+    expect(await stalePreview(files)).toEqual({
+      preview: join(cache, 'a', 'old.webm'),
+      poster: join(cache, 'a', 'old.jpg'),
+    })
   })
 })

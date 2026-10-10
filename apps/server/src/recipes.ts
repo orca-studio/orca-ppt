@@ -1,5 +1,5 @@
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
-import { isAbsolute, join, relative, resolve } from 'node:path'
+import { isAbsolute, join, posix, relative, resolve } from 'node:path'
 import type { RequestResult } from '@orca-ppt/contracts'
 import { recipePrompt } from '@orca-ppt/deck-agent'
 
@@ -40,13 +40,24 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
       title: meta.title,
       mode: meta.mode ?? '汇报稿',
       ...(meta.summary ? { summary: meta.summary } : {}),
-      prompt: recipePrompt({ id: meta.id, title: meta.title, summary: meta.summary }),
+      prompt: recipePrompt({
+        id: meta.id,
+        title: meta.title,
+        summary: meta.summary,
+        sample: meta.sample ? skillRelative(dir, meta.sample) : undefined,
+      }),
     })
   }
   // 首页的顺序:frontmatter 的 order 小的在前(首推的同款写 1),没写的排后面,再按目录名
   return recipes
     .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
     .map(({ order: _order, ...recipe }) => recipe)
+}
+
+/** `sample`(相对配方目录)换成相对 skill 根的路径,提示词里给 agent 用;出了 skill 就不给。 */
+function skillRelative(dir: string, sample: string): string | undefined {
+  const path = posix.normalize(posix.join('recipes', dir, sample)).replace(/\/$/, '')
+  return path.startsWith('..') || posix.isAbsolute(path) ? undefined : path
 }
 
 /**

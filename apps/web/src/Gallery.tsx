@@ -15,7 +15,8 @@ export type Recipe = RequestResult<'catalog.recipes'>['recipes'][number]
  * 打开已有的稿子走应用菜单。
  */
 export interface GalleryProps {
-  recipes: Recipe[]
+  /** undefined:还在加载,什么都不画(否则 Cmd+R 会先闪一下空状态)。 */
+  recipes: Recipe[] | undefined
   /** 点卡片:在工作台里打开这个同款的样稿(只读)。 */
   onPresent: (id: string) => void
   error: string | undefined
@@ -28,7 +29,7 @@ export function Gallery({ recipes, onPresent, error }: GalleryProps) {
       <header aria-hidden="true" />
 
       <div className="gallery-body">
-        {recipes.length === 0 ? (
+        {recipes === undefined ? null : recipes.length === 0 ? (
           <p className="gallery-empty">
             skill 里还没有同款。同款在 skill 的 <code>recipes/</code>{' '}
             目录下，写好之后重开首页就会出现。
@@ -107,7 +108,10 @@ function RecipeCard({ recipe, onPresent }: { recipe: Recipe; onPresent: () => vo
           ) : recipe.poster ? (
             <img src={assetUrl(recipe.poster)} alt="" />
           ) : (
-            <span className="gallery-placeholder">还没有样片</span>
+            // 样片是按样稿现录的,第一次打开首页要等一会儿
+            <span className="gallery-placeholder">
+              {recipe.previewFailed ? '样片没生成出来，点开直接看样稿' : '正在生成样片…'}
+            </span>
           )}
         </button>
         <Button
