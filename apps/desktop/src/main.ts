@@ -60,6 +60,20 @@ const APP_VERSION: string = app.isPackaged
 /** 工作台窗口。菜单动作永远发给它,不管当前焦点在哪。 */
 let workbench: BrowserWindow | undefined
 
+/**
+ * 只许开一份。锁按 userData 目录算,所以装在两处的两份(/Applications 和别的应用自带的那份)
+ * 也只会开一份 —— 第二份起来的话 MCP 端口已经被占,agent 连到的是哪一份全凭运气。
+ * 后开的那份把前一份的窗口叫到前面,自己退出。开发版不加锁:它常和装好的那份同时开着
+ * (端口用 ORCA_PPT_PORT 错开)。
+ */
+if (app.isPackaged && !app.requestSingleInstanceLock()) app.exit(0)
+app.on('second-instance', () => {
+  if (!workbench) return
+  if (workbench.isMinimized()) workbench.restore()
+  workbench.show()
+  workbench.focus()
+})
+
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
 function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }): void {
   const send = (action: MenuAction) => {
