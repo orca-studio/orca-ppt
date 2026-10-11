@@ -780,6 +780,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }
   }, [slide, deck?.previewUrl])
 
+  /**
+   * 左栏跟着当前页走。翻页不一定是点左栏(方向键、agent、自动播放),当前页出了可视区
+   * 就滚过去;本来就看得见就不动,免得点一下缩略图整栏跳一下。
+   */
+  const filmstrip = useRef<HTMLOListElement>(null)
+  useEffect(() => {
+    const current = filmstrip.current?.querySelector<HTMLElement>('button[data-current="true"]')
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
+    current?.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' })
+  }, [slide, deck?.slideCount])
+
   /** 这份稿子用的主题,显示人读的那个名字。 */
   const themeTitle = themes.find((item) => item.name === deck?.theme)?.title ?? deck?.theme
 
@@ -870,7 +881,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
         <section className="pane pane--nav">
           <div className="pane-body">
             {deck && (
-              <ol className="filmstrip">
+              <ol className="filmstrip" ref={filmstrip}>
                 {Array.from({ length: deck.slideCount }, (_, index) => (
                   <li key={index}>
                     <button
