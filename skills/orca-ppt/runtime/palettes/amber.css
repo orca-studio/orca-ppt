@@ -1,0 +1,29 @@
+/* 配色：琥珀
+ * 一句话：炭灰底 + 琥珀黄大面 + 奶油色高亮。像一块仪表盘，**深底**。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          炭灰                --surface     琥珀黄（大圆环、大面板）
+ *   --surface-2   深一档的灰（卡片）    --accent      奶油色（高亮扇形、重点块）
+ *   --accent-soft 浅琥珀              --text / --text-dim  米白 / 灰
+ *   --text-on-surface    炭灰（琥珀上的文字）
+ *   --text-on-accent     炭灰（奶油、浅琥珀上的文字）
+ *   --accent-text        琥珀（炭灰底上的强调字，深底上强调色本身就够亮）
+ *
+ * 琥珀面上的字用深色：琥珀明度高，压白字读不动。
+ * 可以互变的颜色：accent ↔ accent-soft（奶油 ↔ 浅琥珀，同色系）。
+ * 背景就是深色：不需要整页深色形状（themes.md「深底配色要当心」）。
+ */
+
+:root {
+  --bg: #2a2d33;
+  --surface: #f4b41a;
+  --surface-2: #3a3e46;
+  --text: #f3f1ec;
+  --text-dim: #a3a5ab;
+  --text-on-surface: #2a2d33;
+  --accent: #fff0c4;
+  --accent-soft: #ffd56b;
+  --text-on-accent: #2a2d33;
+  --accent-text: #f4b41a;
+}

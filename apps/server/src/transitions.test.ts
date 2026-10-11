@@ -96,6 +96,8 @@ describe('真实示例', () => {
     ['examples/spec-wall', 6],
     // 计划注释后面跟着「数据来源」那几行 —— 它们不该被读成翻页
     ['recipes/data-report', 6],
+    // 同一种手法连续六次,计划后面还有几行几何说明
+    ['recipes/ring-timeline', 6],
   ]
 
   it.each(cases)('%s 解析出 %i 次翻页,每条都有关系和手法', async (name, count) => {
