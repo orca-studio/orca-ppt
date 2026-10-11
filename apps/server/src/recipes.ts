@@ -35,7 +35,7 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
     if (!meta.id || !meta.title || meta.id !== dir) continue
     const order = Number(meta.order)
     recipes.push({
-      order: Number.isFinite(order) ? order : Number.MAX_SAFE_INTEGER,
+      order: Number.isFinite(order) ? order : -Infinity,
       id: meta.id,
       title: meta.title,
       mode: meta.mode ?? '汇报稿',
@@ -48,9 +48,9 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
       }),
     })
   }
-  // 首页的顺序:frontmatter 的 order 小的在前(首推的同款写 1),没写的排后面,再按目录名
+  // 首页的顺序:新上架的在前。frontmatter 的 order 是上架序号,大的在前,没写的排最后,再按目录名
   return recipes
-    .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+    .sort((a, b) => b.order - a.order || a.id.localeCompare(b.id))
     .map(({ order: _order, ...recipe }) => recipe)
 }
 

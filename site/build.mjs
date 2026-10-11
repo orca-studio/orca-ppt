@@ -78,7 +78,7 @@ function readRecipes() {
       title: meta.title,
       mode: meta.mode ?? '汇报稿',
       summary: meta.summary ?? '',
-      order: Number.isFinite(+meta.order) ? +meta.order : 999,
+      order: Number.isFinite(+meta.order) ? +meta.order : -Infinity,
       dir,
       // 线上地址:examples/ 里的样稿沿用老地址,配方目录里的放 /recipes/<id>/
       path: relative(SKILL, dir).split('/').join('/') + '/',
@@ -87,7 +87,8 @@ function readRecipes() {
       pages: (readFileSync(join(dir, 'index.html'), 'utf8').match(/<section[\s>]/g) || []).length,
     })
   }
-  return list.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+  // 新上架的在前:order 是上架序号,大的在前,没写的排最后
+  return list.sort((a, b) => b.order - a.order || a.id.localeCompare(b.id))
 }
 
 /** 把一份样稿目录拷到线上,改掉 node_modules 路径,大 PNG 转 JPEG,带上它引的 _assets。 */

@@ -58,7 +58,7 @@ describe('recipeEntry', () => {
 })
 
 describe('同款的顺序', () => {
-  it('order 小的在前,没写的排后面', async () => {
+  it('order 大的在前(新上架的排第一),没写的排后面', async () => {
     const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
     for (const [id, order] of [
       ['a', ''],
@@ -71,7 +71,7 @@ describe('同款的顺序', () => {
         `---\nid: ${id}\ntitle: ${id}\n${order}---\n`,
       )
     }
-    expect((await listRecipes(skill)).map((item) => item.id)).toEqual(['c', 'b', 'a'])
+    expect((await listRecipes(skill)).map((item) => item.id)).toEqual(['b', 'c', 'a'])
   })
 })
 
