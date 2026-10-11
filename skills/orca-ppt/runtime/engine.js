@@ -1513,7 +1513,7 @@
     let segs = [];
     let cur = -1;
     let chain = Promise.resolve();
-    // 往回跳、隔页跳时 reveal 的 auto-animate 也会动（倒着放），这种不算转场，直接拨到终点
+    // 往回跳、隔页跳没有转场（见 beforeslidechange），拨到终点把场景、视频也放完
     const SETTLED = 1e7;
     const go = async (i) => {
       const forward = i === cur + 1;
@@ -1759,6 +1759,23 @@
     if (EMBED) serveRecap();
   });
   Reveal.on("slidechanged", onSlide);
+
+  // 往回翻、跳页一律硬切。转场都是按往后翻一页设计的，但 reveal 的 auto-animate 不看方向：
+  // 往回时只要离开的那页没有 restart 就会倒着动（只有形态变换，没有错开入场这些补充），
+  // 结果一半页面倒着动一半硬切。切页前给两页临时补上 restart，切完拿掉。
+  const tempRestart = [];
+  Reveal.on("beforeslidechange", (e) => {
+    const from = Reveal.getIndices().h;
+    if (e.indexh === undefined || e.indexh === from || e.indexh === from + 1) return;
+    for (const s of [Reveal.getSlide(from), Reveal.getSlide(e.indexh)]) {
+      if (!s || s.hasAttribute("data-auto-animate-restart")) continue;
+      s.setAttribute("data-auto-animate-restart", "");
+      tempRestart.push(s);
+    }
+  });
+  Reveal.on("slidechanged", () => {
+    for (const s of tempRestart.splice(0)) s.removeAttribute("data-auto-animate-restart");
+  });
 
   // 本次转场的 CSS 动画。暂停的动画不会自己结束，不单独记下来的话，
   // 下一次 seek 会把上一次转场的动画也倒回去，ghost 克隆时就拍到错误的状态。
