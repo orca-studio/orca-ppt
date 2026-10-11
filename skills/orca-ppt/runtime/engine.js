@@ -124,6 +124,15 @@
     for (const section of document.querySelectorAll(".reveal .slides > section[data-auto-animate]")) {
       section.setAttribute("data-auto-animate-unmatched", "false");
     }
+    // 绕圆心转：rotate 绕 transform-origin 转，而 auto-animate 不管位置变没变都把它设成
+    // top left !important，扇形就绕盒子左上角甩出去（录制时这条样式一直留着，扇形停在画面外）。
+    // 标上 data-st-turn，由 tokens.css 里更具体的 !important 规则压回来：默认绕盒子中心，
+    // 作者自己写了 transform-origin（比如指针绕底端）就用作者的
+    for (const el of document.querySelectorAll(".reveal .slides > section [style*='rotate']")) {
+      if (!el.style.rotate) continue;
+      el.dataset.stTurn = "";
+      el.style.setProperty("--st-origin", el.style.transformOrigin || "50% 50%");
+    }
     for (const section of document.querySelectorAll(".reveal .slides > section[data-st]")) {
       const enter = layer("st-enter");
       enter.append(...section.childNodes);
@@ -1744,6 +1753,10 @@
     backgroundTransition: "none",
     autoAnimateDuration: 0.9,
     autoAnimateEasing: "cubic-bezier(0.65, 0, 0.35, 1)",
+    // reveal 默认那一组，加上 rotate。auto-animate 自己用 transform 做位移和缩放，元素的旋转写在
+    // transform 里会被盖掉，所以「绕圆心转」写 CSS 的独立属性 rotate（transitions.md「绕圆心转」）
+    autoAnimateStyles: ["opacity", "color", "background-color", "padding", "font-size", "line-height",
+      "letter-spacing", "border-width", "border-color", "border-radius", "outline", "outline-offset", "rotate"],
     // 往前翻的键都交给 advance（见上）。往回翻不管：往回本来就是硬切。
     // ↓ / ↑ 也翻页：稿子没有纵向的页，reveal 默认的上下导航在这里什么都不做，
     // 而 OrcaPPT 的页胶片是竖着排的，人会顺手按上下。

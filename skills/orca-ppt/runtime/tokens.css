@@ -49,6 +49,9 @@ html, body, .reveal { background: var(--bg); }
 .reveal .slides > section > *,
 .st-layer > * { position: absolute; margin: 0; }
 .st-layer { position: absolute; inset: 0; }
+/* 绕圆心转（transitions.md）：写了 rotate 的元素由 engine.js 标上 data-st-turn。
+   reveal 的 auto-animate 会给元素加 transform-origin: top left !important，这里压回来 */
+.reveal .slides [data-st-turn] { transform-origin: var(--st-origin, 50% 50%) !important; }
 
 /* 文字 */
 .t-display { font-size: var(--type-display); font-weight: 700; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }

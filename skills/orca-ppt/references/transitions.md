@@ -183,6 +183,42 @@
 3. 洞的大小全片保持一致，只移动不缩放。跟着改大小会让观众觉得是另一个东西。
 4. 一份稿子里洞连续移动不超过 3 次，再多就该换页。
 
+#### 常用组合：绕圆心转
+
+环形时间轴、仪表盘、转盘：一块高亮扇形绕圆心转到下一格，观众看到的是「指针走到了下一项」。
+这是 PowerPoint 里「空心弧 + 平滑，每页把弧旋转一格」的做法。写法还是共享元素，只是两页之间变的是
+CSS 的 `rotate`，不是位置。
+
+```html
+<!-- 圆环：画在一个正方形盒子里，中间的洞用径向渐变画（不要用 mask，见第 5 条） -->
+<div data-id="ring" class="s-surface" style="left:-420px; top:0px; width:1080px; height:1080px; border-radius:50%;
+     background:radial-gradient(circle closest-side, transparent 300px, var(--surface) 301px);"></div>
+<!-- 扇形：和圆环同心的正方形；clip-path 三角形切出张角（这里 30°，朝正右方），外沿由 border-radius 切成圆弧 -->
+<div data-id="wedge" class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px; border-radius:50%; rotate:-60deg;
+     background:radial-gradient(circle closest-side, transparent 300px, var(--accent) 301px);
+     clip-path:polygon(50% 50%, 110% 34%, 110% 66%);"></div>
+<!-- 下一页：只改 rotate -->
+<div data-id="wedge" class="s-accent" style="… rotate:-30deg; …"></div>
+```
+
+1. **只改 `rotate`，盒子的位置和大小两页一样。** 引擎绕盒子中心转（要绕别的点，比如指针绕底端，
+   在行内写 `transform-origin`）；盒子一挪或一缩放，转的中心就跟着跑。旋转写 CSS 的独立属性 `rotate`，
+   不要写进 `transform` —— 形态变换自己用 `transform` 做位移，写在里面的旋转会被盖掉。
+2. **每页都写 `rotate`**，包括 0°。只有一页写，引擎认不出它是要转的元素。
+3. **一格的角度 = 可见的弧 ÷ 格数**，从小到大写，翻一页加一格：顺时针一路转下去。
+   一次转动不超过 180° —— `rotate` 按数值插值，`-150deg` → `150deg` 是倒着转 300°，不是顺着转 60°。
+   `check-deck` 会提醒。
+4. **进场和退场放在画面外**：第一页把扇形转到画面外面（圆心贴着画布边时，转到背对画面那一侧），
+   第二页它才转进来；最后一页同理转出去。这两次转得远，写 `data-auto-animate-duration="1.2"`。
+5. **转动的元素不要用 `mask`。** 正在做形态变换的元素加 mask，录制时 Chrome 会把遮罩画错位，扇形消失或只剩一角。
+   洞用径向渐变画在背景上，张角用 `clip-path`。
+6. **格子上的文字（年份、刻度）每个写 `data-id`**，当前那一格换大一档的字号和 `.t-on-accent`，
+   其余的 `.t-on-surface` 加 `opacity` 压暗。字号、颜色、透明度会跟着扇形一起过渡；
+   文字盒子写固定宽度、`text-align:center`，改字号时按行高调 `top`，让文字的中心不动。
+   不写 `data-id` 的话，样式一变它就被当成新元素，先淡出再浮进来。
+7. 扇形和圆环的盒子通常比画布高（圆心贴边、半个环出画），`check-deck` 按整页形状对待它们，
+   不量安全区 —— 环上的文字照常要在安全区里。
+
 ### 元素交接（`data-st="carry"`）
 
 前后两页版式相同，内容不同。对应位置的元素两两交接：旧的朝一个方向滑出淡出，新的从另一侧滑入。
@@ -427,7 +463,7 @@ URL 带 `?calm`,或者 `<html>` / `<body>` 上写 `data-motion="calm"`,就打开
 ## 组合规则
 
 - 任何手法的页之后，下一页都可以用任何手法（包括共享元素）。
-- 不要连续三次翻页用同一种手法。元素交接走列表时例外。
+- 不要连续三次翻页用同一种手法。元素交接走列表、绕圆心转走时间轴时例外 —— 都是「顺序往前走」，同一个动作重复正是看点。
 - **不要用 reveal 自带的 `data-transition`**（slide / zoom / convex），也不要用淡入淡出当页间转场。
 - 一页里 `data-st` 只能写一个。
 - 回顾片尾只看进入它的那一次翻页，不算进「连续三次同一种手法」。

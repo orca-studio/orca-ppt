@@ -234,12 +234,28 @@ for (const deck of decks) {
 
   const count = await page.evaluate(() => window.__capture.count());
   const found = [];
+  let turns = {};
   for (let i = 0; i < count; i++) {
     // 切到这一页并冻住动画，再把时间轴推到转场和入场都放完
     const { transition } = await page.evaluate((n) => window.__capture.go(n), i);
     await page.evaluate((ms) => window.__capture.seek(ms), transition);
     const problems = await page.evaluate(auditSlide);
     for (const p of problems) found.push({ page: i + 1, ...p });
+
+    // —— 绕圆心转一次不超过 180°（transitions.md「绕圆心转」）：rotate 按数值插值，
+    //    -150° → 150° 是倒着转 300°，不是顺着转 60°。按行内写的角度比，跨页才看得出来
+    const now = await page.evaluate(() => Object.fromEntries(
+      [...document.querySelectorAll(".slides > section.present [data-id]")]
+        .filter((el) => el.style.rotate)
+        .map((el) => [el.dataset.id, parseFloat(el.style.rotate) || 0])));
+    for (const [id, deg] of Object.entries(now)) {
+      const was = turns[id] ?? 0;
+      if (Math.abs(deg - was) > 180) {
+        found.push({ page: i + 1, rule: "绕圆心转", level: "warn",
+          msg: `data-id="${id}" 从 ${was}° 转到 ${deg}°，一次转了 ${Math.abs(deg - was)}°（超过 180° 看着像倒转，transitions.md「绕圆心转」）` });
+      }
+    }
+    turns = now;
   }
   await page.close();
 
