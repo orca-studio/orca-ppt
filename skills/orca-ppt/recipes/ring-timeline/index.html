@@ -21,7 +21,8 @@
 6→7  关系：扇形继续顺时针转出画面，五年走完                              手法：绕圆心转  共享：wedge
 连续六次绕圆心转：时间轴走年份，和元素交接走列表一样，是「组合规则」允许的例外。
 圆心 (120, 540)：圆环 1080（内半径 300），扇形 1160、张角 30°，五个年份每格 30°（-60° → 60°），封面 -150°、结尾 150° 都在画面外。
-年份按「标签 + 文字」自动配对：当前年份 .t-h1 .t-on-accent，其余 .t-h2 .t-on-surface 半透明，中心点不变。
+年份每个写 data-id：当前年份 .t-h1 .t-on-accent，其余 .t-h2 .t-on-surface 半透明，中心点不变；
+扇形离开的年份前半程变回普通，到达的年份后半程才放大（焦点移交第 4 条）。
 示例内容：北岸软件是虚构的公司。
 -->
 
@@ -48,7 +49,7 @@
   <section data-page="timeline" data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
     <div data-id="ring" class="s-surface" style="left:-420px; top:0px; width:1080px; height:1080px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 300px, var(--surface) 301px);"></div>
     <div data-id="wedge" class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px; border-radius:50%; rotate:-60deg; background:radial-gradient(circle closest-side, transparent 300px, var(--accent) 301px); clip-path:polygon(50% 50%, 110% 34%, 110% 66%);"></div>
-    <p data-id="y2021" class="t-h1 t-on-accent" style="left:230px; top:136px; width:200px; text-align:center;">2021</p>
+    <p data-id="y2021" class="t-h1 t-on-accent" data-auto-animate-delay="0.6" data-auto-animate-duration="0.6" style="left:230px; top:136px; width:200px; text-align:center;">2021</p>
     <p data-id="y2022" class="t-h2 t-on-surface" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
     <p data-id="y2023" class="t-h2 t-on-surface" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
     <p data-id="y2024" class="t-h2 t-on-surface" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
@@ -66,8 +67,8 @@
   <section data-page="timeline" data-auto-animate data-hold="2.5">
     <div data-id="ring" class="s-surface" style="left:-420px; top:0px; width:1080px; height:1080px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 300px, var(--surface) 301px);"></div>
     <div data-id="wedge" class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px; border-radius:50%; rotate:-30deg; background:radial-gradient(circle closest-side, transparent 300px, var(--accent) 301px); clip-path:polygon(50% 50%, 110% 34%, 110% 66%);"></div>
-    <p data-id="y2021" class="t-h2 t-on-surface" style="left:230px; top:147px; width:200px; text-align:center; opacity:0.5;">2021</p>
-    <p data-id="y2022" class="t-h1 t-on-accent" style="left:384px; top:290px; width:200px; text-align:center;">2022</p>
+    <p data-id="y2021" class="t-h2 t-on-surface" data-auto-animate-duration="0.45" style="left:230px; top:147px; width:200px; text-align:center; opacity:0.5;">2021</p>
+    <p data-id="y2022" class="t-h1 t-on-accent" data-auto-animate-delay="0.45" data-auto-animate-duration="0.45" style="left:384px; top:290px; width:200px; text-align:center;">2022</p>
     <p data-id="y2023" class="t-h2 t-on-surface" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
     <p data-id="y2024" class="t-h2 t-on-surface" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
     <p data-id="y2025" class="t-h2 t-on-surface" style="left:230px; top:875px; width:200px; text-align:center; opacity:0.5;">2025</p>
@@ -85,8 +86,8 @@
     <div data-id="ring" class="s-surface" style="left:-420px; top:0px; width:1080px; height:1080px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 300px, var(--surface) 301px);"></div>
     <div data-id="wedge" class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px; border-radius:50%; rotate:0deg; background:radial-gradient(circle closest-side, transparent 300px, var(--accent) 301px); clip-path:polygon(50% 50%, 110% 34%, 110% 66%);"></div>
     <p data-id="y2021" class="t-h2 t-on-surface" style="left:230px; top:147px; width:200px; text-align:center; opacity:0.5;">2021</p>
-    <p data-id="y2022" class="t-h2 t-on-surface" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
-    <p data-id="y2023" class="t-h1 t-on-accent" style="left:440px; top:500px; width:200px; text-align:center;">2023</p>
+    <p data-id="y2022" class="t-h2 t-on-surface" data-auto-animate-duration="0.45" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
+    <p data-id="y2023" class="t-h1 t-on-accent" data-auto-animate-delay="0.45" data-auto-animate-duration="0.45" style="left:440px; top:500px; width:200px; text-align:center;">2023</p>
     <p data-id="y2024" class="t-h2 t-on-surface" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
     <p data-id="y2025" class="t-h2 t-on-surface" style="left:230px; top:875px; width:200px; text-align:center; opacity:0.5;">2025</p>
     <p class="t-label t-dim" style="left:120px; top:440px;">北岸软件</p>
@@ -104,8 +105,8 @@
     <div data-id="wedge" class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px; border-radius:50%; rotate:30deg; background:radial-gradient(circle closest-side, transparent 300px, var(--accent) 301px); clip-path:polygon(50% 50%, 110% 34%, 110% 66%);"></div>
     <p data-id="y2021" class="t-h2 t-on-surface" style="left:230px; top:147px; width:200px; text-align:center; opacity:0.5;">2021</p>
     <p data-id="y2022" class="t-h2 t-on-surface" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
-    <p data-id="y2023" class="t-h2 t-on-surface" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
-    <p data-id="y2024" class="t-h1 t-on-accent" style="left:384px; top:710px; width:200px; text-align:center;">2024</p>
+    <p data-id="y2023" class="t-h2 t-on-surface" data-auto-animate-duration="0.45" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
+    <p data-id="y2024" class="t-h1 t-on-accent" data-auto-animate-delay="0.45" data-auto-animate-duration="0.45" style="left:384px; top:710px; width:200px; text-align:center;">2024</p>
     <p data-id="y2025" class="t-h2 t-on-surface" style="left:230px; top:875px; width:200px; text-align:center; opacity:0.5;">2025</p>
     <p class="t-label t-dim" style="left:120px; top:440px;">北岸软件</p>
     <p class="t-h1" style="left:120px; top:500px;">发展历程</p>
@@ -123,8 +124,8 @@
     <p data-id="y2021" class="t-h2 t-on-surface" style="left:230px; top:147px; width:200px; text-align:center; opacity:0.5;">2021</p>
     <p data-id="y2022" class="t-h2 t-on-surface" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
     <p data-id="y2023" class="t-h2 t-on-surface" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
-    <p data-id="y2024" class="t-h2 t-on-surface" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
-    <p data-id="y2025" class="t-h1 t-on-accent" style="left:230px; top:864px; width:200px; text-align:center;">2025</p>
+    <p data-id="y2024" class="t-h2 t-on-surface" data-auto-animate-duration="0.45" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
+    <p data-id="y2025" class="t-h1 t-on-accent" data-auto-animate-delay="0.45" data-auto-animate-duration="0.45" style="left:230px; top:864px; width:200px; text-align:center;">2025</p>
     <p class="t-label t-dim" style="left:120px; top:440px;">北岸软件</p>
     <p class="t-h1" style="left:120px; top:500px;">发展历程</p>
     <p class="t-label t-accent" data-auto-animate-delay="0.6" style="left:800px; top:280px;">第 5 段 · 2025</p>
@@ -142,7 +143,7 @@
     <p data-id="y2022" class="t-h2 t-on-surface" style="left:384px; top:301px; width:200px; text-align:center; opacity:0.5;">2022</p>
     <p data-id="y2023" class="t-h2 t-on-surface" style="left:440px; top:511px; width:200px; text-align:center; opacity:0.5;">2023</p>
     <p data-id="y2024" class="t-h2 t-on-surface" style="left:384px; top:721px; width:200px; text-align:center; opacity:0.5;">2024</p>
-    <p data-id="y2025" class="t-h2 t-on-surface" style="left:230px; top:875px; width:200px; text-align:center; opacity:0.5;">2025</p>
+    <p data-id="y2025" class="t-h2 t-on-surface" data-auto-animate-duration="0.6" style="left:230px; top:875px; width:200px; text-align:center; opacity:0.5;">2025</p>
     <p class="t-label t-dim" style="left:120px; top:440px;">北岸软件</p>
     <p class="t-h1" style="left:120px; top:500px;">发展历程</p>
     <p class="t-label t-dim" data-auto-animate-delay="0.8" style="left:800px; top:280px;">2026 · 下一圈</p>

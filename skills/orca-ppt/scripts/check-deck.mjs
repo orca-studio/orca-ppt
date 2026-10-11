@@ -104,9 +104,10 @@ function auditSlide() {
     const b = box(el);
     if (b.width === 0 && b.height === 0) continue;
     if (isFullBleed(el, b)) continue;
-    // Only fully offstage, explicitly paired elements may wait outside the canvas.
-    // Partially clipped elements still fail, as do unmatched accidental overflow elements.
-    if (productDemo && el.dataset.id &&
+    // Only fully offstage, explicitly paired elements may wait outside the canvas
+    // (整组归位的起点、焦点移交的入画 / 出画). Partially clipped elements still fail,
+    // as do unmatched accidental overflow elements.
+    if (el.dataset.id &&
         (b.bottom <= 0 || b.top >= CANVAS_H || b.right <= 0 || b.left >= CANVAS_W) &&
         [...document.querySelectorAll(".slides > section [data-id]")].some((other) =>
           other !== el && other.closest("section") !== section &&
