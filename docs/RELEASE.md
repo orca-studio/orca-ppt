@@ -33,7 +33,11 @@ semver tag 的 Release),有新版就下载,下次启动替换。只在发布版�
    权限见 `apps/desktop/build/entitlements.mac.plist`。核对团队、Hardened Runtime、时间戳。
 4. 用同一个签好的 `.app` 做 zip(`ditto`)和 dmg(`hdiutil`,带 Applications 快捷方式),给 dmg 签名。
 5. `notarytool submit` 提交 dmg(一次提交覆盖里面的应用),**不等结果**,提交号记进 `release.json`。
-6. finalize:查一次结果。通过后给 dmg 和 zip 里的应用 staple,做 Gatekeeper 检查,写 `SHA256SUMS.txt`。
+6. finalize:查一次结果。通过后给应用 staple(zip 按原样重新打包),**再用 staple 过的应用重做 dmg**、
+   签名、提交公证并等结果(里面的应用 Apple 已经认过,通常几分钟),staple dmg,挂上 dmg 核对里面的应用
+   也钉了票据,做 Gatekeeper 检查,写 `SHA256SUMS.txt`。
+   重做 dmg 是因为第一次提交的 dmg 里,应用还没有票据:拖进 Applications 后第一次打开要联网问 Apple,
+   断网就打不开。所以发布工作流也要导入签名证书(`tools/ci-keychain.sh`,两个工作流共用)。
 
 ## 一次性配置
 
@@ -81,7 +85,7 @@ gh variable set APPLE_TEAM_ID --env release --repo orca-studio/orca-ppt --body R
 4. 过几分钟,Actions → **Publish Orca PPT**,`build_run_id` 填上一步的 Run ID:
    - Apple 还在处理:正常结束,没有发布,稍后再跑一次;
    - 公证被拒:失败,日志里有 Apple 给的原因;
-   - 通过:staple、检查、发 Release(dmg、zip、SHA256SUMS.txt),再匿名下载回来核对摘要。
+   - 通过:staple、重做 dmg 再公证、检查、发 Release(dmg、zip、SHA256SUMS.txt),再匿名下载回来核对摘要。
 5. 下载公开的 dmg 装一次,确认能打开、版本对。从第二个版本起,用上一版验证一次自动更新。
 
 ## 本机试打

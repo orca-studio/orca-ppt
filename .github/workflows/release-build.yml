@@ -52,21 +52,7 @@ jobs:
         env:
           APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          set -euo pipefail
-          umask 077
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          PASSWORD="$(openssl rand -hex 32)"
-          echo "::add-mask::$PASSWORD"
-          security create-keychain -p "$PASSWORD" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$PASSWORD" "$KEYCHAIN"
-          security list-keychains -d user -s "$KEYCHAIN"
-          echo "$APPLE_CERTIFICATE_P12_BASE64" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
-          security import "$RUNNER_TEMP/certificate.p12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -T /usr/bin/codesign -T /usr/bin/security >/dev/null
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$PASSWORD" "$KEYCHAIN" >/dev/null
-          rm -f "$RUNNER_TEMP/certificate.p12"
+        run: tools/ci-keychain.sh import
       - name: Build, sign and submit without waiting
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -87,4 +73,4 @@ jobs:
           retention-days: 14
       - name: Remove temporary keychain
         if: always()
-        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" >/dev/null 2>&1 || true
+        run: tools/ci-keychain.sh delete

@@ -2,7 +2,8 @@
 // 结构照 Compositor 的 scripts/ci_release.sh:提交和查询分成两次,不让任何地方干等 Apple。
 //
 //   node tools/release-mac.mjs build      打包、签名、做 zip 和 dmg、提交公证,写 dist/release/release.json
-//   node tools/release-mac.mjs finalize   查一次公证结果;通过就 staple、做 Gatekeeper 检查、写 SHA256SUMS.txt
+//   node tools/release-mac.mjs finalize   查一次公证结果;通过就 staple 应用、用它重做 dmg 再公证(等结果)、
+//                                         staple dmg、做 Gatekeeper 检查、写 SHA256SUMS.txt。要签名身份
 //
 // 环境变量:
 //   APPLE_TEAM_ID                     必填。签名身份按它从钥匙串里挑(Developer ID Application: … (TEAM))
@@ -60,6 +61,29 @@ function signingIdentity() {
   return names[0]
 }
 
+/** dmg:应用 + 一个指向 /Applications 的快捷方式,拖进去就装好了。签名。 */
+async function makeDmg(app, dmg, identity) {
+  const staging = join(tmpdir(), `orca-dmg-${process.pid}`)
+  await rm(staging, { recursive: true, force: true })
+  await rm(dmg, { force: true })
+  await mkdir(staging, { recursive: true })
+  await cp(app, join(staging, 'Orca PPT.app'), { recursive: true, verbatimSymlinks: true })
+  await symlink('/Applications', join(staging, 'Applications'))
+  run('hdiutil', [
+    'create',
+    '-quiet',
+    '-volname',
+    'Orca PPT',
+    '-srcfolder',
+    staging,
+    '-format',
+    'UDZO',
+    dmg,
+  ])
+  await rm(staging, { recursive: true, force: true })
+  run('codesign', ['--sign', identity, '--timestamp', dmg])
+}
+
 async function build() {
   const pkg = JSON.parse(await readFile(join(root, 'apps/desktop/package.json'), 'utf8'))
   const version = pkg.version
@@ -103,25 +127,7 @@ async function build() {
   // zip:给自动更新。ditto 保留符号链接和扩展属性,Framework 不会被拆坏
   run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
 
-  // dmg:应用 + 一个指向 /Applications 的快捷方式,拖进去就装好了
-  const staging = join(tmpdir(), `orca-dmg-${process.pid}`)
-  await rm(staging, { recursive: true, force: true })
-  await mkdir(staging, { recursive: true })
-  await cp(app, join(staging, 'Orca PPT.app'), { recursive: true, verbatimSymlinks: true })
-  await symlink('/Applications', join(staging, 'Applications'))
-  run('hdiutil', [
-    'create',
-    '-quiet',
-    '-volname',
-    'Orca PPT',
-    '-srcfolder',
-    staging,
-    '-format',
-    'UDZO',
-    dmg,
-  ])
-  await rm(staging, { recursive: true, force: true })
-  run('codesign', ['--sign', identity, '--timestamp', dmg])
+  await makeDmg(app, dmg, identity)
 
   const meta = {
     schema_version: 1,
@@ -147,6 +153,18 @@ async function build() {
     console.log(`已提交公证:${submitted.id}。稍后运行 finalize 查结果。`)
   }
   await writeFile(join(out, 'release.json'), JSON.stringify(meta, null, 2) + '\n')
+}
+
+/** 挂上 dmg,确认里面的应用钉了票据(断网第一次打开靠它)。 */
+async function checkAppInDmg(dmg) {
+  const mount = join(tmpdir(), `orca-dmg-mount-${process.pid}`)
+  await mkdir(mount, { recursive: true })
+  run('hdiutil', ['attach', '-quiet', '-nobrowse', '-readonly', '-mountpoint', mount, dmg])
+  try {
+    run('xcrun', ['stapler', 'validate', join(mount, 'Orca PPT.app')])
+  } finally {
+    run('hdiutil', ['detach', '-quiet', mount])
+  }
 }
 
 async function finalize() {
@@ -183,7 +201,46 @@ async function finalize() {
     fail(`公证没通过:${status}`)
   }
 
-  // 票据钉进 dmg,离线也能过 Gatekeeper
+  // 提交的 dmg 通过了,票据覆盖里面的应用。先把应用 staple 好:zip 里的那份解开、staple、按原样再打包
+  const work = join(tmpdir(), `orca-zip-${process.pid}`)
+  await rm(work, { recursive: true, force: true })
+  await mkdir(work, { recursive: true })
+  run('ditto', ['-x', '-k', zip, work])
+  const app = join(work, 'Orca PPT.app')
+  run('xcrun', ['stapler', 'staple', app])
+  run('spctl', ['--assess', '--type', 'execute', '--verbose', app])
+  await rm(zip)
+  run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
+
+  // dmg 用 staple 过的应用重做一份:提交的那份里应用没钉票据,拖进 Applications 后
+  // 第一次打开要联网问 Apple,断网就打不开。重做的 dmg 是新文件,要再公证一次 ——
+  // 里面的应用 Apple 已经认过,这次通常几分钟,所以这里等它。
+  await makeDmg(app, dmg, signingIdentity())
+  await rm(work, { recursive: true, force: true })
+  // 没通过或超时 notarytool 会以非零退出,结果仍在 stdout 上
+  let again
+  try {
+    again = JSON.parse(
+      read('xcrun', [
+        'notarytool',
+        'submit',
+        dmg,
+        ...notaryAuth(),
+        '--wait',
+        '--timeout',
+        '20m',
+        '--output-format',
+        'json',
+      ]),
+    )
+  } catch (error) {
+    again = JSON.parse(String(error.stdout || '{}'))
+  }
+  if (again.status !== 'Accepted') {
+    if (again.id) run('xcrun', ['notarytool', 'log', again.id, ...notaryAuth()])
+    fail(`重做的 dmg 公证没通过:${again.status}`)
+  }
+  meta.dmg_submission_id = again.id
   run('xcrun', ['stapler', 'staple', dmg])
   run('xcrun', ['stapler', 'validate', dmg])
   run('spctl', [
@@ -195,18 +252,7 @@ async function finalize() {
     '--verbose',
     dmg,
   ])
-
-  // zip 里的应用也钉上(dmg 那次提交覆盖了它):解开、staple、按原样再打包
-  const work = join(tmpdir(), `orca-zip-${process.pid}`)
-  await rm(work, { recursive: true, force: true })
-  await mkdir(work, { recursive: true })
-  run('ditto', ['-x', '-k', zip, work])
-  const app = join(work, 'Orca PPT.app')
-  run('xcrun', ['stapler', 'staple', app])
-  run('spctl', ['--assess', '--type', 'execute', '--verbose', app])
-  await rm(zip)
-  run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
-  await rm(work, { recursive: true, force: true })
+  await checkAppInDmg(dmg)
 
   meta.dmg.sha256 = await sha256(dmg)
   meta.zip.sha256 = await sha256(zip)
