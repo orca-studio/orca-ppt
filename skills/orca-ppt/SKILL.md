@@ -35,7 +35,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 ## 产品分栏动画案例
 
-用户要“四栏产品依次切换，最后展开全屏”，或要用内置案例学习共享元素时，先读同款配方 [recipes/drink-showcase/RECIPE.md](recipes/drink-showcase/RECIPE.md)，版式例外见 [references/product-showcase.md](references/product-showcase.md)。演示在 `examples/drink-showcase/index.html`，分步播放和可复制提示词在 `tutorial.html`。这个案例用五页状态实现，无需 Remotion 或额外 motion skill；局部字阶、配色和时长例外仅限该案例配置。
+用户要“四栏产品依次切换，最后展开全屏”，或要用内置案例学习共享元素时，先读同款配方 [recipes/drink-showcase/RECIPE.md](recipes/drink-showcase/RECIPE.md)，版式例外见 [references/product-showcase.md](references/product-showcase.md)。演示在 `examples/drink-showcase/index.html`，分步播放和可复制提示词在 `tutorial.html`。这个案例用六页状态实现，无需 Remotion 或额外 motion skill；主题 `showcase.css` 和配色 `fruit-soda.css` 是标准的，只有安全区和时长是该案例的局部例外。
 
 ## 流程（按顺序，不许跳）
 

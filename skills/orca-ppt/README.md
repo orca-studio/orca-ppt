@@ -59,7 +59,7 @@ ln -s "$PWD/skills/orca-ppt" ~/.claude/skills/orca-ppt   # 在仓库根目录执
 
 ## 产品分栏动画教学
 
-[Drink showcase](examples/drink-showcase/index.html)：五页 HTML slides 复刻四栏产品切换与全屏展开。
+[Drink showcase](examples/drink-showcase/index.html)：六页 HTML slides 复刻四栏产品切换与全屏展开。
 [打开分步教程](examples/drink-showcase/tutorial.html)，可正常播放、慢放、查看各页状态并复制提示词。
 配套 [制作说明](examples/drink-showcase/README.md) 和 [技能参考规范](references/product-showcase.md)。
 

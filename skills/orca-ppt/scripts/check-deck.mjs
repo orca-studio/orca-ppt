@@ -129,6 +129,7 @@ function auditSlide(spec) {
   for (const el of [...section.querySelectorAll(accentSel)].filter(visible)) {
     const b = box(el);
     if (isFullBleed(el, b)) continue;      // 遮挡剪辑的满屏色块不算
+    if (el.matches(".t-on-surface, .t-on-accent")) continue;  // 换成了色块上的字色，已经不是强调色
     accentArea += b.width * b.height;
   }
   const pct = (accentArea / (CANVAS_W * CANVAS_H)) * 100;

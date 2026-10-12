@@ -14,8 +14,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RUNTIME = join(dirname(fileURLToPath(import.meta.url)), "..", "runtime");
-// 案例专用主题：product-showcase.css 是四栏产品切换的局部配置，迁到标准主题之前不按通用规则核
-const EXEMPT = new Set(["product-showcase.css"]);
 const SIZE_CLASSES = ["t-display", "t-metric", "t-h1", "t-h2", "t-body"];
 
 const classesIn = (css) => {
@@ -30,7 +28,6 @@ const base = classesIn(readFileSync(join(RUNTIME, "tokens.css"), "utf8"));
 
 let problems = 0;
 for (const name of readdirSync(join(RUNTIME, "themes")).filter((f) => f.endsWith(".css")).sort()) {
-  if (EXEMPT.has(name)) continue;
   const raw = readFileSync(join(RUNTIME, "themes", name), "utf8");
   const css = raw.replace(/\/\*[\s\S]*?\*\//g, "");
   const out = [];

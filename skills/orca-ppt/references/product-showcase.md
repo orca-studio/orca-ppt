@@ -17,13 +17,13 @@
 
 ## 仅此案例的局部规范
 
-根节点同时使用 `data-layout="standard" data-demo="product-showcase"`，加载 `tokens.css → themes/product-showcase.css → palettes/fruit-soda.css`。普通汇报稿不继承以下例外：
+根节点同时使用 `data-layout="standard" data-demo="product-showcase"`，加载 `tokens.css → themes/showcase.css → palettes/fruit-soda.css`。主题和配色都是标准的（themes.md），别的稿子也能用；`data-demo` 只管下面这几条版式例外，普通汇报稿不继承：
 
 - 全出血四栏：1920×1080，每栏 480。文字安全区左右 72、顶部 48、底部 80；背景可以铺到边缘。
 - 画外待命：已经是通用规则（`transitions.md`「共享元素」第 4 条下的「画外待命」），这里不再特殊。
 - 多元素联动：一条“激活下一产品”的动作可配对整组瓶子、文字、编号和背景；未参与切换的元素保持原位。普通页面仍沿用 1–4 个共享主角的建议。
-- 色彩：橙、粉、淡紫、青是参考案例的产品识别色，可按案例次序插值。替换品牌配色时检查中间帧，不把它扩展为所有深浅色都可直接互变。
-- 字阶：`product-showcase.css` 的 `.t-product-*` 是产品页面角色，允许超大背景词与紧凑说明。它们不改变普通 `.t-*` 字阶；正文配深色提高可读性，白色大字只作装饰。
+- 色彩：橙、粉、淡紫、青分别是 `--accent`、`--accent-soft`、`--surface-2`、`--surface`，色块用对应的 `.s-*` 类，色块上的文字照 visual-spec 加 `.t-on-accent` / `.t-on-surface`。四色按案例次序相邻互变（写在 fruit-soda.css 开头）；换品牌色时改配色文件，检查中间帧。
+- 字阶：全用标准类。编号 `.t-h1`，产品名 `.t-body`，说明 `.t-label`（showcase 主题里不转大写），按钮 `.t-pill`，容量圆章 `.t-badge`。瓶子背后的大字是 `.t-metric.t-on-surface` 加行内 `opacity`，只作装饰。
 - 时长：前三次转场各 22/30 秒，最后一次 0.8 秒，这是参考节奏，不作为其他演示稿的默认值。讲解时可用教学页的 2 倍慢放，或将共享元素时长改为 1.2 秒。元素延迟也要随之调整。
 
 这是已验证的示例配置，不是新动画 API。无需修改 engine.js。教学页的 JavaScript 只调用 Reveal 翻页、调节现有时长和安排播放顺序，不实现元素动画。

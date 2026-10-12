@@ -1,22 +1,28 @@
-/* 配色：Fruit soda；饮料展示的四种产品识别色。
- * 橙→粉→紫→青属于本参考案例的相邻产品切换；不要推广成任意品牌色都适合直接插值。
- * 正文深色确保浅色产品面板可读；白色只给被瓶子遮挡的装饰性 LYCHEE 大字。
- * --product-* 是 product-showcase 主题专用；其余十个变量保持普通主题的颜色接口。 */
+/* 配色：Fruit soda（汽水）
+ * 一句话：纸白底 + 四种饱和的果汁色，深青字。像一排货架，**浅底**。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量，盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          纸白                --surface     青（荔枝）
+ *   --surface-2   淡紫（红毛丹）        --accent      橙（橙子）
+ *   --accent-soft 粉（番石榴）          --text / --text-dim  深青 / 灰
+ *   --text-on-surface / --text-on-accent  深青（四种果汁色明度都高，压白字读不动）
+ *   --accent-text        深橙（白底上的强调字）
+ *
+ * 可以互变的颜色：surface、surface-2、accent、accent-soft 四个果汁色按「橙 → 粉 → 紫 → 青」
+ * 相邻互变（同一块色块一栏栏换产品色，中间帧都是干净的浅色）。不相邻的两色别直接互变。
+ * 白色只给压在色块上、被产品挡住一部分的装饰大字：行内写 color: var(--bg)。
+ */
+
 :root {
   --bg: #ffffff;
   --surface: #6fd5ef;
   --surface-2: #cbc7ec;
-  --text: #111820;
+  --text: #15333d;
   --text-dim: #3e4650;
-  --text-on-surface: #111820;
+  --text-on-surface: #15333d;
   --accent: #fba941;
-  --accent-soft: #f6c481;
-  --text-on-accent: #111820;
+  --accent-soft: #f2a3c1;
+  --text-on-accent: #15333d;
   --accent-text: #8b4800;
-  --product-orange: #fba941;
-  --product-rose: #f2a3c1;
-  --product-pulasan: #cbc7ec;
-  --product-lychee: #6fd5ef;
-  --product-ink: #15333d;
-  --product-display: #ffffff;
 }

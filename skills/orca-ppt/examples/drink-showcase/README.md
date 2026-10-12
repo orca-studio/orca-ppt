@@ -30,7 +30,7 @@ npx serve . -l 3040
 
 `data-id` 相同且标签相同，表示“这是同一个东西”。例如 `active-panel` 在前四页宽 480，最后一页宽 1920。`bottle-lychee` 从第四栏移到中央，始终引用同一个 SVG。
 
-按需替换 `assets/*.svg`、产品名称与说明、`fruit-soda.css` 产品色值。替换字体与字阶在 `product-showcase.css` 里做。其余汇报稿不会加载这套局部样式。
+按需替换 `assets/*.svg`、产品名称与说明、`fruit-soda.css` 里的四个果汁色。字体和圆角在 `themes/showcase.css` 里，它是标准主题，字号只用标准类。
 
 ## 参考与差异
 
