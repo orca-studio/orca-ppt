@@ -660,6 +660,14 @@ export function App({ serverUrl }: { serverUrl: string }) {
     void active.request('deck.autoplay', { deckId: current.deck.id, on: !autoplay })
   }, [autoplay])
 
+  /** 把这一页的页内动画从头放一遍。和 agent 的 navigate replayPage 是同一个协议方法。 */
+  const replayPage = useCallback((from: number) => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current) return
+    void active.request('deck.navigation', { deckId: current.deck.id, action: 'replayPage', from })
+  }, [])
+
   /** 重放一次翻页:先跳回上一页,再往后翻一次 —— 往后翻才播转场。 */
   const replay = useCallback((from: number) => {
     const active = transport.current
@@ -800,6 +808,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
     [deck],
   )
 
+  // 这一页的点击分步(引擎报的)。换了稿子就清掉:老引擎不报,不清的话会一直挂着上一份的
+  const [steps, setSteps] = useState<{ done: number; clicks: number } | undefined>(undefined)
+  const deckId = deck?.deck.id
+  useEffect(() => setSteps(undefined), [deckId])
+
   const onSlideChange = useCallback((index: number) => {
     if (index !== slideRef.current) setSelection(null)
     setSlide(index)
@@ -919,6 +932,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
               previewUrl={deck.previewUrl}
               initialSlide={slide}
               onSlideChange={onSlideChange}
+              onStepChange={setSteps}
               onNavigate={(action) => {
                 void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
               }}
@@ -952,8 +966,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 stage.current?.cancelPick()
                 setPicking(false)
               }}
+              navLocked={agentHolds}
               slide={slide}
               slideCount={deck.slideCount}
+              steps={steps}
               onNavigate={(action) => {
                 void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
               }}
@@ -982,6 +998,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                   : undefined
               }
               onReplay={() => replay(slide)}
+              onReplayPage={() => replayPage(slide)}
               onFlag={() => flagTransition(slide, slide + 1)}
             />
           )}

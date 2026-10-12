@@ -53,7 +53,7 @@ export interface StageHandle {
   reload(slide: number): void
   goto(slide: number): void
   /** 往后翻一页 —— 只有往后翻才播转场。 */
-  navigate(action: 'next' | 'previous' | 'replay', from?: number): void
+  navigate(action: 'next' | 'previous' | 'replay' | 'replayPage', from?: number): void
   /** guest 的 webContents id —— 主进程按它找到 guest 去截图。 */
   guestId(): number | undefined
   /**
@@ -88,6 +88,11 @@ export interface SlideInfo {
   carries: Array<{ id: string; kind: string; text: string }>
   /** 页内动画。引擎给的清单(`window.__orcaBuilds`);没有页内动画或老引擎时是 null。 */
   builds?: PageBuilds | null
+  /**
+   * 离开这一页的那次转场在稿子里实际怎么写的(写在下一页上)。最后一页是 null。
+   * `lead`:遮挡剪辑带着走的领头元素(`data-st-mask-lead`)。
+   */
+  leave?: { st: string | null; lead: string | null } | null
 }
 
 /** 一页的页内动画:skill 引擎 `window.__orcaBuilds()` 的返回值,字段原样照抄。 */
@@ -126,6 +131,8 @@ export interface StageProps {
   initialSlide: number
   onNavigate: (action: 'next' | 'previous') => void
   onSlideChange: (index: number) => void
+  /** 这一页的点击分步按到第几下、一共几下。引擎每次变都报。 */
+  onStepChange?: (steps: { done: number; clicks: number }) => void
   /**
    * 人双击改完了一处文字。返回被拒的理由(没被拒就返回 undefined)——
    * 拒绝的理由要摆回他刚才双击的地方,不能默默吞掉。
@@ -146,7 +153,17 @@ export interface StageProps {
 }
 
 export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
-  { previewUrl, initialSlide, onSlideChange, onNavigate, onTextEdit, readOnly, navLocked, overlay },
+  {
+    previewUrl,
+    initialSlide,
+    onSlideChange,
+    onStepChange,
+    onNavigate,
+    onTextEdit,
+    readOnly,
+    navLocked,
+    overlay,
+  },
   handle,
 ) {
   const ref = useRef<WebviewElement | null>(null)
@@ -169,6 +186,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   onTextEditRef.current = onTextEdit
   const onSlideChangeRef = useRef(onSlideChange)
   onSlideChangeRef.current = onSlideChange
+  const onStepChangeRef = useRef(onStepChange)
+  onStepChangeRef.current = onStepChange
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
   const navLockedRef = useRef(navLocked)
@@ -287,6 +306,10 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           stack: null,
         })
         runtimeErrors.current = runtimeErrors.current.slice(-50)
+      }
+      const step = /^__orca:step (\d+) (\d+)$/.exec(message)
+      if (step && injected.current) {
+        onStepChangeRef.current?.({ done: Number(step[1]), clicks: Number(step[2]) })
       }
       const match = /^__orca:slide (\d+)$/.exec(message)
       if (match && injected.current && !reloadWaiting.current) {
@@ -493,7 +516,10 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
             ? 'Reveal.prev()'
             : action === 'replay'
               ? `Reveal.slide(${Math.trunc(from ?? 0)}); setTimeout(() => { ${ADVANCE} }, 260)`
-              : ADVANCE
+              : action === 'replayPage'
+                ? // 已经在这一页时 Reveal.slide 不会触发翻页,页内动画要引擎自己从头放;老引擎没有就算了
+                  `Reveal.slide(${Math.trunc(from ?? 0)}); window.__orcaReplayBuild?.()`
+                : ADVANCE
         void ref.current
           ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${command}`)
           .catch(() => {})

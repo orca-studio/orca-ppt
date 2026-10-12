@@ -247,7 +247,7 @@ export const requests = {
   'deck.navigation': {
     params: z.object({
       deckId: z.string(),
-      action: z.enum(['next', 'previous', 'replay']),
+      action: z.enum(['next', 'previous', 'replay', 'replayPage']),
       from: z.number().int().nonnegative().optional(),
     }),
     result: z.object({}),
@@ -796,7 +796,7 @@ export const pushes = {
   'canvas.request': CanvasCommand.and(z.object({ requestId: z.string() })),
   'deck.navigation': z.object({
     deckId: z.string(),
-    action: z.enum(['next', 'previous', 'replay']),
+    action: z.enum(['next', 'previous', 'replay', 'replayPage']),
     from: z.number().int().nonnegative().optional(),
   }),
   /** deck 文件变了,画布该热更新了。previewUrl 变了也走这条(成品第一次出现时)。 */

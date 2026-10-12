@@ -106,3 +106,16 @@ describe('自动播放', () => {
     expect(() => window.__orcaAutoplay.start()).not.toThrow()
   })
 })
+
+describe('点击分步报给宿主', () => {
+  it('引擎发 orca:step,guest 转成一条宿主听得到的 console 消息', () => {
+    const debug = vi.spyOn(console, 'debug').mockImplementation(() => {})
+    delete (window as any).__orcaSlideReport
+    window.Reveal = { ...fakeReveal([{}]), on: vi.fn() }
+    // eslint-disable-next-line no-eval
+    ;(0, eval)(source)
+    document.dispatchEvent(new CustomEvent('orca:step', { detail: { done: 1, clicks: 3 } }))
+    expect(debug).toHaveBeenCalledWith('__orca:step 1 3')
+    debug.mockRestore()
+  })
+})

@@ -52,6 +52,8 @@ export interface InspectorProps {
    */
   pageType: string | undefined
   onReplay: () => void
+  /** 把这一页的页内动画从头放一遍。 */
+  onReplayPage: () => void
   onFlag: () => void
 }
 
@@ -114,7 +116,13 @@ function effectText(effect: PageBuilds['items'][number]['effects'][number]) {
   return `${head} · ${effect.at ? `${seconds(effect.at)}起 ` : ''}${seconds(effect.dur)}`
 }
 
-function BuildsSection({ builds }: { builds: PageBuilds | null | undefined }) {
+function BuildsSection({
+  builds,
+  onReplayPage,
+}: {
+  builds: PageBuilds | null | undefined
+  onReplayPage: () => void
+}) {
   if (!builds) return <p className="muted">这一页没有页内动画。</p>
   return (
     <>
@@ -133,6 +141,9 @@ function BuildsSection({ builds }: { builds: PageBuilds | null | undefined }) {
           </li>
         ))}
       </ul>
+      <div className="inspector-actions">
+        <Button onClick={onReplayPage}>重放这页的动画</Button>
+      </div>
     </>
   )
 }
@@ -184,7 +195,7 @@ function SlideScope(props: InspectorProps) {
       {info === null ? (
         <p className="muted">画布还没加载。</p>
       ) : (
-        <BuildsSection builds={info.builds} />
+        <BuildsSection builds={info.builds} onReplayPage={props.onReplayPage} />
       )}
     </>
   )
@@ -272,6 +283,7 @@ function ImageAction({ locked, onReplaceImage }: InspectorProps) {
 function TransitionScope({
   slide,
   note,
+  info,
   last,
   locked,
   onReplay,
@@ -290,6 +302,8 @@ function TransitionScope({
       <Row label="手法" value={note?.technique ?? '没写'} />
       {/* 契约里叫 anchor:承接运动的那个元素,原样照抄稿子里写的。 */}
       <Row label="共享" value={note?.anchor ?? '没写'} />
+      {/* 读的是稿子里实际写的属性,不是计划注释:色块前沿带着走的那个元素 */}
+      {info?.leave?.lead && <Row label="领头" value={info.leave.lead} hint="data-st-mask-lead" />}
 
       <div className="inspector-actions">
         <Button onClick={onReplay}>重放这次转场</Button>

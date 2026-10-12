@@ -83,5 +83,10 @@
   if (window.Reveal?.on && !window.__orcaSlideReport) {
     window.__orcaSlideReport = true
     window.Reveal.on('slidechanged', (event) => console.debug('__orca:slide ' + event.indexh))
+    // 页内动画的点击分步按到第几下了。引擎每次变都发 orca:step,老引擎不发就一直没有
+    document.addEventListener('orca:step', (event) => {
+      const detail = event.detail || {}
+      console.debug('__orca:step ' + (detail.done | 0) + ' ' + (detail.clicks | 0))
+    })
   }
 })()

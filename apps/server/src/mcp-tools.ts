@@ -302,18 +302,19 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     {
       name: 'navigate',
       config: {
-        title: '翻页或重放转场',
-        description: '与键盘翻页和 UI 重放共用操作。replay 必须带 from，页号从 0 数起。',
+        title: '翻页、重放转场或页内动画',
+        description:
+          '与键盘翻页和 UI 重放共用操作。next 在有点击分步的页上先放下一步，放完才翻页。replay 重放从 from 页翻到下一页的转场；replayPage 把 from 页的页内动画从头放一遍。两者都必须带 from，页号从 0 数起。',
         annotations: looking,
         inputSchema: {
-          action: z.enum(['next', 'previous', 'replay']),
+          action: z.enum(['next', 'previous', 'replay', 'replayPage']),
           from: z.number().int().nonnegative().optional(),
         },
       },
       run: async (args) => {
         await call('deck.navigation', {
           deckId: await active.get(call),
-          action: args.action as 'next' | 'previous' | 'replay',
+          action: args.action as 'next' | 'previous' | 'replay' | 'replayPage',
           ...(typeof args.from === 'number' ? { from: args.from } : {}),
         })
         return text('已请求画布执行；完成后的页号请读取 deck_status。')

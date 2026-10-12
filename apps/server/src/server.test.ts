@@ -438,6 +438,11 @@ it('导航走共享推送，停止自动播放，拒绝旧稿子和不完整重�
   expect((await call('deck.navigation', { deckId: a.id, action: 'next' })).ok).toBe(false)
   expect((await call('deck.navigation', { deckId: b.id, action: 'replay' })).ok).toBe(false)
   expect((await call('deck.navigation', { deckId: b.id, action: 'replay', from: 0 })).ok).toBe(true)
+  // 重放页内动画也要说是哪一页 —— server 不知道画布现在停在哪
+  expect((await call('deck.navigation', { deckId: b.id, action: 'replayPage' })).ok).toBe(false)
+  expect((await call('deck.navigation', { deckId: b.id, action: 'replayPage', from: 1 })).ok).toBe(
+    true,
+  )
   expect(
     pushes.some(
       (p) => p.channel === 'deck.navigation' && p.data.action === 'replay' && p.data.from === 0,

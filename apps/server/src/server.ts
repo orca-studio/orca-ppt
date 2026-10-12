@@ -632,7 +632,10 @@ export async function startServer(
         deckPathOf(params.deckId)
         if (params.deckId !== lastOpened)
           throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换，请重新读取状态。')
-        if (params.action === 'replay' && params.from === undefined)
+        if (
+          (params.action === 'replay' || params.action === 'replayPage') &&
+          params.from === undefined
+        )
           throw new Error('重放需要 from 页号')
         bus.broadcast('autoplay.changed', { deckId: params.deckId, on: false })
         bus.broadcast('deck.navigation', params)

@@ -56,8 +56,18 @@ export interface CanvasControlsProps {
   showPick: boolean
   canPick: boolean
   onPick: () => void
+  /**
+   * 翻页按钮锁不锁。和 locked 分开:只读样稿不能改,但要能一页页翻着看;
+   * 只有 agent 拿着稿子时才锁(它在翻页,人再点会抢)。
+   */
+  navLocked: boolean
   slide: number
   slideCount: number
+  /**
+   * 这一页的点击分步:按到第几下、一共几下(引擎报上来的)。clicks 为 0 就是没有分步。
+   * 还没按完时「下一页」先放下一步,和画布里按 → 一样。
+   */
+  steps?: { done: number; clicks: number } | undefined
   onNavigate: (action: 'previous' | 'next') => void
 }
 
@@ -71,10 +81,13 @@ export function CanvasControls({
   showPick,
   canPick,
   onPick,
+  navLocked,
   slide,
   slideCount,
+  steps,
   onNavigate,
 }: CanvasControlsProps) {
+  const stepsLeft = steps ? steps.clicks - steps.done : 0
   return (
     <div className="canvas-controls" role="toolbar" aria-label="画布操作">
       <div className="canvas-controls-group">
@@ -120,7 +133,7 @@ export function CanvasControls({
         <Button
           variant="ghost"
           icon
-          disabled={locked || slide === 0}
+          disabled={navLocked || slide === 0}
           onClick={() => onNavigate('previous')}
           aria-label="上一页"
           title="上一页"
@@ -129,14 +142,21 @@ export function CanvasControls({
         </Button>
         <span className="canvas-controls-count">
           第 {slide + 1} / {slideCount} 页
+          {/* 有点击分步时说清还要按几下 —— 不然放映的人不知道这一页为什么按了没翻 */}
+          {steps && steps.clicks > 0 && (
+            <span className="muted">
+              {' '}
+              · 第 {steps.done}/{steps.clicks} 下
+            </span>
+          )}
         </span>
         <Button
           variant="ghost"
           icon
-          disabled={locked || slide >= slideCount - 1}
+          disabled={navLocked || (slide >= slideCount - 1 && stepsLeft <= 0)}
           onClick={() => onNavigate('next')}
-          aria-label="下一页"
-          title="下一页"
+          aria-label={stepsLeft > 0 ? '下一步' : '下一页'}
+          title={stepsLeft > 0 ? '下一步(这一页还有页内动画没放)' : '下一页'}
         >
           <ChevronIcon flipped />
         </Button>

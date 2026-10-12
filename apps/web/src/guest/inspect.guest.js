@@ -230,6 +230,16 @@
       builds = null
     }
 
+    // 离开这一页的那次转场写在下一页上。计划注释是人写的话,这里报稿子里实际写了什么
+    const following = slide.nextElementSibling
+    const leave =
+      following && following.tagName === 'SECTION'
+        ? {
+            st: following.getAttribute('data-st'),
+            lead: following.getAttribute('data-st-mask-lead'),
+          }
+        : null
+
     return {
       index: currentSlide(),
       // 没写 data-hold 时 reveal 不会自己停 —— 如实报 null,不编一个默认值。
@@ -237,6 +247,7 @@
       duration: slide.getAttribute('data-auto-animate-duration'),
       carries,
       builds,
+      leave,
     }
   }
 

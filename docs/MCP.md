@@ -163,7 +163,7 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 
 `deck.current` 是当前打开稿子的协议状态。MCP 首次使用它确定目标，后续保持目标绑定；用户在 UI 切换稿子后，返回 `DOCUMENT_CHANGED`，必须确认目标后显式 `open_deck`，不会自动将旧任务转向新稿。`deck_status` 返回 `deckId` 和 `currentSlide`（从 0 数起；画布尚未报告时为 null）。
 
-`navigate` 支持 `next`、`previous`、`replay`，重放必须带 `from`。UI 键盘导航和重放同样调用 `deck.navigation`，由服务端停止自动播放并通知画布执行。画布完成翻页后通过 `deck.visibleSlide` 报告实际页号；请求成功不等于动画已经结束。旧稿子的导航请求被拒绝，旧画布的页号报告不会覆盖当前稿子。
+`navigate` 支持 `next`、`previous`、`replay`、`replayPage`。`next` 在有点击分步（`data-step`）的页上先放下一步，全部放完才翻页；`replay` 重放从 `from` 页翻到下一页的转场，`replayPage` 把 `from` 页的页内动画从头放一遍，两者都必须带 `from`。UI 键盘导航和重放同样调用 `deck.navigation`，由服务端停止自动播放并通知画布执行。画布完成翻页后通过 `deck.visibleSlide` 报告实际页号；请求成功不等于动画已经结束。旧稿子的导航请求被拒绝，旧画布的页号报告不会覆盖当前稿子。
 
 这是现有操作入口的一致性改进，不代表已经实现完整的手工排版、增删页或通用导出功能。
 
