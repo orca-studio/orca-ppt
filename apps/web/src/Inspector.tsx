@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { CanvasElement, TransitionNote, RequestParams } from '@orca-ppt/contracts'
-import type { SlideInfo } from './Stage.js'
+import type { PageBuilds, SlideInfo } from './Stage.js'
 import { Button } from './ui/Button.js'
 import { Segmented } from './ui/Segmented.js'
 
@@ -81,6 +81,60 @@ const CARRY_LABEL: Record<string, string> = {
   'data-id': '跨页共享',
   'data-carry': '交接',
   'data-zoom': '放大锚点',
+  'data-lead': '领头元素',
+}
+
+/** 引擎 data-anim 的效果名,和 PowerPoint 动画窗格里的叫法对上。没收录的原样显示。 */
+const EFFECT_LABEL: Record<string, string> = {
+  path: '沿路径走',
+  light: '光束',
+  lit: '被光照亮',
+  fade: '淡入',
+  rise: '上浮',
+  zoom: '弹出',
+  fly: '飞入',
+  wipe: '擦除',
+  trail: '拖影飞入',
+  shine: '擦亮',
+  out: '淡出',
+}
+
+/** 方向写的是「从哪边来」。 */
+const DIR_LABEL: Record<string, string> = { left: '从左', right: '从右', up: '从上', down: '从下' }
+
+const seconds = (value: number) => `${Math.round(value * 100) / 100} 秒`
+
+function effectText(effect: PageBuilds['items'][number]['effects'][number]) {
+  const name = EFFECT_LABEL[effect.kind] ?? effect.kind
+  const head = [name, effect.dir ? (DIR_LABEL[effect.dir] ?? effect.dir) : '', effect.key ?? '']
+    .filter(Boolean)
+    .join(' ')
+  // 被照的一层自己不动,跟着光束走,没有时间可写
+  if (effect.kind === 'lit') return head
+  return `${head} · ${effect.at ? `${seconds(effect.at)}起 ` : ''}${seconds(effect.dur)}`
+}
+
+function BuildsSection({ builds }: { builds: PageBuilds | null | undefined }) {
+  if (!builds) return <p className="muted">这一页没有页内动画。</p>
+  return (
+    <>
+      <Row label="放完" value={seconds(builds.total)} />
+      <Row
+        label="点击"
+        value={builds.clicks ? `按 ${builds.clicks} 下才放完，再按才翻页` : '进页自己放完'}
+        hint={builds.clicks ? 'data-step' : undefined}
+      />
+      <ul className="inspector-carries inspector-builds">
+        {builds.items.map((item, index) => (
+          <li key={`${item.label}-${index}`}>
+            <span className="muted">{item.step ? `第 ${item.step} 下` : '进页'}</span>
+            <em>{item.label}</em>
+            <span>{item.effects.map(effectText).join('；')}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
 }
 
 function SlideScope(props: InspectorProps) {
@@ -124,6 +178,13 @@ function SlideScope(props: InspectorProps) {
             </li>
           ))}
         </ul>
+      )}
+
+      <h3>页内动画</h3>
+      {info === null ? (
+        <p className="muted">画布还没加载。</p>
+      ) : (
+        <BuildsSection builds={info.builds} />
       )}
     </>
   )

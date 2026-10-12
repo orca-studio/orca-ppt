@@ -86,6 +86,31 @@ export interface SlideInfo {
   /** 转场时长(秒)。没写时是 null。 */
   duration: string | null
   carries: Array<{ id: string; kind: string; text: string }>
+  /** 页内动画。引擎给的清单(`window.__orcaBuilds`);没有页内动画或老引擎时是 null。 */
+  builds?: PageBuilds | null
+}
+
+/** 一页的页内动画:skill 引擎 `window.__orcaBuilds()` 的返回值,字段原样照抄。 */
+export interface PageBuilds {
+  /** 放映时全部放完要多久(秒),步与步之间不算停顿。 */
+  total: number
+  /** 要按几下翻页键才放完。0 = 进页自己放完。 */
+  clicks: number
+  steps: Array<{ step: number; length: number }>
+  items: Array<{
+    /** 元素的文字,没有文字就是 `<div.s-group>` 这样的标签。 */
+    label: string
+    /** 第几次点击才放。0 = 进页就放。 */
+    step: number
+    effects: Array<{
+      kind: string
+      dir: string | null
+      /** 在这一步里第几秒开始。 */
+      at: number
+      dur: number
+      key?: string
+    }>
+  }>
 }
 
 /** guest 里改完的一处文字。服务端靠 `oldText` 在源码里定位,不靠选择器。 */

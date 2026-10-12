@@ -1855,9 +1855,8 @@
         break;
     }
   }
-  function buildsFor(slide) {
-    if (!slide) return null;
-    for (const c of slide.querySelectorAll(".st-trail, .st-shine")) c.remove();
+  // 这一页有哪些页内动画、每一步多长。只读 DOM，不改：buildsFor 拿它建时间线，__orcaBuilds 拿它给宿主看
+  function collectBuilds(slide) {
     // 转场时克隆进来的上一页（ghost）里也有 data-path 的元素，它们停在克隆那一刻的姿态，不该再动
     const own = (sel) => [...slide.querySelectorAll(sel)].filter((el) => !el.closest(".st-ghost, .st-ghost-el"));
     const movers = own("[data-path]").map((el) => {
@@ -1866,10 +1865,7 @@
         console.error(`[orca-transition-skill] data-path 读不出关键帧：「${el.dataset.path}」，写成 "t x y a; t x y a"`);
         return null;
       }
-      const [px, py] = el.dataset.pivot ? el.dataset.pivot.trim().split(/[\s,]+/).map(Number) : [];
-      const pivot = [Number.isFinite(px) ? px : el.offsetWidth / 2, Number.isFinite(py) ? py : el.offsetHeight / 2];
-      el.style.transformOrigin = `${pivot[0]}px ${pivot[1]}px`;
-      return { el, keys, step: stepOf(el), rest: [el.offsetLeft + pivot[0], el.offsetTop + pivot[1]], pose: null };
+      return { el, keys, step: stepOf(el) };
     }).filter(Boolean);
     const lights = movers.filter((m) => m.el.dataset.light).map((m) => ({
       m,
@@ -1878,23 +1874,41 @@
       w: (+m.el.dataset.lightWidth || 0) / 2,
       on: +m.el.dataset.lightOn || 0,
     }));
-    for (const l of lights) {
-      if (l.m.el.parentElement !== slide) console.warn(`[orca-transition-skill] data-light="${l.key}" 要写在页面的直接子元素上，光束按画布坐标算`);
-    }
     const lit = own("[data-lit]");
     const anims = own("[data-anim]").map((el) => ({ el, step: stepOf(el), list: parseAnims(el) })).filter((x) => x.list.length);
-    for (const x of anims) {
-      if (x.el.dataset.path) console.warn(`[orca-transition-skill] 同一个元素别同时写 data-path 和 data-anim，两个都改 transform，后写的会盖掉前面的`);
-    }
     if (!movers.length && !lit.length && !anims.length) return null;
 
-    // 每一步多长，从第几秒开始。第 0 步总是有（可以是 0 秒），这样「进页先停住，点一下才出来」也成立
+    // 每一步多长。第 0 步总是有（可以是 0 秒），这样「进页先停住，点一下才出来」也成立
     const len = new Map([[0, 0]]);
     const bump = (s, t) => len.set(s, Math.max(len.get(s) ?? 0, t));
     for (const m of movers) bump(m.step, m.keys[m.keys.length - 1][0]);
     for (const l of lights) bump(l.m.step, l.on);
     for (const x of anims) for (const a of x.list) bump(x.step, a.at + a.len);
     const steps = [...len.keys()].sort((p, q) => p - q);
+    return { movers, lights, lit, anims, len, steps };
+  }
+  function buildsFor(slide) {
+    if (!slide) return null;
+    for (const c of slide.querySelectorAll(".st-trail, .st-shine")) c.remove();
+    const found = collectBuilds(slide);
+    if (!found) return null;
+    const { movers, lights, lit, anims, len, steps } = found;
+    for (const m of movers) {
+      const el = m.el;
+      const [px, py] = el.dataset.pivot ? el.dataset.pivot.trim().split(/[\s,]+/).map(Number) : [];
+      const pivot = [Number.isFinite(px) ? px : el.offsetWidth / 2, Number.isFinite(py) ? py : el.offsetHeight / 2];
+      el.style.transformOrigin = `${pivot[0]}px ${pivot[1]}px`;
+      m.rest = [el.offsetLeft + pivot[0], el.offsetTop + pivot[1]];
+      m.pose = null;
+    }
+    for (const l of lights) {
+      if (l.m.el.parentElement !== slide) console.warn(`[orca-transition-skill] data-light="${l.key}" 要写在页面的直接子元素上，光束按画布坐标算`);
+    }
+    for (const x of anims) {
+      if (x.el.dataset.path) console.warn(`[orca-transition-skill] 同一个元素别同时写 data-path 和 data-anim，两个都改 transform，后写的会盖掉前面的`);
+    }
+
+    // 每一步从第几秒开始
     const start = new Map();
     let total = 0;
     steps.forEach((s, i) => {
@@ -2053,6 +2067,35 @@
     if (stepAt < 0) return (sceneCall ? sceneCall.duration() - sceneCall.time() : 0) + stops[0];
     return stepTween?.isActive() ? (stepTween.duration() - stepTween.time()) / stepTween.timeScale() : 0;
   };
+  // 这一页的页内动画清单（只读）。OrcaPPT 的右栏「页」那一档显示它，宿主不用自己再解析一遍 data-anim。
+  // 时长按放映算（步与步之间不空 STEP_GAP）；clicks 是要按几下翻页键才放完。没有页内动画时返回 null
+  window.__orcaBuilds = (index) => {
+    const slide = index === undefined ? Reveal.getCurrentSlide() : Reveal.getSlide(index);
+    const found = slide && collectBuilds(slide);
+    if (!found) return null;
+    // 名字优先（data-id、领头元素的键），其次是字，都没有才写标签
+    const label = (el) => {
+      const name = el.dataset.id || el.dataset.lead;
+      if (name) return name;
+      const text = (el.textContent || "").trim().replace(/\s+/g, " ");
+      if (text) return text.length > 16 ? `${text.slice(0, 16)}…` : text;
+      const cls = [...el.classList].find((c) => /^[st]-/.test(c));
+      return `<${el.tagName.toLowerCase()}${cls ? `.${cls}` : ""}>`;
+    };
+    const items = [];
+    for (const m of found.movers) {
+      const end = m.keys[m.keys.length - 1][0];
+      const effects = [{ kind: "path", dir: null, at: m.keys[0][0], dur: end - m.keys[0][0] }];
+      const l = found.lights.find((q) => q.m === m);
+      if (l) effects.push({ kind: "light", dir: null, at: l.on, dur: Math.max(0, end - l.on), key: l.key });
+      items.push({ label: label(m.el), step: m.step, effects });
+    }
+    for (const el of found.lit) items.push({ label: label(el), step: stepOf(el), effects: [{ kind: "lit", dir: null, at: 0, dur: 0, key: el.dataset.lit }] });
+    for (const x of found.anims) items.push({ label: label(x.el), step: x.step, effects: x.list.map((a) => ({ kind: a.kind, dir: a.dir, at: a.at, dur: a.dur })) });
+    const steps = found.steps.map((step) => ({ step, length: found.len.get(step) }));
+    return { total: Math.round(steps.reduce((t, x) => t + x.length, 0) * 100) / 100, clicks: steps.length - 1, steps, items };
+  };
+
 
   function cleanup() {
     // 先跑到终点再销毁，避免中途翻页时元素停在隐藏状态

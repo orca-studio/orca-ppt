@@ -190,7 +190,7 @@
    * 这一页的情况 —— 右栏「页」那一档要显示的东西。
    *
    * 只有 guest 答得出来:停留时长写在 section 的 `data-hold` 上,参与转场的元素靠
-   * `data-id` / `data-carry` / `data-zoom` 认 —— 这些都在**运行时的 DOM** 里,
+   * `data-id` / `data-carry` / `data-zoom` / `data-lead` 认 —— 这些都在**运行时的 DOM** 里,
    * 服务端读 HTML 也能看见,但页号对不上(reveal 会克隆节点),不如直接问画布。
    */
   function slideInfo() {
@@ -199,18 +199,35 @@
     if (!slide) return null
 
     const carries = []
-    for (const element of slide.querySelectorAll('[data-id],[data-carry],[data-zoom]')) {
+    for (const element of slide.querySelectorAll(
+      '[data-id],[data-carry],[data-zoom],[data-lead]',
+    )) {
       const text = (element.textContent || '').trim()
       carries.push({
-        id: element.getAttribute('data-id') || element.getAttribute('data-carry') || '',
+        id:
+          element.getAttribute('data-id') ||
+          element.getAttribute('data-carry') ||
+          element.getAttribute('data-lead') ||
+          '',
         // 这个元素是靠什么参与转场的。名字直接显示,不翻译 —— 人要去稿子里找的就是它。
         kind: element.hasAttribute('data-id')
           ? 'data-id'
           : element.hasAttribute('data-carry')
             ? 'data-carry'
-            : 'data-zoom',
+            : element.hasAttribute('data-lead')
+              ? 'data-lead'
+              : 'data-zoom',
         text: text.length > 24 ? text.slice(0, 24) + '…' : text,
       })
+    }
+
+    // 页内动画(路径、光束、入场强调、点击分步)问引擎要清单 —— data-anim 怎么读、每一步多长,
+    // 只有引擎说了算,这里不再解析一遍。老引擎没有这个接口,就是 null
+    let builds = null
+    try {
+      builds = (window.__orcaBuilds && window.__orcaBuilds()) || null
+    } catch {
+      builds = null
     }
 
     return {
@@ -219,6 +236,7 @@
       hold: slide.getAttribute('data-hold'),
       duration: slide.getAttribute('data-auto-animate-duration'),
       carries,
+      builds,
     }
   }
 

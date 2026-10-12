@@ -235,6 +235,20 @@ describe('slideInfo', () => {
     expect(window.__orcaInspect.slideInfo().carries[0].text).toHaveLength(25)
   })
 
+  it('页内动画问引擎要清单,原样带上;老引擎没有这个接口就是 null', () => {
+    withReveal('<section></section><section><p data-anim="rise">x</p></section>')
+    expect(window.__orcaInspect.slideInfo().builds).toBeNull()
+    const builds = { total: 0.6, clicks: 0, steps: [{ step: 0, length: 0.6 }], items: [] }
+    ;(window as any).__orcaBuilds = () => builds
+    expect(window.__orcaInspect.slideInfo().builds).toEqual(builds)
+    ;(window as any).__orcaBuilds = () => {
+      throw new Error('引擎读不懂')
+    }
+    // 引擎出错不该让整个「页」那一档跟着空掉
+    expect(window.__orcaInspect.slideInfo().builds).toBeNull()
+    delete (window as any).__orcaBuilds
+  })
+
   it('没有 Reveal 时给 null,不抛', () => {
     document.body.innerHTML = ''
     delete window.Reveal
