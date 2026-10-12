@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 数字滚动时间轴</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/midnight.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Clearing，配色 midnight，版式 standard）
+1→2  关系：游标从画面外移到第一个刻度，大年份第一次出现                 手法：共享元素  共享：cursor, glow
+2→3  关系：年份逐位滚到 1978，标题和说明原地换，游标右移一格           手法：共享元素 + 逐位滚轮 + 原地替换  共享：cursor, glow；滚轮 year；替换 title, desc
+3→4  关系：年份逐位滚到 1996，标题和说明原地换，游标右移一格           手法：共享元素 + 逐位滚轮 + 原地替换  共享：cursor, glow；滚轮 year；替换 title, desc
+4→5  关系：年份逐位滚到 2011，标题和说明原地换，游标右移一格           手法：共享元素 + 逐位滚轮 + 原地替换  共享：cursor, glow；滚轮 year；替换 title, desc
+5→6  关系：年份逐位滚到 2024，标题和说明原地换，游标右移一格           手法：共享元素 + 逐位滚轮 + 原地替换  共享：cursor, glow；滚轮 year；替换 title, desc
+6→7  关系：年份只滚个位（2024 → 2025），游标走出画面                  手法：共享元素 + 逐位滚轮 + 原地替换  共享：cursor, glow；滚轮 year；替换 title, desc
+连续六次共享元素：时间轴「顺序往前走」，同一个动作重复正是看点（transitions.md「组合规则」）。
+大年份 .t-metric 每页同位置同字号（left:0 width:1920 居中，top:380），写 data-text="year" data-roll。
+-->
+
+<div class="slides">
+
+
+  <!-- 1 封面：顶部年份刻度都在，游标藏在左边外面；大年份还没出现 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <div data-id="glow" class="s-accent-soft" style="left:650px; top:200px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:-60px; top:150px; width:16px; height:16px;"></div>
+    <p class="t-label t-dim" style="left:0px; top:330px; width:1920px; text-align:center;">青澜市 · 1953–2024</p>
+    <p class="t-display" style="left:0px; top:400px; width:1920px; text-align:center;">一座港城的五个年份</p>
+    <p class="t-body" style="left:360px; top:620px; width:1200px; text-align:center;">每翻一页，年份像滚轮一样滚到下一个数。</p>
+  </section>
+
+  <!-- 2 1953：大年份第一次出现，按普通新元素入场 -->
+  <section data-page="timeline" data-auto-animate data-hold="2.5">
+    <div data-id="glow" class="s-accent-soft" style="left:160px; top:120px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:552px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">青澜建港</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">1953</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">第一座深水码头落成，三条航线把这座小城和外面连在一起。</p>
+  </section>
+
+  <!-- 3 1978：年份逐位滚到 1978，没变的位不动 -->
+  <section data-page="timeline" data-auto-animate data-hold="2.5">
+    <div data-id="glow" class="s-accent-soft" style="left:1020px; top:200px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:732px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">工厂林立</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">1978</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">沿江建起纺织厂和造船厂，城市人口第一次突破五十万。</p>
+  </section>
+
+  <!-- 4 1996：年份逐位滚到 1996，没变的位不动 -->
+  <section data-page="timeline" data-auto-animate data-hold="2.5">
+    <div data-id="glow" class="s-accent-soft" style="left:300px; top:360px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:912px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">跨江大桥</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">1996</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">青澜大桥通车，南北两岸从轮渡四十分钟变成开车六分钟。</p>
+  </section>
+
+  <!-- 5 2011：年份逐位滚到 2011，没变的位不动 -->
+  <section data-page="timeline" data-auto-animate data-hold="2.5">
+    <div data-id="glow" class="s-accent-soft" style="left:1120px; top:300px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:1092px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">新城启幕</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">2011</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">江南新城动工，图书馆、科创园和滨江公园一年内相继开放。</p>
+  </section>
+
+  <!-- 6 2024：年份逐位滚到 2024，没变的位不动 -->
+  <section data-page="timeline" data-auto-animate data-hold="2.5">
+    <div data-id="glow" class="s-accent-soft" style="left:560px; top:120px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:1272px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">面向未来</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">2024</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">港口完成自动化改造，青澜成为长江下游最繁忙的内河港之一。</p>
+  </section>
+
+  <!-- 7 结尾：年份只滚最后一位 2024 → 2025，游标走出画面 -->
+  <section data-page="closing" data-auto-animate data-hold="3">
+    <div data-id="glow" class="s-accent-soft" style="left:650px; top:200px; width:620px; height:620px; border-radius:50%; opacity:0.18;"></div>
+    <p data-id="t1953" class="t-label t-dim" style="left:480px; top:96px; width:160px; text-align:center;">1953</p>
+    <p data-id="t1978" class="t-label t-dim" style="left:660px; top:96px; width:160px; text-align:center;">1978</p>
+    <p data-id="t1996" class="t-label t-dim" style="left:840px; top:96px; width:160px; text-align:center;">1996</p>
+    <p data-id="t2011" class="t-label t-dim" style="left:1020px; top:96px; width:160px; text-align:center;">2011</p>
+    <p data-id="t2024" class="t-label t-dim" style="left:1200px; top:96px; width:160px; text-align:center;">2024</p>
+    <div data-id="cursor" class="s-dot" style="left:1980px; top:150px; width:16px; height:16px;"></div>
+    <p data-swap="title" class="t-h1" style="left:0px; top:230px; width:1920px; text-align:center;">下一个年份</p>
+    <p data-text="year" data-roll class="t-metric" style="left:0px; top:380px; width:1920px; text-align:center;">2025</p>
+    <p data-swap="desc" class="t-body" style="left:360px; top:740px; width:1200px; text-align:center;">示例内容：青澜市是虚构的城市，年份和事件都是编的。</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

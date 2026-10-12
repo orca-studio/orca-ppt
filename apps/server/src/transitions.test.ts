@@ -98,6 +98,10 @@ describe('真实示例', () => {
     ['recipes/data-report', 6],
     // 同一种手法连续六次,计划后面还有几行几何说明
     ['recipes/ring-timeline', 6],
+    // 手法里有「+」连起来的几种,共享一栏用分号分组
+    ['recipes/digit-roll', 6],
+    // 计划前面先有几行页内动画说明,它们没有页号箭头
+    ['recipes/spotlight-opening', 5],
   ]
 
   it.each(cases)('%s 解析出 %i 次翻页,每条都有关系和手法', async (name, count) => {
