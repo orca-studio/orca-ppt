@@ -91,7 +91,7 @@ cover: 8.5
 
 - 扇形和圆环的盒子每页位置、大小一样，只改 `rotate`；每页都写 `rotate`。
 - 一次转动不超过 180°（`check-deck` 会提醒）。
-- 扇形和圆环不用 `mask`：洞用径向渐变，张角用 `clip-path`（`transitions.md`「绕圆心转」第 5 条）。
+- 洞用径向渐变，张角用 `clip-path`（`transitions.md`「绕圆心转」第 5 条）。
 - 每个年份写 `data-id`，文字两页一样；当前年份 `.t-on-accent`，其余 `.t-on-surface`。
 - 不编数：节点的数从用户给的材料来，没有就不放数字行。
 
