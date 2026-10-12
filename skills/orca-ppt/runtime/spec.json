@@ -1,0 +1,15 @@
+{
+  "_": [
+    "visual-spec.md 里写死的数字，给校验用。check-deck 和应用的出稿检查（apps/server/src/spec-check.ts）都读这一份，",
+    "规范只在 skill 里（AGENTS.md 边界 4）：改数字先改 visual-spec.md，再改这里，两处说法要一致。",
+    "每个键后面的 where 指回规范出处。"
+  ],
+  "safeArea": { "left": 120, "right": 1800, "top": 80, "bottom": 1000, "where": "visual-spec.md「画布和网格」" },
+  "showcaseSafeArea": { "left": 72, "right": 1848, "top": 48, "bottom": 1000, "where": "product-showcase.md「仅此案例的局部规范」" },
+  "safeAreaExempt": ["s-spot", "st-photo"],
+  "columns": [120, 560, 1000, 1440],
+  "bento": { "rows": [240, 640], "cell": [360, 360], "where": "visual-spec.md「Bento 网格页」" },
+  "bars": { "left": 680, "height": 56, "maxRows": 6, "where": "visual-spec.md「横向条形图页」" },
+  "timeline": { "nodes": 4, "where": "visual-spec.md「横向时间线页」只放 4 站" },
+  "compare": { "panel": [800, 760], "top": 240, "lefts": [120, 1000], "where": "visual-spec.md「对比页」" }
+}

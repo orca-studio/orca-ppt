@@ -10,7 +10,8 @@
     "capture": "node scripts/capture.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
     "palettes": "node scripts/check-palettes.mjs",
-    "deck": "node scripts/check-deck.mjs"
+    "deck": "node scripts/check-deck.mjs",
+    "themes": "node scripts/check-themes.mjs"
   },
   "repository": {
     "type": "git",

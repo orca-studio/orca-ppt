@@ -20,9 +20,14 @@
 // 推到转场、入场和页内动画都放完的那一刻,量的就是声明的布局。
 
 import { chromium } from "playwright-core";
-import { existsSync } from "node:fs";
-import { resolve, relative } from "node:path";
-import { pathToFileURL } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve, relative } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+// 规范数字（安全区这些）和页面类型词表都读 skill 自己的那一份，应用的出稿检查读的也是它们
+const RUNTIME = resolve(dirname(fileURLToPath(import.meta.url)), "../runtime");
+const SPEC = JSON.parse(readFileSync(resolve(RUNTIME, "spec.json"), "utf8"));
+const PAGE_TYPES = JSON.parse(readFileSync(resolve(RUNTIME, "pages.json"), "utf8")).pages.map((p) => p.id);
 
 const decks = process.argv.slice(2).filter((a) => !a.startsWith("-"));
 if (decks.length === 0) {
@@ -36,15 +41,13 @@ if (decks.length === 0) {
  * 每条规则都标了出处,改规则先去改那儿 —— 这个脚本是 visual-spec.md 的执行端,
  * 不是第二处规范。
  */
-function auditSlide() {
+function auditSlide(spec) {
   const CANVAS_W = 1920;
   const CANVAS_H = 1080;
   // Product showcase is a full-bleed reference demo, not a standard report layout.
-  // Its scoped safe area and paired offstage poses are defined in references/product-showcase.md.
+  // Its scoped safe area is defined in references/product-showcase.md.
   const productDemo = document.documentElement.dataset.demo === "product-showcase";
-  const SAFE = productDemo
-    ? { left: 72, right: 1848, top: 48, bottom: 1000 }
-    : { left: 120, right: 1800, top: 80, bottom: 1000 };
+  const SAFE = productDemo ? spec.showcaseSafeArea : spec.safeArea;
 
   const section = document.querySelector(".slides > section.present");
   if (!section) return [{ rule: "内部", msg: "找不到当前页" }];
@@ -189,7 +192,7 @@ function auditSlide() {
     if (isFullBleed(blk, bb)) continue;
     for (const t of texts) {
       if (!contains(bb, box(t))) continue;
-      if (!t.classList.contains("t-on-accent")) {
+      if (!t.closest(".t-on-accent")) {
         add("强调块上的文字", `${name(t)} 压在 ${name(blk)} 上但没加 .t-on-accent（visual-spec.md:76）`);
       }
     }
@@ -200,12 +203,19 @@ function auditSlide() {
   //    不加就继承 --text,而 --text 是配 --bg 的:页面底浅、面板深的配色(washi 的墨色面板、
   //    midnight)下,深字压深底直接读不出来。.t-metric 更糟,它自己是 --accent-text,
   //    那本来就是给浅页面底准备的深色。
+  // 整页 .s-surface（「整页 ↔ 卡片」的底）上的文字同样要加 —— 以前这里跳过整页形状，恰好核不到
+  // 封面、结尾这种整页深底。整页底上又压着别的形状时，那块形状上的文字归那块形状管
+  const shapes = [...section.querySelectorAll("[class*='s-']")].filter(visible)
+    .filter((el) => !isFullBleed(el, box(el)) && !el.classList.contains("s-anchor"));
   for (const panel of [...section.querySelectorAll(".s-surface")].filter(visible)) {
     const pb = box(panel);
-    if (isFullBleed(panel, pb)) continue;
+    const full = isFullBleed(panel, pb);
+    if (full && (panel.classList.contains("s-spot") || panel.classList.contains("st-mask"))) continue;
     for (const t of texts) {
       if (!contains(pb, box(t))) continue;
-      if (t.classList.contains("t-on-surface") || t.classList.contains("t-on-accent")) continue;
+      if (full && shapes.some((sh) => sh !== panel && contains(box(sh), box(t)))) continue;
+      // 类写在外层（名单 <ul class="t-credits t-on-surface"> 里的 <span>）也算
+      if (t.closest(".t-on-surface, .t-on-accent")) continue;
       // 强调块压在面板上时,块上的文字归 .t-on-accent 管(上一条已经核过)
       const onAccent = [...section.querySelectorAll(".s-accent, .s-accent-soft")]
         .filter(visible).some((blk) => contains(box(blk), box(t)));
@@ -241,7 +251,7 @@ for (const deck of decks) {
     // 页内动画的元素可以从画外开始走（灯从顶上落下来），量起点会误报出界，量的是它停下来的地方
     const { transition, scene } = await page.evaluate((n) => window.__capture.go(n), i);
     await page.evaluate((ms) => window.__capture.seek(ms), transition + (scene || 0));
-    const problems = await page.evaluate(auditSlide);
+    const problems = await page.evaluate(auditSlide, SPEC);
     for (const p of problems) found.push({ page: i + 1, ...p });
 
     // —— 绕圆心转一次不超过 180°（transitions.md「绕圆心转」）：rotate 按数值插值，
@@ -258,6 +268,58 @@ for (const deck of decks) {
       }
     }
     turns = now;
+  }
+
+  // —— 整份稿子的检查：页面类型词表、手法次数、连续同一种手法、镂空聚焦的洞
+  const deckInfo = await page.evaluate(() => [...document.querySelectorAll(".slides > section")].map((s) => ({
+    page: s.dataset.page || null,
+    st: s.dataset.st || null,
+    lead: !!s.dataset.stMaskLead,
+    spot: (() => { const el = s.querySelector(":scope > .s-spot"); return el && el.offsetWidth ? `${el.offsetWidth}×${el.offsetHeight}` : null; })(),
+  })));
+  deckInfo.forEach((d, i) => {
+    if (d.page && !PAGE_TYPES.includes(d.page)) {
+      found.push({ page: i + 1, rule: "页面类型", msg: `data-page="${d.page}" 不在 runtime/pages.json 的词表里（${PAGE_TYPES.join(" / ")}）。认不准就别标（visual-spec.md「页面类型」）` });
+    }
+  });
+  // 次数上限（transitions.md 各手法第 1 条）；带领头元素的遮挡剪辑是开场动作的一部分，不算
+  const limits = { "zoom-through": 2, mask: 2, recap: 1 };
+  for (const [kind, max] of Object.entries(limits)) {
+    const pages = deckInfo.map((d, i) => (d.st === kind && !(kind === "mask" && d.lead) ? i + 1 : 0)).filter(Boolean);
+    if (pages.length > max) {
+      found.push({ page: pages[max], rule: "手法次数", msg: `data-st="${kind}" 用了 ${pages.length} 次（第 ${pages.join("、")} 页），一份稿子最多 ${max} 次（transitions.md）` });
+    }
+  }
+  // 连续三次同一种 data-st（transitions.md「组合规则」）。元素交接走列表是例外；
+  // 共享元素这类没有 data-st 的翻页（含焦点移交、绕圆心转）从 DOM 上分不出手法，不在这里核
+  for (let i = 3; i < deckInfo.length; i++) {
+    const run = deckInfo.slice(i - 2, i + 1).map((d) => d.st);
+    if (run[0] && run[0] !== "carry" && run.every((k) => k === run[0])) {
+      found.push({ page: i + 1, rule: "组合规则", level: "warn", msg: `第 ${i - 1}–${i + 1} 页连续三次 data-st="${run[0]}"（transitions.md「组合规则」）` });
+    }
+  }
+  const spots = [...new Set(deckInfo.map((d) => d.spot).filter(Boolean))];
+  if (spots.length > 1) {
+    found.push({ page: deckInfo.findIndex((d) => d.spot === spots[1]) + 1, rule: "镂空聚焦", msg: `洞的大小前后不一致（${spots.join("、")}），只移动不改大小（transitions.md「镂空聚焦」）` });
+  }
+
+  // —— 行内样式（visual-spec.md「颜色和形状」）：读源文件，看作者写了什么。
+  //    运行起来以后引擎和 reveal 会往元素上写行内颜色，那时候再量就是误报
+  const source = readFileSync(file, "utf8");
+  const sectionStarts = [...source.matchAll(/<section[\s>]/g)].map((m) => m.index);
+  const pageAt = (idx) => sectionStarts.filter((s) => s <= idx).length;
+  const COLOR = /(?:^|;)\s*(color|background(?:-color|-image)?|border(?:-[a-z]+)?(?:-color)?|outline(?:-color)?|fill|stroke)\s*:[^;]*?(#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\()/;
+  for (const m of source.matchAll(/style="([^"]*)"/g)) {
+    const page = pageAt(m.index);
+    if (!page) continue; // section 之外（页面框架）不管
+    const style = m[1];
+    const color = style.match(COLOR);
+    if (color) found.push({ page, rule: "行内样式", msg: `style 里写了色值「${color[2]}」（${color[1]}）。只写变量 var(--…)，换配色时才会跟着变` });
+    if (/font-size\s*:\s*[\d.]+px/.test(style)) found.push({ page, rule: "行内样式", msg: `style 里写了像素字号「${style.match(/font-size\s*:\s*[\d.]+px/)[0]}」。用字号类` });
+  }
+  for (const m of source.matchAll(/<[a-z]+[^>]*\s(fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)) {
+    const page = pageAt(m.index);
+    if (page) found.push({ page, rule: "行内样式", msg: `svg 上写了 ${m[1]}="${m[2]}"。用线条类 .l-*` });
   }
   await page.close();
 
