@@ -319,7 +319,7 @@ ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide
  *
  * 用稿子自己的录制接口(`?capture` + `__capture.go/seek`)定位,不用「跳页 + 睡一会儿」:
  * 转场是 GSAP 驱动的,睡固定毫秒会截到还没画完的上一页 —— 实测就是整排错位一格。
- * `go(i)` 返回这次转场的时长,`seek(transition)` 正好落在转场结束的稳定态。
+ * `go(i)` 返回这次转场和页内动画的时长,`seek(transition + build)` 落在全部放完的稳定态。
  * 普通 Reveal.js 稿子没有录制接口时,在隐藏窗口关闭内置转场并直接定位静态页面。
  */
 const thumbnailQueue = new ThumbnailQueue()
@@ -398,8 +398,9 @@ ipcMain.handle(
             await offscreen.webContents.executeJavaScript(
               `(async () => {
                 if (window.__capture?.go && window.__capture?.seek) {
-                  const { transition } = await window.__capture.go(${index});
-                  await window.__capture.seek(transition);
+                  // 页内动画（点击分步、入场）放完才是这一页完整的样子;老引擎没有 build,就停在转场结束
+                  const { transition, build } = await window.__capture.go(${index});
+                  await window.__capture.seek(transition + (build || 0));
                 } else {
                   Reveal.slide(${index});
                   // Use the completed static slide, including all fragment steps.

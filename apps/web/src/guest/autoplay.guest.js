@@ -10,6 +10,8 @@
 ;(() => {
   const DEFAULT_HOLD = 1.5
   const DEFAULT_TRANSITION = 0.9
+  /** 页内动画放完一步后停多久再按下一下(毫秒)。 */
+  const STEP_HOLD_MS = 800
 
   let timer
   let running = false
@@ -35,9 +37,21 @@
       stop()
       return
     }
+    // 页内动画还没放完这一步:等它放完再多停一会儿,别把它压掉
+    const busy = window.__orcaBusy ? window.__orcaBusy() : 0
+    if (busy > 0) {
+      clearTimeout(timer)
+      timer = setTimeout(step, busy * 1000 + STEP_HOLD_MS)
+      return
+    }
     // 走引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧。老稿子没有就退回 Reveal
-    if (window.__orcaAdvance) window.__orcaAdvance()
-    else window.Reveal.next()
+    // 返回 "step" 是这一下被页内动画的点击分步吃掉了,还在这一页:放完那一步再说
+    const result = window.__orcaAdvance ? window.__orcaAdvance() : window.Reveal.next()
+    if (result === 'step') {
+      clearTimeout(timer)
+      timer = setTimeout(step, 50)
+      return
+    }
     schedule()
   }
 
