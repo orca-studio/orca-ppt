@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import type { DeckPhase, PhaseReport } from '@orca-ppt/contracts'
 import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-ppt/deck-agent'
 import { findEntryName, readPageTypes } from './decks.js'
-import { checkDeck } from './spec-check.js'
+import { checkDeck, type Spec } from './spec-check.js'
 
 /**
  * 阶段状态与闸门。server 拥有状态、持久化、恢复;**品味在 deck-agent** —— 提示词和
@@ -14,10 +14,10 @@ import { checkDeck } from './spec-check.js'
  * 从磁盘上的产物推出各阶段的状态。产物在且合规是 done,在但不合规是 failed,不在是 idle。
  * 不这么做的话,关掉重开就丢了全部进度 —— 而进度明明就躺在目录里。
  */
-export async function readPhaseStatus(deckPath: string): Promise<PhaseReport[]> {
+export async function readPhaseStatus(deckPath: string, spec?: Spec): Promise<PhaseReport[]> {
   return Promise.all(
     phaseOrder.map(async (phase) => {
-      const check = await checkArtifact(deckPath, phase, { requireBuild: false })
+      const check = await checkArtifact(deckPath, phase, { requireBuild: false, spec })
       if (check.missing) return { phase, status: 'idle' as const, issues: [] }
       return {
         phase,
@@ -37,7 +37,7 @@ interface ArtifactCheckResult {
 async function checkArtifact(
   deckPath: string,
   phase: DeckPhase,
-  options: { requireBuild: boolean },
+  options: { requireBuild: boolean; spec?: Spec | undefined },
 ): Promise<ArtifactCheckResult> {
   const path = join(deckPath, artifactPath[phase])
 
@@ -62,7 +62,7 @@ async function checkArtifact(
        */
       const issues =
         phase === 'build'
-          ? checkDeck(html, readPageTypes(html)).map(
+          ? checkDeck(html, readPageTypes(html), options.spec).map(
               (issue) => `第 ${issue.slide + 1} 页:${issue.message}`,
             )
           : []
@@ -97,11 +97,19 @@ async function checkArtifact(
 export async function phaseGate(
   deckPath: string,
   phase: DeckPhase,
-  context: { request?: string | undefined; skillPath?: string | undefined; themes?: string[] },
+  context: {
+    request?: string | undefined
+    skillPath?: string | undefined
+    themes?: string[]
+    spec?: Spec | undefined
+  },
 ): Promise<{ prompt?: string; blockedBy?: DeckPhase; issues: string[] }> {
   for (const upstream of phaseOrder.slice(0, phaseOrder.indexOf(phase))) {
     if (upstream === 'review') continue
-    const check = await checkArtifact(deckPath, upstream, { requireBuild: false })
+    const check = await checkArtifact(deckPath, upstream, {
+      requireBuild: false,
+      spec: context.spec,
+    })
     if (check.missing) {
       return { blockedBy: upstream, issues: [`${artifactPath[upstream]} 还没写出来`] }
     }

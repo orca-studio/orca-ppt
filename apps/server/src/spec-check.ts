@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { sliceSections } from './decks.js'
 
 /**
@@ -15,6 +17,10 @@ import { sliceSections } from './decks.js'
  * - 没标类型的页只做通用检查(安全区),不猜它是什么;
  * - 「坐标取 40 的倍数」这条**没有做**:图表的条按数据比例算、居中文字按公式算,
  *   合法的例外太多,做了就是误报机器。
+ *
+ * **数字不写在这里。** 安全区、四列、条形图这些都读 skill 的 `runtime/spec.json`,
+ * check-deck 读的也是那一份 —— 规范只在 skill 里(AGENTS.md 边界 4)。以前这里抄了一份,
+ * 和 check-deck 走了样(时间线放行 5 站、安全区没有画外豁免),同一份稿子两边结论不同。
  */
 
 /** 一条问题。`slide` 从 0 数起。 */
@@ -23,23 +29,49 @@ export interface SpecIssue {
   message: string
 }
 
-/** 安全区:内容不许超出这个框。 */
-const SAFE = { left: 120, right: 1800, top: 80, bottom: 1000 }
+/** skill 的 `runtime/spec.json`:visual-spec.md 里写死的数字。 */
+export interface Spec {
+  safeArea: { left: number; right: number; top: number; bottom: number }
+  safeAreaExempt: string[]
+  /** Bento 的四列,时间线的节点也用同一套 —— 两页之间才接得上。 */
+  columns: number[]
+  bento: { rows: number[]; cell: [number, number] }
+  bars: { left: number; height: number; maxRows: number }
+  timeline: { nodes: number }
+  compare: { panel: [number, number]; top: number; lefts: number[] }
+}
 
-/** Bento 的四列,时间线的节点也用同一套 —— 两页之间才接得上。 */
-const COLUMNS = [120, 560, 1000, 1440]
-const BENTO_ROWS = [240, 640]
+/** 读 skill 的规范数字。读不到就返回 undefined,出稿检查跳过坐标这一项,不自己编一份。 */
+export async function readSpec(skillPath: string | undefined): Promise<Spec | undefined> {
+  if (!skillPath) return undefined
+  try {
+    return JSON.parse(await readFile(join(skillPath, 'runtime/spec.json'), 'utf8')) as Spec
+  } catch {
+    return undefined
+  }
+}
 
-export function checkDeck(html: string, pageTypes: Array<string | null>): SpecIssue[] {
+export function checkDeck(
+  html: string,
+  pageTypes: Array<string | null>,
+  spec: Spec | undefined,
+): SpecIssue[] {
+  if (!spec) return []
   const issues: SpecIssue[] = []
-  sliceSections(html).forEach((section, slide) => {
+  const sections = sliceSections(html)
+  // 每页的 data-id,判断「画外待命」要看别的页有没有配对
+  const ids = sections.map(
+    (section) => new Set([...section.matchAll(/data-id="([^"]+)"/g)].map((m) => m[1])),
+  )
+  sections.forEach((section, slide) => {
     const type = pageTypes[slide] ?? null
     const add = (message: string) => issues.push({ slide, message })
-    checkSafeArea(section, add)
-    if (type === 'bars') checkBars(section, add)
-    if (type === 'timeline') checkTimeline(section, add)
-    if (type === 'bento') checkBento(section, add)
-    if (type === 'compare') checkCompare(section, add)
+    const pairedElsewhere = (id: string) => ids.some((set, other) => other !== slide && set.has(id))
+    checkSafeArea(section, spec, pairedElsewhere, add)
+    if (type === 'bars') checkBars(section, spec, add)
+    if (type === 'timeline') checkTimeline(section, spec, add)
+    if (type === 'bento') checkBento(section, spec, add)
+    if (type === 'compare') checkCompare(section, spec, add)
   })
   return issues
 }
@@ -87,17 +119,33 @@ function boxes(section: string): Box[] {
 const fullBleed = (box: Box) => box.width === 1920 || box.height === 1080
 
 /**
- * 安全区不管的几个类:
+ * 安全区不管的几个类(`spec.safeAreaExempt`):
  * - `.s-spot` 是镂空聚焦的圈,它按被聚焦的那个东西定位,而且靠一层铺满全屏的遮罩起作用;
  * - `.st-photo` 是故事稿的整页照片,本来就铺满。
  * 把它们算成越界是误报,而一个会误报的检查比没有检查更糟。
+ *
+ * 还有「画外待命」:整个落在画布外、别的页有同 data-id 配对的元素,是在等着入画或刚出画
+ * (transitions.md「共享元素」第 4 条)。只露出一部分的不算。
  */
-const EXEMPT = ['s-spot', 'st-photo']
+const offstage = (box: Box) =>
+  box.left !== undefined &&
+  box.top !== undefined &&
+  box.width !== undefined &&
+  box.height !== undefined &&
+  (box.left + box.width <= 0 || box.top + box.height <= 0 || box.left >= 1920 || box.top >= 1080)
 
-function checkSafeArea(section: string, add: (message: string) => void): void {
+function checkSafeArea(
+  section: string,
+  spec: Spec,
+  pairedElsewhere: (id: string) => boolean,
+  add: (message: string) => void,
+): void {
+  const SAFE = spec.safeArea
   for (const box of boxes(section)) {
     if (fullBleed(box)) continue
-    if (box.cls.split(' ').some((name) => EXEMPT.includes(name))) continue
+    if (box.cls.split(' ').some((name) => spec.safeAreaExempt.includes(name))) continue
+    const id = box.raw.match(/data-id="([^"]+)"/)?.[1]
+    if (id && offstage(box) && pairedElsewhere(id)) continue
     const where = box.cls ? `.${box.cls.split(' ')[0]}` : `<${box.tag}>`
     if (box.left !== undefined && box.left < SAFE.left) {
       add(`${where} 的 left ${box.left} 越过左安全区(${SAFE.left})`)
@@ -114,16 +162,17 @@ function checkSafeArea(section: string, add: (message: string) => void): void {
   }
 }
 
-function checkBars(section: string, add: (message: string) => void): void {
+function checkBars(section: string, spec: Spec, add: (message: string) => void): void {
+  const { left, height, maxRows } = spec.bars
   const bars = boxes(section).filter((box) => box.raw.includes('data-enter="grow-right"'))
   if (bars.length === 0) {
     add('横向条形图页:一条 data-enter="grow-right" 的条都没有')
     return
   }
-  if (bars.length > 6) add(`横向条形图页:${bars.length} 条,规范最多 6 条`)
+  if (bars.length > maxRows) add(`横向条形图页:${bars.length} 条,规范最多 ${maxRows} 条`)
   for (const bar of bars) {
-    if (bar.left !== 680) add(`横向条形图页:条的 left 应为 680,现在是 ${bar.left}`)
-    if (bar.height !== 56) add(`横向条形图页:条的高应为 56,现在是 ${bar.height}`)
+    if (bar.left !== left) add(`横向条形图页:条的 left 应为 ${left},现在是 ${bar.left}`)
+    if (bar.height !== height) add(`横向条形图页:条的高应为 ${height},现在是 ${bar.height}`)
   }
   // 最长的那条要叫 axis —— 下一页的轴从它形态变换过来,改名就接不上了。
   const longest = bars.reduce((a, b) => ((b.width ?? 0) > (a.width ?? 0) ? b : a))
@@ -132,10 +181,11 @@ function checkBars(section: string, add: (message: string) => void): void {
   }
 }
 
-function checkTimeline(section: string, add: (message: string) => void): void {
+function checkTimeline(section: string, spec: Spec, add: (message: string) => void): void {
+  const COLUMNS = spec.columns
   const dots = boxes(section).filter((box) => box.cls.split(' ').includes('s-dot'))
-  if (dots.length < 4 || dots.length > 5) {
-    add(`横向时间线页:${dots.length} 个节点,规范是 4 到 5 个`)
+  if (dots.length !== spec.timeline.nodes) {
+    add(`横向时间线页:${dots.length} 个节点,规范是 ${spec.timeline.nodes} 个`)
   }
   for (const dot of dots) {
     if (dot.left !== undefined && !COLUMNS.includes(dot.left)) {
@@ -144,12 +194,15 @@ function checkTimeline(section: string, add: (message: string) => void): void {
   }
 }
 
-function checkBento(section: string, add: (message: string) => void): void {
+function checkBento(section: string, spec: Spec, add: (message: string) => void): void {
+  const COLUMNS = spec.columns
+  const BENTO_ROWS = spec.bento.rows
+  const [cw, ch] = spec.bento.cell
   const cells = boxes(section).filter(
-    (box) => box.width === 360 && box.height === 360 && box.cls.startsWith('s-'),
+    (box) => box.width === cw && box.height === ch && box.cls.startsWith('s-'),
   )
   if (cells.length === 0) {
-    add('Bento 网格页:没有 360×360 的格子')
+    add(`Bento 网格页:没有 ${cw}×${ch} 的格子`)
     return
   }
   for (const cell of cells) {
@@ -162,16 +215,19 @@ function checkBento(section: string, add: (message: string) => void): void {
   }
 }
 
-function checkCompare(section: string, add: (message: string) => void): void {
-  const panels = boxes(section).filter((box) => box.width === 800 && box.height === 760)
+function checkCompare(section: string, spec: Spec, add: (message: string) => void): void {
+  const [pw, ph] = spec.compare.panel
+  const panels = boxes(section).filter((box) => box.width === pw && box.height === ph)
   if (panels.length !== 2) {
-    add(`对比页:${panels.length} 个 800×760 的面板,规范是两个`)
+    add(`对比页:${panels.length} 个 ${pw}×${ph} 的面板,规范是两个`)
     return
   }
   for (const panel of panels) {
-    if (panel.top !== 240) add(`对比页:面板 top 应为 240,现在是 ${panel.top}`)
-    if (panel.left !== 120 && panel.left !== 1000) {
-      add(`对比页:面板 left 应为 120 或 1000,现在是 ${panel.left}`)
+    if (panel.top !== spec.compare.top) {
+      add(`对比页:面板 top 应为 ${spec.compare.top},现在是 ${panel.top}`)
+    }
+    if (panel.left === undefined || !spec.compare.lefts.includes(panel.left)) {
+      add(`对比页:面板 left 应为 ${spec.compare.lefts.join(' 或 ')},现在是 ${panel.left}`)
     }
   }
 }

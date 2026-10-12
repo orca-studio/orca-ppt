@@ -1,9 +1,26 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { checkDeck } from './spec-check.js'
+import { checkDeck, type Spec } from './spec-check.js'
+
+// 规范数字读仓库里 skill 的那一份 —— 测试和产品用同一个来源
+const spec = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL('../../../skills/orca-ppt/runtime/spec.json', import.meta.url)),
+    'utf8',
+  ),
+) as Spec
 
 const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
 const msgs = (html: string, types: Array<string | null>) =>
-  checkDeck(html, types).map((issue) => issue.message)
+  checkDeck(html, types, spec).map((issue) => issue.message)
+
+describe('读不到规范', () => {
+  it('没有 spec.json 时不做坐标检查,不自己编一份', () => {
+    const html = deck('<section><p class="t-h1" style="left:80px; top:200px;">x</p></section>')
+    expect(checkDeck(html, [null], undefined)).toEqual([])
+  })
+})
 
 describe('安全区', () => {
   it('越过左边界要报', () => {
@@ -42,7 +59,7 @@ describe('安全区', () => {
       '<section><p style="left:200px; top:200px;">ok</p></section>',
       '<section><p style="left:40px; top:200px;">bad</p></section>',
     )
-    expect(checkDeck(html, [null, null])[0]?.slide).toBe(1)
+    expect(checkDeck(html, [null, null], spec)[0]?.slide).toBe(1)
   })
 })
 
@@ -77,6 +94,28 @@ describe('横向条形图页', () => {
   })
 })
 
+describe('画外待命', () => {
+  it('整个在画布外、别的页有配对的元素不算越界', () => {
+    const html = deck(
+      '<section><div data-id="focus" class="s-accent" style="left:-640px; top:240px; width:520px; height:112px;"></div></section>',
+      '<section><div data-id="focus" class="s-accent" style="left:120px; top:240px; width:520px; height:112px;"></div></section>',
+    )
+    expect(msgs(html, [null, null])).toEqual([])
+  })
+
+  it('没有配对、或只露出一部分的照样报', () => {
+    const lone = deck(
+      '<section><div data-id="x" class="s-accent" style="left:-640px; top:240px; width:520px; height:112px;"></div></section>',
+    )
+    expect(msgs(lone, [null]).join()).toContain('左安全区')
+    const partly = deck(
+      '<section><div data-id="y" class="s-accent" style="left:-100px; top:240px; width:520px; height:112px;"></div></section>',
+      '<section><div data-id="y" class="s-accent" style="left:120px; top:240px; width:520px; height:112px;"></div></section>',
+    )
+    expect(msgs(partly, [null, null]).join()).toContain('左安全区')
+  })
+})
+
 describe('横向时间线页', () => {
   const dot = (left: number) =>
     `<div class="s-dot" style="left:${left}px; top:542px; width:40px; height:40px;"></div>`
@@ -91,7 +130,12 @@ describe('横向时间线页', () => {
     expect(msgs(html, ['timeline']).join()).toContain('600')
   })
 
-  it('节点数不对要报 —— 规范是 4 到 5 个', () => {
+  it('第五站也要报 —— 规范只放 4 站,第五站的标签会挤出右边安全区', () => {
+    const html = deck(`<section>${[120, 560, 1000, 1440, 1440].map(dot).join('')}</section>`)
+    expect(msgs(html, ['timeline']).join()).toContain('5 个节点')
+  })
+
+  it('节点数不对要报 —— 规范是 4 个', () => {
     const html = deck(`<section>${[120, 560, 1000].map(dot).join('')}</section>`)
     expect(msgs(html, ['timeline']).join()).toContain('3 个节点')
   })

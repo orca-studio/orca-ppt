@@ -41,6 +41,7 @@ import {
   type OpenedDeck,
 } from './decks.js'
 import { phaseGate, readPhaseStatus } from './phases.js'
+import { readSpec } from './spec-check.js'
 import { planPreview } from './preview.js'
 import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
@@ -271,7 +272,7 @@ export async function startServer(
       transitions: opened.transitions,
       plan: readTransitionPlan(opened),
     })
-    for (const report of await readPhaseStatus(path)) {
+    for (const report of await readPhaseStatus(path, await spec)) {
       bus.broadcast('phase.changed', { deckId, ...report })
     }
     return opened
@@ -359,6 +360,8 @@ export async function startServer(
   // 词表读一次就够 —— 它跟着 skill 的文件走,和 catalog 一样。
   const vocabulary = catalog.skillPath ? readVocabulary(catalog.skillPath) : Promise.resolve([])
   const pageTypes = catalog.skillPath ? readPageTypes(catalog.skillPath) : Promise.resolve([])
+  // 出稿检查的规范数字(skill 的 runtime/spec.json)。读不到就跳过坐标检查,不自己编一份
+  const spec = readSpec(catalog.skillPath)
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
@@ -686,7 +689,7 @@ export async function startServer(
           slideTitles: opened.slideTitles,
           pageTypes: opened.pageTypes,
           transitionPlan: readTransitionPlan(opened),
-          phases: await readPhaseStatus(opened.deck.path),
+          phases: await readPhaseStatus(opened.deck.path, await spec),
           previewUrl: mountPreview(opened),
           ...(theme ? { theme } : {}),
           ...(readOnly ? { readOnly } : {}),
@@ -940,11 +943,12 @@ export async function startServer(
           request: params.request,
           skillPath: catalog.skillPath,
           themes: catalog.themes.map((theme) => theme.name),
+          spec: await spec,
         })
       }
       case 'phase.check': {
         const params = parseParams('phase.check', raw)
-        const all = await readPhaseStatus(deckPathOf(params.deckId))
+        const all = await readPhaseStatus(deckPathOf(params.deckId), await spec)
         return { phases: params.phase ? all.filter((row) => row.phase === params.phase) : all }
       }
       case 'deck.inspect': {
