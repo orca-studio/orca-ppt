@@ -24,17 +24,18 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 读 `references/visual-spec.md` 的「整页视频」：素材要先转成 1920×1080 @30fps，
 录制时由 `capture.mjs` 逐帧 seek，不靠真实播放。
 
-**页面里要有场景内部的 MG 动画时**（成片格子亮起、卡片弹出、拼字、数字滚动，产品概念片），
-用 orca-motion-skill 写场景，本 skill 只管场景之间的转场。
-（翻页时数字像 PowerPoint 那样逐位滚到下一个数，不算场景内部动画 —— 用文字级匹配的 `data-roll`，见 `transitions.md`。）
-（PowerPoint / WPS 动画窗格那种「一个东西沿路径走、光照到哪亮到哪」的开场、飞入 / 擦除 / 拖影 / 擦亮这些入场强调、「点一下出一条」，也不用场景 —— 用页内动画的 `data-path` / `data-light` / `data-anim` / `data-step`，见 `transitions.md`「页内动画」。）场景怎么放进页面见那个 skill 的 `references/integration.md`。
+**页面里要有动画时**，先分清是哪一种：
+- PowerPoint / WPS 动画窗格能做的那类 —— 沿路径走、光照到哪亮到哪、飞入 / 擦除 / 拖影 / 擦亮、点一下出一条，
+  以及翻页时数字逐位滚到下一个数 —— 用本 skill 的属性，见 `transitions.md`「页内动画」和「文字级匹配」；
+- 成片格子亮起、拼字、产品概念片这类场景内部的 MG 动画，用 orca-motion-skill 写场景，
+  怎么放进页面见那个 skill 的 `references/integration.md`。
 
 **用户用剪辑软件里的转场名提需求时**（推、交叉缩放、圆形划像、溶解、百叶窗……），
 先读 `references/premiere-mapping.md`，按他想要的感觉选手法，不要照着复刻效果。
 
 ## 产品分栏动画案例
 
-用户要“四栏产品依次切换，最后展开全屏”，或要用内置案例学习共享元素时，先读同款配方 [recipes/drink-showcase/RECIPE.md](recipes/drink-showcase/RECIPE.md)，版式例外见 [references/product-showcase.md](references/product-showcase.md)。演示在 `examples/drink-showcase/index.html`，分步播放和可复制提示词在 `tutorial.html`。这个案例用五页状态实现，无需 Remotion 或额外 motion skill；局部字阶、配色、画外待命和时长例外仅限该案例配置。
+用户要“四栏产品依次切换，最后展开全屏”，或要用内置案例学习共享元素时，先读同款配方 [recipes/drink-showcase/RECIPE.md](recipes/drink-showcase/RECIPE.md)，版式例外见 [references/product-showcase.md](references/product-showcase.md)。演示在 `examples/drink-showcase/index.html`，分步播放和可复制提示词在 `tutorial.html`。这个案例用五页状态实现，无需 Remotion 或额外 motion skill；局部字阶、配色和时长例外仅限该案例配置。
 
 ## 流程（按顺序，不许跳）
 
@@ -42,18 +43,11 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 1. **读规范**：按上表读。
 2. **列内容**：每页一个主角。故事稿先写出这一期要推的一个论点。
    页面要用数据时读 `references/data.md`：数从哪来、表格文件怎么读、出处怎么记。
-3. **选页面类型**：按 `visual-spec.md` 的「先看内容，再选页面类型」挑，**先有内容再挑版式**。
-   那张表有一列「严禁用」，撞上了就换一种，不要把内容硬塞进不合适的形状 ——
-   没有大小关系的东西进图表、不对等的两项并排、凑不满的格子硬撑，
-   读者看出来的关系都是假的。
+3. **选页面类型**：**先有内容再挑版式**，按 `visual-spec.md` 的「先看内容，再选页面类型」挑，撞上「严禁用」就换一种。
 4. **写转场计划**：每次翻页一行，先写两页的「关系」，再选手法。计划作为 HTML 注释放进文件。
 5. **写页面**：汇报稿从 `templates/starter.html` 开始，故事稿从 `templates/story-starter.html` 开始，把 `{{ROOT}}` 换成
-   这份 HTML 到本 skill 根目录的相对路径。用主题时，在 `tokens.css` 后面引入**两个**文件，
-   顺序不能反：`runtime/themes/<主题>.css` 再 `runtime/palettes/<配色>.css`。
-   **主题只给字体和圆角，颜色全在配色文件里** —— 只引主题不引配色，整份稿子会退回
-   `tokens.css` 的默认深底橙色，字体对了颜色全错，而且不报错（示例稿踩过一次）。
-   配色用主题头里写的「默认配色」，或者换 `runtime/palettes/` 里任意一套（任意配色配任意主题）。
-   先读主题和配色文件开头的注释（可以互变的颜色、新增的类）。
+   这份 HTML 到本 skill 根目录的相对路径。主题和配色怎么引见 `themes.md`「使用主题」：
+   **主题和配色两个文件都要引** —— 只引主题不引配色，整份稿子退回默认的深底橙色，而且不报错。
 6. **核版式**：
    ```bash
    node <skill>/scripts/check-deck.mjs <deck>.html
@@ -77,8 +71,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
    自己没法播放视频时，用帧差量运动：每次转场里，画面变化明显的帧应该连续占满转场区间的大部分，
    而不是集中在一两帧。
 
-   **匹配剪辑（`match-cut`）不适用这一条** —— 它是硬切，本来就没有转场帧。
-   它只能这样验：取切点前后两帧，确认锚的轮廓完全重合、而画面上其余东西都换了。
+   **匹配剪辑（`match-cut`）不适用这一条** —— 它是硬切，没有转场帧，验法见 `transitions.md`「自检标准」第 7 条。
 
 ## 放映
 
@@ -98,7 +91,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 | 路径 | 内容 |
 | --- | --- |
-| `runtime/tokens.css` | 设计变量和样式类（默认主题）。不要改，也不要在稿子里覆盖 |
+| `runtime/tokens.css` | 设计变量和样式类（默认主题）。做稿时不改，也不在稿子里覆盖 |
 | `runtime/themes/` | 其他主题，只覆盖设计变量。可以按 `references/themes.md` 新建 |
 | `runtime/palettes/` | 配色，只给那 10 个颜色变量。**任意配色配任意主题**，在主题之后引入 |
 | `runtime/pairs.json` | 颜色配对表（哪个类压在哪个类上），`check-palettes.mjs` 读它 |
@@ -134,6 +127,12 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 ## 不许做的
 
-- 不许写自己的 `<style>`，不许在 style 里写颜色和字号。
-- 不许自己写 GSAP 或 CSS 动画。转场只用规范里的属性。
-- 不许改 `runtime/` 和 `scripts/` 下的文件，唯一的例外是按 `themes.md` 在 `runtime/themes/` 下**新建**主题。觉得有 bug 就报告。
+**做稿时：**
+
+- 不许写自己的 `<style>`。行内 style 只许写位置、尺寸和变量（`var(--…)`），不许写色值和像素字号 ——
+  换主题、换配色时，写死的颜色和字号会漏掉。细则见 `visual-spec.md`「颜色和形状」。
+- 不许自己写 GSAP 或 CSS 动画。转场和页内动画只用规范里的属性。
+- 不改 `runtime/` 和 `scripts/`。觉得引擎有 bug，就报告。
+
+**扩展 skill 时**（加同款、加手法、加配色、加字体）：按 `recipes/README.md` 的流程，
+新能力加进 `runtime/` 并写进对应的规范文件；新主题、新配色按 `themes.md`。
