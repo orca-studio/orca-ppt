@@ -232,7 +232,7 @@
 上面「焦点移交」的规则照用，只是两页之间变的是 CSS 的 `rotate`，不是位置。
 
 ```html
-<!-- 圆环：画在一个正方形盒子里，中间的洞用径向渐变画（不要用 mask，见第 5 条） -->
+<!-- 圆环：画在一个正方形盒子里，中间的洞用径向渐变画（见第 5 条） -->
 <div data-id="ring" class="s-surface" style="left:-420px; top:0px; width:1080px; height:1080px; border-radius:50%;
      background:radial-gradient(circle closest-side, transparent 300px, var(--surface) 301px);"></div>
 <!-- 扇形：和圆环同心的正方形；clip-path 三角形切出张角（这里 30°，朝正右方），外沿由 border-radius 切成圆弧 -->
@@ -252,8 +252,7 @@
    `check-deck` 会提醒。
 4. **入画和出画**（焦点移交第 6 条）：圆心贴着画布边时，第一页把扇形转到背对画面那一侧，
    第二页它才转进来；最后一页同理转出去。
-5. **转动的元素不要用 `mask`。** 正在做形态变换的元素加 mask，录制时 Chrome 会把遮罩画错位，扇形消失或只剩一角。
-   洞用径向渐变画在背景上，张角用 `clip-path`。
+5. **洞用径向渐变画在背景上，张角用 `clip-path`。** 一个盒子画完，两页之间只差 `rotate`。
 6. **格子上的文字（年份、刻度）照焦点移交第 1、3 条写**，当前那一格可以换大一档的字号：
    文字盒子写固定宽度、`text-align:center`，改字号时按行高调 `top`，让文字的中心不动。
 7. 扇形和圆环的盒子通常比画布高（圆心贴边、半个环出画），`check-deck` 按整页形状对待它们，
