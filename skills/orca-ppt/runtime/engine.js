@@ -642,9 +642,14 @@
       console.error(`[orca-transition-skill] 不认识的 data-enter="${kind}"，可选：${[...Object.keys(ENTER), "draw"].join(" / ")}`);
       spec = ENTER.rise;
     }
+    // 淡入淡到作者写的透明度（压在色块上的半透明装饰大字），不是一律淡到 1。
+    // GSAP 跑完会把 opacity 写回行内，所以第一次见到时记下作者原来写的
+    if (!AUTHORED_OPACITY.has(el)) AUTHORED_OPACITY.set(el, el.style.opacity === "" ? 1 : +el.style.opacity);
+    const to = "autoAlpha" in spec.to ? { ...spec.to, autoAlpha: AUTHORED_OPACITY.get(el) } : { ...spec.to };
     gsap.set(el, spec.from);
-    tl.to(el, { ...spec.to }, at);
+    tl.to(el, to, at);
   }
+  const AUTHORED_OPACITY = new WeakMap();
 
 
   // ───────── 元素级：原地替换（data-swap）和文字级匹配（data-text）─────────
