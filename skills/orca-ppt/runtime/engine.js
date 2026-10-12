@@ -8,7 +8,6 @@
 //     汇报稿：carry（元素交接）/ split（一变多）/ merge（多合一）/ match-move（匹配放大）/ match-cut（匹配剪辑，硬切）/ zoom-through（整页推近）/ zoom-into（放大进元素内部）/ mask（遮挡剪辑）
 //     结尾页：recap（回顾片尾，配合 .s-recap 回顾屏和 .t-credits 名单）
 //     故事稿：zoom-match（推近匹配）/ iris（遮挡变形）
-//     旧版：speed-match，规范已不再使用，只为兼容旧示例保留
 //
 // 页内动画（不是转场）：data-path 关键帧路径、data-light / data-lit 光束遮罩，进页后自己动，和场景时间线同一条路（buildsFor）
 //
@@ -36,7 +35,14 @@
   const W = 1920;
   const H = 1080;
 
-  const DURATION = { "speed-match": 0.9, mask: 1.0 };
+  const DURATION = { mask: 1.0 };
+  // 作者写的数值超出规范范围：夹回范围内，并在控制台说清楚（不夹的话匹配放大会放出画布）
+  const ranged = (kind, attr, v, lo, hi) => {
+    if (v >= lo && v <= hi) return v;
+    const c = Math.min(hi, Math.max(lo, v));
+    console.warn(`[orca-transition-skill] ${kind} 的 ${attr}="${v}" 超出 ${lo} 到 ${hi}，按 ${c} 处理`);
+    return c;
+  };
   const VECTOR = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
 
   // GSAP 拿到空数组会在控制台警告「target not found」，混进自检报告里。空的就跳过
@@ -175,15 +181,6 @@
   const rectOf = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
 
   const builders = {
-    "speed-match"(section, ghost, enter) {
-      const d = +section.dataset.stDuration || DURATION["speed-match"];
-      const [vx, vy] = VECTOR[section.dataset.stDirection || "left"];
-      const ease = "power3.inOut";
-      return timeline()
-        .fromTo(ghost, { x: 0, y: 0 }, { x: vx * W, y: vy * H, duration: d, ease }, 0)
-        .fromTo(enter, { x: -vx * W, y: -vy * H }, { x: 0, y: 0, duration: d, ease }, 0);
-    },
-
     // 匹配剪辑：硬切，一帧动画都不加。
     // 前后两页各有一个形状、大小、位置都相同的锚（data-match），切过去时观众的视线被锚钉住，
     // 页面其余部分可以全换。引擎在这里不做动画 —— 它只负责校验两页的锚是不是真的对上了，
@@ -248,6 +245,9 @@
 
     mask(section, ghost, enter) {
       const d = +section.dataset.stDuration || DURATION.mask;
+      if (!section.dataset.stDirection) {
+        console.warn(`[orca-transition-skill] 遮挡剪辑没写 data-st-direction，按 left 处理。规范默认写 up（换话题从下往上盖）`);
+      }
       const [vx, vy] = VECTOR[section.dataset.stDirection || "left"];
       const mask = document.createElement("div");
       mask.className = "st-mask";
@@ -331,6 +331,9 @@
   builders.carry = (section, ghost, enter) => {
     const d = +section.dataset.stDuration || 1.0;
     const half = d / 2;
+    if (section.dataset.stDistance) {
+      console.warn(`[orca-transition-skill] 元素交接写了 data-st-distance，规范不建议写：滑动距离由引擎按版式算`);
+    }
     const maxDist = +section.dataset.stDistance || 240;
     const MIN_DIST = 80;
     const [vx, vy] = VECTOR[section.dataset.stDirection || "left"];
@@ -401,7 +404,7 @@
   builders["match-move"] = (section, ghost, enter) => {
     const d = +section.dataset.stDuration || 0.9;
     const half = d / 2;
-    const peak = +section.dataset.stScale || 1.5;
+    const peak = section.dataset.stScale ? ranged("match-move", "data-st-scale", +section.dataset.stScale, 1.3, 2) : 1.5;
     const sel = `[data-match="${section.dataset.stMatch}"]`;
     const olds = [...ghost.querySelectorAll(sel)];
     const news = [...enter.querySelectorAll(sel)];
@@ -470,7 +473,7 @@
     if (toKey && !b) console.error(`[orca-transition-skill] zoom-through 这一页找不到 data-zoom="${toKey}"，改用画面中心`);
     // 推近倍数：让 from 元素占满画面约 75%（按 16:9 折算），限制在 2 到 8 倍
     const fit = (el) => 0.75 * W / Math.max(el.offsetWidth, el.offsetHeight * W / H);
-    const K = +section.dataset.stScale || Math.min(8, Math.max(2, fit(a)));
+    const K = section.dataset.stScale ? ranged("zoom-through", "data-st-scale", +section.dataset.stScale, 2, 8) : Math.min(8, Math.max(2, fit(a)));
     if (fit(a) < 2 && !section.dataset.stScale) {
       console.warn(`[orca-transition-skill] zoom-through 的 "${fromKey}" 太大，推近不到 2 倍，推进感会弱。换一个更小的元素`);
     }
@@ -557,7 +560,7 @@
     // 纵深：元素所在的那页被镜头缓慢推近（最多 PUSH 倍，data-st-push 可调，默认 2），镜头跟着主角走
     // （主角中心始终对着页面里元素的位置），同时轻微虚化、淡出。推得越深淡出越晚，让推近那段看得出来；
     // 推太深周围的格子会被放大到抢主角
-    const PUSH = Math.max(1, +section.dataset.stPush || 2);
+    const PUSH = section.dataset.stPush ? ranged("zoom-into", "data-st-push", +section.dataset.stPush, 1, 4) : 2;
     const FADE = 0.05 * (PUSH - 2);                  // 每多推 1 倍，淡出往后挪 5%
 
     // 里面那页要有底色，否则透出后面的页；压在最上面
