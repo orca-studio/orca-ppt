@@ -11,7 +11,6 @@ import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { Gallery, type Recipe, type Theme } from './Gallery.js'
 import { Inspector } from './Inspector.js'
-import { TransitionLink } from './TransitionLink.js'
 import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
@@ -895,31 +894,41 @@ export function App({ serverUrl }: { serverUrl: string }) {
           <div className="pane-body">
             {deck && (
               <ol className="filmstrip" ref={filmstrip}>
-                {Array.from({ length: deck.slideCount }, (_, index) => (
-                  <li key={index}>
-                    <button
-                      type="button"
-                      aria-label={`第 ${index + 1} 页`}
-                      data-current={index === slide}
-                      // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
-                      // 写是「这儿被改了」,后者更要紧,也留得更久。
-                      data-agent={agent.touched.get(index)?.kind}
-                      onClick={() => goto(index)}
-                    >
-                      {thumbs[index] ? (
-                        <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
-                      ) : (
-                        <span className="filmstrip-thumb filmstrip-thumb--empty" />
-                      )}
-                    </button>
-                    {index < deck.slideCount - 1 && (
-                      <TransitionLink
-                        note={deck.transitionPlan.find((t) => t.from === index)}
-                        {...(readOnly ? {} : { onFlag: () => flagTransition(index, index + 1) })}
-                      />
-                    )}
-                  </li>
-                ))}
+                {Array.from({ length: deck.slideCount }, (_, index) => {
+                  // 进入这一页的那次翻页。硬切不算转场,不标
+                  const entry = deck.transitionPlan.find((t) => t.to === index)
+                  const animated = entry && !/^(无|硬切|none)/i.test(entry.technique)
+                  return (
+                    <li key={index}>
+                      <div className="filmstrip-gutter">
+                        <span className="filmstrip-number">{index + 1}</span>
+                        {animated && (
+                          <span
+                            className="filmstrip-mark"
+                            title={`转场:${entry.technique}${entry.relation ? ` —— ${entry.relation}` : ''}`}
+                          >
+                            <TransitionMark />
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`第 ${index + 1} 页${animated ? `,转场:${entry.technique}` : ''}`}
+                        data-current={index === slide}
+                        // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
+                        // 写是「这儿被改了」,后者更要紧,也留得更久。
+                        data-agent={agent.touched.get(index)?.kind}
+                        onClick={() => goto(index)}
+                      >
+                        {thumbs[index] ? (
+                          <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
+                        ) : (
+                          <span className="filmstrip-thumb filmstrip-thumb--empty" />
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
               </ol>
             )}
           </div>
@@ -1019,4 +1028,25 @@ async function pickDeck(open: (path: string) => unknown): Promise<void> {
   // 界面不碰文件系统 —— 壳弹目录选择器,只把路径交回来。
   const path = await window.orca?.pickDeck?.()
   if (path) open(path)
+}
+
+/**
+ * 页码下面那颗星:进入这一页有转场(PowerPoint 缩略图栏的同一个记号)。
+ * 转场的细节、「指着它说不对」都在右栏「转场」那一档,这里只做记号。
+ */
+function TransitionMark() {
+  return (
+    <svg viewBox="0 0 20 16" width="23" height="18" aria-hidden="true">
+      <path
+        d="M13 1.5l1.6 3.4 3.7.5-2.7 2.6.7 3.7-3.3-1.8-3.3 1.8.7-3.7L7.7 5.4l3.7-.5z"
+        fill="currentColor"
+      />
+      <path
+        d="M1 4.5h4M1 8h3.5M1 11.5h4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
 }

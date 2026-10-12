@@ -596,8 +596,6 @@ select:focus-visible {
 /* ── 左栏:胶片 ───────────────────────────────────────────────────── */
 
 .filmstrip {
-  --filmstrip-pad: 6px;
-
   list-style: none;
   margin: 0;
   padding: 0;
@@ -608,103 +606,84 @@ select:focus-visible {
    * 内容以下 —— 和 flex 项要 min-width:0 是同一类坑。
    */
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-1);
+  gap: var(--space-4);
+}
+
+/* 一页:左边页码 + 转场记号,右边缩略图(PowerPoint 缩略图栏的排法) */
+.filmstrip li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: start;
+}
+
+.filmstrip-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+
+.filmstrip-number {
+  font-size: var(--text-md);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.filmstrip-mark {
+  display: flex;
+  color: color-mix(in oklab, var(--text) 75%, transparent);
+  cursor: help;
 }
 
 .filmstrip button {
+  display: block;
   width: 100%;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--filmstrip-pad);
-  border: 1px solid transparent;
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-md);
-  text-align: left;
+  background: none;
   /* 慢是给 agent 那圈高亮的:它退场要让人来得及看见(见下面 data-agent)。 */
-  transition:
-    box-shadow 0.3s ease,
-    background-color 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 
-/* 悬停是每分钟几十次的事,进场不能拖 —— 目标状态上的 transition 管进场那一程。 */
-.filmstrip button:hover {
-  background: var(--panel);
-  transition-duration: var(--duration-fast);
+.filmstrip-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  transition: border-color var(--duration-fast) ease;
 }
 
+/* 悬停是每分钟几十次的事,进场不能拖 */
+.filmstrip button:hover .filmstrip-thumb {
+  border-color: var(--muted);
+}
+
+/* 当前页:缩略图外面隔一道细缝套一圈粗的强调色,和 PowerPoint 选中页一样 */
 .filmstrip button[data-current='true'] {
-  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--bg),
+    0 0 0 6px var(--accent);
 }
 
-/* 当前页已经有一圈强调色描边,再叠一圈焦点框就成了双圈(方向键翻页后焦点框会露出来) */
+/* 当前页已经有一圈强调色,再叠一圈焦点框就成了双圈(方向键翻页后焦点框会露出来) */
 .filmstrip button[data-current='true']:focus-visible {
   outline: none;
 }
 
-.filmstrip-thumb {
-  /* flex 项默认不肯缩到内容以下,不给 min-width:0 就会把图顶出栏外 */
-  flex: 1;
-  min-width: 0;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: var(--radius-xs);
-  background: var(--bg);
-}
-
 .filmstrip-thumb--empty {
-  border: 1px solid var(--line);
   background: transparent;
 }
 
-/* 左栏是纯导航,给缩略图更多宽度 */
+/* 左栏是纯导航,给缩略图更多宽度;选中那圈描边往外扩 6px,留出位置别被裁掉 */
 .pane--nav .pane-body {
-  padding: var(--space-3);
-}
-
-/* 两张缩略图之间的那一道:这次翻页怎么接上的 */
-.tlink {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  /* 和缩略图左边对齐:按钮内边距 + 边框 */
-  margin: 2px 0 2px calc(6px + 1px);
-  font-size: var(--text-xs);
-  color: var(--muted);
-  min-height: var(--control-xs);
-}
-
-/* 没写计划的那几次翻页留一道空隙,不留的话上下两张图会贴在一起 */
-.tlink--none {
-  min-height: var(--space-2);
-}
-
-.tlink-technique {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tlink-technique::before {
-  content: '↓ ';
-  opacity: 0.6;
-}
-
-.tlink-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity var(--duration-fast) ease;
-}
-
-/* 用键盘 Tab 过来时也得看得见,不然焦点落在一个透明按钮上。 */
-.tlink:hover .tlink-actions,
-.tlink:focus-within .tlink-actions {
-  opacity: 1;
-}
-
-.tlink-actions .btn {
-  font-size: 10px;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-2);
 }
 
 /* ── 状态栏 ───────────────────────────────────────────────────────── */
