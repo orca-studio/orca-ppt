@@ -56,19 +56,6 @@ export interface CanvasControlsProps {
   showPick: boolean
   canPick: boolean
   onPick: () => void
-  /**
-   * 翻页按钮锁不锁。和 locked 分开:只读样稿不能改,但要能一页页翻着看;
-   * 只有 agent 拿着稿子时才锁(它在翻页,人再点会抢)。
-   */
-  navLocked: boolean
-  slide: number
-  slideCount: number
-  /**
-   * 这一页的点击分步:按到第几下、一共几下(引擎报上来的)。clicks 为 0 就是没有分步。
-   * 还没按完时「下一页」先放下一步,和画布里按 → 一样。
-   */
-  steps?: { done: number; clicks: number } | undefined
-  onNavigate: (action: 'previous' | 'next') => void
 }
 
 export function CanvasControls({
@@ -81,13 +68,9 @@ export function CanvasControls({
   showPick,
   canPick,
   onPick,
-  navLocked,
-  slide,
-  slideCount,
-  steps,
-  onNavigate,
 }: CanvasControlsProps) {
-  const stepsLeft = steps ? steps.clicks - steps.done : 0
+  // 只读样稿上两样都不摆,整条不要 —— 翻页和页码在左栏(缩略图、页码、方向键)
+  if (!showHistory && !showPick) return null
   return (
     <div className="canvas-controls" role="toolbar" aria-label="画布操作">
       <div className="canvas-controls-group">
@@ -128,38 +111,6 @@ export function CanvasControls({
             </Button>
           </>
         )}
-      </div>
-      <div className="canvas-controls-pages">
-        <Button
-          variant="ghost"
-          icon
-          disabled={navLocked || slide === 0}
-          onClick={() => onNavigate('previous')}
-          aria-label="上一页"
-          title="上一页"
-        >
-          <ChevronIcon />
-        </Button>
-        <span className="canvas-controls-count">
-          第 {slide + 1} / {slideCount} 页
-          {/* 有点击分步时说清还要按几下 —— 不然放映的人不知道这一页为什么按了没翻 */}
-          {steps && steps.clicks > 0 && (
-            <span className="muted">
-              {' '}
-              · 第 {steps.done}/{steps.clicks} 下
-            </span>
-          )}
-        </span>
-        <Button
-          variant="ghost"
-          icon
-          disabled={navLocked || (slide >= slideCount - 1 && stepsLeft <= 0)}
-          onClick={() => onNavigate('next')}
-          aria-label={stepsLeft > 0 ? '下一步' : '下一页'}
-          title={stepsLeft > 0 ? '下一步(这一页还有页内动画没放)' : '下一页'}
-        >
-          <ChevronIcon flipped />
-        </Button>
       </div>
       <div className="canvas-controls-group canvas-controls-primary">
         {/* 指给 agent 看:圆钮,开着的时候才上强调色。只读样稿上不摆 —— 指出来也没人能改。
@@ -231,31 +182,6 @@ function HomeIcon() {
         fill="none"
         stroke="currentColor"
         strokeWidth="1.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-/**
- * 翻页箭头。不用 ‹ › 字符:那两个字形在字框里偏下,和旁边的中文页码对不齐。
- * 画成 SVG,几何上就是居中的。
- */
-function ChevronIcon({ flipped = false }: { flipped?: boolean }) {
-  return (
-    <svg
-      width="8"
-      height="13"
-      viewBox="0 0 8 13"
-      aria-hidden="true"
-      style={flipped ? { transform: 'scaleX(-1)' } : undefined}
-    >
-      <path
-        d="M6.5 1.5 1.5 6.5l5 5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
       />

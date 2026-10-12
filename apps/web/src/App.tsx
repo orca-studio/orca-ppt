@@ -902,6 +902,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
                     <li key={index}>
                       <div className="filmstrip-gutter">
                         <span className="filmstrip-number">{index + 1}</span>
+                        {/* 页内动画按到第几下:放映的人要知道这一页为什么按了还没翻 */}
+                        {index === slide && steps && steps.clicks > 0 && (
+                          <span className="filmstrip-steps" title="页内动画按到第几下">
+                            {steps.done}/{steps.clicks}
+                          </span>
+                        )}
                         {animated && (
                           <span
                             className="filmstrip-mark"
@@ -974,13 +980,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 if (!picking) return void pick()
                 stage.current?.cancelPick()
                 setPicking(false)
-              }}
-              navLocked={agentHolds}
-              slide={slide}
-              slideCount={deck.slideCount}
-              steps={steps}
-              onNavigate={(action) => {
-                void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
               }}
             />
           )}
