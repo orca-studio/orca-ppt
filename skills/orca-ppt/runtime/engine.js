@@ -10,6 +10,8 @@
 //     故事稿：zoom-match（推近匹配）/ iris（遮挡变形）
 //     旧版：speed-match，规范已不再使用，只为兼容旧示例保留
 //
+// 页内动画（不是转场）：data-path 关键帧路径、data-light / data-lit 光束遮罩，进页后自己动，和场景时间线同一条路（buildsFor）
+//
 // data-st 页的做法：reveal 在这里是硬切。切页瞬间把上一页的内容克隆成 ghost 层，
 // 放在新页里，第一帧和上一页完全一样，所以硬切看不出来；再用 GSAP 把 ghost 交接给新内容。
 //
@@ -252,6 +254,7 @@
       // 只接受设计变量名：accent / surface / surface-2 / bg / accent-soft
       if (section.dataset.stMaskColor) mask.style.background = `var(--${section.dataset.stMaskColor})`;
       section.append(mask);
+      if (section.dataset.stMaskLead) return maskLead(section, ghost, enter, mask, vx, vy);
       const half = d / 2;
       // 色块从一侧加速盖满，盖满的那一帧换内容，再沿同方向减速离开
       gsap.set(enter, { autoAlpha: 0 });
@@ -263,6 +266,64 @@
         .to(mask, { x: vx * W, y: vy * H, duration: half, ease: "power3.out" }, half);
     },
   };
+
+  // 遮挡剪辑带领头元素（data-st-mask-lead="键"，上一页的元素写 data-lead="键"）：
+  // 上一页的那个元素（手电筒）从它停下的姿态起步，往色块推进的方向走出画面，色块的前沿贴着它的背面一起进来 ——
+  // 看起来是它把下一页拉出来。WPS 里是「缓慢移出」和「缓慢进入 · 自右侧」同时放。
+  // 和普通遮挡剪辑不同，色块铺满后不离开：下一页的底就是这块色（data-st-mask-color 写成下一页的底色），
+  // 铺满那一帧换上下一页，看不出切。
+  //   前沿起步时在画外，领头元素一动，前沿先用 CATCH 这一段追上它的背面，之后一直贴着。
+  const MASK_LEAD_D = 1.4;
+  const MASK_LEAD_CATCH = 0.3;
+  function maskLead(section, ghost, enter, mask, vx, vy) {
+    const key = section.dataset.stMaskLead;
+    const d = +section.dataset.stDuration || MASK_LEAD_D;
+    const src = ghost.querySelector(`:scope > [data-lead="${key}"]`);
+    if (!src) {
+      console.error(`[orca-transition-skill] data-st-mask-lead="${key}" 在上一页找不到 data-lead="${key}" 的元素（要写在页面的直接子元素上）`);
+    }
+    // 领头元素搬出 ghost、放到色块上面。套一层铺满画布的壳来平移：元素自己的 transform 是它停下的姿态，不能动
+    const rig = layer("st-ghost-el");
+    rig.style.zIndex = 11; // 色块（.st-mask）是 10，领头元素压在它上面
+    if (src) {
+      rig.append(src);
+      section.append(rig);
+    }
+    const horiz = vx !== 0;
+    const sgn = horiz ? vx : vy;
+    const size = horiz ? W : H;
+    // 背面：迎着色块的那一侧（色块往左推，就是元素的右边）
+    let trail0 = sgn < 0 ? size : 0;
+    if (src) {
+      const box = section.getBoundingClientRect(), r = src.getBoundingClientRect();
+      const k = section.offsetWidth / (box.width || 1);
+      const l = (r.left - box.left) * k, t = (r.top - box.top) * k, rr = (r.right - box.left) * k, b = (r.bottom - box.top) * k;
+      trail0 = sgn < 0 ? (horiz ? rr : b) : (horiz ? l : t);
+    }
+    const edge0 = sgn < 0 ? size : 0;    // 前沿起点：画外
+    const edgeEnd = sgn < 0 ? 0 : size;  // 前沿终点：铺满
+    const gap0 = edge0 - trail0;         // 起步时前沿离背面多远（追上之后是 0）
+    const travel = edgeEnd - trail0;     // 领头元素走多远：背面走到画面另一头，整个出画
+    const clock = { p: 0, q: 0 };
+    const apply = () => {
+      const lead = travel * clock.p;
+      const edge = trail0 + lead + gap0 * (1 - clock.q);
+      const m = sgn < 0 ? edge : edge - size;
+      gsap.set(mask, horiz ? { x: m, y: 0 } : { x: 0, y: m });
+      gsap.set(rig, horiz ? { x: lead } : { y: lead });
+    };
+    gsap.set(enter, { autoAlpha: 0 });
+    apply();
+    // 缓慢移出 / 缓慢进入：领头元素从静止起步，一路减速到铺满
+    // 上一页被光照着的那一层停在旧的光束里，不会跟着走：灯一动先把光收掉（关灯再走）
+    return timeline()
+      .to(ghost.querySelectorAll(":scope > [data-lit]"), { autoAlpha: 0, duration: 0.2, ease: "power1.out" }, 0)
+      .to(clock, { p: 1, duration: d, ease: "power2.inOut", onUpdate: apply }, 0)
+      .to(clock, { q: 1, duration: d * MASK_LEAD_CATCH, ease: "power2.out", onUpdate: apply }, 0)
+      .set(ghost, { autoAlpha: 0 }, d)
+      .set(enter, { autoAlpha: 1 }, d)
+      .set([mask, rig], { autoAlpha: 0 }, d);
+  }
 
   // 元素级速度匹配：不推整页。data-carry 相同的元素成对交接——
   // 旧的加速离开并淡出，新的从另一侧同速度减速进入；按 data-carry 首次出现的顺序错开。
@@ -589,6 +650,7 @@
 
   const SWAP_D = 0.5;   // 原地替换：交叉溶解时长
   const TEXT_D = 0.9;   // 文字级匹配：留下的字移到新位置的时长
+  const ROLL_D = 0.7;   // 文字级匹配的逐位滚轮（data-roll）：对齐参考作品「平滑」的 0.7 秒
   const PAIR_TOL = 40;  // 前后两页锚点允许的偏差（px）
   const SWAP_SIZE_RATIO = 2.5;  // 原地替换：两个对象尺寸差到这个倍数就提醒（形状不同是正常的）
 
@@ -655,6 +717,87 @@
     return { from: +ma[2].replace(/,/g, ""), to: +mb[2].replace(/,/g, ""), fmt };
   }
 
+  // 逐位滚轮（data-roll）：前后缀相同、中间是纯数字。小数点、千分位不支持 —— 它们不是「一位」
+  const ROLL_RE = /^(\D*?)(\d+)(\D*)$/;
+  function rollParts(a, b) {
+    const ma = ROLL_RE.exec(a.trim());
+    const mb = ROLL_RE.exec(b.trim());
+    if (!ma || !mb || ma[1] !== mb[1] || ma[3] !== mb[3]) return null;
+    return { pre: mb[1], from: ma[2], to: mb[2], suf: mb[3] };
+  }
+
+  // 逐位滚轮：每一位是一条 0–9 的竖条，只露出一格（PPT 里是竖排文本框 + 上下遮挡矩形 + 平滑）。
+  // 竖条的顺序固定是 0 在上、9 在下，所以数字变大往上滚、变小往下滚，中间经过的数字都露一下；
+  // 没变的位不动。位数变了按个位对齐：多出来的位从 0 滚到目标并淡入，少掉的位滚回 0 并淡出。
+  // 前缀、后缀的字只跟着移位置。整个过程由时间轴驱动，录制时逐帧 seek 也是确定的。
+  // 返回 false = 配不上（不是纯数字、前后缀不同、字号不同），调用方退回普通的文字级匹配。
+  function rollTween(tl, ghost, next, d) {
+    const parts = rollParts(ghost.textContent, next.textContent);
+    const fsA = parseFloat(getComputedStyle(ghost).fontSize);
+    const fsB = parseFloat(getComputedStyle(next).fontSize);
+    if (!parts || Math.abs(fsA - fsB) > 0.5) {
+      console.warn(`[orca-transition-skill] 逐位滚轮 data-text="${next.dataset.text}" 前后两页要是「相同前后缀 + 纯数字」、字号相同，这次退回普通的文字级匹配`);
+      return false;
+    }
+    const from = offsetBox(ghost);
+    const to = offsetBox(next);
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const boxes = (spans) => spans.map((sp) => ({ x: sp.offsetLeft, y: sp.offsetTop, w: sp.offsetWidth, h: sp.offsetHeight }));
+    const A = boxes(charize(ghost).spans);
+    const shadow = next.cloneNode(true);
+    shadow.style.visibility = "hidden";
+    next.after(shadow);
+    const B = boxes(charize(shadow).spans).map((b) => ({ ...b, x: b.x + dx, y: b.y + dy }));
+    shadow.remove();
+
+    // 列：前缀逐字左对齐，数字按个位对齐，后缀逐字右对齐
+    const pl = parts.pre.length, nA = parts.from.length, nB = parts.to.length, n = Math.max(nA, nB);
+    const cols = [];
+    for (let i = 0; i < pl; i++) cols.push({ a: i, b: i, ch: parts.pre[i] });
+    for (let k = 0; k < n; k++) {
+      const ia = k - (n - nA), ib = k - (n - nB);
+      cols.push({
+        a: ia >= 0 ? pl + ia : null, b: ib >= 0 ? pl + ib : null,
+        va: ia >= 0 ? +parts.from[ia] : 0, vb: ib >= 0 ? +parts.to[ib] : 0, digit: true,
+      });
+    }
+    for (let i = 0; i < parts.suf.length; i++) cols.push({ a: pl + nA + i, b: pl + nB + i, ch: parts.suf[i] });
+
+    // 动画层：清掉旧字，盒子尺寸钉住，每列一个只露一格的窗口
+    ghost.textContent = "";
+    ghost.style.width = `${from.w}px`;
+    ghost.style.height = `${from.h}px`;
+    const colorB = getComputedStyle(next).color;
+    tl.to(ghost, { color: colorB, duration: d, ease: "power2.inOut" }, 0);
+    for (const c of cols) {
+      const s0 = c.a !== null ? A[c.a] : B[c.b];
+      const s1 = c.b !== null ? B[c.b] : A[c.a];
+      const h = s0.h;
+      const win = document.createElement("span");
+      win.style.cssText = `position:absolute; left:${s0.x}px; top:${s0.y}px; width:${s0.w}px; height:${h}px; overflow:hidden;`;
+      const strip = document.createElement("span");
+      strip.style.cssText = "position:absolute; left:0; top:0; width:100%;";
+      const cells = c.digit ? [..."0123456789"] : [c.ch];
+      for (const ch of cells) {
+        const cell = document.createElement("span");
+        cell.textContent = ch;
+        cell.style.cssText = `display:block; height:${h}px; line-height:${h}px; text-align:center; white-space:pre;`;
+        strip.append(cell);
+      }
+      win.append(strip);
+      ghost.append(win);
+      tl.fromTo(win, { x: 0, y: 0, width: s0.w }, {
+        x: s1.x - s0.x, y: s1.y - s0.y, width: s1.w, duration: d, ease: "power2.inOut",
+      }, 0);
+      if (!c.digit) continue;
+      tl.fromTo(strip, { y: -c.va * h }, { y: -c.vb * h, duration: d, ease: "power2.inOut" }, 0);
+      if (c.a === null) tl.fromTo(win, { autoAlpha: 0 }, { autoAlpha: 1, duration: d * 0.6, ease: "power1.out" }, 0);
+      if (c.b === null) tl.to(win, { autoAlpha: 0, duration: d * 0.6, ease: "power1.in" }, d * 0.4);
+    }
+    return true;
+  }
+
   // 元素自己有没有不透明的底（色块、卡片、图片）。
   function isOpaque(el) {
     if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(el.tagName)) return true;
@@ -696,6 +839,8 @@
     gsap.set(next, { autoAlpha: 0 });
     tl.set(next, { autoAlpha: 1 }, hand);
     tl.set(ghost, { autoAlpha: 0 }, hand);
+
+    if ((next.hasAttribute("data-roll") || ghost.hasAttribute("data-roll")) && rollTween(tl, ghost, next, d)) return;
 
     if (num) {
       ghost.style.whiteSpace = "nowrap";
@@ -881,7 +1026,8 @@
     for (const p of pairs) {
       const g = ghostOf.get(p.old);
       if (!g) continue;
-      const d = +p.next.dataset.duration || (p.attr === "swap" ? SWAP_D : TEXT_D);
+      const d = +p.next.dataset.duration
+        || (p.attr === "swap" ? SWAP_D : p.next.hasAttribute("data-roll") ? ROLL_D : TEXT_D);
       (p.attr === "swap" ? swapTween : textTween)(tl, g, p.next, d);
     }
     return tl;
@@ -1578,8 +1724,234 @@
   let sceneCall = null;
   const hasScenes = (slide) => !!(window.OrcaMotion && slide?.querySelector(".mo-scene"));
   function sceneFor(slide) {
-    if (!hasScenes(slide)) return null;
-    return window.OrcaMotion.build(slide);
+    const motion = hasScenes(slide) ? window.OrcaMotion.build(slide) : null;
+    const builds = buildsFor(slide);
+    if (!motion || !builds) return motion || builds;
+    const tl = gsap.timeline({ paused: true }).add(motion, 0).add(builds, 0);
+    // 场景动画算在第 0 步里：第 0 步至少要等场景放完
+    const stops = builds.data.stops.slice();
+    stops[0] = Math.max(stops[0], motion.duration());
+    for (let i = 1; i < stops.length; i++) stops[i] = Math.max(stops[i], stops[i - 1]);
+    tl.data = { stops };
+    return tl;
+  }
+
+  // ───────── 页内动画：关键帧路径 + 光束遮罩（transitions.md「页内动画」） ─────────
+  // PowerPoint / WPS 动画窗格里「自定义路径 + 陀螺旋」和「剪除出口的遮罩」那一类：进页后元素自己动，
+  // 不是翻页转场。和场景时间线走同一条路：转场结束后开始播，离开这一页跳到结尾，录制时按毫秒 seek。
+  //   data-path="t x y a; t x y a; …"  t 秒（从这一页的页内动画开始算），(x, y) 是元素枢轴点落在哪
+  //                                     （父元素坐标系，直接子元素就是画布坐标），a 是旋转角（度，顺时针）。
+  //                                     关键帧之间按 Catmull-Rom 样条走，时间是匀速的。
+  //   data-pivot="x y"                 枢轴点在元素自身的位置（px），默认元素中心。旋转也绕它。
+  //   data-light="键"                  这个元素是光源：从枢轴点沿元素的「上方」射出一束楔形光。
+  //     data-light-spread / -width / -on   半张角（度，默认 13）/ 出光口宽（px，默认 0）/ 几秒后亮（默认 0）
+  //   data-lit="键"                    只在同键光束照到的地方可见（clip-path 跟着光束每帧重算）。
+  const LIGHT_L = 4000; // 光束长度：比画布对角线长，射到哪都出画
+  const parseKeys = (str) =>
+    str.split(";").map((k) => k.trim().split(/[\s,]+/).map(Number)).filter((k) => k.length >= 3 && k.every(Number.isFinite))
+      .map(([t, x, y, a = 0]) => [t, x, y, a]).sort((p, q) => p[0] - q[0]);
+  const catmull = (p0, p1, p2, p3, u) =>
+    0.5 * (2 * p1 + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u * u * u);
+  function poseAt(keys, t) {
+    const n = keys.length;
+    if (n === 1 || t <= keys[0][0]) return keys[0].slice(1);
+    if (t >= keys[n - 1][0]) return keys[n - 1].slice(1);
+    let i = 0;
+    while (keys[i + 1][0] < t) i++;
+    const k0 = keys[Math.max(0, i - 1)], k1 = keys[i], k2 = keys[i + 1], k3 = keys[Math.min(n - 1, i + 2)];
+    const u = (t - k1[0]) / (k2[0] - k1[0] || 1);
+    return [1, 2, 3].map((j) => catmull(k0[j], k1[j], k2[j], k3[j], u));
+  }
+  // 入场 / 强调（data-anim）：PowerPoint 动画窗格里最常用的那几种，写成「效果 方向 时长 @开始」，几段用分号隔开：
+  //   data-anim="trail right .5s @.2; shine .8s @.9"
+  //   fade 淡入 / rise 上浮 / zoom 弹出 / fly 方向 飞入 / wipe 方向 擦除 / trail 方向 拖影飞入 / shine 擦亮 / out 淡出
+  //   方向是「从哪边来」：fly right 从右边飞进来，wipe left 从左往右擦出来。
+  // 点击分步（data-step="n"）：写了的元素（或它所在的组）等第 n 次按翻页键才动，没写的是第 0 步，进页自己动。
+  //   放映时每一步放完停住，按键放下一步；全部放完再按才翻页。录制没人按键，步与步之间空 STEP_GAP 秒连着放。
+  const STEP_GAP = 0.6;
+  const ANIM_DUR = { fade: 0.5, rise: 0.6, zoom: 0.5, fly: 0.6, wipe: 0.7, trail: 0.6, shine: 0.9, out: 0.4 };
+  const ANIM_DIR = { fly: "down", wipe: "left", trail: "right" };
+  const TRAIL = [0.45, 0.28, 0.14]; // 拖影：每份副本的不透明度，越往后越淡
+  const TRAIL_LAG = 0.05;           // 拖影：副本之间错开的秒数
+  const SHINE_BAND = 260;           // 擦亮：光带宽（px，和 tokens.css .st-shine 的 background-size 一致）
+  const stepOf = (el) => Math.max(0, Math.round(+el.closest("[data-step]")?.dataset.step || 0));
+  function parseAnims(el) {
+    return el.dataset.anim.split(";").map((s) => s.trim()).filter(Boolean).map((s) => {
+      const a = { kind: null, dir: null, at: 0, dur: null };
+      for (const tok of s.split(/\s+/)) {
+        if (tok in VECTOR) a.dir = tok;
+        else if (tok.startsWith("@")) a.at = +tok.slice(1);
+        else if (/^\d*\.?\d+s$/.test(tok)) a.dur = +tok.slice(0, -1);
+        else a.kind = tok;
+      }
+      if (!(a.kind in ANIM_DUR) || !Number.isFinite(a.at)) {
+        console.error(`[orca-transition-skill] data-anim 读不懂：「${s}」，可选：${Object.keys(ANIM_DUR).join(" / ")}，写成「效果 方向 时长 @开始」`);
+        return null;
+      }
+      a.dur ??= ANIM_DUR[a.kind];
+      a.dir ??= ANIM_DIR[a.kind] ?? null;
+      // 拖影最后一份副本落地后还要淡掉
+      a.len = a.dur + (a.kind === "trail" ? TRAIL.length * TRAIL_LAG + 0.25 : 0);
+      return a;
+    }).filter(Boolean);
+  }
+  // 拖影、擦亮要的副本。用 div 而不是克隆原标签：reveal 的 auto-animate 会按文字配对没写 data-id 的 p / h1，
+  // 同样文字的副本会被当成下一页的配对对象
+  function overlayOf(el, cls) {
+    const c = document.createElement("div");
+    c.className = `${el.className} ${cls}`;
+    c.setAttribute("style", el.getAttribute("style") || "");
+    c.setAttribute("aria-hidden", "true");
+    c.innerHTML = el.innerHTML;
+    return c;
+  }
+  function animTween(tl, el, a, at, extras) {
+    const d = a.dur;
+    const [vx, vy] = VECTOR[a.dir] ?? [0, 0];
+    switch (a.kind) {
+      case "fade":
+        tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: d, ease: "power1.out" }, at);
+        break;
+      case "rise":
+        tl.fromTo(el, { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: d, ease: "power2.out" }, at);
+        break;
+      case "zoom":
+        tl.fromTo(el, { autoAlpha: 0, scale: 0.6 }, { autoAlpha: 1, scale: 1, duration: d, ease: "back.out(1.6)" }, at);
+        break;
+      case "fly":
+        // 挪一整个画布宽 / 高：元素在画布里哪都行，起点一定在画外
+        tl.fromTo(el, { x: vx * W, y: vy * H }, { x: 0, y: 0, duration: d, ease: "power3.out" }, at);
+        break;
+      case "wipe": {
+        // inset(上 右 下 左)：从左边擦出来 = 先把右边整个裁掉，再放开
+        const side = { left: 1, right: 3, up: 2, down: 0 }[a.dir];
+        const from = [0, 0, 0, 0].map((v, i) => (i === side ? 100 : 0));
+        const inset = (v) => `inset(${v.map((n) => `${n}%`).join(" ")})`;
+        tl.fromTo(el, { clipPath: inset(from) }, { clipPath: inset([0, 0, 0, 0]), duration: d, ease: "power2.inOut" }, at);
+        break;
+      }
+      case "trail": {
+        tl.fromTo(el, { x: vx * W, y: vy * H }, { x: 0, y: 0, duration: d, ease: "power3.out" }, at);
+        TRAIL.forEach((alpha, i) => {
+          const c = extras.trail[i];
+          const t = at + (i + 1) * TRAIL_LAG;
+          tl.fromTo(c, { x: vx * W, y: vy * H, autoAlpha: alpha }, { x: 0, y: 0, duration: d, ease: "power3.out" }, t)
+            .to(c, { autoAlpha: 0, duration: 0.25, ease: "power1.out" }, t + d);
+        });
+        break;
+      }
+      case "shine": {
+        // 一道斜着的高光从左扫到右：副本的字透明，背景渐变按字形裁出来（tokens.css .st-shine）
+        // 光带只扫字本身：文本框常常比字宽得多（整行居中的大标题），按框扫的话大半时间扫在空白里
+        const c = extras.shine;
+        const [x0, x1] = extras.textSpan;
+        tl.set(c, { autoAlpha: 1 }, at)
+          .fromTo(c, { backgroundPositionX: `${x0 - SHINE_BAND}px` }, { backgroundPositionX: `${x1}px`, duration: d, ease: "power1.inOut" }, at)
+          .set(c, { autoAlpha: 0 }, at + d);
+        break;
+      }
+      case "out":
+        tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: d, ease: "power1.in", immediateRender: false }, at);
+        break;
+    }
+  }
+  function buildsFor(slide) {
+    if (!slide) return null;
+    for (const c of slide.querySelectorAll(".st-trail, .st-shine")) c.remove();
+    // 转场时克隆进来的上一页（ghost）里也有 data-path 的元素，它们停在克隆那一刻的姿态，不该再动
+    const own = (sel) => [...slide.querySelectorAll(sel)].filter((el) => !el.closest(".st-ghost, .st-ghost-el"));
+    const movers = own("[data-path]").map((el) => {
+      const keys = parseKeys(el.dataset.path);
+      if (!keys.length) {
+        console.error(`[orca-transition-skill] data-path 读不出关键帧：「${el.dataset.path}」，写成 "t x y a; t x y a"`);
+        return null;
+      }
+      const [px, py] = el.dataset.pivot ? el.dataset.pivot.trim().split(/[\s,]+/).map(Number) : [];
+      const pivot = [Number.isFinite(px) ? px : el.offsetWidth / 2, Number.isFinite(py) ? py : el.offsetHeight / 2];
+      el.style.transformOrigin = `${pivot[0]}px ${pivot[1]}px`;
+      return { el, keys, step: stepOf(el), rest: [el.offsetLeft + pivot[0], el.offsetTop + pivot[1]], pose: null };
+    }).filter(Boolean);
+    const lights = movers.filter((m) => m.el.dataset.light).map((m) => ({
+      m,
+      key: m.el.dataset.light,
+      spread: Math.tan(((+m.el.dataset.lightSpread || 13) * Math.PI) / 180),
+      w: (+m.el.dataset.lightWidth || 0) / 2,
+      on: +m.el.dataset.lightOn || 0,
+    }));
+    for (const l of lights) {
+      if (l.m.el.parentElement !== slide) console.warn(`[orca-transition-skill] data-light="${l.key}" 要写在页面的直接子元素上，光束按画布坐标算`);
+    }
+    const lit = own("[data-lit]");
+    const anims = own("[data-anim]").map((el) => ({ el, step: stepOf(el), list: parseAnims(el) })).filter((x) => x.list.length);
+    for (const x of anims) {
+      if (x.el.dataset.path) console.warn(`[orca-transition-skill] 同一个元素别同时写 data-path 和 data-anim，两个都改 transform，后写的会盖掉前面的`);
+    }
+    if (!movers.length && !lit.length && !anims.length) return null;
+
+    // 每一步多长，从第几秒开始。第 0 步总是有（可以是 0 秒），这样「进页先停住，点一下才出来」也成立
+    const len = new Map([[0, 0]]);
+    const bump = (s, t) => len.set(s, Math.max(len.get(s) ?? 0, t));
+    for (const m of movers) bump(m.step, m.keys[m.keys.length - 1][0]);
+    for (const l of lights) bump(l.m.step, l.on);
+    for (const x of anims) for (const a of x.list) bump(x.step, a.at + a.len);
+    const steps = [...len.keys()].sort((p, q) => p - q);
+    const start = new Map();
+    let total = 0;
+    steps.forEach((s, i) => {
+      if (i) total += CAPTURE ? STEP_GAP : 0;
+      start.set(s, total);
+      total += len.get(s);
+    });
+    const stops = steps.map((s) => start.get(s) + len.get(s));
+
+    const apply = (t) => {
+      for (const m of movers) {
+        const [x, y, a] = (m.pose = poseAt(m.keys, t - start.get(m.step)));
+        m.el.style.transform = `translate(${x - m.rest[0]}px, ${y - m.rest[1]}px) rotate(${a}deg)`;
+      }
+      for (const el of lit) {
+        const l = lights.find((q) => q.key === el.dataset.lit);
+        if (!l || t - start.get(l.m.step) < l.on) { el.style.clipPath = "polygon(0 0, 0 0, 0 0)"; continue; }
+        const [x, y, a] = l.m.pose;
+        const r = (a * Math.PI) / 180, dx = Math.sin(r), dy = -Math.cos(r), nx = Math.cos(r), ny = Math.sin(r);
+        const far = l.w + LIGHT_L * l.spread;
+        const ox = el.offsetLeft, oy = el.offsetTop;
+        const pt = (along, side) => `${(x + dx * along + nx * side - ox).toFixed(1)}px ${(y + dy * along + ny * side - oy).toFixed(1)}px`;
+        el.style.clipPath = `polygon(${pt(0, -l.w)}, ${pt(0, l.w)}, ${pt(LIGHT_L, far)}, ${pt(LIGHT_L, -far)})`;
+      }
+    };
+    const tl = gsap.timeline({ paused: true });
+    if (movers.length || lit.length) {
+      apply(0);
+      const clock = { t: 0 };
+      tl.to(clock, { t: total, duration: Math.max(total, 0.001), ease: "none", onUpdate: () => apply(clock.t) }, 0);
+    }
+    // 副本先全部建好再挂动画：fromTo 一挂上就把元素摆到起点，之后再克隆会把起点姿态也抄过去
+    for (const x of anims) {
+      x.extras = {};
+      if (x.list.some((a) => a.kind === "trail")) {
+        x.extras.trail = TRAIL.map(() => {
+          const c = overlayOf(x.el, "st-trail");
+          x.el.before(c); // 压在原件下面：原件领头，副本跟在后面
+          return c;
+        });
+      }
+      if (x.list.some((a) => a.kind === "shine")) {
+        // 字在元素里从哪到哪（元素自身坐标，不受 reveal 缩放影响）
+        const range = document.createRange();
+        range.selectNodeContents(x.el);
+        const box = x.el.getBoundingClientRect(), txt = range.getBoundingClientRect();
+        const k = x.el.offsetWidth / (box.width || 1);
+        x.extras.textSpan = txt.width ? [(txt.left - box.left) * k, (txt.right - box.left) * k] : [0, x.el.offsetWidth];
+        x.extras.shine = overlayOf(x.el, "st-shine");
+        x.el.after(x.extras.shine);
+        gsap.set(x.extras.shine, { autoAlpha: 0 });
+      }
+    }
+    for (const x of anims) for (const a of x.list) animTween(tl, x.el, a, start.get(x.step) + a.at, x.extras);
+    tl.call(() => {}, null, total);
+    tl.data = { stops };
+    return tl;
   }
   // ───────── 页面里的视频 ─────────
   // 放映模式：翻到这一页从头播，离开就停。
@@ -1616,8 +1988,13 @@
   function stopScene() {
     sceneCall?.kill();
     sceneCall = null;
+    stepTween?.kill();
+    stepTween = null;
+    stepAt = -1;
     scene?.progress(1).pause();
     scene = null;
+    // 拖影、擦亮的副本放完就是透明的，留着没用，还可能被下一页的 auto-animate 当成配对对象
+    for (const c of document.querySelectorAll(".reveal .slides .st-trail, .reveal .slides .st-shine")) c.remove();
   }
   // 转场要多久：GSAP 转场看时间线；共享元素看 reveal 的 auto-animate 时长（取页上写的最长的那个）
   function transitionSeconds(slide) {
@@ -1633,8 +2010,49 @@
     scene = prebuilt ?? sceneFor(slide);
     if (!scene) return;
     scene.pause(0);
-    if (!CAPTURE) sceneCall = gsap.delayedCall(delay, () => scene?.play(0));
+    if (!CAPTURE) sceneCall = gsap.delayedCall(delay, () => (scene?.data?.stops ? playStep(0) : scene?.play(0)));
   }
+
+  // ───────── 页内动画的点击分步 ─────────
+  // 有页内动画的页，场景时间线上记着每一步停在哪（data.stops）。放映时一步一步放，翻页键先推下一步：
+  //   这一步还在放 → 剩下的压到 FINISH_S 秒放完，停住（PowerPoint 里放动画时点一下也是先放完这一个）；
+  //   这一步放完了、后面还有 → 放下一步；
+  //   全放完了 → 翻页。
+  let stepAt = -1;      // 放到第几步了（-1 = 还在等转场放完）
+  let stepTween = null; // 推着场景时间线走完这一步的那个补间
+  function playStep(i) {
+    const stops = scene.data.stops;
+    sceneCall?.kill();
+    sceneCall = null;
+    stepTween?.kill();
+    stepAt = i;
+    stepTween = scene.tweenFromTo(i ? stops[i - 1] : 0, stops[i], { ease: "none" });
+  }
+  function stepNext() {
+    const stops = scene?.data?.stops;
+    if (!stops) return false;
+    if (stepAt < 0) {
+      playStep(0);
+      return true;
+    }
+    if (stepTween?.isActive()) {
+      const left = (stepTween.duration() - stepTween.time()) / stepTween.timeScale();
+      if (left > FINISH_S) stepTween.timeScale(stepTween.timeScale() * (left / FINISH_S));
+      return true;
+    }
+    if (stepAt < stops.length - 1) {
+      playStep(stepAt + 1);
+      return true;
+    }
+    return false;
+  }
+  // 页内动画还要多久放完这一步（秒）。自动播放用它决定什么时候按下一下，不用把页内动画的时长抄进 data-hold
+  window.__orcaBusy = () => {
+    const stops = scene?.data?.stops;
+    if (!stops) return 0;
+    if (stepAt < 0) return (sceneCall ? sceneCall.duration() - sceneCall.time() : 0) + stops[0];
+    return stepTween?.isActive() ? (stepTween.duration() - stepTween.time()) / stepTween.timeScale() : 0;
+  };
 
   function cleanup() {
     // 先跑到终点再销毁，避免中途翻页时元素停在隐藏状态
@@ -1710,7 +2128,12 @@
     }
     // 共享元素走 reveal 的 auto-animate，是 CSS transition，不在 current 里，要一起看
     const running = cssTransitions();
-    if (!current?.isActive() && running.length === 0) return Reveal.next();
+    if (!current?.isActive() && running.length === 0) {
+      if (stepNext()) return "step";
+      return Reveal.next();
+    }
+    // 转场在跑、这一页有页内动画：只把转场压完，接着放第 0 步，不翻页
+    const stepped = !!scene?.data?.stops;
 
     queued = 1;
     const done = [];
@@ -1731,7 +2154,9 @@
     Promise.race([Promise.all(done), timeout]).then(() => {
       const steps = queued;
       queued = 0;
-      if (steps === 1) Reveal.next();
+      if (stepped) {
+        if (stepAt < 0) playStep(0);
+      } else if (steps === 1) Reveal.next();
       else Reveal.slide(Math.min(Reveal.getIndices().h + steps, Reveal.getTotalSlides() - 1));
     });
   }
@@ -1833,7 +2258,9 @@
         hold = Math.max(hold, recapMs + 1500);
       }
       sceneOffset = end;
-      return { transition: end, hold, scene: sceneMs || recapMs, video: videoMs };
+      // build：页内动画（含点击分步）放完要多久。缩略图停在这之后 —— 那才是这一页「完整」的样子
+      const buildMs = scene?.data?.stops ? sceneMs : 0;
+      return { transition: end, hold, scene: sceneMs || recapMs, video: videoMs, build: buildMs };
     },
     async seek(ms) {
       for (const a of captured) a.currentTime = Math.min(ms, a.effect.getComputedTiming().endTime);

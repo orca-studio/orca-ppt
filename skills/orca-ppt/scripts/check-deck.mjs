@@ -17,7 +17,7 @@
 // 拦掉的话 reveal 永远不就绪,一个元素都量不到),但它的入场动画会把元素变形 ——
 // grow-up 的柱子初始是 scaleY(0),这时候量高度是 0。所以借 capture.mjs 用的那套
 // `window.__capture`:`go(i)` 切到第 i 页并冻住全部动画,`seek(transition)` 把时间轴
-// 推到转场和入场都放完的那一刻,量的就是声明的布局。
+// 推到转场、入场和页内动画都放完的那一刻,量的就是声明的布局。
 
 import { chromium } from "playwright-core";
 import { existsSync } from "node:fs";
@@ -237,9 +237,10 @@ for (const deck of decks) {
   const found = [];
   let turns = {};
   for (let i = 0; i < count; i++) {
-    // 切到这一页并冻住动画，再把时间轴推到转场和入场都放完
-    const { transition } = await page.evaluate((n) => window.__capture.go(n), i);
-    await page.evaluate((ms) => window.__capture.seek(ms), transition);
+    // 切到这一页并冻住动画，再把时间轴推到转场、入场和页内动画（data-path 这类）都放完。
+    // 页内动画的元素可以从画外开始走（灯从顶上落下来），量起点会误报出界，量的是它停下来的地方
+    const { transition, scene } = await page.evaluate((n) => window.__capture.go(n), i);
+    await page.evaluate((ms) => window.__capture.seek(ms), transition + (scene || 0));
     const problems = await page.evaluate(auditSlide);
     for (const p of problems) found.push({ page: i + 1, ...p });
 
