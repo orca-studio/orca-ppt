@@ -1019,9 +1019,13 @@
     }
     const tl = timeline();
     tl.fromTo(ghosts, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
+    // 写了页内动画的元素（或里面包着它们的组）入场归页内动画管：这里再让它上浮淡入，
+    // 转场一结束它就已经看得见了，点击分步的「点一下才出来」就没了
+    const BUILD = "[data-anim], [data-path], [data-lit], [data-step]";
     const incoming = [...section.children].filter((el) =>
       !prevIds.has(el.dataset.id) && !el.matches(".st-layer, .st-ghost-el") && !pairedNew.has(el)
-      && !(!el.dataset.id && prevSame.has(signature(el))));
+      && !(!el.dataset.id && prevSame.has(signature(el)))
+      && !el.matches(BUILD) && !el.querySelector(BUILD));
     for (const el of incoming) enterTween(tl, el, +(el.dataset.autoAnimateDelay ?? 0.6));
     for (const p of pairs) {
       const g = ghostOf.get(p.old);
@@ -2041,7 +2045,15 @@
     stepTween?.kill();
     stepAt = i;
     stepTween = scene.tweenFromTo(i ? stops[i - 1] : 0, stops[i], { ease: "none" });
+    reportStep();
   }
+  // 这一页按到第几下了（done），一共要按几下（clicks）。第 0 步是进页自己放的，不算一下
+  function stepState() {
+    const stops = scene?.data?.stops;
+    return stops ? { done: Math.max(0, stepAt), clicks: stops.length - 1 } : { done: 0, clicks: 0 };
+  }
+  // 宿主（OrcaPPT 底栏的「第 1/3 下」）听这个事件，不用轮询
+  const reportStep = () => document.dispatchEvent(new CustomEvent("orca:step", { detail: stepState() }));
   function stepNext() {
     const stops = scene?.data?.stops;
     if (!stops) return false;
@@ -2066,6 +2078,15 @@
     if (!stops) return 0;
     if (stepAt < 0) return (sceneCall ? sceneCall.duration() - sceneCall.time() : 0) + stops[0];
     return stepTween?.isActive() ? (stepTween.duration() - stepTween.time()) / stepTween.timeScale() : 0;
+  };
+  window.__orcaStep = stepState;
+  // 把这一页的页内动画从头再放一遍（OrcaPPT 的「重放这页的动画」）。点击分步的页回到第 0 步，等人再按
+  window.__orcaReplayBuild = () => {
+    const slide = Reveal.getCurrentSlide();
+    if (!slide) return;
+    stopScene();
+    startScene(slide, 0);
+    reportStep();
   };
   // 这一页的页内动画清单（只读）。OrcaPPT 的右栏「页」那一档显示它，宿主不用自己再解析一遍 data-anim。
   // 时长按放映算（步与步之间不空 STEP_GAP）；clicks 是要按几下翻页键才放完。没有页内动画时返回 null
@@ -2116,6 +2137,7 @@
     // 往回翻、跳页没有转场，场景和视频直接从头播
     const delay = played ? transitionSeconds(e.currentSlide) : 0;
     startScene(e.currentSlide, delay, next);
+    reportStep();
     playVideos(e.currentSlide, delay);
     startRecap(e.currentSlide, delay);
   }
