@@ -22,6 +22,38 @@ describe('applyTextEdit', () => {
     )
   })
 
+  it('整段文字一模一样的优先 —— 「北岸软件」不撞「北岸软件 · 2021–2025」', () => {
+    const html = deck('<section><p>北岸软件 · 2021–2025</p><p>北岸软件</p></section>')
+    const result = applyTextEdit(html, { slide: 0, oldText: '北岸软件', newText: '南山' })
+    expect(result.ok && result.html).toBe(
+      deck('<section><p>北岸软件 · 2021–2025</p><p>南山</p></section>'),
+    )
+  })
+
+  it('短数字也认得准 —— 「12」不撞「2021」', () => {
+    const html = deck('<section><p>2021</p><p class="t-metric">12</p></section>')
+    const result = applyTextEdit(html, { slide: 0, oldText: '12', newText: '30' })
+    expect(result.ok && result.html).toContain('<p class="t-metric">30</p>')
+  })
+
+  it('新文字留空就删掉整个元素,连它独占的那一行', () => {
+    const html = deck('<section>\n    <p>标题</p>\n    <p class="t-metric">12</p>\n  </section>')
+    const result = applyTextEdit(html, { slide: 0, oldText: '12', newText: '' })
+    expect(result.ok && result.html).toBe(deck('<section>\n    <p>标题</p>\n  </section>'))
+  })
+
+  it('元素里还套着别的标签就不删,只清掉那段字', () => {
+    const html = deck('<section><p>12<span>人</span></p></section>')
+    const result = applyTextEdit(html, { slide: 0, oldText: '12', newText: '' })
+    expect(result.ok && result.html).toBe(deck('<section><p><span>人</span></p></section>'))
+  })
+
+  it('改一段字里的一部分仍然可以(退回子串匹配)', () => {
+    const html = deck('<section><p>走过的四站。</p></section>')
+    const result = applyTextEdit(html, { slide: 0, oldText: '四站', newText: '五站' })
+    expect(result.ok && result.html).toContain('<p>走过的五站。</p>')
+  })
+
   it('同一页里有两处一样的文字就拒绝 —— 认不准是哪一处', () => {
     const html = deck('<section><p>下一步</p><span>下一步</span></section>')
     const result = applyTextEdit(html, { slide: 0, oldText: '下一步', newText: 'x' })
