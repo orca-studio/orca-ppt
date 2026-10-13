@@ -39,7 +39,21 @@ export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children
 
       {/* 标题居中,和 macOS 窗口标题一样;两边按钮多少变了它也不跟着挪 */}
       <span className="toolbar-title">{title ?? 'Orca PPT'}</span>
-      <div className="toolbar-agent">{children}</div>
+      <div className="toolbar-agent">
+        {children}
+        {/* 右栏开关放在最右,和它管的那一栏同一边(Keynote、Xcode 也这样摆) */}
+        <Button
+          variant="ghost"
+          icon
+          on={layout.inspector}
+          onClick={() => onLayoutChange({ inspector: !layout.inspector })}
+          title={layout.inspector ? '收起右栏(⌥⌘0)' : '显示右栏(⌥⌘0)'}
+          aria-label="右栏"
+          aria-pressed={layout.inspector}
+        >
+          <SidebarIcon right />
+        </Button>
+      </div>
     </header>
   )
 }
@@ -176,7 +190,6 @@ function TargetIcon() {
   )
 }
 
-/** 和 macOS 侧栏开关一个意思:一个方框,左边那一竖是侧栏。 */
 function HomeIcon() {
   return (
     <svg width="15" height="14" viewBox="0 0 15 14" aria-hidden="true">
@@ -192,7 +205,9 @@ function HomeIcon() {
   )
 }
 
-function SidebarIcon() {
+/** 和 macOS 侧栏开关一个意思:一个方框,靠边那一竖是侧栏。 */
+function SidebarIcon({ right = false }: { right?: boolean }) {
+  const x = right ? 9.6 : 5.4
   return (
     <svg width="15" height="13" viewBox="0 0 15 13" aria-hidden="true">
       <rect
@@ -205,7 +220,7 @@ function SidebarIcon() {
         stroke="currentColor"
         strokeWidth="1.3"
       />
-      <line x1="5.4" y1="0.75" x2="5.4" y2="12.25" stroke="currentColor" strokeWidth="1.3" />
+      <line x1={x} y1="0.75" x2={x} y2="12.25" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }

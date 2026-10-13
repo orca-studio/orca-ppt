@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type {
   CanvasElement,
   Control,
@@ -11,7 +11,7 @@ import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { Gallery, type Recipe, type Theme } from './Gallery.js'
 import { Inspector } from './Inspector.js'
-import { readLayout, writeLayout, type Layout } from './layout.js'
+import { clampInspectorWidth, readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
 import { idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
@@ -30,6 +30,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
   const presentRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
+  const toggleInspectorRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
   const stepHistoryRef = useRef<(direction: 'undo' | 'redo') => void>(() => {})
 
@@ -429,6 +430,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (action === 'open') void pickDeck(open)
       else if (action === 'present') presentRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
+      else if (action === 'toggle-inspector') toggleInspectorRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
       else if (action.startsWith('theme:')) {
@@ -651,9 +653,19 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
   }, [])
 
+  /** 菜单里的「显示/隐藏右栏」。 */
+  const toggleInspector = useCallback(() => {
+    setLayout((current) => {
+      const merged: Layout = { ...current, inspector: !current.inspector }
+      writeLayout(merged)
+      return merged
+    })
+  }, [])
+
   presentRef.current = present
 
   toggleNavRef.current = toggleNav
+  toggleInspectorRef.current = toggleInspector
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
@@ -928,7 +940,16 @@ export function App({ serverUrl }: { serverUrl: string }) {
           onRelease={() => setHolder('control.release')}
         />
       </Toolbar>
-      <div className="shell" data-nav={layout.nav ? 'on' : 'off'}>
+      <div
+        className="shell"
+        data-nav={layout.nav ? 'on' : 'off'}
+        data-inspector={layout.inspector ? 'on' : 'off'}
+        style={
+          layout.inspectorWidth === null
+            ? undefined
+            : ({ '--pane-right-user': `${layout.inspectorWidth}px` } as CSSProperties)
+        }
+      >
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
           <div className="pane-body">
@@ -1010,7 +1031,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
           )}
         </section>
 
-        <section className="pane">
+        <section className="pane pane--inspector">
+          {layout.inspector && (
+            <PaneResizer
+              onResize={(width) => changeLayout({ inspectorWidth: clampInspectorWidth(width) })}
+              onReset={() => changeLayout({ inspectorWidth: null })}
+            />
+          )}
           {deck && (
             <Inspector
               selection={selection}
@@ -1038,6 +1065,56 @@ export function App({ serverUrl }: { serverUrl: string }) {
         </section>
       </div>
     </div>
+  )
+}
+
+/**
+ * 右栏左边缘那条拖柄:按住左右拖改宽度,双击回到默认宽度,聚焦后方向键也能调。
+ * 宽度从栏的实际宽度起算 —— 窗口窄时 CSS 会把它压窄,不能从记住的数字起算。
+ */
+function PaneResizer({
+  onResize,
+  onReset,
+}: {
+  onResize: (width: number) => void
+  onReset: () => void
+}) {
+  const widthOf = (handle: HTMLElement) => handle.parentElement?.getBoundingClientRect().width ?? 0
+  return (
+    <div
+      className="pane-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="拖动调整右栏宽度,双击恢复默认"
+      tabIndex={0}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return
+        event.preventDefault()
+        const handle = event.currentTarget
+        const startX = event.clientX
+        const startWidth = widthOf(handle)
+        // 听 window 不靠 setPointerCapture:画布会抢走捕获,指针一扫过它拖动就断了
+        document.body.dataset.resizing = 'true'
+        const move = (e: PointerEvent) => onResize(startWidth + (startX - e.clientX))
+        const up = () => {
+          window.removeEventListener('pointermove', move)
+          window.removeEventListener('pointerup', up)
+          window.removeEventListener('pointercancel', up)
+          delete document.body.dataset.resizing
+        }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
+      }}
+      onDoubleClick={onReset}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 64 : 16
+        if (event.key === 'ArrowLeft') onResize(widthOf(event.currentTarget) + step)
+        else if (event.key === 'ArrowRight') onResize(widthOf(event.currentTarget) - step)
+        else return
+        event.preventDefault()
+      }}
+    />
   )
 }
 

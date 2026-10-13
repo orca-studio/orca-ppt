@@ -329,7 +329,13 @@ select:focus-visible {
    * 窗口一矮,整排就比窗口还高,画布按撑高后的高度居中,稿子被推到窗口下面、切掉半截。
    * 列同理:1fr 默认最小是内容宽,窄窗口里会把右栏挤出窗口。
    */
-  grid-template-columns: var(--pane-left) minmax(0, 1fr) var(--pane-right);
+  /*
+   * 右栏拖过就用拖出来的宽度,但不超过窗口的 45%:窗口缩小时画布仍是主角。
+   * 两栏开合只改这两个变量,列的写法只有这一处。
+   */
+  --nav-col: var(--pane-left);
+  --inspector-col: min(var(--pane-right-user, var(--pane-right)), 45vw);
+  grid-template-columns: var(--nav-col) minmax(0, 1fr) var(--inspector-col);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
@@ -737,12 +743,70 @@ select:focus-visible {
 /* ── 左栏开合 ─────────────────────────────────────────────────────── */
 
 .shell[data-nav='off'] {
-  grid-template-columns: 0 minmax(0, 1fr) var(--pane-right);
+  --nav-col: 0px;
 }
 
 .shell[data-nav='off'] .pane--nav {
   border-right: 0;
   overflow: hidden;
+}
+
+/* ── 右栏开合、拖宽 ───────────────────────────────────────────────── */
+
+.shell[data-inspector='off'] {
+  --inspector-col: 0px;
+}
+
+.shell[data-inspector='off'] .pane--stage {
+  border-right: 0;
+}
+
+.shell[data-inspector='off'] .pane--inspector {
+  overflow: hidden;
+}
+
+.pane--inspector {
+  position: relative;
+}
+
+/* 看得见的只有 1px 分隔线,能按住的范围左右各宽出几像素 */
+.pane-resizer {
+  position: absolute;
+  inset: 0 auto 0 -4px;
+  width: 8px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.pane-resizer::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 3px;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.pane-resizer:hover::after,
+.pane-resizer:focus-visible::after,
+body[data-resizing] .pane-resizer::after {
+  opacity: 1;
+}
+
+.pane-resizer:focus-visible {
+  outline: none;
+}
+
+/* 拖的时候指针可能跑出拖柄、扫过画布的 iframe:光标不变,也别选中文字 */
+body[data-resizing] {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body[data-resizing] iframe {
+  pointer-events: none;
 }
 
 /* ── 工具栏左侧那组圆钮 ─────────────────────────────────────────── */

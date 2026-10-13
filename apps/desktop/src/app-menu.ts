@@ -12,6 +12,7 @@ export type MenuAction =
   | 'open'
   | 'present'
   | 'toggle-nav'
+  | 'toggle-inspector'
   | 'toggle-autoplay'
   | 'theme:system'
   | 'theme:light'
@@ -101,6 +102,12 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
           label: '显示/隐藏页胶片',
           accelerator: 'Control+Cmd+S',
           click: () => send('toggle-nav'),
+        },
+        {
+          // Xcode 收起右边检查器也是这个键;⌥⌘I 留给开发者工具
+          label: '显示/隐藏右栏',
+          accelerator: 'CmdOrCtrl+Alt+0',
+          click: () => send('toggle-inspector'),
         },
         { type: 'separator' },
         {
