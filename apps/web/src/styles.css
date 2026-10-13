@@ -395,24 +395,12 @@ select:focus-visible {
   white-space: nowrap;
 }
 
-.canvas-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--line);
-  background: var(--panel);
-}
-
-.canvas-controls-group {
+/* 首页、页胶片后面那组稿子操作(撤销、重做、指给 agent 看):一条细竖线隔开,不和导航混成一组。 */
+.toolbar-tools {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-}
-
-.canvas-controls-primary {
-  justify-content: flex-end;
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--line);
 }
 
 .pane {

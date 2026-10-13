@@ -8,12 +8,14 @@ export interface ToolbarProps {
   title: string | undefined
   /** 回首页(关掉这份稿子)。 */
   onHome: () => void
+  /** 紧跟在首页、页胶片后面的稿子操作(撤销、重做、指给 agent 看)。没打开稿子时不给。 */
+  tools?: ReactNode
   children?: ReactNode
   layout: Layout
   onLayoutChange: (next: Partial<Layout>) => void
 }
 
-export function Toolbar({ title, layout, onLayoutChange, onHome, children }: ToolbarProps) {
+export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children }: ToolbarProps) {
   return (
     <header className="toolbar">
       {/* 首页和页胶片是一组:同款圆钮挨着放,不和一段文字混排 */}
@@ -33,6 +35,7 @@ export function Toolbar({ title, layout, onLayoutChange, onHome, children }: Too
           <SidebarIcon />
         </Button>
       </div>
+      {tools}
 
       {/* 标题居中,和 macOS 窗口标题一样;两边按钮多少变了它也不跟着挪 */}
       <span className="toolbar-title">{title ?? 'Orca PPT'}</span>
@@ -69,11 +72,12 @@ export function CanvasControls({
   canPick,
   onPick,
 }: CanvasControlsProps) {
-  // 只读样稿上两样都不摆,整条不要 —— 翻页和页码在左栏(缩略图、页码、方向键)
+  // 只读样稿上两样都不摆 —— 翻页和页码在左栏(缩略图、页码、方向键)。
+  // 以前这几个钮单独占画布底下一整条,现在挪到顶栏首页旁边,高度让给画布(和 Keynote、PowerPoint 一样)
   if (!showHistory && !showPick) return null
   return (
-    <div className="canvas-controls" role="toolbar" aria-label="画布操作">
-      <div className="canvas-controls-group">
+    <div className="toolbar-tools" role="toolbar" aria-label="稿子操作">
+      <div className="toolbar-nav">
         {showHistory && (
           <>
             {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
@@ -111,12 +115,11 @@ export function CanvasControls({
             </Button>
           </>
         )}
-      </div>
-      <div className="canvas-controls-group canvas-controls-primary">
-        {/* 指给 agent 看:圆钮,开着的时候才上强调色。只读样稿上不摆 —— 指出来也没人能改。
+        {/* 指给 agent 看:开着的时候才上强调色。只读样稿上不摆 —— 指出来也没人能改。
             放映不摆按钮:在工作台里翻页本身就是在放;全屏放映走应用菜单(⌥⌘P)。 */}
         {showPick && (
           <Button
+            variant="ghost"
             icon
             on={picking}
             aria-pressed={picking}
