@@ -849,8 +849,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         // 不动磁盘:只是让界面知道这段时间归你改。
         annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
         description:
-          '开始一段连续的修改之前调一次,说清要做什么(reason 会显示给用户)。之后画布上会盖一层遮罩,用户不能同时改稿子,直到你调 hand_off,或者两分钟没有任何调用。不调也能用别的工具,只是用户看不到这段活儿叫什么,几步连着改时还可能被他插进来。' +
-          '要等用户批准什么时,再调一次并带上 waiting(界面会显示「等你批准:…」);批准完再调一次不带 waiting 就清掉。' +
+          '开始一段连续的修改之前调一次,说清要做什么(reason 在应用右上角的状态圆点上,鼠标停上去能看到)。之后画布上会盖一层遮罩,用户不能同时改稿子,直到你调 hand_off,或者两分钟没有任何调用。不调也能用别的工具,只是这段活儿没有名字,几步连着改时还可能被他插进来。' +
+          '要等用户批准什么时,再调一次并带上 waiting(同样挂在状态圆点上;要批准什么请在你自己的对话里直接问用户);批准完再调一次不带 waiting 就清掉。' +
           '用户点了「接管」,你的工具会返回 USER_IN_CONTROL:硬停止,不要重试,也不要自己调 take_control 拿回来;结束这一轮告诉用户你停在哪儿,等他明确说继续再调 take_control。' +
           '用户点了「停止」,工具会返回 USER_STOPPED:这件事不做了,结束这一轮。',
         inputSchema: {

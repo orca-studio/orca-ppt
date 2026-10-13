@@ -8,10 +8,10 @@ import { Button } from './ui/Button.js'
  * 两处都在说「这个应用和 agent 之间通不通」,分开放人得来回看。现在只剩这一处:
  * 本地服务断了优先说这个(它断了 agent 那头的状态也不可信)。
  *
- * 平常只留圆点:连上 / 没连上 / agent 在干活(圆点一明一暗)颜色就说清了,字天天挂在
- * 那儿是噪音。agent 在做什么也不写:画布和页胶片上它碰到哪儿亮哪儿,比一行字清楚;
- * 旁边的「接管 / 停止」照摆。字只留给要人动手或圆点说不清的:断线原因、等谁批准、
- * 谁接管了。藏起来的字仍在,读屏和鼠标悬停(title)还能拿到。
+ * 只有圆点,不写字:连上(绿)/ 没连上(灰)/ 断线(红)/ agent 在干活(一明一暗)。
+ * 本来就是 agent 驱动的 —— 它在做什么、等什么批准,人在 agent 的对话里都看得到,
+ * 这里再写一遍作用有限;画布和页胶片上它碰到哪儿亮哪儿,也比一行字清楚。
+ * 按钮(接管 / 停止 / 交还)照摆。那句话仍在,读屏和鼠标悬停(title)还能拿到。
  */
 export function AgentStatus({
   control,
@@ -46,18 +46,11 @@ export function AgentStatus({
           : 'Agent 未连接'
 
   const tone = server ? 'off' : active ? 'active' : connected ? 'on' : 'idle'
-  const quiet = !server && !taken && !(active && control.waiting)
 
   return (
-    <div className="agent-control" title={quiet ? status : undefined}>
+    <div className="agent-control" title={status}>
       <span className="agent-control-dot" data-tone={tone} aria-hidden="true" />
-      <span
-        className={quiet ? 'agent-control-label visually-hidden' : 'agent-control-label'}
-        role="status"
-        aria-live="polite"
-        title={status}
-        data-active={active}
-      >
+      <span className="visually-hidden" role="status" aria-live="polite">
         {status}
       </span>
       {active && (
