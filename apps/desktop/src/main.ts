@@ -167,8 +167,6 @@ async function createWindow(): Promise<void> {
   window.on('closed', () => {
     if (workbench === window) workbench = undefined
   })
-  // 放映中用户自己退出全屏(绿灯、⌃⌘F):当成退出放映,不然界面还藏着工作台
-  window.on('leave-full-screen', requestStopPresent)
 
   hardenWebviews(window)
 
@@ -269,41 +267,57 @@ ipcMain.handle('deck:capture-full', async (_event, input: { guestId: number }) =
   return file
 })
 
-/**
- * 放映在主窗口里做:主窗口切全屏,界面只留画布(渲染层负责藏掉其余部分)。
- *
- * 以前另开一个无边框窗口。两样对不上:agent 的 navigate 翻的是工作台那块画布,不是放映窗口;
- * Jevbot 这类工具只录主窗口,放映窗口录不到。close_deck 也关不掉它。
- *
- * 退出有三条路,都汇到渲染层的「退出放映」(它再走协议方法 deck.stopPresent):
- * Esc(工作台和画布 guest 里按都算)、用户点绿灯或 ⌃⌘F 退出全屏、agent 的 stop_present。
- */
-let presenting = false
+/** 同时只放映一份 —— 再点一次「播放」应该是换内容,不是叠一个新窗口。 */
+let presenter: BrowserWindow | undefined
 
-ipcMain.handle('deck:present', (_event, input: { on: boolean; fullscreen: boolean }) => {
-  if (!workbench) return false
-  presenting = input.on
-  // 系统全屏只给对外展示;不全屏的放映也要记着 presenting,Esc 才拦得下
-  const full = input.on && input.fullscreen
-  if (workbench.isFullScreen() !== full) workbench.setFullScreen(full)
+/**
+ * 全屏放映。
+ *
+ * 开一个独立的无边框窗口,而不是把主窗口切全屏:放映时三栏工作台不该还在旁边,
+ * 而且放完要能原样退回来。Esc 关掉,方向键归 reveal 自己(guest 有焦点)。
+ */
+ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide: number }) => {
+  presenter?.destroy()
+
+  const window = new BrowserWindow({
+    fullscreen: true,
+    backgroundColor: '#000000',
+    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+  })
+  presenter = window
+  window.on('closed', () => {
+    if (presenter === window) presenter = undefined
+  })
+
+  // Esc 退出放映,和 Keynote 一致。这一道管真实键盘。
+  window.webContents.on('before-input-event', (event, key) => {
+    if (key.type !== 'keyDown' || key.key !== 'Escape') return
+    event.preventDefault()
+    window.close()
+  })
+
+  await window.loadURL(`${input.previewUrl}#/${input.slide}`)
+  // 第二道:reveal 自己也绑了 Esc(总览模式),而且程序注入的按键不走
+  // before-input-event。捕获阶段先截下来。
+  await window.webContents.executeJavaScript(
+    `addEventListener('keydown', (e) => {
+       if (e.key !== 'Escape') return
+       e.preventDefault()
+       e.stopImmediatePropagation()
+       window.close()
+     }, true)`,
+  )
+  window.focus()
   return true
 })
 
-/** 告诉渲染层「人要退出放映」。渲染层走协议方法,agent 那边也就知道了。 */
-function requestStopPresent(): void {
-  if (!presenting) return
-  presenting = false
-  workbench?.webContents.send('menu:action', 'stop-present')
-}
-
-// Esc 退出放映,和 Keynote 一致。按键多半落在画布 guest 里,所以每个 webContents 都要拦;
-// 拦下来也挡住了 reveal 自己绑的 Esc(总览模式)。
-app.on('web-contents-created', (_event, contents) => {
-  contents.on('before-input-event', (event, input) => {
-    if (!presenting || input.type !== 'keyDown' || input.key !== 'Escape') return
-    event.preventDefault()
-    requestStopPresent()
-  })
+/**
+ * 结束放映:关掉放映窗口。agent 的 stop_present、close_deck(关稿子回首页)都走它 ——
+ * 以前没有这条路,稿子关了放映窗口还全屏挂着。
+ */
+ipcMain.handle('deck:stop-present', () => {
+  presenter?.close()
+  return true
 })
 
 /**

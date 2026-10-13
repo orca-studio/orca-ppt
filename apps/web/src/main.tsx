@@ -25,8 +25,10 @@ declare global {
       setMenuState?: (state: { canPresent: boolean; theme: string }) => Promise<void>
       /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
       setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
-      /** 主窗口进出全屏放映。藏掉工作台、只留画布的是渲染层自己。 */
-      present?: (input: { on: boolean; fullscreen: boolean }) => Promise<boolean>
+      /** 全屏放映。稿子好不好只有放映能回答。 */
+      present?: (input: { previewUrl: string; slide: number }) => Promise<boolean>
+      /** 关掉放映窗口。 */
+      stopPresent?: () => Promise<boolean>
       /** 离屏渲每一页的缩略图。不碰可见画布。 */
       /** 录一段同款样片(按内容寻址的缓存,写到哪由 server 定)。 */
       renderPreview?: (input: {

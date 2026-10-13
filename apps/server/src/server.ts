@@ -1047,7 +1047,6 @@ export async function startServer(
           deckId: params.deckId,
           previewUrl,
           slide: params.slide ?? 0,
-          fullscreen: params.fullscreen ?? false,
         })
         return {}
       }

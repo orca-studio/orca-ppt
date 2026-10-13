@@ -32,7 +32,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const toggleNavRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
   const stepHistoryRef = useRef<(direction: 'undo' | 'redo') => void>(() => {})
-  const stopPresentRef = useRef<() => void>(() => {})
 
   const [state, setState] = useState<TransportState>('closed')
   const [deck, setDeck] = useState<OpenedDeck | undefined>()
@@ -45,8 +44,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const thumbTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
-  /** 正在放映:主窗口全屏,只留画布。放的就是工作台这块画布,不另开窗口。 */
-  const [presenting, setPresenting] = useState(false)
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
@@ -195,23 +192,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setSelection(null)
       setRequests([])
       setThumbs([])
-      // 放映中关掉稿子(agent 的 close_deck):放映跟着结束,不留一个全屏的空窗口
-      setPresenting(false)
-      void window.orca?.present?.({ on: false, fullscreen: false })
+      // 放映中关掉稿子(agent 的 close_deck):放映窗口跟着关,不留一个全屏窗口挂着
+      void window.orca?.stopPresent?.()
     })
 
-    // 放映:主窗口切全屏(壳做),藏掉工作台(这里做),画布跳到起始页
+    // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
-      if (data.deckId !== deckRef.current?.deck.id) return
-      setPresenting(true)
-      // 系统全屏只在对外展示时切;agent 演示时画布在主窗口里铺满就够了
-      void window.orca?.present?.({ on: true, fullscreen: data.fullscreen })
-      stage.current?.goto(data.slide)
+      void window.orca?.present?.({ previewUrl: data.previewUrl, slide: data.slide })
     })
+    // agent 的 stop_present:关掉放映窗口
     next.subscribe('present.stop', (data) => {
-      if (data.deckId !== deckRef.current?.deck.id) return
-      setPresenting(false)
-      void window.orca?.present?.({ on: false, fullscreen: false })
+      if (data.deckId === deckRef.current?.deck.id) void window.orca?.stopPresent?.()
     })
 
     // 同款样片也只有壳录得了。录好之后 server 会推 recipes.changed。
@@ -440,7 +431,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
-      else if (action === 'stop-present') stopPresentRef.current()
       else if (action.startsWith('theme:')) {
         const next = action.slice('theme:'.length) as ThemeSource
         applyTheme(next)
@@ -641,12 +631,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const current = deckRef.current
     if (!active || !current) return
     // 走协议而不是直接开窗:agent 说「放给我看」触发的是同一条路。
-    // 人点菜单「全屏放映」是要对外展示:切系统全屏
-    void active.request('deck.present', {
-      deckId: current.deck.id,
-      slide: slideRef.current,
-      fullscreen: true,
-    })
+    void active.request('deck.present', { deckId: current.deck.id, slide: slideRef.current })
   }, [])
 
   const changeLayout = useCallback((next: Partial<Layout>) => {
@@ -668,22 +653,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   presentRef.current = present
 
-  /** 退出放映。Esc、退出全屏、agent 的 stop_present 都汇到这条协议方法。 */
-  const stopPresent = useCallback(() => {
-    const current = deckRef.current
-    if (current) void transport.current?.request('deck.stopPresent', { deckId: current.deck.id })
-  }, [])
-  stopPresentRef.current = stopPresent
-
-  // 在浏览器里开(没有桌面壳)时,Esc 由这里接;桌面壳里壳自己拦,画布 guest 里按也算
-  useEffect(() => {
-    if (!presenting || window.orca?.present) return
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') stopPresent()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [presenting, stopPresent])
   toggleNavRef.current = toggleNav
 
   // 菜单里的启用状态和主题勾选跟着界面走。
@@ -920,7 +889,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }
 
   return (
-    <div className="app" data-presenting={presenting ? '' : undefined}>
+    <div className="app">
       <Toolbar
         title={deck?.deck.title}
         layout={layout}
@@ -1026,8 +995,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 void transport.current?.request('deck.navigation', { deckId: deck.deck.id, action })
               }}
               onTextEdit={editText}
-              // 放映时不改字、不画选中框:人在讲,不是在编辑
-              readOnly={readOnly || presenting}
+              readOnly={readOnly}
               navLocked={agentHolds}
               overlay={agentHolds && <div className="stage-lock" />}
             />

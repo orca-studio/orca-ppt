@@ -650,15 +650,10 @@ export const requests = {
       deckId: z.string(),
       /** 从第几页开始。不给就从第一页。 */
       slide: z.number().int().nonnegative().optional(),
-      /**
-       * 切不切系统全屏。对外展示才要全屏(人点菜单「全屏放映」);agent 演示、联调时
-       * 只在主窗口里铺满画布,窗口不动。不给就是 false。
-       */
-      fullscreen: z.boolean().optional(),
     }),
     result: z.object({}),
   },
-  /** 退出放映。放映时按 Esc、退出全屏走它,agent 的 stop_present 也走它。 */
+  /** 关掉放映窗口。agent 的 stop_present 走它。 */
   'deck.stopPresent': {
     params: z.object({ deckId: z.string() }),
     result: z.object({}),
@@ -859,17 +854,13 @@ export const pushes = {
   'control.changed': Control,
   /** 稿子关了(回首页)。界面据此回到同款画廊。 */
   'deck.closed': z.object({ deckId: z.string() }),
-  /**
-   * 进入放映:主窗口切全屏,只留画布,从 slide 页开始。放的就是工作台里那块画布 ——
-   * agent 的 navigate 翻的是它,录屏录的是主窗口,另开一个窗口两样都对不上。
-   */
+  /** 请壳开一个全屏窗口放映。只有壳做得到。 */
   'present.request': z.object({
     deckId: z.string(),
     previewUrl: z.string(),
     slide: z.number().int().nonnegative(),
-    fullscreen: z.boolean(),
   }),
-  /** 退出放映,回到工作台。 */
+  /** 关掉放映窗口。 */
   'present.stop': z.object({ deckId: z.string() }),
   /**
    * agent 通过 MCP 动了一下。**agent 代替人执行,那它做的事就该和人做的一样看得见** ——
