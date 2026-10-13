@@ -241,7 +241,7 @@ async function finalize() {
     fail(`重做的 dmg 公证没通过:${again.status}`)
   }
   meta.dmg_submission_id = again.id
-  run('xcrun', ['stapler', 'staple', dmg])
+  await stapleWhenReady(dmg)
   run('xcrun', ['stapler', 'validate', dmg])
   run('spctl', [
     '--assess',
@@ -264,6 +264,24 @@ async function finalize() {
   )
   await writeFile(join(out, 'notarization-status.txt'), 'accepted\n')
   console.log(`公证通过,已 staple:${meta.dmg.name}、${meta.zip.name}`)
+}
+
+/**
+ * 刚公证通过就 staple,票据常常还没同步到 Apple 的查询服务(CloudKit),stapler 报
+ * 「network connection was lost」、退出码 68。0.1.3 发布时连着两次都卡在这里,
+ * 而同一次运行里更早公证过的应用 staple 得好好的。所以失败了隔一会儿再试。
+ */
+async function stapleWhenReady(path, attempts = 8, waitMs = 30_000) {
+  for (let i = 1; ; i++) {
+    try {
+      run('xcrun', ['stapler', 'staple', path])
+      return
+    } catch (error) {
+      if (i >= attempts) throw error
+      console.log(`staple 第 ${i} 次没成(票据可能还没同步),${waitMs / 1000} 秒后再试`)
+      await new Promise((done) => setTimeout(done, waitMs))
+    }
+  }
 }
 
 if (mode === 'build') await build()
