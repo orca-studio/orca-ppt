@@ -308,9 +308,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
             const label =
               data.action === 'show_slide'
                 ? `第 ${Number(args.index) + 1} 页`
-                : data.action === 'undo'
-                  ? '撤销'
-                  : '重做'
+                : data.action === 'navigate'
+                  ? `第 ${navigateTarget(args, slideRef.current, deckRef.current?.slideCount ?? 0) + 1} 页`
+                  : data.action === 'undo'
+                    ? '撤销'
+                    : '重做'
             const element = [...document.querySelectorAll<HTMLElement>('[aria-label]')].find(
               (e) => e.getAttribute('aria-label') === label,
             )
@@ -1103,4 +1105,23 @@ function TransitionMark() {
       />
     </svg>
   )
+}
+
+/**
+ * navigate 会翻到哪一页,给光标指缩略图用。next / previous 按画布当前页加减一
+ * (点击分步还没放完时 next 其实不翻页,光标指的是下一页,差一点不要紧);
+ * replay 放的是 from → from+1 那次转场,指 from+1;replayPage 指 from。
+ */
+function navigateTarget(args: Record<string, unknown>, current: number, count: number): number {
+  const last = Math.max(0, count - 1)
+  const from = Number.isInteger(args.from) ? Number(args.from) : current
+  const target =
+    args.action === 'next'
+      ? current + 1
+      : args.action === 'previous'
+        ? current - 1
+        : args.action === 'replay'
+          ? from + 1
+          : from
+  return Math.min(Math.max(target, 0), last)
 }

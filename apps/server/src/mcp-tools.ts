@@ -312,6 +312,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'navigate',
       config: {
         title: '翻页、重放转场或页内动画',
+        // 翻页时宿主也画光标:visual_target 算出要翻到哪页,指向左栏那页的缩略图
+        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
           '与键盘翻页和 UI 重放共用操作。next 在有点击分步的页上先放下一步，放完才翻页。replay 重放从 from 页翻到下一页的转场；replayPage 把 from 页的页内动画从头放一遍。两者都必须带 from，页号从 0 数起。',
         annotations: looking,
@@ -453,7 +455,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         annotations: looking,
         _meta: { 'dev.jevbot/ui': { version: 1, resolves: true, tracks: true } },
         inputSchema: {
-          action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
+          action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo']),
           arguments: z.record(z.string(), z.unknown()),
           phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
           targetId: z.string().optional(),
@@ -473,7 +475,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         return json(
           await call('visual.prepare', {
             deckId,
-            action: args.action as 'show_slide' | 'edit_text' | 'undo' | 'redo',
+            action: args.action as 'show_slide' | 'navigate' | 'edit_text' | 'undo' | 'redo',
             arguments: arguments_,
             phase: (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed' | 'track',
             targetId: args.targetId as string | undefined,

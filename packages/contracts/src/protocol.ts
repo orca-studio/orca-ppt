@@ -10,7 +10,7 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
  */
 
 export const VisualRequest = z.object({
-  action: z.enum(['show_slide', 'edit_text', 'undo', 'redo']),
+  action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo']),
   arguments: z.record(z.string(), z.unknown()),
   phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
   targetId: z.string().optional(),
