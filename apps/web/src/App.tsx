@@ -60,6 +60,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [layout, setLayout] = useState<Layout>(readLayout)
   /** agent 在首页指着的同款(preview_recipe / show_recipe_prompt)。seq 让同一个请求再发一次也生效。 */
   const [recipeFocus, setRecipeFocus] = useState<RecipeFocus>()
+  /** agent 正指着的同款卡片:摆成悬停的样子(见 Gallery 的 pointed)。 */
+  const [pointedRecipe, setPointedRecipe] = useState<string>()
   const [selection, setSelection] = useState<CanvasElement | null>(null)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
@@ -116,6 +118,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('deck.opened', (data) => {
       // 进了工作台,首页上指着的那张卡就作废了 —— 回首页时不该又自己弹出来
       setRecipeFocus(undefined)
+      setPointedRecipe(undefined)
       if (deckRef.current?.deck.id === data.deckId) return
       void openWith(next, data.path)
     })
@@ -209,6 +212,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
     next.subscribe('recipe.focus', (data) => {
       setRecipeFocus((current) => ({ ...data, seq: (current?.seq ?? 0) + 1 }))
+      setPointedRecipe(data.show === 'none' ? undefined : data.id)
     })
     // agent 的 stop_present:关掉放映窗口
     next.subscribe('present.stop', (data) => {
@@ -275,7 +279,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
           if ((HOME_VISUAL_ACTIONS as readonly string[]).includes(data.action)) {
             await next.request('visual.result', {
               requestId: data.requestId,
-              target: await homeTarget(data),
+              target: await homeTarget(data, setPointedRecipe),
             })
             return
           }
@@ -904,6 +908,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
         <Gallery
           recipes={recipes}
           focus={recipeFocus}
+          pointed={pointedRecipe}
+          onUnpoint={() => setPointedRecipe(undefined)}
           error={error}
           onPresent={(id) => {
             void transport.current
@@ -1141,12 +1147,15 @@ function PaneResizer({
  */
 async function homeTarget(
   data: PushData<'visual.request'>,
+  point: (id: string) => void,
 ): Promise<RequestResult<'visual.prepare'>> {
   const id = String(data.arguments.id ?? '')
   const targetId = JSON.stringify(['home', data.action, id])
   const measuredAt = () => ({ measuredAt: Date.now() })
   if (data.phase === 'completed' || data.phase === 'failed') return measuredAt()
   if (data.phase === 'track' && data.targetId !== targetId) return measuredAt()
+  // 先把卡片摆成悬停的样子,「做同款」才画得出来 —— 光标到的时候那儿得有个按钮
+  point(id)
   const selector = `${data.action === 'preview_recipe' ? '.gallery-play' : '.gallery-copy'}`
   let element: HTMLElement | null = null
   for (let waited = 0; waited <= 1500; waited += 50) {
@@ -1158,6 +1167,8 @@ async function homeTarget(
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
   if (!element) return measuredAt()
+  // 等按钮淡入(150ms)走完再交出位置,光标不会先到一步
+  if (data.phase === 'prepare') await new Promise((resolve) => setTimeout(resolve, 180))
   // 卡片可能在首页下面没滚到的地方:先滚进来再量
   element.scrollIntoView({ block: 'nearest' })
   const rect = element.getBoundingClientRect()

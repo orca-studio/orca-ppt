@@ -981,6 +981,7 @@ body[data-resizing] iframe {
   }
 
   .gallery-recipe:hover .gallery-copy,
+  .gallery-recipe[data-pointed] .gallery-copy,
   .gallery-recipe .gallery-copy:focus-visible,
   .gallery-recipe .gallery-copy[aria-expanded='true'] {
     opacity: 1;

@@ -23,10 +23,17 @@ export interface GalleryProps {
   onPresent: (id: string) => void
   /** agent 指着的同款(preview_recipe / show_recipe_prompt),和人悬停、点按钮效果一样。 */
   focus?: RecipeFocus | undefined
+  /**
+   * agent 正指着的那张卡(id):摆成和鼠标悬停一样 —— 样片在播、「做同款」露出来。
+   * 不然 Jevbot 的光标和高亮框指着一块空地,看的人不知道点的是什么。
+   */
+  pointed?: string | undefined
+  /** 人自己的鼠标从那张卡上移开了:agent 指的那一下就算看完了。 */
+  onUnpoint?: () => void
   error: string | undefined
 }
 
-export function Gallery({ recipes, onPresent, focus, error }: GalleryProps) {
+export function Gallery({ recipes, onPresent, focus, pointed, onUnpoint, error }: GalleryProps) {
   return (
     <div className="gallery">
       {/* 不放标题:首页只有同款卡片,「做同款」卡片上已经写着。这一条只当窗口拖动区 */}
@@ -49,6 +56,8 @@ export function Gallery({ recipes, onPresent, focus, error }: GalleryProps) {
                 focus={
                   focus && { show: focus.id === item.id ? focus.show : 'none', seq: focus.seq }
                 }
+                pointed={pointed === item.id}
+                onUnpoint={() => onUnpoint?.()}
               />
             ))}
           </div>
@@ -73,22 +82,24 @@ function RecipeCard({
   recipe,
   onPresent,
   focus,
+  pointed,
+  onUnpoint,
 }: {
   recipe: Recipe
   onPresent: () => void
   focus: Pick<RecipeFocus, 'show' | 'seq'> | undefined
+  /** agent 指着这张卡:和悬停一样。和真悬停分开记,人的鼠标不在这儿也成立。 */
+  pointed: boolean
+  onUnpoint: () => void
 }) {
   const card = useRef<HTMLElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const [hover, setHover] = useState(false)
-  // agent 让播的样片。和悬停分开记:人把鼠标移开不该打断 agent 正在给人看的那段
-  const [pointed, setPointed] = useState(false)
   const [open, setOpen] = useState(false)
 
   // agent 指过来:每来一次请求(seq)照做一次,人中途按 Esc 收起后再请求也能再打开
   useEffect(() => {
     if (!focus) return
-    setPointed(focus.show === 'preview')
     setOpen(focus.show === 'prompt')
     if (focus.show !== 'none')
       card.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -117,12 +128,13 @@ function RecipeCard({
       ref={card}
       // 光标定位(visual_target)按 id 找这张卡
       data-recipe={recipe.id}
+      data-pointed={pointed || undefined}
       className="gallery-recipe"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => {
         setHover(false)
-        // 人自己摸过这张卡,agent 让播的那一段就算看完了
-        setPointed(false)
+        // 人自己摸过这张卡,agent 指的那一下就算看完了
+        if (pointed) onUnpoint()
       }}
     >
       <div className="gallery-media">
