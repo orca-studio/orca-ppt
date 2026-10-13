@@ -20,6 +20,7 @@ import {
   type RequestMethod,
   type ResponseEnvelope,
   parseParams,
+  HOME_VISUAL_ACTIONS,
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
@@ -1027,12 +1028,19 @@ export async function startServer(
       }
       case 'visual.prepare': {
         const params = parseParams('visual.prepare', raw)
-        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        const home = (HOME_VISUAL_ACTIONS as readonly string[]).includes(params.action)
+        if (!home && (!params.deckId || params.deckId !== lastOpened))
+          throw new Error('DOCUMENT_CHANGED')
         if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
         if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
-        const { deckId, ...request } = params
-        const target = await visualTargets.request(deckId, request)
-        if (deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
+        // 卡片只在首页上:开着稿子就先回首页,光标才有地方指(工具本身也会这么做)
+        if (home && params.phase === 'prepare') {
+          for (const deckId of [...openDecks.keys()])
+            await dispatchUnlocked('deck.close', { deckId })
+        }
+        const { deckId = '', ...request } = params
+        const target = await visualTargets.request(home ? '' : deckId, request)
+        if (!home && deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
         if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
         return target
       }

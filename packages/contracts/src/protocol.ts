@@ -12,8 +12,14 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
 /** 首页上指着一个同款时给人看什么。 */
 export const RecipeFocusShow = z.enum(['preview', 'prompt', 'none'])
 
+/**
+ * 首页上的动作:指的是同款卡片,不是哪份稿子里的东西。`visual.prepare` 对它们不带 deckId,
+ * 推给界面的 `visual.request` 里 deckId 是空串。
+ */
+export const HOME_VISUAL_ACTIONS = ['preview_recipe', 'show_recipe_prompt'] as const
+
 export const VisualRequest = z.object({
-  action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo']),
+  action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo', ...HOME_VISUAL_ACTIONS]),
   arguments: z.record(z.string(), z.unknown()),
   phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
   targetId: z.string().optional(),
@@ -712,7 +718,11 @@ export const requests = {
     result: z.object({}),
   },
   /** 壳把截好的图交回来。只有壳会调。 */
-  'visual.prepare': { params: VisualRequest.extend({ deckId: z.string() }), result: VisualTarget },
+  /** 首页上的动作(HOME_VISUAL_ACTIONS)不带 deckId,其余都要带。 */
+  'visual.prepare': {
+    params: VisualRequest.extend({ deckId: z.string().optional() }),
+    result: VisualTarget,
+  },
   'visual.result': {
     params: z.object({
       requestId: z.string(),

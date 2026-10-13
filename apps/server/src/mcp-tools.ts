@@ -5,7 +5,7 @@ import type {
   RequestParams,
   RequestResult,
 } from '@orca-ppt/contracts'
-import { phaseOrder } from '@orca-ppt/contracts'
+import { HOME_VISUAL_ACTIONS, phaseOrder } from '@orca-ppt/contracts'
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { AgentError, hasAgentCode } from './agent-errors.js'
@@ -304,6 +304,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '播放同款样片',
         annotations: looking,
+        // 光标指那张卡的样片:visual_target 认这个 action,返回卡片的位置
+        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
           '在首页播某个同款卡片上的样片，和鼠标停在卡片上一样。给用户介绍同款、挑同款时用。开着稿子的话应用会先关掉它回首页。on=false 停下。id 来自 list_recipes。',
         inputSchema: {
@@ -329,6 +331,8 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '打开做同款提示词',
         annotations: looking,
+        // 光标指那张卡上的「做同款」按钮
+        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
           '在首页打开某个同款的「做同款」弹窗，用户能看到并复制那段提示词，和点卡片上的「做同款」一样。开着稿子的话应用会先关掉它回首页。open=false 收起。提示词正文 list_recipes 里也有。',
         inputSchema: {
@@ -506,15 +510,36 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         annotations: looking,
         _meta: { 'dev.jevbot/ui': { version: 1, resolves: true, tracks: true } },
         inputSchema: {
-          action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo']),
+          action: z.enum([
+            'show_slide',
+            'navigate',
+            'edit_text',
+            'undo',
+            'redo',
+            ...HOME_VISUAL_ACTIONS,
+          ]),
           arguments: z.record(z.string(), z.unknown()),
           phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
           targetId: z.string().optional(),
         },
       },
       run: async (args) => {
-        const deckId = await active.get(call)
         const arguments_ = args.arguments as Record<string, unknown>
+        type Action = RequestParams<'visual.prepare'>['action']
+        const phase = (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed' | 'track'
+        // 首页上的同款卡片不属于哪份稿子:不要求开着稿子。准备阶段 server 会先回首页,
+        // 之前认下的那份稿子也就关了
+        if ((HOME_VISUAL_ACTIONS as readonly string[]).includes(String(args.action))) {
+          const target = await call('visual.prepare', {
+            action: args.action as Action,
+            arguments: arguments_,
+            phase,
+            ...(typeof args.targetId === 'string' ? { targetId: args.targetId } : {}),
+          })
+          if (phase === 'prepare') active.clear()
+          return json(target)
+        }
+        const deckId = await active.get(call)
         if (
           (args.phase ?? 'prepare') === 'prepare' &&
           args.action === 'edit_text' &&

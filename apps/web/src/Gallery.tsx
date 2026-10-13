@@ -115,6 +115,8 @@ function RecipeCard({
   return (
     <article
       ref={card}
+      // 光标定位(visual_target)按 id 找这张卡
+      data-recipe={recipe.id}
       className="gallery-recipe"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => {

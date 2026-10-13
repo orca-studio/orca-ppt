@@ -4,9 +4,11 @@ import type {
   Control,
   HistoryState,
   PendingRequest,
+  PushData,
   RequestResult,
   RequestParams,
 } from '@orca-ppt/contracts'
+import { HOME_VISUAL_ACTIONS } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { Gallery, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
@@ -270,6 +272,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('visual.request', (data) => {
       void (async () => {
         try {
+          if ((HOME_VISUAL_ACTIONS as readonly string[]).includes(data.action)) {
+            await next.request('visual.result', {
+              requestId: data.requestId,
+              target: await homeTarget(data),
+            })
+            return
+          }
           if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
           const args = data.arguments
           const tracking = data.phase === 'track'
@@ -1124,6 +1133,53 @@ function PaneResizer({
       }}
     />
   )
+}
+
+/**
+ * 首页同款卡片上的光标目标:preview_recipe 指样片,show_recipe_prompt 指「做同款」按钮。
+ * 准备阶段 server 可能刚关掉稿子,首页还没画出来,所以等它一会儿。
+ */
+async function homeTarget(
+  data: PushData<'visual.request'>,
+): Promise<RequestResult<'visual.prepare'>> {
+  const id = String(data.arguments.id ?? '')
+  const targetId = JSON.stringify(['home', data.action, id])
+  const measuredAt = () => ({ measuredAt: Date.now() })
+  if (data.phase === 'completed' || data.phase === 'failed') return measuredAt()
+  if (data.phase === 'track' && data.targetId !== targetId) return measuredAt()
+  const selector = `${data.action === 'preview_recipe' ? '.gallery-play' : '.gallery-copy'}`
+  let element: HTMLElement | null = null
+  for (let waited = 0; waited <= 1500; waited += 50) {
+    element =
+      [...document.querySelectorAll<HTMLElement>('[data-recipe]')]
+        .find((card) => card.dataset.recipe === id)
+        ?.querySelector<HTMLElement>(selector) ?? null
+    if (element) break
+    await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+  if (!element) return measuredAt()
+  // 卡片可能在首页下面没滚到的地方:先滚进来再量
+  element.scrollIntoView({ block: 'nearest' })
+  const rect = element.getBoundingClientRect()
+  const bounds = await window.orca?.contentBounds?.()
+  const visible =
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.x >= 0 &&
+    rect.y >= 0 &&
+    rect.x + rect.width <= innerWidth &&
+    rect.y + rect.height <= innerHeight
+  if (!bounds || !visible) return measuredAt()
+  return {
+    ...measuredAt(),
+    rect: {
+      x: bounds.x + rect.x * bounds.zoom,
+      y: bounds.y + rect.y * bounds.zoom,
+      width: rect.width * bounds.zoom,
+      height: rect.height * bounds.zoom,
+    },
+    targetId,
+  }
 }
 
 const TRANSPORT_LABEL: Record<TransportState, string> = {

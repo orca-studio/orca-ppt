@@ -353,6 +353,24 @@ it('MCP 在首页指着同款:播样片、打开做同款,都走 recipe.focus', 
   ])
 })
 
+it('首页上的光标定位不要求开着稿子,也不带 deckId', async () => {
+  const { client, calls } = fakeClient({ 'deck.list': { decks: [] } })
+  const { map } = toolsOf(client)
+  await map.get('visual_target')!.run({
+    action: 'show_recipe_prompt',
+    arguments: { id: 'ring-timeline' },
+    phase: 'prepare',
+  })
+  expect(calls).toContainEqual([
+    'visual.prepare',
+    { action: 'show_recipe_prompt', arguments: { id: 'ring-timeline' }, phase: 'prepare' },
+  ])
+  const meta = (name: string) =>
+    (map.get(name)!.config as { _meta?: Record<string, unknown> })._meta?.['dev.jevbot/ui']
+  expect(meta('preview_recipe')).toEqual({ version: 1, visual: true })
+  expect(meta('show_recipe_prompt')).toEqual({ version: 1, visual: true })
+})
+
 it('MCP 改转场计划走 deck.editPlan,对不上就拒绝', async () => {
   const responses: Record<string, unknown> = {
     'deck.current': { deckId: '/d' },

@@ -177,7 +177,7 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 
 ## 宿主虚拟鼠标反馈
 
-show_slide、edit_text、undo、redo 声明 dev.jevbot/ui 操作目标。visual_target 是宿主定位接口，走共享 visual.prepare 协议往返到 renderer，返回 macOS 屏幕点坐标及测量时间。prepare 阶段可先定位目标页，不修改文档；completed / failed 阶段呈现结果。缺失或歧义目标返回无 rect，宿主跳过鼠标提示。
+show_slide、edit_text、undo、redo、preview_recipe、show_recipe_prompt 声明 dev.jevbot/ui 操作目标(后两个指首页同款卡片,不要求开着稿子,准备阶段会先回首页)。visual_target 是宿主定位接口，走共享 visual.prepare 协议往返到 renderer，返回 macOS 屏幕点坐标及测量时间。prepare 阶段可先定位目标页，不修改文档；completed / failed 阶段呈现结果。缺失或歧义目标返回无 rect，宿主跳过鼠标提示。
 
 control_state 返回控制权且不续期、不取得控制权，供宿主决定何时收起光标。实际鼠标由 Jevbot 绘制，应用不模拟系统输入。
 
