@@ -46,8 +46,14 @@ describe('recipePrompt', () => {
     expect(prompt).toContain('不要从空白重写')
   })
 
-  it('自检要看图,点名 capture_slide', () => {
+  it('自检要看图,点名 capture_slide,每一页都看', () => {
     expect(prompt).toContain('capture_slide')
+    expect(prompt).toContain('每一页')
+  })
+
+  it('改字点名 edit_text,不写脚本整份替换', () => {
+    expect(prompt).toContain('改字用 edit_text')
+    expect(prompt).toContain('不要写脚本整份替换')
   })
 
   it('有内容槽位就列成清单,没有就留一个自由贴的位置', () => {
