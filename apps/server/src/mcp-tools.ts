@@ -379,15 +379,25 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           theme: z.string().optional().describe('list_themes 返回的主题名').meta({ title: '主题' }),
         },
       },
-      run: async (args) =>
-        json(
-          await call('deck.create', {
-            parentDir: String(args.parentDir),
-            title: String(args.title),
-            ...(typeof args.from === 'string' ? { from: args.from } : {}),
-            ...(typeof args.theme === 'string' ? { theme: args.theme } : {}),
-          }),
-        ),
+      run: async (args) => {
+        const created = await call('deck.create', {
+          parentDir: String(args.parentDir),
+          title: String(args.title),
+          ...(typeof args.from === 'string' ? { from: args.from } : {}),
+          ...(typeof args.theme === 'string' ? { theme: args.theme } : {}),
+        })
+        // 复制样稿时动过的地方要说出来:agent 照着样稿原文去找,找不到会以为复制坏了
+        if (typeof args.from === 'string' && args.from.startsWith('recipe:')) {
+          return json({
+            ...created,
+            changed: [
+              `<title> 改成了「${String(args.title)}」,其余内容和样稿一字不差`,
+              '入口文件叫 deck.html;引到 skill 的路径已改成从新位置回去的相对路径',
+            ],
+          })
+        }
+        return json(created)
+      },
     },
     {
       name: 'deck_status',

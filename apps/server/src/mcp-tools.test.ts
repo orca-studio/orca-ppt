@@ -327,6 +327,18 @@ it('MCP 新建透传 UI 的模板和主题，并提供同一个模板目录', as
   ])
 })
 
+it('MCP 从同款新建时，告诉 agent 改了标题', async () => {
+  const { client } = fakeClient({ 'deck.create': { path: '/tmp/demo' } })
+  const { map } = toolsOf(client)
+  const result = textOf(
+    await map
+      .get('create_deck')!
+      .run({ parentDir: '/tmp', title: 'Demo', from: 'recipe:ring-timeline' }),
+  )
+  expect(result).toContain('/tmp/demo')
+  expect(result).toContain('<title> 改成了「Demo」')
+})
+
 it('publishes readable labels without changing the edit_text protocol', () => {
   const { client } = fakeClient()
   const tool = buildTools(client, new ActiveDeck()).find((tool) => tool.name === 'edit_text')!
