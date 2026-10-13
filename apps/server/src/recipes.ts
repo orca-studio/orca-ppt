@@ -45,6 +45,7 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
         title: meta.title,
         summary: meta.summary,
         sample: meta.sample ? skillRelative(dir, meta.sample) : undefined,
+        slots: contentSlots(text),
       }),
     })
   }
@@ -118,6 +119,27 @@ async function withinSkill(skillPath: string, path: string): Promise<string | un
   if (!root || !target) return undefined
   const rel = relative(root, target)
   return rel && !rel.startsWith('..') && !isAbsolute(rel) ? target : undefined
+}
+
+/**
+ * 配方「内容槽位」表的第一列(槽位名),原样去掉加粗。提示词拿它给用户列清单 ——
+ * 只搬运,不改写:槽位怎么取、缺了怎么办仍然只写在配方里。
+ */
+export function contentSlots(text: string): string[] {
+  const section = text.match(/^## 内容槽位\s*$([\s\S]*?)(?=^## |(?![\s\S]))/m)?.[1] ?? ''
+  const rows = section.split(/\r?\n/).filter((line) => line.trim().startsWith('|'))
+  return (
+    rows
+      .slice(2) // 表头和分隔行
+      // 括号里写的是给 agent 的属性名(`data-recap`),用户看不懂,去掉
+      .map((row) =>
+        (row.split('|')[1] ?? '')
+          .replace(/\*\*/g, '')
+          .replace(/（[^）]*`[^）]*）/g, '')
+          .trim(),
+      )
+      .filter(Boolean)
+  )
 }
 
 /** 只认最简单的 `键: 值` 一行一个,不引 YAML 库。值里的冒号保留。 */

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { frontmatter, listRecipes, pageRange, recipeEntry } from './recipes.js'
+import { contentSlots, frontmatter, listRecipes, pageRange, recipeEntry } from './recipes.js'
 
 const recipe = (id: string, extra = '') => `---
 id: ${id}
@@ -119,5 +119,28 @@ describe('pageRange', () => {
 describe('frontmatter', () => {
   it('不认的行跳过,空值不收', () => {
     expect(frontmatter('---\nid: x\n# 注释\nempty:\n---\n')).toEqual({ id: 'x' })
+  })
+})
+
+describe('contentSlots', () => {
+  it('取「内容槽位」表的第一列,去掉加粗和给 agent 看的属性名', () => {
+    const text = `## 内容槽位
+
+| 槽位 | 从哪取 | 缺了怎么办 |
+| --- | --- | --- |
+| **节点**（年份、版本号） | 用户给的 | 停下来要 |
+| **回顾范围**（\`data-recap="起-止"\`） | 默认整份 | — |
+
+## 页面结构
+
+| 不是 | 槽位 |
+| --- | --- |
+| x | y |
+`
+    expect(contentSlots(text)).toEqual(['节点（年份、版本号）', '回顾范围'])
+  })
+
+  it('没有这一节就是空的', () => {
+    expect(contentSlots('# 正文')).toEqual([])
   })
 })

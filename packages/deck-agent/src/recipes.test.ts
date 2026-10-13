@@ -40,6 +40,22 @@ describe('recipePrompt', () => {
     expect(pointed).toContain('recipes/drink-showcase/RECIPE.md')
   })
 
+  it('从样稿起头:先读样稿,用 create_deck 复制它,不从空白重写', () => {
+    expect(prompt).toContain('再读样稿 `recipes/recap-credits/index.html`')
+    expect(prompt).toContain('from 填 `recipe:recap-credits`')
+    expect(prompt).toContain('不要从空白重写')
+  })
+
+  it('自检要看图,点名 capture_slide', () => {
+    expect(prompt).toContain('capture_slide')
+  })
+
+  it('有内容槽位就列成清单,没有就留一个自由贴的位置', () => {
+    const listed = recipePrompt({ id: 'x', title: 'X', slots: ['节点', '封面'] })
+    expect(listed).toContain('- 节点:\n- 封面:')
+    expect(prompt).toContain('在这里贴上')
+  })
+
   it('没有 summary 也能生成', () => {
     expect(recipePrompt({ id: 'x', title: 'X' })).toContain('「X」')
   })
