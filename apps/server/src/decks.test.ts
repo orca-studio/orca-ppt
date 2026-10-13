@@ -55,6 +55,14 @@ describe('countTopLevelSections', () => {
 })
 
 describe('readSlideTitles', () => {
+  it('跳过跨页共享的锚和每页都有的固定字 —— 环形时间轴的年份、圆心的「发展历程」不是标题', () => {
+    const page = (year: string, title: string) =>
+      `<section><p data-id="y${year}" class="t-h1">${year}</p><p class="t-h1">发展历程</p><p class="t-h1">${title}</p></section>`
+    expect(
+      readSlideTitles(wrap(page('2021', '起步') + page('2022', '扩张') + page('2023', '上市'))),
+    ).toEqual(['起步', '扩张', '上市'])
+  })
+
   const wrap = (sections: string) => `<div class="slides">${sections}</div>`
 
   it('t-h1 排在 t-display 前面 —— 有的页用 t-display 放的是章节号', () => {

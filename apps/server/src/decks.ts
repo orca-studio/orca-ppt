@@ -211,7 +211,17 @@ async function listFiles(
 }
 
 export function readSlideTitles(html: string): Array<string | null> {
-  return sliceSections(html).map((section) => titleOf(section))
+  const sections = sliceSections(html)
+  // 每页都一样的字是固定的版面元素(环形时间轴圆心的「发展历程」),不是这一页的标题
+  const pages = new Map<string, number>()
+  for (const section of sections) {
+    const seen = new Set(
+      TITLE_CLASSES.flatMap((name) => textsByClass(section, name)).map((t) => t.text),
+    )
+    for (const text of seen) pages.set(text, (pages.get(text) ?? 0) + 1)
+  }
+  const fixed = (text: string) => sections.length > 2 && (pages.get(text) ?? 0) === sections.length
+  return sections.map((section) => titleOf(section, fixed))
 }
 
 /**
@@ -226,7 +236,18 @@ export function readPageTypes(html: string): Array<string | null> {
   )
 }
 
-function titleOf(section: string): string | null {
+/**
+ * 同一级字号里先挑「这一页自己的」:不带 data-id(带的是跨页共享的锚,比如时间轴上的
+ * 年份,当前那一格放大成 `t-h1`,拿来当标题就成了「2022」)、也不是每页都有的固定字。
+ * 挑不出来再退回第一个,总比没有标题好。
+ */
+function titleOf(section: string, fixed: (text: string) => boolean = () => false): string | null {
+  // 同一级字号里挑,不往下一级跳:封面的大字带 data-id(要和下一页共享)也照样是标题
+  for (const className of TITLE_CLASSES) {
+    const texts = textsByClass(section, className).filter((t) => !fixed(t.text))
+    const pick = texts.find((t) => !t.shared) ?? texts[0]
+    if (pick) return pick.text
+  }
   for (const className of TITLE_CLASSES) {
     const text = firstTextByClass(section, className)
     if (text) return text
@@ -240,6 +261,14 @@ function titleOf(section: string): string | null {
 }
 
 function firstTextByClass(section: string, className: string): string | null {
+  return textsByClass(section, className)[0]?.text ?? null
+}
+
+function textsByClass(
+  section: string,
+  className: string,
+): Array<{ text: string; shared: boolean }> {
+  const found: Array<{ text: string; shared: boolean }> = []
   // 类名要整词匹配:t-h1 不能撞上 t-h10,也要能从 "t-h1 t-on-surface" 里认出来。
   const opening = new RegExp(
     `<([a-z][a-z0-9]*)\\b[^>]*class\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))[^>]*>`,
@@ -253,9 +282,9 @@ function firstTextByClass(section: string, className: string): string | null {
     const from = match.index + match[0].length
     const close = section.indexOf(`</${tag}`, from)
     const text = plainText(section.slice(from, close === -1 ? undefined : close))
-    if (text) return text
+    if (text) found.push({ text, shared: /\bdata-id\s*=/.test(match[0]) })
   }
-  return null
+  return found
 }
 
 /** 去标签、合并空白、截断 —— 页胶片一行放不下长句。 */
