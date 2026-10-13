@@ -305,7 +305,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       run: async () => {
         await call('deck.close', { deckId: await active.get(call) })
         active.clear()
-        return json({})
+        return text('稿子已关上,应用回到了首页(同款画廊)。放映窗口如果开着也一并关了。')
       },
     },
     {
@@ -337,7 +337,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         )
         const slide = live?.slide
         return typeof slide === 'number'
-          ? text(`画布现在停在第 ${slide + 1} 页(slide=${slide})。`)
+          ? text(
+              `工作台画布现在停在第 ${slide + 1} 页(slide=${slide})。navigate 翻的是工作台画布,不是放映窗口。`,
+            )
           : text('已请求画布执行；画布还没报回页号，要确认就调 get_canvas_context。')
       },
     },

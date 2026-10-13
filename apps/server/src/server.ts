@@ -655,7 +655,7 @@ export async function startServer(
       }
       case 'deck.open': {
         const params = parseParams('deck.open', raw)
-        const opened = await openDeck(params.path)
+        const opened = await openDeck(expandHome(params.path))
 
         openDecks.set(opened.deck.id, opened.deck.path)
         const readOnly = await insideSkill(opened.deck.path)
@@ -707,7 +707,7 @@ export async function startServer(
       }
       case 'deck.create': {
         const params = parseParams('deck.create', raw)
-        const path = join(params.parentDir ?? DEFAULT_DECKS_DIR, slugify(params.title))
+        const path = join(expandHome(params.parentDir ?? DEFAULT_DECKS_DIR), slugify(params.title))
 
         if (params.from?.startsWith('recipe:')) {
           // 做同款:从同款的样稿起头,主题和配色沿用样稿的
@@ -1204,6 +1204,14 @@ function clip(text: string, max = 24): string {
  * 猜出来的地方每次不一样。稿子是磁盘上的普通目录,放在文稿里用户找得到、拿得走。
  */
 const DEFAULT_DECKS_DIR = join(homedir(), 'Documents', 'Orca PPT')
+
+/**
+ * agent 常写 `~/Documents/…`。不展开的话它会被当成相对路径,拼到 server 的工作目录下
+ * (`apps/desktop/~/Documents/…`),报一个让人摸不着头脑的 ENOENT。
+ */
+export function expandHome(path: string): string {
+  return path === '~' ? homedir() : path.startsWith('~/') ? join(homedir(), path.slice(2)) : path
+}
 
 const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.editText',
