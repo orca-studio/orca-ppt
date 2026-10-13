@@ -1,4 +1,4 @@
-// 开发时把 Electron.app 的 bundle 名字和图标改成 Orca PPT 的。
+// 开发时把 Electron.app 的 bundle 名字、bundle id 和图标改成 Orca PPT 的。
 //
 // 为什么非得动 bundle:macOS 最左边那个应用菜单的标题取自 `CFBundleName`,
 // `app.setName()` 和菜单模板里的 label 都改不动它 —— 不改就一直显示 "Electron"。
@@ -13,6 +13,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const NAME = 'Orca PPT'
+// 和发布版同一个 bundle id(docs/RELEASE.md)。Jevbot 这类按 bundle id 认应用的工具
+// (找窗口、虚拟鼠标、录屏)才认得出开发版,不用为开发版另开特例。
+const BUNDLE_ID = 'ai.orca-studio.ppt'
 
 if (process.platform !== 'darwin') process.exit(0)
 
@@ -47,6 +50,11 @@ if (read('CFBundleName') !== NAME) {
     const command = read(key) === undefined ? `Add :${key} string ${NAME}` : `Set :${key} ${NAME}`
     execFileSync('/usr/libexec/PlistBuddy', ['-c', command, plist])
   }
+  changed = true
+}
+
+if (read('CFBundleIdentifier') !== BUNDLE_ID) {
+  execFileSync('/usr/libexec/PlistBuddy', ['-c', `Set :CFBundleIdentifier ${BUNDLE_ID}`, plist])
   changed = true
 }
 
@@ -94,4 +102,4 @@ try {
   // 刷新不了就等下次启动
 }
 
-process.stdout.write(`开发用的 Electron 已改成 ${NAME} 的名字和图标\n`)
+process.stdout.write(`开发用的 Electron 已改成 ${NAME} 的名字、bundle id(${BUNDLE_ID})和图标\n`)
