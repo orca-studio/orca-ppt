@@ -329,6 +329,15 @@ it('MCP 截别的页之后把画布翻回人原来看的那一页', async () => 
   ])
 }, 10_000)
 
+it('MCP 放映不给页号就从第一页，stop_present 走 deck.stopPresent', async () => {
+  const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
+  const { map } = toolsOf(client)
+  await map.get('present')!.run({})
+  expect(calls).toContainEqual(['deck.present', { deckId: '/d' }])
+  await map.get('stop_present')!.run({})
+  expect(calls).toContainEqual(['deck.stopPresent', { deckId: '/d' }])
+})
+
 it('MCP 关掉稿子回首页', async () => {
   const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
   const { map } = toolsOf(client)

@@ -1146,3 +1146,29 @@ select:focus-visible {
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
 }
+
+/* ── 放映:主窗口全屏,只留画布 ─────────────────────────────────────
+   放的是工作台这块画布(agent 的 navigate 翻的就是它),不另开窗口 —— 另开的窗口录屏录不到。 */
+.app[data-presenting] {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.app[data-presenting] .toolbar,
+.app[data-presenting] .pane:not(.pane--stage),
+.app[data-presenting] .stage-lock {
+  display: none;
+}
+
+.app[data-presenting] .shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app[data-presenting] .stage {
+  padding: 0;
+  background: #000;
+}
+
+.app[data-presenting] .stage-frame {
+  border-radius: 0;
+  box-shadow: none;
+}

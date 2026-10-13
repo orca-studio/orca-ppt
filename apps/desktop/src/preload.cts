@@ -31,7 +31,8 @@ electron.contextBridge.exposeInMainWorld('orca', {
     electron.ipcRenderer.invoke('deck:thumbnails', input),
   renderPreview: (input: unknown): Promise<boolean> =>
     electron.ipcRenderer.invoke('deck:preview', input),
-  present: (input: unknown): Promise<boolean> => electron.ipcRenderer.invoke('deck:present', input),
+  present: (input: { on: boolean; fullscreen: boolean }): Promise<boolean> =>
+    electron.ipcRenderer.invoke('deck:present', input),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>
     electron.ipcRenderer.invoke('app:theme', source),
   onMenuAction: (handler: (action: string) => void): void => {

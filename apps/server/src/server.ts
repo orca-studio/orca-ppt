@@ -1047,7 +1047,14 @@ export async function startServer(
           deckId: params.deckId,
           previewUrl,
           slide: params.slide ?? 0,
+          fullscreen: params.fullscreen ?? false,
         })
+        return {}
+      }
+      case 'deck.stopPresent': {
+        const params = parseParams('deck.stopPresent', raw)
+        deckPathOf(params.deckId)
+        bus.broadcast('present.stop', { deckId: params.deckId })
         return {}
       }
       case 'deck.autoplay': {

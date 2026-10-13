@@ -938,12 +938,12 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
     },
     {
       name: 'present',
-      activity: (args) => ({ kind: 'read', label: '开始放映', slides: slideArg(args, 'from') }),
+      activity: (args) => ({ kind: 'read', label: '开始放映', slides: slideArg(args, 'slide') }),
       config: {
-        title: '全屏放映',
+        title: '放映',
         annotations: looking,
         description:
-          '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见 —— 截图看不出。',
+          '放映这份稿子:主窗口里只留画布、铺满窗口,从指定页开始(不给就从第一页)。默认不切系统全屏 —— 演示、联调时窗口不动;用户要对外展示才传 fullscreen: true。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见,截图看不出。放映中用 navigate 翻页(翻的就是正在放的这块画布),放完用 stop_present 退出;close_deck 也会顺带退出。',
         inputSchema: {
           slide: z
             .number()
@@ -954,14 +954,36 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
               '从第几页开始,从 0 数起(第 1 页传 0)。x-jevbot-format 只管界面上怎么显示给人看,不改这里的数法',
             )
             .meta({ title: '起始页', 'x-jevbot-format': 'one-based-index' }),
+          fullscreen: z
+            .boolean()
+            .optional()
+            .describe('切系统全屏。只在用户要对外展示时传 true;不给就在主窗口里放')
+            .meta({ title: '全屏' }),
         },
       },
       run: async (args) => {
         await call('deck.present', {
           deckId: await active.get(call),
           ...(args.slide === undefined ? {} : { slide: Number(args.slide) }),
+          ...(args.fullscreen === true ? { fullscreen: true } : {}),
         })
-        return text('已经全屏放映起来了。用户按 Esc 退出。')
+        return text(
+          (args.fullscreen === true ? '已经全屏放映。' : '已经在主窗口里放映(画布铺满窗口)。') +
+            '用 navigate 翻页,stop_present 退出;用户也可以按 Esc 退出。',
+        )
+      },
+    },
+    {
+      name: 'stop_present',
+      activity: () => ({ kind: 'read', label: '退出放映', slides: [] }),
+      config: {
+        title: '退出放映',
+        annotations: looking,
+        description: '退出全屏放映,回到工作台(和用户按 Esc 一样)。没在放映时调它也没关系。',
+      },
+      run: async () => {
+        await call('deck.stopPresent', { deckId: await active.get(call) })
+        return text('已经退出放映,回到工作台。')
       },
     },
     {

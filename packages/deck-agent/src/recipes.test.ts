@@ -46,6 +46,10 @@ describe('recipePrompt', () => {
     expect(prompt).toContain('不要从空白重写')
   })
 
+  it('样稿要读完 —— 一次返回不完,带着 next 接着读', () => {
+    expect(prompt).toContain('next 不为空就带着它接着读')
+  })
+
   it('自检要看图,点名 capture_slide,每一页都看', () => {
     expect(prompt).toContain('capture_slide')
     expect(prompt).toContain('每一页')
