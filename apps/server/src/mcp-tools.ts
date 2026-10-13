@@ -140,6 +140,9 @@ function slideArg(args: Record<string, unknown>, key = 'slide'): number[] {
 const nth = (slides: number[]) =>
   slides[0] === undefined ? '当前这一页' : `第 ${slides[0] + 1} 页`
 
+/** 翻页后等画布换页的时间。Reveal 一开始转场就换了当前页,不用等转场放完。 */
+const NAV_SETTLE_MS = 250
+
 export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[] {
   const canvasReads: ToolSpec[] = [
     [
@@ -318,12 +321,22 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         },
       },
       run: async (args) => {
+        const deckId = await active.get(call)
         await call('deck.navigation', {
-          deckId: await active.get(call),
+          deckId,
           action: args.action as 'next' | 'previous' | 'replay' | 'replayPage',
           ...(typeof args.from === 'number' ? { from: args.from } : {}),
         })
-        return text('已请求画布执行；完成后的页号请读取 deck_status。')
+        // 翻页是发给画布去做的。等它一拍,再从画布读回现在停在哪页 —— 不然 agent 还得
+        // 自己再调一次工具才知道,而 deck_status 里没有实时页号。
+        await new Promise((done) => setTimeout(done, NAV_SETTLE_MS))
+        const live = await call('canvas.inspect', { deckId, include: 'context' }).catch(
+          () => undefined,
+        )
+        const slide = live?.slide
+        return typeof slide === 'number'
+          ? text(`画布现在停在第 ${slide + 1} 页(slide=${slide})。`)
+          : text('已请求画布执行；画布还没报回页号，要确认就调 get_canvas_context。')
       },
     },
     {
@@ -369,7 +382,11 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         description:
           '新建稿子，可从 list_templates 选择起始模板并指定主题；做同款时 from 填 recipe:<同款 id>，复制一份同款样稿（主题、配色、素材沿用样稿的，theme 不生效）。省略 from 则建空目录。建完用 open_deck 打开。',
         inputSchema: {
-          parentDir: z.string().describe('放在哪个目录下').meta({ title: '保存位置' }),
+          parentDir: z
+            .string()
+            .optional()
+            .describe('放在哪个目录下。不给就放在 ~/Documents/Orca PPT/,别去猜别的路径')
+            .meta({ title: '保存位置' }),
           title: z.string().describe('deck 名字,会成为目录名').meta({ title: '稿子名称' }),
           from: z
             .string()
@@ -381,7 +398,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       run: async (args) => {
         const created = await call('deck.create', {
-          parentDir: String(args.parentDir),
+          ...(typeof args.parentDir === 'string' ? { parentDir: args.parentDir } : {}),
           title: String(args.title),
           ...(typeof args.from === 'string' ? { from: args.from } : {}),
           ...(typeof args.theme === 'string' ? { theme: args.theme } : {}),
@@ -494,7 +511,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
             .number()
             .int()
             .nonnegative()
-            .describe('页号,从 0 数起')
+            .describe(
+              '页号,从 0 数起(第 1 页传 0)。x-jevbot-format 只管界面上怎么显示给人看,不改这里的数法',
+            )
             .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
         },
       },
@@ -608,16 +627,18 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           openWorldHint: false,
         },
         description:
-          '在源文件里把某一页的一段文字精确换成新的,标签和属性一个不动 —— 改文案用它,比你自己编辑 HTML 稳,不会误伤 data-id / data-carry 这些转场靠的属性。`old_text` 要和页面上现在那段字**一模一样**。找不到、或者这一页里有好几处一样的,它会拒绝并告诉你为什么,那时候再自己动手。',
+          '在源文件里把某一页的一段文字精确换成新的,标签和属性一个不动 —— 改文案用它,比你自己编辑 HTML 稳,能撤销,不会误伤 data-id / data-carry 这些转场靠的属性。`old_text` 优先按**整段文字**认(「12」不会撞上「2021」),整段对不上才按一段字里的一部分找。`new_text` 留空就把只装着这段字的那个元素整个删掉(比如不要的数字行、单位行)。找不到、或者这一页里有好几处一样的,它会拒绝并告诉你为什么,那时候再自己动手。',
         inputSchema: {
           slide: z
             .number()
             .int()
             .nonnegative()
-            .describe('页号,从 0 数起')
+            .describe(
+              '页号,从 0 数起(第 1 页传 0)。x-jevbot-format 只管界面上怎么显示给人看,不改这里的数法',
+            )
             .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
           old_text: z.string().describe('现在那段文字,要一模一样').meta({ title: '原文字' }),
-          new_text: z.string().describe('换成什么').meta({ title: '替换为' }),
+          new_text: z.string().describe('换成什么;留空就删掉这个元素').meta({ title: '替换为' }),
         },
       },
       run: async (args) => {
@@ -929,7 +950,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
             .int()
             .nonnegative()
             .optional()
-            .describe('从第几页开始,从 0 数起')
+            .describe(
+              '从第几页开始,从 0 数起(第 1 页传 0)。x-jevbot-format 只管界面上怎么显示给人看,不改这里的数法',
+            )
             .meta({ title: '起始页', 'x-jevbot-format': 'one-based-index' }),
         },
       },
@@ -982,13 +1005,23 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
             .int()
             .nonnegative()
             .optional()
-            .describe('页号,从 0 数起')
+            .describe(
+              '页号,从 0 数起(第 1 页传 0)。x-jevbot-format 只管界面上怎么显示给人看,不改这里的数法',
+            )
             .meta({ title: '页码', 'x-jevbot-format': 'one-based-index' }),
         },
       },
       run: async (args) => {
         const deckId = await active.get(call)
+        // 截别的页要先把画布翻过去。截完翻回人原来看的那一页:不然 agent 逐页截一遍,
+        // 画布就停在最后截的那页,人看到的是「改完字自己跳到了第 7 页」
+        let back: number | undefined
         if (args.slide !== undefined) {
+          const before = await call('canvas.inspect', { deckId, include: 'context' }).catch(
+            () => undefined,
+          )
+          if (typeof before?.slide === 'number' && before.slide !== Number(args.slide))
+            back = before.slide
           await call('deck.showSlide', { deckId, index: Number(args.slide) })
           // 转场要放完才是那一页最终的样子。
           await new Promise((resolve) => setTimeout(resolve, 1400))
@@ -999,6 +1032,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           ...(typeof args.expected_revision === 'string'
             ? { expectedRevision: args.expected_revision }
             : {}),
+        }).finally(() => {
+          if (back !== undefined)
+            void call('deck.showSlide', { deckId, index: back }).catch(() => {})
         })
         // 图直接给,不只给路径:不是每个宿主都让 agent 读任意文件,而且多读一趟也白费。
         // 读不到就退回只给路径 —— 截图本身是成功的。

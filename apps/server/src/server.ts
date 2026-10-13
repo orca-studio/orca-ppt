@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { homedir } from 'node:os'
 import { basename, dirname, join, relative, isAbsolute, extname } from 'node:path'
 import {
   CanvasEvidence,
@@ -706,7 +707,7 @@ export async function startServer(
       }
       case 'deck.create': {
         const params = parseParams('deck.create', raw)
-        const path = join(params.parentDir, slugify(params.title))
+        const path = join(params.parentDir ?? DEFAULT_DECKS_DIR, slugify(params.title))
 
         if (params.from?.startsWith('recipe:')) {
           // 做同款:从同款的样稿起头,主题和配色沿用样稿的
@@ -1192,6 +1193,12 @@ function clip(text: string, max = 24): string {
  * agent 拿着稿子时,界面发来的这几个一律拒绝:它们都会改磁盘上的稿子。
  * 翻页、放映、指给 agent 看不在里面 —— 那些不改稿子,人随时能做。
  */
+/**
+ * agent 新建稿子没说放哪时的默认目录。不给默认值的话,agent 会从别的稿子路径里猜,
+ * 猜出来的地方每次不一样。稿子是磁盘上的普通目录,放在文稿里用户找得到、拿得走。
+ */
+const DEFAULT_DECKS_DIR = join(homedir(), 'Documents', 'Orca PPT')
+
 const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.editText',
   'deck.editPages',

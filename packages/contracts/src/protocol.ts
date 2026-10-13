@@ -315,7 +315,8 @@ export const requests = {
    */
   'deck.create': {
     params: z.object({
-      parentDir: z.string(),
+      /** 放在哪个目录下。不给就是 ~/Documents/Orca PPT(见 server 的 DEFAULT_DECKS_DIR)。 */
+      parentDir: z.string().optional(),
       title: z.string(),
       /** 起始文件 `template:<文件名>`,或做同款时的 `recipe:<同款 id>`(复制同款样稿)。 */
       from: z.string().optional(),

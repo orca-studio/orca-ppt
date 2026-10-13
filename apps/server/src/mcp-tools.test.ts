@@ -305,6 +305,30 @@ it('MCP 放映同款样稿后，接下来的工具对准样稿，不报 DOCUMENT
   })
 })
 
+it('MCP 翻页后直接报回画布停在哪一页', async () => {
+  const { client } = fakeClient({
+    'deck.current': { deckId: '/d' },
+    'canvas.inspect': { slide: 3 },
+  })
+  const { map } = toolsOf(client)
+  expect(textOf(await map.get('navigate')!.run({ action: 'next' }))).toContain('第 4 页(slide=3)')
+})
+
+it('MCP 截别的页之后把画布翻回人原来看的那一页', async () => {
+  const { client, calls } = fakeClient({
+    'deck.current': { deckId: '/d' },
+    'canvas.inspect': { slide: 2 },
+    'deck.capture': { path: '/nope.png', deckId: '/d', slide: 6 },
+  })
+  const { map } = toolsOf(client)
+  await map.get('capture_slide')!.run({ slide: 6 })
+  const shows = calls.filter(([method]) => method === 'deck.showSlide').map(([, p]) => p)
+  expect(shows).toEqual([
+    { deckId: '/d', index: 6 },
+    { deckId: '/d', index: 2 },
+  ])
+}, 10_000)
+
 it('MCP 关掉稿子回首页', async () => {
   const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
   const { map } = toolsOf(client)
@@ -325,6 +349,13 @@ it('MCP 新建透传 UI 的模板和主题，并提供同一个模板目录', as
     'deck.create',
     { parentDir: '/tmp', title: 'Test', from: 'blank', theme: 'forest' },
   ])
+})
+
+it('MCP 新建不给保存位置时不编一个，交给 server 的默认目录', async () => {
+  const { client, calls } = fakeClient({ 'deck.create': { path: '/x' } })
+  const { map } = toolsOf(client)
+  await map.get('create_deck')!.run({ title: 'Demo', from: 'recipe:ring-timeline' })
+  expect(calls).toContainEqual(['deck.create', { title: 'Demo', from: 'recipe:ring-timeline' }])
 })
 
 it('MCP 从同款新建时，告诉 agent 改了标题', async () => {
