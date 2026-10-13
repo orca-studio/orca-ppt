@@ -21,6 +21,7 @@ describe('recipePrompt', () => {
   it('不适用就直说,不编人名和数据', () => {
     expect(prompt).toContain('不适用')
     expect(prompt).toContain('不要编人名和数据')
+    expect(prompt).toContain('一条也别留')
   })
 
   it('没连上 Orca PPT 时,先转告怎么装、怎么连', () => {
