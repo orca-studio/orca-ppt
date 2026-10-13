@@ -950,7 +950,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       </div>
                       <button
                         type="button"
-                        aria-label={`第 ${index + 1} 页${animated ? `,转场:${entry.technique}` : ''}`}
+                        // 名字只写「第 N 页」:show_slide 让 Jevbot 按这个名字找按钮画光标,
+                        // 多一个后缀就对不上。转场说明放进 aria-description
+                        aria-label={`第 ${index + 1} 页`}
+                        aria-description={animated ? `转场:${entry.technique}` : undefined}
                         data-current={index === slide}
                         // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
                         // 写是「这儿被改了」,后者更要紧,也留得更久。
