@@ -207,7 +207,7 @@ async function finalize() {
   await mkdir(work, { recursive: true })
   run('ditto', ['-x', '-k', zip, work])
   const app = join(work, 'Orca PPT.app')
-  run('xcrun', ['stapler', 'staple', app])
+  await stapleWhenReady(app)
   run('spctl', ['--assess', '--type', 'execute', '--verbose', app])
   await rm(zip)
   run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip])
@@ -267,9 +267,9 @@ async function finalize() {
 }
 
 /**
- * 刚公证通过就 staple,票据常常还没同步到 Apple 的查询服务(CloudKit),stapler 报
- * 「network connection was lost」、退出码 68。0.1.3 发布时连着两次都卡在这里,
- * 而同一次运行里更早公证过的应用 staple 得好好的。所以失败了隔一会儿再试。
+ * stapler 要去 Apple 的查询服务(CloudKit)取票据,从 GitHub 的 runner 上经常连不稳:
+ * 报「network connection was lost」、退出码 68。0.1.3 卡在 dmg 那一步两次,0.1.4 卡在
+ * 应用那一步一次。应用和 dmg 都走这里,失败了隔一会儿再试。
  */
 async function stapleWhenReady(path, attempts = 8, waitMs = 30_000) {
   for (let i = 1; ; i++) {
