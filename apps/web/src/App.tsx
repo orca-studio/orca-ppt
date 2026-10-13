@@ -152,11 +152,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
         slideRef.current = nextSlide
         setSlide(nextSlide)
         if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(nextSlide)
-        setThumbs([])
+        // 旧缩略图留到新图出来:改一个字就整列清空再重画,左栏每次都闪一下
         thumbsVersion.current += 1
         clearTimeout(thumbTimer.current)
         thumbTimer.current = setTimeout(() => {
-          if (deckRef.current?.deck.id === data.deckId) void refreshThumbs(next, data.deckId)
+          if (deckRef.current?.deck.id === data.deckId)
+            void refreshThumbs(next, data.deckId, { keep: true })
         }, 250)
       }
     })
@@ -456,17 +457,27 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [serverUrl, openWith])
 
   /** 页胶片的缩略图。通过隐藏窗口生成，不驱动用户当前画布。 */
-  const refreshThumbs = useCallback(async (via: Transport, deckId: string) => {
-    const version = ++thumbsVersion.current
-    setThumbs([])
-    if (!window.orca?.renderThumbnails) return
-    try {
-      const { paths } = await via.request('deck.thumbnails', { deckId })
-      if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId) setThumbs(paths)
-    } catch {
-      if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId) setThumbs([])
-    }
-  }, [])
+  const refreshThumbs = useCallback(
+    async (via: Transport, deckId: string, options: { keep?: boolean } = {}) => {
+      const version = ++thumbsVersion.current
+      // 换了一份稿子才清空;同一份稿子改了内容,旧图先顶着
+      if (!options.keep) setThumbs([])
+      if (!window.orca?.renderThumbnails) return
+      try {
+        const { paths } = await via.request('deck.thumbnails', { deckId })
+        if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId)
+          setThumbs(paths)
+      } catch {
+        if (
+          !options.keep &&
+          version === thumbsVersion.current &&
+          deckRef.current?.deck.id === deckId
+        )
+          setThumbs([])
+      }
+    },
+    [],
+  )
 
   useEffect(
     () => () => {
@@ -877,6 +888,26 @@ export function App({ serverUrl }: { serverUrl: string }) {
         onHome={() => {
           if (deck) void transport.current?.request('deck.close', { deckId: deck.deck.id })
         }}
+        tools={
+          deck && (
+            <CanvasControls
+              history={history}
+              // 只读样稿上撤销 / 重做根本用不上,不摆;agent 拿着时照摆,只是灰着
+              showHistory={!deck.readOnly}
+              locked={readOnly}
+              onUndo={() => void stepHistory('undo')}
+              onRedo={() => void stepHistory('redo')}
+              picking={picking}
+              showPick={!deck.readOnly}
+              canPick={Boolean(deck?.previewUrl) && !readOnly}
+              onPick={() => {
+                if (!picking) return void pick()
+                stage.current?.cancelPick()
+                setPicking(false)
+              }}
+            />
+          )
+        }
       >
         <Pending requests={requests} crops={crops} />
         <AgentStatus
@@ -964,24 +995,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
                 </div>
               </div>
             </div>
-          )}
-          {deck && (
-            <CanvasControls
-              history={history}
-              // 只读样稿上撤销 / 重做根本用不上,不摆;agent 拿着时照摆,只是灰着
-              showHistory={!deck.readOnly}
-              locked={readOnly}
-              onUndo={() => void stepHistory('undo')}
-              onRedo={() => void stepHistory('redo')}
-              picking={picking}
-              showPick={!deck.readOnly}
-              canPick={Boolean(deck?.previewUrl) && !readOnly}
-              onPick={() => {
-                if (!picking) return void pick()
-                stage.current?.cancelPick()
-                setPicking(false)
-              }}
-            />
           )}
         </section>
 

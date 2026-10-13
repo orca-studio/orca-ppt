@@ -475,11 +475,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         return { ...result, x: host.x + result.x, y: host.y + result.y }
       },
       pick: async () => {
-        const result = await ref.current?.executeJavaScript('window.__orcaInspect.arm()')
+        const result = await ref.current?.executeJavaScript('window.__orcaInspect?.arm()')
         return (result as PickedAnchor | null) ?? null
       },
       cancelPick: () => {
-        void ref.current?.executeJavaScript('window.__orcaInspect.disarm()').catch(() => {})
+        void ref.current?.executeJavaScript('window.__orcaInspect?.disarm()').catch(() => {})
       },
       autoplay: (on: boolean) => {
         void ref.current
@@ -534,7 +534,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       slideInfo: async () => {
         const result = await ref.current
-          ?.executeJavaScript('window.__orcaInspect.slideInfo()')
+          ?.executeJavaScript('window.__orcaInspect?.slideInfo() ?? null')
           .catch(() => null)
         return (result as SlideInfo | null) ?? null
       },
