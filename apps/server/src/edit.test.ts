@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyTextEdit, escapeHtml } from './edit.js'
+import { applyPlanEdit, applyTextEdit, escapeHtml } from './edit.js'
 
 const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
 
@@ -124,5 +124,38 @@ describe('applyTextEdit', () => {
 describe('escapeHtml', () => {
   it('只转会改变结构的那三个', () => {
     expect(escapeHtml('a & b < c > d "e"')).toBe('a &amp; b &lt; c &gt; d "e"')
+  })
+})
+
+describe('applyPlanEdit', () => {
+  const html = [
+    '<!-- 转场计划（主题 Clearing）',
+    '1→2  关系:同一个圆环  手法:神奇移动',
+    '示例内容：北岸软件是虚构的公司。',
+    '-->',
+    '<div class="slides"><section><p>北岸软件</p></section></div>',
+  ].join('\n')
+
+  it('只换注释里那一处,页面里同样的字不动', () => {
+    const result = applyPlanEdit(html, { oldText: '示例内容：北岸软件是虚构的公司。', newText: '' })
+    expect(result.ok).toBe(true)
+    expect(result.ok && result.html).not.toContain('虚构的公司')
+    expect(result.ok && result.html).toContain('<p>北岸软件</p>')
+  })
+
+  it('注释里有好几处、或者找不到,都拒绝', () => {
+    const twice = html.replace('同一个圆环', '北岸软件')
+    expect(applyPlanEdit(twice, { oldText: '北岸软件', newText: 'x' }).ok).toBe(false)
+    expect(applyPlanEdit(html, { oldText: '没有这句', newText: 'x' }).ok).toBe(false)
+  })
+
+  it('新文字带 -- 就拒绝:注释会提前结束,计划漏进页面', () => {
+    const result = applyPlanEdit(html, { oldText: '神奇移动', newText: 'a -- b' })
+    expect(result.ok).toBe(false)
+  })
+
+  it('没有转场计划注释就直说', () => {
+    const result = applyPlanEdit('<div class="slides"></div>', { oldText: 'a', newText: 'b' })
+    expect(result.ok || result.reason).toContain('没有转场计划')
   })
 })

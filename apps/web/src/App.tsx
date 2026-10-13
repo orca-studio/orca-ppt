@@ -9,7 +9,7 @@ import type {
 } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
-import { Gallery, type Recipe, type Theme } from './Gallery.js'
+import { Gallery, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
 import { Inspector } from './Inspector.js'
 import { clampInspectorWidth, readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
@@ -56,6 +56,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [layout, setLayout] = useState<Layout>(readLayout)
+  /** agent 在首页指着的同款(preview_recipe / show_recipe_prompt)。seq 让同一个请求再发一次也生效。 */
+  const [recipeFocus, setRecipeFocus] = useState<RecipeFocus>()
   const [selection, setSelection] = useState<CanvasElement | null>(null)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
@@ -110,6 +112,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     // agent 开了一份稿子,窗口跟着开。已经开着这份就不动 —— 免得把当前页跳回第一页。
     next.subscribe('deck.opened', (data) => {
+      // 进了工作台,首页上指着的那张卡就作废了 —— 回首页时不该又自己弹出来
+      setRecipeFocus(undefined)
       if (deckRef.current?.deck.id === data.deckId) return
       void openWith(next, data.path)
     })
@@ -200,6 +204,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
       void window.orca?.present?.({ previewUrl: data.previewUrl, slide: data.slide })
+    })
+    next.subscribe('recipe.focus', (data) => {
+      setRecipeFocus((current) => ({ ...data, seq: (current?.seq ?? 0) + 1 }))
     })
     // agent 的 stop_present:关掉放映窗口
     next.subscribe('present.stop', (data) => {
@@ -887,6 +894,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       <div className="app app--gallery">
         <Gallery
           recipes={recipes}
+          focus={recipeFocus}
           error={error}
           onPresent={(id) => {
             void transport.current

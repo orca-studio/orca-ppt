@@ -79,6 +79,31 @@ export function applyTextEdit(html: string, edit: TextEdit): EditResult {
   return done(section.slice(0, at) + escapeHtml(newText) + section.slice(at + target.length))
 }
 
+/**
+ * 改转场计划注释里的一段字。注释在页面之外,`applyTextEdit` 只看页面,够不着它。
+ *
+ * 同样拿旧文字当锚、恰好一处才换。注释里不转义(那不是标记),但新文字不许带 `--`:
+ * 带了注释就提前结束,后面的计划会漏进页面里显示出来。
+ */
+export function applyPlanEdit(
+  html: string,
+  edit: { oldText: string; newText: string },
+): EditResult {
+  const comment = /<!--\s*转场计划[\s\S]*?-->/.exec(html)
+  if (!comment) return { ok: false, reason: '这份稿子没有转场计划注释' }
+  const oldText = edit.oldText.trim()
+  const newText = edit.newText.trim()
+  if (!oldText) return { ok: false, reason: '原文是空的,没法定位' }
+  if (newText.includes('--')) return { ok: false, reason: '新文字里不能有「--」,它会提前结束注释' }
+  if (oldText === newText) return { ok: true, html }
+  const body = comment[0]
+  const count = countOccurrences(body, oldText)
+  if (count === 0) return { ok: false, reason: '转场计划注释里找不到那段文字' }
+  if (count > 1) return { ok: false, reason: '转场计划注释里有好几处一样的文字,认不准是哪一处' }
+  const at = comment.index + body.indexOf(oldText)
+  return { ok: true, html: html.slice(0, at) + newText + html.slice(at + oldText.length) }
+}
+
 /** 标签之间的一段文字,带它在 section 里的起止位置。注释、脚本、样式里的不算。 */
 function textNodes(section: string): Array<{ text: string; start: number; end: number }> {
   const masked = section.replace(/<!--[\s\S]*?-->|<(script|style)\b[\s\S]*?<\/\1>/gi, (m) =>

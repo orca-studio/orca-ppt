@@ -9,6 +9,9 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
  * 界面里有、这里没有的操作,不许存在(见 docs/ARCHITECTURE.md)。
  */
 
+/** 首页上指着一个同款时给人看什么。 */
+export const RecipeFocusShow = z.enum(['preview', 'prompt', 'none'])
+
 export const VisualRequest = z.object({
   action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo']),
   arguments: z.record(z.string(), z.unknown()),
@@ -385,6 +388,14 @@ export const requests = {
     /** 打开的样稿。agent 调的话,它接下来操作的就是这一份(见 MCP 的 present_recipe)。 */
     result: z.object({ deckId: z.string() }),
   },
+  /**
+   * 首页上指着某个同款给人看:播它的样片(和鼠标悬停一样),或者打开它的「做同款」提示词
+   * (和点那个按钮一样)。`none` 收起。开着稿子的话先关掉回首页 —— 这两样只在首页上有。
+   */
+  'recipe.focus': {
+    params: z.object({ id: z.string(), show: RecipeFocusShow }),
+    result: z.object({}),
+  },
   /** 关掉这份稿子,回首页。工具栏左上角的「首页」走它。 */
   'deck.close': {
     params: z.object({ deckId: z.string() }),
@@ -450,6 +461,14 @@ export const requests = {
       oldText: z.string(),
       newText: z.string(),
     }),
+    result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
+  },
+  /**
+   * 改转场计划注释里的一段字(注释在页面之外,editText 够不着)。和 editText 一样拿旧文字
+   * 当锚,恰好出现一次才换,能撤销。只动注释,页面一个字节不碰。
+   */
+  'deck.editPlan': {
+    params: z.object({ deckId: z.string(), oldText: z.string(), newText: z.string() }),
     result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
   },
   /**
@@ -862,6 +881,8 @@ export const pushes = {
   }),
   /** 关掉放映窗口。 */
   'present.stop': z.object({ deckId: z.string() }),
+  /** 首页上指着某个同款:播样片 / 打开「做同款」提示词 / 收起。见 `recipe.focus` 方法。 */
+  'recipe.focus': z.object({ id: z.string(), show: RecipeFocusShow }),
   /**
    * agent 通过 MCP 动了一下。**agent 代替人执行,那它做的事就该和人做的一样看得见** ——
    * 否则画布自己翻页、文字自己变了,人只能干看着猜。

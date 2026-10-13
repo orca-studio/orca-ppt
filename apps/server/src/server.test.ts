@@ -172,6 +172,34 @@ describe('deck.editText', () => {
   })
 })
 
+describe('deck.editPlan', () => {
+  it('改转场计划注释里的一句,能撤销', async () => {
+    const plan = '<!-- 转场计划\n示例内容：北岸软件是虚构的公司。\n-->\n'
+    const { dir, id } = await builtDeck(
+      `${plan}<div class="slides"><section><p>北岸软件</p></section></div>`,
+    )
+    const file = join(dir, 'deck.html')
+    const original = await readFile(file, 'utf8')
+    const response = await call('deck.editPlan', {
+      deckId: id,
+      oldText: '北岸软件是虚构的公司。',
+      newText: '素材来自用户的年报。',
+    })
+    expect(response.data).toEqual({ ok: true })
+    const edited = await readFile(file, 'utf8')
+    expect(edited).toContain('示例内容：素材来自用户的年报。')
+    expect(edited).toContain('<p>北岸软件</p>')
+    expect((await call('deck.undo', { deckId: id })).data.ok).toBe(true)
+    expect(await readFile(file, 'utf8')).toBe(original)
+  })
+})
+
+describe('recipe.focus', () => {
+  it('没有这个同款就报错', async () => {
+    expect((await call('recipe.focus', { id: 'no-such-recipe', show: 'preview' })).ok).toBe(false)
+  })
+})
+
 describe('撤销 / 重做', () => {
   const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
 

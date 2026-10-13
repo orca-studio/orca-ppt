@@ -338,6 +338,40 @@ it('MCP 放映不给页号就从第一页，stop_present 走 deck.stopPresent', 
   expect(calls).toContainEqual(['deck.stopPresent', { deckId: '/d' }])
 })
 
+it('MCP 在首页指着同款:播样片、打开做同款,都走 recipe.focus', async () => {
+  const { client, calls } = fakeClient()
+  const { map } = toolsOf(client)
+  await map.get('preview_recipe')!.run({ id: 'ring-timeline' })
+  await map.get('preview_recipe')!.run({ id: 'ring-timeline', on: false })
+  await map.get('show_recipe_prompt')!.run({ id: 'ring-timeline' })
+  await map.get('show_recipe_prompt')!.run({ id: 'ring-timeline', open: false })
+  expect(calls.filter(([method]) => method === 'recipe.focus').map(([, p]) => p)).toEqual([
+    { id: 'ring-timeline', show: 'preview' },
+    { id: 'ring-timeline', show: 'none' },
+    { id: 'ring-timeline', show: 'prompt' },
+    { id: 'ring-timeline', show: 'none' },
+  ])
+})
+
+it('MCP 改转场计划走 deck.editPlan,对不上就拒绝', async () => {
+  const responses: Record<string, unknown> = {
+    'deck.current': { deckId: '/d' },
+    'deck.editPlan': { ok: true },
+  }
+  const { client, calls } = fakeClient(responses)
+  const { map } = toolsOf(client)
+  expect(textOf(await map.get('edit_plan')!.run({ old_text: '北岸软件', new_text: '' }))).toContain(
+    '改好了',
+  )
+  expect(calls).toContainEqual([
+    'deck.editPlan',
+    { deckId: '/d', oldText: '北岸软件', newText: '' },
+  ])
+  responses['deck.editPlan'] = { ok: false, reason: '转场计划注释里找不到那段文字' }
+  const refused = await map.get('edit_plan')!.run({ old_text: 'x', new_text: 'y' })
+  expect(textOf(refused)).toContain('找不到')
+})
+
 it('MCP 关掉稿子回首页', async () => {
   const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
   const { map } = toolsOf(client)

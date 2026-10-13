@@ -295,6 +295,55 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'preview_recipe',
+      activity: (args) => ({
+        kind: 'read',
+        label: args.on === false ? '停掉同款样片' : '播放同款样片',
+        slides: [],
+      }),
+      config: {
+        title: '播放同款样片',
+        annotations: looking,
+        description:
+          '在首页播某个同款卡片上的样片，和鼠标停在卡片上一样。给用户介绍同款、挑同款时用。开着稿子的话应用会先关掉它回首页。on=false 停下。id 来自 list_recipes。',
+        inputSchema: {
+          id: z.string().describe('list_recipes 返回的同款 id'),
+          on: z.boolean().optional().describe('不给就是播;false 停下').meta({ title: '播放' }),
+        },
+      },
+      run: async (args) => {
+        const on = args.on !== false
+        await call('recipe.focus', { id: String(args.id), show: on ? 'preview' : 'none' })
+        // 开着的稿子被关了(首页才有样片),接下来要操作稿子得重新打开
+        if (on) active.clear()
+        return text(on ? '首页上这张同款卡片在播样片了。' : '样片停了。')
+      },
+    },
+    {
+      name: 'show_recipe_prompt',
+      activity: (args) => ({
+        kind: 'read',
+        label: args.open === false ? '收起做同款提示词' : '打开做同款提示词',
+        slides: [],
+      }),
+      config: {
+        title: '打开做同款提示词',
+        annotations: looking,
+        description:
+          '在首页打开某个同款的「做同款」弹窗，用户能看到并复制那段提示词，和点卡片上的「做同款」一样。开着稿子的话应用会先关掉它回首页。open=false 收起。提示词正文 list_recipes 里也有。',
+        inputSchema: {
+          id: z.string().describe('list_recipes 返回的同款 id'),
+          open: z.boolean().optional().describe('不给就是打开;false 收起').meta({ title: '打开' }),
+        },
+      },
+      run: async (args) => {
+        const open = args.open !== false
+        await call('recipe.focus', { id: String(args.id), show: open ? 'prompt' : 'none' })
+        if (open) active.clear()
+        return text(open ? '首页上这个同款的「做同款」弹窗打开了。' : '弹窗收起了。')
+      },
+    },
+    {
       name: 'close_deck',
       activity: () => ({ kind: 'read', label: '回首页', slides: [] }),
       config: {
@@ -654,6 +703,39 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         })
         if (!result.ok) return refuse(tag('没改:', result.reason))
         return text(`第 ${Number(args.slide) + 1} 页改好了。`)
+      },
+    },
+    {
+      name: 'edit_plan',
+      activity: (args) => ({
+        kind: 'write',
+        label: '改转场计划',
+        slides: [],
+        ...(typeof args.new_text === 'string' ? { hint: args.new_text } : {}),
+      }),
+      config: {
+        title: '改转场计划里的一句',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+        description:
+          '把稿子开头「转场计划」注释里的一段字精确换掉 —— 页面之外的字 edit_text 够不着,比如做同款后注释里还留着样稿的示例公司、示例说明。只改注释,页面一个字节不动,能撤销。找不到、或者有好几处一样的,它会拒绝。',
+        inputSchema: {
+          old_text: z.string().describe('注释里现在那段文字,要一模一样').meta({ title: '原文字' }),
+          new_text: z.string().describe('换成什么;留空就删掉这段字').meta({ title: '替换为' }),
+        },
+      },
+      run: async (args) => {
+        const result = await call('deck.editPlan', {
+          deckId: await active.get(call),
+          oldText: String(args.old_text),
+          newText: String(args.new_text),
+        })
+        if (!result.ok) return refuse(tag('没改:', result.reason))
+        return text('转场计划改好了。')
       },
     },
     {

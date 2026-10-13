@@ -24,7 +24,7 @@ import {
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { DeckWatcher } from './deck-watch.js'
-import { applyTextEdit } from './edit.js'
+import { applyPlanEdit, applyTextEdit } from './edit.js'
 import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
@@ -750,6 +750,19 @@ export async function startServer(
         }
         return { deckId: opened.deck.id }
       }
+      case 'recipe.focus': {
+        const params = parseParams('recipe.focus', raw)
+        const recipes = await listRecipes(catalog.skillPath)
+        if (!recipes.some((recipe) => recipe.id === params.id))
+          throw new Error(`RECIPE_NOT_FOUND: 没有这个同款:${params.id}`)
+        // 样片和「做同款」只在首页上有:开着稿子就先关掉,和点「首页」一样
+        if (params.show !== 'none') {
+          for (const deckId of [...openDecks.keys()])
+            await dispatchUnlocked('deck.close', { deckId })
+        }
+        bus.broadcast('recipe.focus', { id: params.id, show: params.show })
+        return {}
+      }
       case 'catalog.recipes': {
         parseParams('catalog.recipes', raw)
         // 每次现读:写配方、改样稿时不用重启应用就能在首页看到。
@@ -900,6 +913,36 @@ export async function startServer(
           })
         }
         // 不用在这儿广播:文件一变,看稿子的 watcher 自己会推 deck.changed。
+        return { ok: true }
+      }
+      case 'deck.editPlan': {
+        const params = parseParams('deck.editPlan', raw)
+        const root = deckPathOf(params.deckId)
+        const name = await findEntryName(root)
+        if (!name) return { ok: false, reason: AgentError.noBuild() }
+
+        const file = join(root, name)
+        const html = await readFile(file, 'utf8')
+        const result = applyPlanEdit(html, { oldText: params.oldText, newText: params.newText })
+        if (!result.ok) return { ok: false, reason: result.reason }
+        if (result.html !== html) {
+          const summary = `转场计划「${clip(params.oldText)}」→「${clip(params.newText)}」`
+          await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
+          // 带 label:撤的时候要求整份还是改完的样子才还回去,不按页去找那段字
+          historyOf(params.deckId).record({
+            slide: 0,
+            oldText: params.oldText.trim(),
+            newText: params.newText.trim(),
+            before: html,
+            after: result.html,
+            label: summary,
+          })
+          announceHistory(params.deckId)
+          await recordChange(params.deckId, {
+            summary: `把${summary}`,
+            detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
+          })
+        }
         return { ok: true }
       }
       case 'deck.undo': {

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import type { RequestResult } from '@orca-ppt/contracts'
+import type { PushData, RequestResult } from '@orca-ppt/contracts'
 import { Button } from './ui/Button.js'
 import { assetUrl } from './assets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
 export type Recipe = RequestResult<'catalog.recipes'>['recipes'][number]
+/** agent 在首页指着的同款:播样片还是打开「做同款」。seq 每来一次请求加一。 */
+export type RecipeFocus = PushData<'recipe.focus'> & { seq: number }
 
 /**
  * 没有打开稿子时的首屏:**同款画廊**。看样片,在卡片右上角复制「做同款」的提示词,贴进
@@ -19,10 +21,12 @@ export interface GalleryProps {
   recipes: Recipe[] | undefined
   /** 点卡片:在工作台里打开这个同款的样稿(只读)。 */
   onPresent: (id: string) => void
+  /** agent 指着的同款(preview_recipe / show_recipe_prompt),和人悬停、点按钮效果一样。 */
+  focus?: RecipeFocus | undefined
   error: string | undefined
 }
 
-export function Gallery({ recipes, onPresent, error }: GalleryProps) {
+export function Gallery({ recipes, onPresent, focus, error }: GalleryProps) {
   return (
     <div className="gallery">
       {/* 不放标题:首页只有同款卡片,「做同款」卡片上已经写着。这一条只当窗口拖动区 */}
@@ -37,7 +41,15 @@ export function Gallery({ recipes, onPresent, error }: GalleryProps) {
         ) : (
           <div className="gallery-grid gallery-grid--recipes">
             {recipes.map((item) => (
-              <RecipeCard key={item.id} recipe={item} onPresent={() => onPresent(item.id)} />
+              <RecipeCard
+                key={item.id}
+                recipe={item}
+                onPresent={() => onPresent(item.id)}
+                // 指着别的卡也算一次「收起」:同一时间只指一张
+                focus={
+                  focus && { show: focus.id === item.id ? focus.show : 'none', seq: focus.seq }
+                }
+              />
             ))}
           </div>
         )}
@@ -52,20 +64,42 @@ export function Gallery({ recipes, onPresent, error }: GalleryProps) {
  * 样片悬停才播:一屏好几段视频同时放,既吵又费电。触屏没有悬停(点一下会误触发),
  * 用户开了减少动效也不自动播 —— 封面已经说明了这个同款长什么样。
  */
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const canPreview = () =>
-  matchMedia('(hover: hover) and (pointer: fine)').matches &&
-  !matchMedia('(prefers-reduced-motion: reduce)').matches
+  matchMedia('(hover: hover) and (pointer: fine)').matches && !reducedMotion()
 
 /** 一张同款卡。 */
-function RecipeCard({ recipe, onPresent }: { recipe: Recipe; onPresent: () => void }) {
+function RecipeCard({
+  recipe,
+  onPresent,
+  focus,
+}: {
+  recipe: Recipe
+  onPresent: () => void
+  focus: Pick<RecipeFocus, 'show' | 'seq'> | undefined
+}) {
+  const card = useRef<HTMLElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const [hover, setHover] = useState(false)
+  // agent 让播的样片。和悬停分开记:人把鼠标移开不该打断 agent 正在给人看的那段
+  const [pointed, setPointed] = useState(false)
   const [open, setOpen] = useState(false)
+
+  // agent 指过来:每来一次请求(seq)照做一次,人中途按 Esc 收起后再请求也能再打开
+  useEffect(() => {
+    if (!focus) return
+    setPointed(focus.show === 'preview')
+    setOpen(focus.show === 'prompt')
+    if (focus.show !== 'none')
+      card.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [focus?.seq, focus?.show])
+
+  const playing = (hover && canPreview()) || (pointed && !reducedMotion())
 
   useEffect(() => {
     const el = video.current
     if (!el) return
-    if (hover && canPreview()) {
+    if (playing) {
       void el.play().catch(() => {})
       return
     }
@@ -76,13 +110,18 @@ function RecipeCard({ recipe, onPresent }: { recipe: Recipe; onPresent: () => vo
       el.load()
     }
     // 样片换了(缓存刚录好)也要重新判断:鼠标正停在卡片上时,新换上来的元素该接着播
-  }, [hover, recipe.preview])
+  }, [playing, recipe.preview])
 
   return (
     <article
+      ref={card}
       className="gallery-recipe"
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseLeave={() => {
+        setHover(false)
+        // 人自己摸过这张卡,agent 让播的那一段就算看完了
+        setPointed(false)
+      }}
     >
       <div className="gallery-media">
         {/* 样片区整块是打开样稿的按钮;「做同款」压在右上角,和它是兄弟不是子元素(按钮里不能套按钮) */}
