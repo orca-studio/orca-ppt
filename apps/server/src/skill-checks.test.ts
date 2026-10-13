@@ -2,7 +2,11 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
+import { readPageTypes } from './decks.js'
+import { listRecipes, recipeEntry } from './recipes.js'
+import { checkDeck, readSpec } from './spec-check.js'
 
 /**
  * skill 自带的检查，跟着 `pnpm test` 一起跑。前两个是静态检查，跟着 `pnpm test` 一起跑：
@@ -42,4 +46,23 @@ describe('skill 静态检查', () => {
     }
     expect(result.status, result.stdout + result.stderr).toBe(0)
   }, 180_000)
+
+  /*
+   * 应用里的出稿检查(spec-check)和 check-deck 是两份实现,走样过:环形时间轴的扇形
+   * 故意出血,check-deck 认得,应用里却报了 21 条越界,agent 只能自己判断是误报。
+   * 同款样稿在两边都必须 0 条。
+   */
+  it('同款样稿在应用的出稿检查里也是 0 条(spec-check)', async () => {
+    const spec = await readSpec(skill)
+    const found: string[] = []
+    for (const recipe of await listRecipes(skill)) {
+      const sample = await recipeEntry(skill, recipe.id)
+      if (!sample) continue
+      const html = await readFile(sample.entry, 'utf8')
+      for (const issue of checkDeck(html, readPageTypes(html), spec)) {
+        found.push(`${recipe.id} 第 ${issue.slide + 1} 页:${issue.message}`)
+      }
+    }
+    expect(found).toEqual([])
+  })
 })

@@ -32,6 +32,8 @@ export interface SpecIssue {
 /** skill 的 `runtime/spec.json`:visual-spec.md 里写死的数字。 */
 export interface Spec {
   safeArea: { left: number; right: number; top: number; bottom: number }
+  /** 四栏产品切换(`data-demo="product-showcase"`)的局部安全区。 */
+  showcaseSafeArea?: { left: number; right: number; top: number; bottom: number }
   safeAreaExempt: string[]
   /** Bento 的四列,时间线的节点也用同一套 —— 两页之间才接得上。 */
   columns: number[]
@@ -59,6 +61,8 @@ export function checkDeck(
   if (!spec) return []
   const issues: SpecIssue[] = []
   const sections = sliceSections(html)
+  // 四栏产品切换是全出血的参考案例,有自己的安全区(product-showcase.md),和 check-deck 一样认 data-demo
+  const showcase = /<html[^>]*data-demo="product-showcase"/.test(html)
   // 每页的 data-id,判断「画外待命」要看别的页有没有配对
   const ids = sections.map(
     (section) => new Set([...section.matchAll(/data-id="([^"]+)"/g)].map((m) => m[1])),
@@ -67,7 +71,7 @@ export function checkDeck(
     const type = pageTypes[slide] ?? null
     const add = (message: string) => issues.push({ slide, message })
     const pairedElsewhere = (id: string) => ids.some((set, other) => other !== slide && set.has(id))
-    checkSafeArea(section, spec, pairedElsewhere, add)
+    checkSafeArea(section, spec, showcase, pairedElsewhere, add)
     if (type === 'bars') checkBars(section, spec, add)
     if (type === 'timeline') checkTimeline(section, spec, add)
     if (type === 'bento') checkBento(section, spec, add)
@@ -87,10 +91,26 @@ interface Box {
   raw: string
 }
 
-function boxes(section: string): Box[] {
-  const found: Box[] = []
-  for (const match of section.matchAll(/<(\w+)\b([^>]*)>/g)) {
-    const attrs = match[2] ?? ''
+/** 没有结束标签的元素:不算进嵌套深度。 */
+const VOID = new Set(['img', 'br', 'hr', 'input', 'meta', 'link', 'source', 'col', 'wbr', 'area'])
+
+/**
+ * 页面里带绝对坐标的元素,带上嵌套深度(section 自己是 0,直接子元素是 1)。
+ * 嵌套元素的 left / top 是相对外层盒子的,不是画布坐标 —— 手电筒的灯头写在灯这个组里,
+ * `left:52` 是在灯里的位置,拿去和安全区比就是误报。
+ */
+function boxes(section: string): Array<Box & { depth: number }> {
+  const found: Array<Box & { depth: number }> = []
+  let depth = 0
+  for (const match of section.matchAll(/<(\/?)(\w+)\b([^>]*)>/g)) {
+    const tag = (match[2] ?? '').toLowerCase()
+    if (match[1]) {
+      depth = Math.max(0, depth - 1)
+      continue
+    }
+    const here = depth
+    if (!VOID.has(tag) && !(match[3] ?? '').trimEnd().endsWith('/')) depth += 1
+    const attrs = match[3] ?? ''
     const style = attrs.match(/style="([^"]*)"/)?.[1]
     if (!style) continue
     const px = (name: string) => {
@@ -98,7 +118,8 @@ function boxes(section: string): Box[] {
       return value === undefined ? undefined : Number(value)
     }
     found.push({
-      tag: match[1] ?? '',
+      depth: here,
+      tag,
       cls: attrs.match(/class="([^"]*)"/)?.[1] ?? '',
       left: px('left'),
       top: px('top'),
@@ -116,7 +137,9 @@ function boxes(section: string): Box[] {
  * **必须真的铺满**:一开始我把「没写 width」也算进来,结果 `left:0` 的文字全被放行了 ——
  * 那正是要抓的东西。
  */
-const fullBleed = (box: Box) => box.width === 1920 || box.height === 1080
+// 和 check-deck 的 isFullBleed 同一条:宽或高不小于画布就是整页形状(环形时间轴的扇形
+// 1160×1160,圆心贴边、故意出血)。以前只认正好等于画布,比画布大的反而被判越界。
+const fullBleed = (box: Box) => (box.width ?? 0) >= 1919 || (box.height ?? 0) >= 1079
 
 /**
  * 安全区不管的几个类(`spec.safeAreaExempt`):
@@ -137,26 +160,38 @@ const offstage = (box: Box) =>
 function checkSafeArea(
   section: string,
   spec: Spec,
+  showcase: boolean,
   pairedElsewhere: (id: string) => boolean,
   add: (message: string) => void,
 ): void {
-  const SAFE = spec.safeArea
+  const SAFE = showcase && spec.showcaseSafeArea ? spec.showcaseSafeArea : spec.safeArea
+  // 容差和 check-deck 一样是 8px:2px 的细线压在边界上、描边撑出来的几像素不是构图错误
+  const SLACK = 8
   for (const box of boxes(section)) {
+    if (box.depth !== 1) continue
     if (fullBleed(box)) continue
     if (box.cls.split(' ').some((name) => spec.safeAreaExempt.includes(name))) continue
     const id = box.raw.match(/data-id="([^"]+)"/)?.[1]
     if (id && offstage(box) && pairedElsewhere(id)) continue
     const where = box.cls ? `.${box.cls.split(' ')[0]}` : `<${box.tag}>`
-    if (box.left !== undefined && box.left < SAFE.left) {
+    if (box.left !== undefined && box.left < SAFE.left - SLACK) {
       add(`${where} 的 left ${box.left} 越过左安全区(${SAFE.left})`)
     }
-    if (box.left !== undefined && box.width !== undefined && box.left + box.width > SAFE.right) {
+    if (
+      box.left !== undefined &&
+      box.width !== undefined &&
+      box.left + box.width > SAFE.right + SLACK
+    ) {
       add(`${where} 右边到 ${box.left + box.width},越过右安全区(${SAFE.right})`)
     }
-    if (box.top !== undefined && box.top < SAFE.top) {
+    if (box.top !== undefined && box.top < SAFE.top - SLACK) {
       add(`${where} 的 top ${box.top} 越过上安全区(${SAFE.top})`)
     }
-    if (box.top !== undefined && box.height !== undefined && box.top + box.height > SAFE.bottom) {
+    if (
+      box.top !== undefined &&
+      box.height !== undefined &&
+      box.top + box.height > SAFE.bottom + SLACK
+    ) {
       add(`${where} 底边到 ${box.top + box.height},越过下安全区(${SAFE.bottom})`)
     }
   }
@@ -164,7 +199,10 @@ function checkSafeArea(
 
 function checkBars(section: string, spec: Spec, add: (message: string) => void): void {
   const { left, height, maxRows } = spec.bars
-  const bars = boxes(section).filter((box) => box.raw.includes('data-enter="grow-right"'))
+  // 上一页的轴形态变换成最长的那条时,它写 data-id="axis" 而不写 grow-right,也是一条
+  const bars = boxes(section).filter(
+    (box) => box.raw.includes('data-enter="grow-right"') || box.raw.includes('data-id="axis"'),
+  )
   if (bars.length === 0) {
     add('横向条形图页:一条 data-enter="grow-right" 的条都没有')
     return

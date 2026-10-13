@@ -42,6 +42,11 @@ describe('安全区', () => {
     expect(msgs(html, [null])).toEqual([])
   })
 
+  it('比画布还大的形状也是整页形状 —— 环形时间轴的扇形圆心贴边、故意出血', () => {
+    const wedge = `<div class="s-accent" style="left:-460px; top:-40px; width:1160px; height:1160px;"></div>`
+    expect(msgs(deck(`<section>${wedge}</section>`), [null])).toEqual([])
+  })
+
   it('镂空聚焦的圈不算 —— 它按被聚焦的东西定位,算越界是误报', () => {
     const html = deck(
       '<section><div class="s-spot" style="left:60px; top:900px; width:400px; height:400px;"></div></section>',
