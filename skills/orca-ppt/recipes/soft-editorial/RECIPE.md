@@ -61,16 +61,16 @@ cover: 3.5
 tokens.css → themes/soft-editorial.css → palettes/sage.css
 ```
 
-样稿版式 `data-layout="standard"`，画布 1920×1080，左右边距 120，卡片顶 `top:200`、底 `880`。
+坐标看样稿 `examples/soft-editorial/index.html`（做同款时 create_deck 会复制它）。
 
-| 页 | 状态 |
+| 页 | 主角 |
 | --- | --- |
-| 1 封面 | `.t-display` 刊名居中 `top:400`，副标题 `.t-body` `top:600`；下面一枚黄绿胶囊 `.s-surface`（left 760 top 720，400×80，`data-split="cards"`），里面一行 `.t-label .t-on-surface`。**不写** `data-auto-animate` |
-| 2 洞察 | 三张等宽卡并排：`c1` 粉 `.s-accent`（left 120）、`c2` 黄绿 `.s-surface`（left 680）、`c3` 桃 `.s-accent-soft`（left 1240），各 520×680、间距 40；三张同时写 `data-split="cards"`（顺序 c1, c2, c3）。卡上各一组 label + `.t-h2` + `.t-body`。这一页写 `data-st="split"` 加 `data-auto-animate` |
-| 3 数字 | 同三张卡换布局：`c2` 撑成左侧 1040×680 大面板放主数字（`.t-metric`）；`c1` 缩到右上 600×320、`c3` 缩到右下 600×320，各放一个 `.t-display` 数字加一行说明。三张同时写 `data-merge="panel"` |
-| 4 图表 | 左边是结论标题（两行 `.t-h1`）、一句解读和图例；右边一张 `.s-surface-2` 图表卡（left 840，960×680，`data-merge="panel"`），里面是坐标线、三条 `data-enter="draw"` 的曲线、终点数值和横轴标签。粉线终点放一个 24×24 粉色圆点（`.s-accent` + `border-radius:50%`，`data-zoom="top"`，`data-enter="pop"`），终点数值往右让到 `left:1744` |
-| 5 细节 | 左边：一行 `.t-label` 说是哪一组、三行 `.t-h1` 原话、一段 `.t-body` 出处。右边三块事实条 `c1` `c2` `c3`（left 1000，800×200，top 200 / 440 / 680），每块一个 `.t-h1` 数字加一段 `.t-body`。写 `data-st="zoom-into"` 加 `data-auto-animate` |
-| 6 实验 | 一行 `.t-h1` 标题（top 180）；三张卡回到第 2 页的三栏（left 120 / 680 / 1240，520×560，top 320），卡上 label + `.t-h2` + `.t-body` |
+| 1 封面 | 刊名 + 副标题；下面一枚黄绿胶囊 `.s-surface`（`data-split="cards"`），里面一行 `.t-label .t-on-surface`。**不写** `data-auto-animate` |
+| 2 洞察 | 三张等宽卡并排：`c1` 粉 `.s-accent`、`c2` 黄绿 `.s-surface`、`c3` 桃 `.s-accent-soft`；三张同时写 `data-split="cards"`（顺序 c1, c2, c3）。卡上各一组 label + `.t-h2` + `.t-body`。这一页写 `data-st="split"` 加 `data-auto-animate` |
+| 3 数字 | 同三张卡换布局：`c2` 撑成左侧大面板放主数字（`.t-metric`）；`c1` 缩到右上、`c3` 缩到右下，各放一个 `.t-display` 数字加一行说明。三张同时写 `data-merge="panel"` |
+| 4 图表 | 左边是结论标题、一句解读和图例；右边一张 `.s-surface-2` 图表卡（`data-merge="panel"`），里面是坐标线、三条 `data-enter="draw"` 的曲线、终点数值和横轴标签。粉线终点放一个粉色小圆点（`.s-accent` + `border-radius:50%`，`data-zoom="top"`，`data-enter="pop"`），终点数值往右让开圆点 |
+| 5 细节 | 左边：哪一组、一句原话、出处。右边三块事实条 `c1` `c2` `c3` 上下排，每块一个 `.t-h1` 数字加一段 `.t-body`。写 `data-st="zoom-into"` 加 `data-auto-animate` |
+| 6 实验 | 一行标题；三张卡回到第 2 页的三栏，卡上 label + `.t-h2` + `.t-body` |
 
 - 卡片用 `div` 写，`data-id` 只给三张卡（`c1` `c2` `c3`），卡上的文字不配对，跟着上浮淡入淡出。
 - 卡片和颜色是绑定的：`c1` 永远是粉、`c2` 永远是黄绿、`c3` 永远是桃。之后每页换的是**位置和大小**，不换颜色。

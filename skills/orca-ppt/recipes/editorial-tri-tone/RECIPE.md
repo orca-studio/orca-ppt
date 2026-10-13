@@ -62,12 +62,9 @@ cover: 6
 6 结尾      整页酒红收成画面中间的一张酒红卡（page）；卡上大数字和一句话；页眉 mark 留在左上
 ```
 
-关键坐标（1920×1080 画布）：
+坐标看样稿 `examples/editorial-tri-tone/index.html`（做同款时 create_deck 会复制它）。
 
-- 页眉 `mark`：`left:120 top:80`，`t-label`；章节标记：`left:1000 top:80 width:800`，右对齐。
-- 原则墙卡片：每张 360×320，横向 `left` 依次 120 / 560 / 1000 / 1440，两行 `top` 280 / 640。卡上编号在卡内 `+40, +40`，标题在 `+40, +120`，宽 280。
-- 详情页：整页形状 `left:0 top:0 width:1920 height:1080; border-radius:0`，**写在 section 第一个**；章节号 `120,200`（`t-display t-serif`）；标题 `120,460`（`t-h1`）；正文 `120,580`，宽 880；胶囊一行 `top:820`，每个 360×96，文字 `top:840`。
-- 结尾卡：`left:120 top:240 width:1680 height:640`，和整页形状同一个 `data-id`、同一个颜色类 `s-surface`。
+- 结尾卡和详情页整页形状同一个 `data-id`（`page`）、同一个颜色类 `s-surface`。
 - 胶囊就是 `.s-accent`：本主题 `--radius-s` 是 999px，强调块天然是胶囊形。
 
 `data-zoom` 的那张卡必须是酒红的 `.s-surface` —— 它要长成整页酒红的详情页，换成奶油黄卡中途会混出浑浊的橄榄色（`blush` 配色里酒红和奶油黄不能互变）。

@@ -67,8 +67,8 @@ cover: 10.6
 Ledger 主题的数字是 Inter 600，「34%」三个字符实测 355px，小格子内容区只有 280px；拆开以后数字 2 位，单位小一档。
 共享元素的两页要写**同一段数字**（都是「34」），单位各自跟着页面出。
 
-坐标照样稿抄的只有转场锚：整页 / hero 格 / 对比页左面板（`page`），总览 chart 格和数据页面板（`chart`），
-数据页坐标轴 `left:1040 top:880 720×4` 和横条页最长条 `left:680 top:240 880×56`（`axis`）。
+坐标看样稿 `index.html`（做同款时 create_deck 会复制它）。转场锚三对：整页 / hero 格 / 对比页左面板（`page`），
+总览 chart 格和数据页面板（`chart`），数据页坐标轴和横条页最长条（`axis`）。
 其余按 `visual-spec.md` 各页面类型的标准位置摆。
 
 引用顺序：`tokens.css → themes/ledger.css → palettes/ledger.css`。

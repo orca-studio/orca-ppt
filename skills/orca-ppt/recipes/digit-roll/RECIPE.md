@@ -51,18 +51,14 @@ cover: 8.5
 7 结尾      年份只滚个位到「下一个年份」；游标走出画面右外；说明一句往后看的话
 ```
 
-做转场锚的元素照样稿抄坐标：
+坐标看样稿 `index.html`（做同款时 create_deck 会复制它）。做转场锚的元素：
 
-| 元素 | 坐标 | 写法 |
-| --- | --- | --- |
-| 大年份 `year` | `left:0 top:380 width:1920`，居中 | `.t-metric`，`data-text="year" data-roll`；**每页同位置同字号** |
-| 标题 `title` | `left:0 top:230 width:1920`，居中 | `.t-h1`，`data-swap="title"` |
-| 说明 `desc` | `left:360 top:740 width:1200`，居中 | `.t-body`，`data-swap="desc"` |
-| 刻度 `t1953`… | `top:96`，宽 160 居中，五格间隔 180（中心 560 / 740 / 920 / 1100 / 1280） | `.t-label .t-dim`，每页写同样的 `data-id` |
-| 游标 `cursor` | 刻度正下方 `top:150`，16×16 | `.s-dot`，`data-id="cursor"` |
-| 光晕 `glow` | 620×620，每页换个位置（落在安全区里） | `.s-accent-soft` 圆，`opacity:0.18`，`data-id="glow"` |
+- 大年份 `.t-metric`，`data-text="year" data-roll`，**每页同位置同字号**。
+- 标题 `.t-h1` `data-swap="title"`、说明 `.t-body` `data-swap="desc"`，每页同位置。
+- 刻度 `.t-label .t-dim` 每格一个 `data-id`（`t1953`…），每页写同样一排；游标 `.s-dot` `data-id="cursor"` 在刻度正下方，每页移到当前格。
+- 光晕 `.s-accent-soft` 圆 `data-id="glow"`，每页换个位置（落在安全区里）。
 
-节点数不是 5 时：刻度间隔 180 不变，整排居中重新算中心。
+节点数不是 5 时：刻度格宽 160、间隔 180 不变，整排居中重新算中心；游标跟着落在当前格中心下方。
 
 主题和配色：样稿用 `clearing` 主题 + `midnight` 配色（深底、琥珀大年份）。
 参考里每页换一张背景照片；本 skill 不放照片，用一团柔和光晕换位置代替「整页背景换了」的感觉。

@@ -63,25 +63,11 @@ PPT 要绕「导出视频 → 再导回」这一圈，是因为它的一页没�
 
 回顾范围从目录开始、到结论结束：封面不放（回顾里第一眼就该是内容），结尾页自己不放。
 
-片尾这一页的写法：
+片尾这一页三样东西：整页 `.s-surface` 底、`.s-recap` 屏幕（`data-recap` / `data-recap-hold`）、`ol.t-credits` 名单。
+坐标看样稿 `index.html`（做同款时 create_deck 会复制它）。
 
-```html
-<section data-st="recap" data-hold="2">
-  <!-- 1 底：写在屏幕前面，转场时就在，屏幕缩小后露出来 -->
-  <div class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
-  <!-- 2 屏幕：16:9 -->
-  <div class="s-recap" data-recap="2-7" data-recap-hold="0.7"
-       style="left:120px; top:220px; width:1120px; height:630px;"></div>
-  <!-- 3 名单：写在屏幕后面，转场末尾淡入 -->
-  <ol class="t-credits t-on-surface" style="left:1320px; top:120px; width:480px; height:840px;">
-    <li><span>选题策划</span><b>姓名</b></li>
-    …
-  </ol>
-</section>
-```
-
-- 屏幕 `left:120 top:220 width:1120 height:630`。宽高必须 16:9，否则回顾的页会留黑边。
-- 名单框 `left:1320 top:120 width:480 height:840`。条目行高 80，一框放得下 10 条；更多也行，滚动会走完。
+- 屏幕宽高必须 16:9，否则回顾的页会留黑边。
+- 名单条目行高 80，样稿的名单框放得下 10 条；更多也行，滚动会走完。
 - 屏幕绕左边缘倾斜，右边缘往里退。名单放在右边，正好占住退出来的空间 —— 名单别放左边。
 - 写在屏幕**前面**的元素是底，**后面**的在转场末尾依次淡入。标题之类（「感谢」「Credits」）想加就写在名单后面，用 `.t-label`。
 

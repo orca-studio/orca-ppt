@@ -45,9 +45,9 @@ cover: 3.6
 
 - 一张 `class="st-photo"` 的整页照片，写原图的 `width` `height` 和 `data-anchors`；
 - `data-guide` 写这一页的锚点名（引导框常驻在它上面）；
-- 左下角编号 `.t-body`（`left:120 top:820`）和名字 `.t-h1`（`left:120 top:880`），不放别的字。
+- 左下角编号 `.t-body` 和名字 `.t-h1`，不放别的字。
 
-从故事稿起始文件 `templates/story-starter.html` 开始写。
+坐标看样稿 `examples/story-circle/index.html`（做同款时 create_deck 会复制它）。
 
 ## 动效原则
 

@@ -60,17 +60,12 @@ cover: 4.5
 7 结尾        和封面同构：轴缩回封面装饰线的位置，标题换成下一卷
 ```
 
-锚点的标准位置（其余元素按 `references/visual-spec.md` 的页面类型摆）：
-
-| 页 | `axis` 的位置 |
-| --- | --- |
-| 封面 / 结尾 | `left:120 top:700 width:600 height:4` —— 两页**完全一样** |
-| 时间线 | `left:120 top:560 width:1680 height:4`（横向时间线页的标准轴） |
-| 条形图 | 最长的那条：`left:680 top:240 width:880 height:56` |
-| 关键数字 | `.t-metric` 下面的粗线：`left:120 top:640 width:560 height:8` |
+坐标看样稿 `examples/forest-timeline/index.html`（做同款时 create_deck 会复制它）。`axis` 在封面和结尾**完全一样**，
+时间线页是横向时间线页的标准轴，条形图里是最长的那条，关键数字页是 `.t-metric` 下面的粗线；
+其余元素按 `references/visual-spec.md` 的页面类型摆。
 
 关键数字页的另外两个共享元素：数值 `data-id="pct"`（条形图里是 `.t-h2 .t-accent`，这里是 `.t-metric`），
-名字 `data-id="name"`（两页都是 `.t-h2`，从条形图左列飞到 `top:680`）。
+名字 `data-id="name"`（两页都是 `.t-h2`，从条形图左列飞到粗线下面）。
 
 引用顺序：`tokens.css → themes/editorial-forest.css → palettes/forest.css`。
 

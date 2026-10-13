@@ -52,16 +52,17 @@ cover: 6.5
 ## 页面结构
 
 七页，默认主题（只引 `runtime/tokens.css`，没有主题和配色文件）。根节点 `data-layout="standard"`。
+坐标看样稿 `examples/spec-wall/index.html`（做同款时 create_deck 会复制它）；锚和椭圆的坐标换素材后要从新视频末帧重新量。
 
 | 页 | 状态 | 关键元素 |
 | --- | --- | --- |
-| 1 封面 | 左对齐：小标签、`.t-display` 型号、一句 `.t-body`、一条 `.s-accent` 短横 | 无 |
-| 2 整页视频 | 只有 `.v-full` 视频，不压任何字；加一个隐形锚 | `data-match="dial"` 的 `.s-anchor`，坐标从末帧量（样稿 `745,355 450×400`） |
-| 3 形状页 | 和锚**完全同位置同大小**的椭圆（`.s-accent` + `border-radius:50%`），椭圆里一个数字（`.t-on-accent`）；左上标题和一句说明，右下一个编号 | 椭圆同时写 `data-match="dial"` 和 `data-id="hero"`；数字 `data-id="holes"` |
-| 4 参数墙 | bento 密集版：hero 格 `120,200 800×520`，8 张小卡（列 `120/560/1000/1440`，行 `200/480/760`，各 `360×240`，hero 占掉左两列前两行）；最后一个元素是光斑 | `data-id="hero"`（hero 格）、`data-id="holes"`（「指孔」卡里的数字）、`data-id="spot"`（洞罩住 `1000,200` 那张卡） |
-| 5 同一面墙 | 和第 4 页**逐个元素完全一样**，只有光斑换位置 | `data-id="spot"`（洞移到 `1440,200` 那张卡）；那张卡写 `data-zoom="spin"` |
-| 6 细节页 | 横向时间线页：整页 `.s-surface` 底（`border-radius:0`，第一个子元素）、`.t-h1` 标题、4 站（轴 `120,560 1680×4`，节点列 `120/560/1000/1440`），左下一行 `.t-label` 注明示意值 | 写 `data-st="zoom-into" data-st-direction="in" data-st-from="spin"`；轴 `data-id="axis"` |
-| 7 结尾 | 整页 `.s-surface` 底照抄第 6 页（原地不动）；居中 `.t-display` + 一句 `.t-body`，下面一条 `.s-accent` 短横 `840,720 240×8` | 短横 `data-id="axis"` |
+| 1 封面 | 型号、一句副题、一条短横 | 无 |
+| 2 整页视频 | 只有 `.v-full` 视频，不压任何字；加一个隐形锚 | `data-match="dial"` 的 `.s-anchor`，坐标从末帧量 |
+| 3 形状页 | 和锚**完全同位置同大小**的椭圆（`.s-accent` + `border-radius:50%`），椭圆里一个数字（`.t-on-accent`）；标题、一句说明、编号 | 椭圆同时写 `data-match="dial"` 和 `data-id="hero"`；数字 `data-id="holes"` |
+| 4 参数墙 | bento 密集版：hero 格 + 8 张小卡；最后一个元素是光斑 | `data-id="hero"`（hero 格）、`data-id="holes"`（「指孔」卡里的数字）、`data-id="spot"`（洞罩住「指孔」卡） |
+| 5 同一面墙 | 和第 4 页**逐个元素完全一样**，只有光斑换位置 | `data-id="spot"`（洞移到「回转一圈」卡）；那张卡写 `data-zoom="spin"` |
+| 6 细节页 | 横向时间线页：整页 `.s-surface` 底（`border-radius:0`，第一个子元素）、标题、4 站，一行 `.t-label` 注明示意值 | 写 `data-st="zoom-into" data-st-direction="in" data-st-from="spin"`；轴 `data-id="axis"` |
+| 7 结尾 | 整页 `.s-surface` 底照抄第 6 页（原地不动）；居中一句结尾 + 一句副题，下面一条短横 | 短横 `data-id="axis"` |
 
 - 形状页的椭圆用 `.s-accent`（亮橙），不用 `.s-accent-soft`：默认主题的 `.t-on-accent` 是深字，压在暗橙上读不出来。亮橙 → 暗橙是同色系，3→4 形态变换中途不发灰。
 - 第 4 页小卡里的数字用 `.t-h1`、文字值用 `.t-h2`、标签 `.t-label .t-dim`，全部加 `.t-on-surface`；hero 格上的字加 `.t-on-accent`。密集版的字阶规则见 `visual-spec.md`「Bento 网格页」。

@@ -59,7 +59,7 @@ cover: 8
 
 ```
 1 封面      两行大字夹一条双横线；底部一条整宽深蓝横条（data-split: chapters），上面一行副题
-2 议程      标题 + 结构线；四行，每行左侧一个 120×120 深蓝序号块（data-split: chapters），第一块同时是钻入点（data-zoom: ch1）
+2 议程      标题 + 结构线；每行左侧一个深蓝序号块（data-split: chapters），第一块同时是钻入点（data-zoom: ch1）
 3 章节页    左半幅深蓝面板（data-id: panel，data-zoom: panel）+ 巨大序号（data-id: num）；右半翡翠绿上是标题、说明、两个米色小标签
 4 数据页    同一块面板撑满整页（data-id: panel，data-split: themes）；序号缩成左上角小标签（data-id: num）；关键数字 + 柱状图
 5 主题页    翡翠绿底：眉题 + 标题 + 结构线；三张深蓝主题卡按三栏排（data-split: themes，data-merge: decide）
@@ -67,25 +67,14 @@ cover: 8
 7 结尾      燕麦米色块上扫，回到翡翠绿：大字 + 双横线，页眉页脚回到底部
 ```
 
-做转场锚的元素和标准位置（1920×1080 画布）：
+坐标看样稿 `examples/emerald-editorial/index.html`（做同款时 create_deck 会复制它）。
 
-| 元素 | 页 | 位置 / 尺寸 | 键 |
-| --- | --- | --- | --- |
-| 封面横条 `.s-surface` | 1 | `left:120 top:840 width:1680 height:120` | `data-split="chapters"` |
-| 议程序号块 `.s-surface` ×N | 2 | `left:120`，`120×120`，行距 180（top 300 / 480 / 660 / 840） | `data-split="chapters"`；第一块加 `data-zoom="ch1"` |
-| 章节面板 `.s-surface` | 3 | `left:0 top:0 width:960 height:1080`，section 第一个子元素 | `data-id="panel" data-zoom="panel"` |
-| 章节序号 `.t-display.t-on-surface` | 3 | `left:120 top:440 width:720`，`text-align:center`（落在面板 960 宽的中线上） | `data-id="num"` |
-| 整页底色 `.s-surface` | 4 | `left:0 top:0 width:1920 height:1080; border-radius:0`，section 第一个子元素 | `data-id="panel"` |
-| 小序号 `.t-label.t-on-surface` | 4 | `left:120 top:80` | `data-id="num"` |
-| 主题卡 `.s-surface` ×3 | 5 | 三栏 `left:120 / 680 / 1240`，`top:360 width:520 height:600` | `data-split="themes" data-merge="decide"` |
-| 决定面板 `.s-surface` | 6 | `left:120 top:360 width:1680 height:600` | `data-merge="decide"` |
-| 眉题 `.t-label`、结构线 `.s-rule` | 5、6 | `left:120 top:80`；`left:120 top:300 width:1680` | 不写键，两页完全一样，原地不动 |
-
+- 第 5、6 页的眉题和结构线不写键，两页完全一样，原地不动。
 - 议程序号块上的数字、章节面板上的文字、主题卡和决定面板上的文字都不写 `data-split` / `data-merge` / `data-id`，让它们自动入场。
-- 章节面板贴左边出血，但面板里的文字照样守安全区：`left` 不小于 120（角标 `left:120`，序号 `left:120 width:720`）。
+- 章节面板贴左边出血，但面板里的文字照样守安全区：`left` 不小于 120。
 - 主题卡 2 张或 4 张时：2 张用两栏 `left:120 / 1000 width:800`，4 张用 `left:120 / 540 / 960 / 1380 width:380`，高度不变。
 - 议程是 4 条时序号块正好 4 个；3 条或 5 条时保持块尺寸 120、行距按版面重排，最后一块不要压到 `top:960` 以下。
-- 数据页的柱状图：一条 4px 的 `.s-accent` 当坐标轴（样稿 `top:880`），柱子宽 120、间隔 80，底边对齐坐标轴；
+- 数据页柱子数变了：一条 4px 的 `.s-accent` 当坐标轴，柱子宽 120、间隔 80，底边对齐坐标轴；
   前几根 `.s-accent-soft`、最后一根（最新的）`.s-accent`，季度标签在轴下方 40。
 
 引用顺序：`tokens.css → themes/emerald-editorial.css → palettes/emerald.css`（`emerald` 是这个主题的默认配色，写出来是为了明确）。
