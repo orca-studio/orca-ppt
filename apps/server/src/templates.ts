@@ -1,5 +1,5 @@
-import { mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
+import { copyFile, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 
 /**
  * 新建稿子从哪儿起头。**只有 skill 的空白起始文件** —— 汇报稿和故事稿两份。
@@ -13,8 +13,8 @@ import { join, relative, sep } from 'node:path'
  * 代价一路都在:技术演示得被硬打上「商业/创意」这种场景标签、开发中的工作稿混进选择器、
  * 页面类型认不准 —— 因为它们本来就不是按场景组织的东西。
  *
- * 所以 skill 只向产品提供三样:**主题样张、空白起始文件、规范**(给坐标校验用)。
- * agent 要参考示例就直接读文件,它有文件工具。
+ * 所以选择器里只有空白起始文件。**做同款是例外**:同款的样稿就是答案,复刻从它起头
+ * (`recipe:<id>`,见下面的 instantiateSample)。它走的是同款列表,不进这个选择器。
  *
  * 起始文件能复制到任何地方 —— 它引到 deck 目录之外的只有 skill 自己(reveal、gsap、
  * runtime),重写一次相对前缀就行。不重写的话,稿子一挪位置就全白。
@@ -93,6 +93,72 @@ export async function instantiate(options: {
   if (palette) html = withLink(html, `${toSkill}/runtime/palettes/${palette}.css`)
   await writeFile(entry, html)
   return entry
+}
+
+/**
+ * 做同款:以同款的样稿为起点建一份新稿子,返回入口文件路径。
+ *
+ * 做同款就是复刻,样稿就是答案 —— 让 agent 照着配方的文字从空白文件重写一遍,
+ * 等于把例子翻译成文字再翻译回来,两次都会走样。所以直接复制样稿,agent 换内容、增删页。
+ *
+ * 只复制样稿**引用到的**、落在样稿目录里的文件(图片、视频)。配方正文、录好的样片、
+ * 教学页不跟过来。样稿目录之外的引用(skill 的 runtime、reveal、示例共用素材)
+ * 重写成从新位置回去的相对路径,和起始文件一个道理。主题和配色沿用样稿自己的。
+ */
+export async function instantiateSample(options: {
+  sampleDir: string
+  entry: string
+  targetDir: string
+  title?: string
+}): Promise<string> {
+  const { sampleDir, entry, targetDir, title } = options
+  await mkdir(join(targetDir, '.deck'), { recursive: true })
+  const realTarget = await realpath(targetDir)
+  const realSample = await realpath(sampleDir)
+  const copies = new Set<string>()
+
+  const rewrite = (url: string): string => {
+    if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(url) || url.includes('{{')) return url
+    const [path = '', rest = ''] = url.split(/(?=[?#])/)
+    const absolute = resolve(realSample, path)
+    const inside = relative(realSample, absolute)
+    if (inside && !inside.startsWith('..') && !isAbsolute(inside)) {
+      copies.add(inside)
+      return url
+    }
+    return relative(realTarget, absolute).split(sep).join('/') + rest
+  }
+
+  let html = (await readFile(entry, 'utf8'))
+    .replace(
+      /(\b(?:src|href|poster)=")([^"]+)(")/g,
+      (_, a: string, url: string, b: string) => a + rewrite(url) + b,
+    )
+    .replace(
+      /(url\(\s*(?:&quot;|['"])?)([^'")&]+)/g,
+      (_, a: string, url: string) => a + rewrite(url),
+    )
+  if (title) html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(title)}</title>`)
+
+  for (const file of copies) {
+    const from = join(realSample, file)
+    if (
+      !(await stat(from).then(
+        (info) => info.isFile(),
+        () => false,
+      ))
+    )
+      continue
+    await mkdir(dirname(join(targetDir, file)), { recursive: true })
+    await copyFile(from, join(targetDir, file))
+  }
+  const out = join(targetDir, 'deck.html')
+  await writeFile(out, html)
+  return out
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 /**

@@ -361,14 +361,14 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           openWorldHint: false,
         },
         description:
-          '新建稿子，可从 list_templates 选择起始模板并指定主题。省略模板则建空目录。建完用 open_deck 打开。',
+          '新建稿子，可从 list_templates 选择起始模板并指定主题；做同款时 from 填 recipe:<同款 id>，复制一份同款样稿（主题、配色、素材沿用样稿的，theme 不生效）。省略 from 则建空目录。建完用 open_deck 打开。',
         inputSchema: {
           parentDir: z.string().describe('放在哪个目录下').meta({ title: '保存位置' }),
           title: z.string().describe('deck 名字,会成为目录名').meta({ title: '稿子名称' }),
           from: z
             .string()
             .optional()
-            .describe('list_templates 返回的模板 id')
+            .describe('list_templates 返回的模板 id,或 recipe:<list_recipes 返回的同款 id>')
             .meta({ title: '模板' }),
           theme: z.string().optional().describe('list_themes 返回的主题名').meta({ title: '主题' }),
         },

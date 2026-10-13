@@ -48,7 +48,7 @@ import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
-import { instantiate, listTemplates } from './templates.js'
+import { instantiate, instantiateSample, listTemplates } from './templates.js'
 import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
 import {
   ensureDir,
@@ -708,7 +708,17 @@ export async function startServer(
         const params = parseParams('deck.create', raw)
         const path = join(params.parentDir, slugify(params.title))
 
-        if (params.from) {
+        if (params.from?.startsWith('recipe:')) {
+          // 做同款:从同款的样稿起头,主题和配色沿用样稿的
+          const sample = await recipeEntry(catalog.skillPath, params.from.slice('recipe:'.length))
+          if (!sample) throw new Error(`不认识的同款:${params.from}(id 来自 list_recipes)`)
+          await instantiateSample({
+            sampleDir: sample.dir,
+            entry: sample.entry,
+            targetDir: path,
+            title: params.title,
+          })
+        } else if (params.from) {
           if (!catalog.skillPath) throw new Error(AgentError.skillNotFound())
           await instantiate({
             skillPath: catalog.skillPath,

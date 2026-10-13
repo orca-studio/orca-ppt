@@ -317,6 +317,7 @@ export const requests = {
     params: z.object({
       parentDir: z.string(),
       title: z.string(),
+      /** 起始文件 `template:<文件名>`,或做同款时的 `recipe:<同款 id>`(复制同款样稿)。 */
       from: z.string().optional(),
       /** 空白模板配哪个主题。起始文件本身不带主题,不配的话新稿子没有样子。 */
       theme: z.string().optional(),

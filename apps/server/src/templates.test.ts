@@ -1,8 +1,8 @@
-import { mkdir, mkdtemp, readFile, realpath, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, realpath, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { instantiate, listTemplates } from './templates.js'
+import { instantiate, instantiateSample, listTemplates } from './templates.js'
 
 /** 照 skill 的布局搭一份假的。**只搭产品用得到的那部分** —— examples/ 产品不读。 */
 async function fakeSkill() {
@@ -173,4 +173,54 @@ it('注释里的示例 link 不会吞掉新插入的主题和配色', async () =
   const active = (await readFile(join(dir, 'deck.html'), 'utf8')).replace(/<!--[\s\S]*?-->/g, '')
   expect(active).toContain('themes/editorial-forest.css')
   expect(active).toContain('palettes/forest.css')
+})
+
+describe('instantiateSample(做同款从样稿起头)', () => {
+  async function fakeSample() {
+    const skill = await mkdtemp(join(tmpdir(), 'skill-'))
+    const dir = join(skill, 'examples/drink')
+    await mkdir(join(dir, 'assets'), { recursive: true })
+    await mkdir(join(skill, 'examples/_assets'), { recursive: true })
+    await writeFile(join(dir, 'assets/a.svg'), '<svg/>')
+    await writeFile(join(dir, 'RECIPE.md'), '配方')
+    await writeFile(join(dir, 'index.mp4'), 'x')
+    await writeFile(
+      join(dir, 'index.html'),
+      '<head><title>样稿</title><link href="../../runtime/tokens.css"></head>' +
+        '<img src="assets/a.svg"><video src="../_assets/clip.mp4"></video>' +
+        '<div style="background:url(\'assets/a.svg\')"></div><a href="https://x.dev">x</a>',
+    )
+    return { skill, dir }
+  }
+
+  it('引到样稿外的路径改成从新位置回去,样稿里的素材复制过来', async () => {
+    const { skill, dir } = await fakeSample()
+    const out = await target()
+    const entry = await instantiateSample({
+      sampleDir: dir,
+      entry: join(dir, 'index.html'),
+      targetDir: out,
+      title: '我的 <稿>',
+    })
+    const html = await readFile(entry, 'utf8')
+    const realOut = await realpath(out)
+    const tokens = html.match(/href="([^"]*tokens\.css)"/)?.[1]
+    expect(join(realOut, tokens!)).toBe(join(await realpath(skill), 'runtime/tokens.css'))
+    const clip = html.match(/src="([^"]*clip\.mp4)"/)?.[1]
+    expect(join(realOut, clip!)).toBe(join(await realpath(skill), 'examples/_assets/clip.mp4'))
+    expect(html).toContain('src="assets/a.svg"')
+    expect(html).toContain("url('assets/a.svg')")
+    expect(html).toContain('href="https://x.dev"')
+    expect(html).toContain('<title>我的 &lt;稿&gt;</title>')
+    await expect(readFile(join(out, 'assets/a.svg'), 'utf8')).resolves.toBe('<svg/>')
+  })
+
+  it('配方、样片这些没被引用的文件不跟过来', async () => {
+    const { dir } = await fakeSample()
+    const out = await target()
+    await instantiateSample({ sampleDir: dir, entry: join(dir, 'index.html'), targetDir: out })
+    await expect(stat(join(out, 'RECIPE.md'))).rejects.toThrow()
+    await expect(stat(join(out, 'index.mp4'))).rejects.toThrow()
+    await expect(stat(join(out, '.deck'))).resolves.toBeDefined()
+  })
 })
