@@ -8,9 +8,10 @@ import { Button } from './ui/Button.js'
  * 两处都在说「这个应用和 agent 之间通不通」,分开放人得来回看。现在只剩这一处:
  * 本地服务断了优先说这个(它断了 agent 那头的状态也不可信)。
  *
- * 平常的两种状态(连上 / 没连上)只留圆点:颜色就说清了,「Agent 已连接」几个字天天
- * 挂在那儿是噪音。字留给圆点说不清的:断线原因、agent 在做什么、等谁批准、谁接管了。
- * 平常状态的字仍在,只是看不见 —— 读屏和鼠标悬停(title)还能拿到。
+ * 平常只留圆点:连上 / 没连上 / agent 在干活(圆点一明一暗)颜色就说清了,字天天挂在
+ * 那儿是噪音。agent 在做什么也不写:画布和页胶片上它碰到哪儿亮哪儿,比一行字清楚;
+ * 旁边的「接管 / 停止」照摆。字只留给要人动手或圆点说不清的:断线原因、等谁批准、
+ * 谁接管了。藏起来的字仍在,读屏和鼠标悬停(title)还能拿到。
  */
 export function AgentStatus({
   control,
@@ -45,7 +46,7 @@ export function AgentStatus({
           : 'Agent 未连接'
 
   const tone = server ? 'off' : active ? 'active' : connected ? 'on' : 'idle'
-  const quiet = !server && !active && !taken
+  const quiet = !server && !taken && !(active && control.waiting)
 
   return (
     <div className="agent-control" title={quiet ? status : undefined}>
