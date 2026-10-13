@@ -7,6 +7,10 @@ import { Button } from './ui/Button.js'
  * 以前左下角还有一行状态栏,只放一个「本地服务」的绿点和「刚指给 agent」的回执 ——
  * 两处都在说「这个应用和 agent 之间通不通」,分开放人得来回看。现在只剩这一处:
  * 本地服务断了优先说这个(它断了 agent 那头的状态也不可信)。
+ *
+ * 平常的两种状态(连上 / 没连上)只留圆点:颜色就说清了,「Agent 已连接」几个字天天
+ * 挂在那儿是噪音。字留给圆点说不清的:断线原因、agent 在做什么、等谁批准、谁接管了。
+ * 平常状态的字仍在,只是看不见 —— 读屏和鼠标悬停(title)还能拿到。
  */
 export function AgentStatus({
   control,
@@ -41,12 +45,13 @@ export function AgentStatus({
           : 'Agent 未连接'
 
   const tone = server ? 'off' : active ? 'active' : connected ? 'on' : 'idle'
+  const quiet = !server && !active && !taken
 
   return (
-    <div className="agent-control">
+    <div className="agent-control" title={quiet ? status : undefined}>
       <span className="agent-control-dot" data-tone={tone} aria-hidden="true" />
       <span
-        className="agent-control-label"
+        className={quiet ? 'agent-control-label visually-hidden' : 'agent-control-label'}
         role="status"
         aria-live="polite"
         title={status}

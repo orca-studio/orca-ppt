@@ -558,6 +558,14 @@ select:focus-visible {
 .agent-control-dot[data-tone='active'] {
   background: var(--tone-agent);
   opacity: 1;
+  /* agent 在干活:圆点一明一暗,不用读字也知道它在动 */
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-control-dot[data-tone='active'] {
+    animation: none;
+  }
 }
 
 .agent-control-dot[data-tone='off'] {
@@ -577,6 +585,16 @@ select:focus-visible {
 
 .agent-control .btn {
   flex: none;
+}
+
+/* 看不见,但读屏读得到 */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ── 左栏:胶片 ───────────────────────────────────────────────────── */
