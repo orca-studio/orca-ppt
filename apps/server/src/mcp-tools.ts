@@ -283,7 +283,13 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           '在应用的工作台里打开某个同款的样稿（只读），和首页点卡片一样。id 来自 list_recipes。看完用 close_deck 回首页。',
         inputSchema: { id: z.string().describe('list_recipes 返回的同款 id') },
       },
-      run: async (args) => json(await call('recipe.present', { id: String(args.id) })),
+      run: async (args) => {
+        const presented = await call('recipe.present', { id: String(args.id) })
+        // 样稿是 agent 自己打开的,不是用户切走了:接下来的 present / close_deck 就对这一份。
+        // 不同步的话,下一个工具就报 DOCUMENT_CHANGED,而恢复要走一次需要批准的 open_deck。
+        active.set(presented.deckId)
+        return json(presented)
+      },
     },
     {
       name: 'close_deck',

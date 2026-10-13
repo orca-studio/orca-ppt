@@ -381,7 +381,8 @@ export const requests = {
    */
   'recipe.present': {
     params: z.object({ id: z.string() }),
-    result: z.object({}),
+    /** 打开的样稿。agent 调的话,它接下来操作的就是这一份(见 MCP 的 present_recipe)。 */
+    result: z.object({ deckId: z.string() }),
   },
   /** 关掉这份稿子,回首页。工具栏左上角的「首页」走它。 */
   'deck.close': {

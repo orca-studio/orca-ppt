@@ -744,8 +744,10 @@ export async function startServer(
         if (!found) throw new Error(`RECIPE_NOT_FOUND: 没有这个同款,或者它没有样稿:${params.id}`)
         // 和 agent 调 open_deck 同一条路:打开、推 deck.opened,界面跟着进工作台。
         // 样稿在 skill 里,deck.open 会把它认成只读。
-        await dispatchUnlocked('deck.open', { path: found.dir })
-        return {}
+        const opened = (await dispatchUnlocked('deck.open', { path: found.dir })) as {
+          deck: { id: string }
+        }
+        return { deckId: opened.deck.id }
       }
       case 'catalog.recipes': {
         parseParams('catalog.recipes', raw)

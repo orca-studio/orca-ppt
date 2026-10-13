@@ -289,6 +289,22 @@ it('MCP 列出首页同一份同款', async () => {
   expect(calls).toContainEqual(['recipe.present', { id: 'recap-credits' }])
 })
 
+it('MCP 放映同款样稿后，接下来的工具对准样稿，不报 DOCUMENT_CHANGED', async () => {
+  const responses: Record<string, unknown> = {
+    'deck.current': { deckId: '/mine' },
+    'recipe.present': { deckId: '/sample' },
+  }
+  const { client, calls } = fakeClient(responses)
+  const { map } = toolsOf(client)
+  await map.get('present')!.run({}) // 先认下 /mine
+  responses['deck.current'] = { deckId: '/sample' }
+  await map.get('present_recipe')!.run({ id: 'ring-timeline' })
+  await map.get('present')!.run({})
+  expect(calls.filter(([method]) => method === 'deck.present').at(-1)?.[1]).toMatchObject({
+    deckId: '/sample',
+  })
+})
+
 it('MCP 关掉稿子回首页', async () => {
   const { client, calls } = fakeClient({ 'deck.current': { deckId: '/d' } })
   const { map } = toolsOf(client)
