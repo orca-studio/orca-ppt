@@ -277,7 +277,7 @@ function measure(index) {
     text: q("[data-text]:not([data-roll])"),
     roll: q("[data-roll]"),
     lost: [
-      ...(q("[data-anim], [data-step]") ? ["anim"] : []),
+      ...(q("[data-anim], [data-step], [data-path]") ? ["anim"] : []),
       ...(q("video") ? ["video"] : []),
       ...(q("[data-auto-animate-delay]") ? ["rhythm"] : []),
     ],

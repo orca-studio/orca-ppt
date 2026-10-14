@@ -26,6 +26,7 @@
 | `ring-timeline` | 环形时间轴 | 发展历程、版本演进：4–6 个节点，高亮扇形绕圆心一格一格转 | [ring-timeline/RECIPE.md](ring-timeline/RECIPE.md) |
 | `digit-roll` | 数字滚动时间轴 | 城市 / 公司年表：4–6 个年份，翻一页年份逐位滚到下一个数 | [digit-roll/RECIPE.md](digit-roll/RECIPE.md) |
 | `spotlight-opening` | 手电筒开场 | 发布会 / 年会开场：手电筒落下扫一圈，光照到哪品牌名亮到哪，再落版进正文（页内动画） | [spotlight-opening/RECIPE.md](spotlight-opening/RECIPE.md) |
+| `team-layouts` | 团队成员排版 | 团队介绍：从一个人讲到一整面照片墙，人数每变一次同一批人整组换队形 | [team-layouts/RECIPE.md](team-layouts/RECIPE.md) |
 
 ## 怎么用一个同款
 

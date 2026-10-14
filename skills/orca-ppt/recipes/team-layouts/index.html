@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 团队成员排版</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/editorial-forest.css">
+  <link rel="stylesheet" href="../../runtime/palettes/forest.css">
+</head>
+<body>
+<div class="reveal">
+<!-- 转场计划（主题 Editorial Forest，配色 forest，版式 standard）
+1→2   关系：封面的整页绿收成人物身后的面板，第一个人从面板里站起来          手法：形态变换        共享：stage
+2→3   关系：同一个人，换深色底讲她的一句话；人不动，面板撑满，字色变浅      手法：形态变换        共享：stage, p0, name0, role0
+3→4   关系：第二个人加入；整页绿收成下半屏色带，第一个人缩到右下            手法：共享元素        共享：stage, p0, name0, role0
+4→5   关系：两人变三人，一字排开站在色带上                                  手法：共享元素        共享：stage, p0, p1
+5→6   关系：三人变四人，同一排挤出一个位置                                  手法：共享元素（整组重排） 共享：stage, p0–p2
+6→7   关系：四人变六人，一排换成两排卡片，色带退场                          手法：共享元素（整组重排） 共享：p0–p3
+7→8   关系：六人变八人，抠图人像收成圆形头像，卡片退场                      手法：形态变换（整组重排） 共享：p0–p5
+8→9   关系：八人变十二人，圆头像撑回竖卡                                    手法：形态变换（整组重排） 共享：p0–p7
+9→10  关系：十二个人整组归位进照片墙，另外十二张从画外散落飞入补满          手法：共享元素（整组重排）+ 页内动画（data-path）共享：p0–p11
+每个人整份稿子同一个 data-id（p0–p11），同一张图；人数变了，带得走的人都带着走，新来的人等整组落位再入场。
+名字没写 data-id：前后两页同一个名字会被 reveal 按文字自动配对，跟着自己的人走，也算在整组里。
+人像一律 object-fit:cover + object-position:50% 0%：竖框里是整个人，方框、圆框里只剩上半身，变形时只是裁掉腰，不压扁脸。
+示例内容：星火设计工作室和十二位成员都是虚构的，人像是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：整页绿底，下一页收成人物身后的那块面板 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <div data-id="stage" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <p class="t-label t-on-surface" style="left:360px; top:320px; width:1200px; text-align:center;">星火设计工作室 · 2026</p>
+    <p class="t-display t-on-surface" style="left:360px; top:400px; width:1200px; text-align:center;">团队介绍</p>
+    <p class="t-body t-on-surface" style="left:360px; top:600px; width:1200px; text-align:center;">从一个人，到一整面照片墙。</p>
+  </section>
+
+  <!-- 2 一个人：整页绿收成人身后的面板，人从面板里站起来 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="stage" class="s-surface" style="left:1040px; top:320px; width:680px; height:680px;"></div>
+    <img data-id="p0" src="people/p00.webp" alt="" data-auto-animate-delay="0.6" style="left:1080px; top:100px; width:600px; height:900px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-label t-accent" data-auto-animate-delay="0.8" data-id="role0" style="left:120px; top:200px;">创意总监</p>
+    <p class="t-display" data-auto-animate-delay="0.8" data-id="name0" style="left:120px; top:260px;">林知夏</p>
+    <p class="t-h2" data-auto-animate-delay="0.88" style="left:120px; top:480px; width:800px;">十年品牌设计，<br>带过二十多个从零到一的项目。</p>
+    <p class="t-body t-dim" data-auto-animate-delay="0.96" style="left:120px; top:680px; width:800px;">江城大学 · 视觉传达 · 硕士</p>
+    <p class="t-body t-dim" data-auto-animate-delay="0.96" style="left:120px; top:740px; width:800px;">2016 年入行，2022 年加入星火</p>
+  </section>
+
+  <!-- 3 一个人 · 换深色：面板撑满整页，人不动，名字和职位换成面板上的字色 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="stage" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;"></div>
+    <img data-id="p0" src="people/p00.webp" alt="" style="left:1080px; top:100px; width:600px; height:900px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-label t-on-surface" data-id="role0" style="left:120px; top:200px;">创意总监</p>
+    <p class="t-display t-on-surface" data-id="name0" style="left:120px; top:260px;">林知夏</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.8" style="left:120px; top:480px; width:800px;">「好的设计，是把复杂的事，<br>讲成一眼就懂的画面。」</p>
+  </section>
+
+  <!-- 4 两个人：整页绿收成下半屏色带，林知夏缩到右下，周以安从左上入场 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="stage" class="s-surface" style="left:0px; top:640px; width:1920px; height:440px; border-radius:0;"></div>
+    <img data-id="p0" src="people/p00.webp" alt="" style="left:1280px; top:280px; width:400px; height:600px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-label t-on-surface" data-id="role0" style="left:160px; top:720px;">创意总监</p>
+    <p class="t-h2 t-on-surface" data-id="name0" style="left:160px; top:760px;">林知夏</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.0" style="left:160px; top:840px; width:960px;">负责工作室的创意方向，客户续约率保持在九成以上。</p>
+    <img data-id="p1" src="people/p01.webp" alt="" data-auto-animate-delay="0.8" style="left:160px; top:80px; width:320px; height:480px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-label t-accent" data-auto-animate-delay="0.88" style="left:560px; top:160px;">产品经理</p>
+    <p class="t-h2" data-auto-animate-delay="0.88" style="left:560px; top:200px;">周以安</p>
+    <p class="t-body t-dim" data-auto-animate-delay="0.96" style="left:560px; top:280px; width:1000px;">八年产品经验，主导的三款工具服务过上百万用户。</p>
+  </section>
+
+  <!-- 5 三个人：一字排开站在色带上 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="stage" class="s-surface" style="left:0px; top:640px; width:1920px; height:440px; border-radius:0;"></div>
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">三位核心成员</p>
+    <img data-id="p1" src="people/p01.webp" alt="" style="left:300px; top:200px; width:360px; height:540px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.0" style="left:260px; top:780px; width:440px; text-align:center;">周以安</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:260px; top:860px; width:440px; text-align:center;">产品经理</p>
+    <img data-id="p0" src="people/p00.webp" alt="" style="left:780px; top:200px; width:360px; height:540px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.0" style="left:740px; top:780px; width:440px; text-align:center;">林知夏</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:740px; top:860px; width:440px; text-align:center;">创意总监</p>
+    <img data-id="p2" src="people/p02.webp" alt="" data-auto-animate-delay="0.8" style="left:1260px; top:200px; width:360px; height:540px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.88" style="left:1220px; top:780px; width:440px; text-align:center;">沈若溪</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.88" style="left:1220px; top:860px; width:440px; text-align:center;">视觉设计师</p>
+  </section>
+
+  <!-- 6 四个人：同一排挤出一个位置 -->
+  <section data-auto-animate data-hold="3">
+    <div data-id="stage" class="s-surface" style="left:0px; top:640px; width:1920px; height:440px; border-radius:0;"></div>
+    <p class="t-h1" data-auto-animate-delay="0.6" style="left:120px; top:80px;">四位核心成员</p>
+    <img data-id="p1" src="people/p01.webp" alt="" style="left:200px; top:200px; width:320px; height:480px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.7" style="left:160px; top:760px; width:400px; text-align:center;">周以安</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.7" style="left:160px; top:840px; width:400px; text-align:center;">产品经理</p>
+    <img data-id="p0" src="people/p00.webp" alt="" style="left:600px; top:200px; width:320px; height:480px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.7" style="left:560px; top:760px; width:400px; text-align:center;">林知夏</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.7" style="left:560px; top:840px; width:400px; text-align:center;">创意总监</p>
+    <img data-id="p2" src="people/p02.webp" alt="" style="left:1000px; top:200px; width:320px; height:480px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.7" style="left:960px; top:760px; width:400px; text-align:center;">沈若溪</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.7" style="left:960px; top:840px; width:400px; text-align:center;">视觉设计师</p>
+    <img data-id="p3" src="people/p03.webp" alt="" data-auto-animate-delay="0.6" style="left:1400px; top:200px; width:320px; height:480px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.6799999999999999" style="left:1360px; top:760px; width:400px; text-align:center;">许清和</p>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.6799999999999999" style="left:1360px; top:840px; width:400px; text-align:center;">交互设计师</p>
+  </section>
+
+  <!-- 7 六个人：一排换成两排卡片，四个人带着走，色带退场 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">六位核心成员</p>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:120px; top:200px; width:520px; height:360px;"></div>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:700px; top:200px; width:520px; height:360px;"></div>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:1280px; top:200px; width:520px; height:360px;"></div>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:120px; top:600px; width:520px; height:360px;"></div>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:700px; top:600px; width:520px; height:360px;"></div>
+    <div class="s-surface-2" data-auto-animate-delay="0.8" style="left:1280px; top:600px; width:520px; height:360px;"></div>
+    <img data-id="p1" src="people/p01.webp" alt="" style="left:420px; top:260px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:160px; top:300px;">周以安</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:160px; top:380px;">产品经理</p>
+    <img data-id="p0" src="people/p00.webp" alt="" style="left:1000px; top:260px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:740px; top:300px;">林知夏</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:740px; top:380px;">创意总监</p>
+    <img data-id="p2" src="people/p02.webp" alt="" style="left:1580px; top:260px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:1320px; top:300px;">沈若溪</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:1320px; top:380px;">视觉设计师</p>
+    <img data-id="p4" src="people/p04.webp" alt="" data-auto-animate-delay="0.88" style="left:420px; top:660px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:160px; top:700px;">顾南乔</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:160px; top:780px;">前端工程师</p>
+    <img data-id="p5" src="people/p05.webp" alt="" data-auto-animate-delay="0.96" style="left:1000px; top:660px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:740px; top:700px;">陈屿白</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:740px; top:780px;">后端工程师</p>
+    <img data-id="p3" src="people/p03.webp" alt="" style="left:1580px; top:660px; width:200px; height:300px; object-fit:cover; object-position:50% 0%;">
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:1320px; top:700px;">许清和</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.96" style="left:1320px; top:780px;">交互设计师</p>
+  </section>
+
+  <!-- 8 八个人：抠图人像收成圆形头像（加灰底），卡片退场 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">八位核心成员</p>
+    <img data-id="p1" src="people/p01.webp" alt="" class="s-surface-2" style="left:300px; top:200px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:260px; top:460px; width:320px; text-align:center;">周以安</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:260px; top:530px; width:320px; text-align:center;">产品经理</p>
+    <img data-id="p0" src="people/p00.webp" alt="" class="s-surface-2" style="left:660px; top:200px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:620px; top:460px; width:320px; text-align:center;">林知夏</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:620px; top:530px; width:320px; text-align:center;">创意总监</p>
+    <img data-id="p2" src="people/p02.webp" alt="" class="s-surface-2" style="left:1020px; top:200px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:980px; top:460px; width:320px; text-align:center;">沈若溪</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:980px; top:530px; width:320px; text-align:center;">视觉设计师</p>
+    <img data-id="p6" src="people/p06.webp" alt="" class="s-surface-2" data-auto-animate-delay="0.8" style="left:1380px; top:200px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1340px; top:460px; width:320px; text-align:center;">苏念</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:1340px; top:530px; width:320px; text-align:center;">品牌策划</p>
+    <img data-id="p4" src="people/p04.webp" alt="" class="s-surface-2" style="left:300px; top:580px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:260px; top:840px; width:320px; text-align:center;">顾南乔</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:260px; top:910px; width:320px; text-align:center;">前端工程师</p>
+    <img data-id="p5" src="people/p05.webp" alt="" class="s-surface-2" style="left:660px; top:580px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:620px; top:840px; width:320px; text-align:center;">陈屿白</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:620px; top:910px; width:320px; text-align:center;">后端工程师</p>
+    <img data-id="p3" src="people/p03.webp" alt="" class="s-surface-2" style="left:1020px; top:580px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:980px; top:840px; width:320px; text-align:center;">许清和</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:980px; top:910px; width:320px; text-align:center;">交互设计师</p>
+    <img data-id="p7" src="people/p07.webp" alt="" class="s-surface-2" data-auto-animate-delay="0.88" style="left:1380px; top:580px; width:240px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:50%;">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1340px; top:840px; width:320px; text-align:center;">江北辰</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.9" style="left:1340px; top:910px; width:320px; text-align:center;">用户研究员</p>
+  </section>
+
+  <!-- 9 十二个人：圆头像撑回竖卡，两排六个 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">十二位团队成员</p>
+    <img data-id="p1" src="people/p01.webp" alt="" class="s-surface-2" style="left:160px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:140px; top:490px; width:240px; text-align:center;">周以安</p>
+    <img data-id="p0" src="people/p00.webp" alt="" class="s-surface-2" style="left:440px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:420px; top:490px; width:240px; text-align:center;">林知夏</p>
+    <img data-id="p2" src="people/p02.webp" alt="" class="s-surface-2" style="left:720px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:700px; top:490px; width:240px; text-align:center;">沈若溪</p>
+    <img data-id="p6" src="people/p06.webp" alt="" class="s-surface-2" style="left:1000px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:980px; top:490px; width:240px; text-align:center;">苏念</p>
+    <img data-id="p8" src="people/p08.webp" alt="" class="s-surface-2" data-auto-animate-delay="0.8" style="left:1280px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1260px; top:490px; width:240px; text-align:center;">唐书言</p>
+    <img data-id="p9" src="people/p09.webp" alt="" class="s-surface-2" data-auto-animate-delay="0.88" style="left:1560px; top:180px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1540px; top:490px; width:240px; text-align:center;">叶景行</p>
+    <img data-id="p4" src="people/p04.webp" alt="" class="s-surface-2" style="left:160px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:140px; top:910px; width:240px; text-align:center;">顾南乔</p>
+    <img data-id="p5" src="people/p05.webp" alt="" class="s-surface-2" style="left:440px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:420px; top:910px; width:240px; text-align:center;">陈屿白</p>
+    <img data-id="p3" src="people/p03.webp" alt="" class="s-surface-2" style="left:720px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:700px; top:910px; width:240px; text-align:center;">许清和</p>
+    <img data-id="p7" src="people/p07.webp" alt="" class="s-surface-2" style="left:1000px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:980px; top:910px; width:240px; text-align:center;">江北辰</p>
+    <img data-id="p10" src="people/p10.webp" alt="" class="s-surface-2" data-auto-animate-delay="0.9600000000000001" style="left:1280px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1260px; top:910px; width:240px; text-align:center;">宋知意</p>
+    <img data-id="p11" src="people/p11.webp" alt="" class="s-surface-2" data-auto-animate-delay="1.04" style="left:1560px; top:600px; width:200px; height:300px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <p class="t-h2" data-auto-animate-delay="0.9" style="left:1540px; top:910px; width:240px; text-align:center;">程一诺</p>
+  </section>
+
+  <!-- 10 照片墙：十二个人整组归位进墙，另外十二张从画外散落飞入、归位补满 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <p class="t-h1" data-auto-animate-delay="0.8" style="left:120px; top:80px;">星火设计工作室</p>
+    <img data-id="p1" src="people/p01.webp" alt="" class="s-surface-2" style="left:180px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p0" src="people/p00.webp" alt="" class="s-surface-2" style="left:580px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p2" src="people/p02.webp" alt="" class="s-surface-2" style="left:980px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p6" src="people/p06.webp" alt="" class="s-surface-2" style="left:1380px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p8" src="people/p08.webp" alt="" class="s-surface-2" style="left:380px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p9" src="people/p09.webp" alt="" class="s-surface-2" style="left:780px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p4" src="people/p04.webp" alt="" class="s-surface-2" style="left:1180px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p5" src="people/p05.webp" alt="" class="s-surface-2" style="left:1580px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p3" src="people/p03.webp" alt="" class="s-surface-2" style="left:180px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p7" src="people/p07.webp" alt="" class="s-surface-2" style="left:580px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p10" src="people/p10.webp" alt="" class="s-surface-2" style="left:980px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img data-id="p11" src="people/p11.webp" alt="" class="s-surface-2" style="left:1380px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p03.webp" alt="" class="s-surface-2" data-path="0.1 -260 504 28; 0.65 358 294 -19; 1.4 460 320 0" style="left:380px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p08.webp" alt="" class="s-surface-2" data-path="0.16 2180 619 -29; 0.71 699 258 2; 1.46 860 320 0" style="left:780px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p01.webp" alt="" class="s-surface-2" data-path="0.22 1056 -320 -33; 0.77 1388 654 11; 1.52 1260 320 0" style="left:1180px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p06.webp" alt="" class="s-surface-2" data-path="0.28 657 1400 33; 0.83 1453 283 12; 1.58 1660 320 0" style="left:1580px; top:200px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p11.webp" alt="" class="s-surface-2" data-path="0.34 -260 326 -3; 0.89 1400 356 1; 1.64 260 600 0" style="left:180px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p04.webp" alt="" class="s-surface-2" data-path="0.4 2180 684 -17; 0.95 891 793 -19; 1.7 660 600 0" style="left:580px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p09.webp" alt="" class="s-surface-2" data-path="0.46 1391 -320 30; 1.01 1022 319 20; 1.76 1060 600 0" style="left:980px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p02.webp" alt="" class="s-surface-2" data-path="0.52 1355 1400 28; 1.07 681 728 2; 1.82 1460 600 0" style="left:1380px; top:480px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p07.webp" alt="" class="s-surface-2" data-path="0.58 -260 699 -9; 1.13 1000 526 25; 1.88 460 880 0" style="left:380px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p00.webp" alt="" class="s-surface-2" data-path="0.64 2180 349 -2; 1.19 427 808 8; 1.94 860 880 0" style="left:780px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p05.webp" alt="" class="s-surface-2" data-path="0.7 1213 -320 -31; 1.25 849 843 -18; 2.0 1260 880 0" style="left:1180px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+    <img src="people/p10.webp" alt="" class="s-surface-2" data-path="0.76 1056 1400 22; 1.31 960 375 1; 2.06 1660 880 0" style="left:1580px; top:760px; width:160px; height:240px; object-fit:cover; object-position:50% 0%; border-radius:var(--radius-m);">
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>
