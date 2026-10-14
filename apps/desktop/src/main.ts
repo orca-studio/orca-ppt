@@ -20,7 +20,7 @@ import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
 import { recordPreview, type PreviewJob } from './preview-recorder.js'
-import { UpdateSourceType, updateElectronApp } from 'update-electron-app'
+import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
 
 /**
  * 菜单和「关于」里显示的名字。**要在 app ready 之前设** —— macOS 最左边那个菜单的名字
@@ -525,6 +525,13 @@ if (app.isPackaged) {
       repo: 'orca-studio/orca-ppt',
     },
     updateInterval: '1 hour',
+    // 库自带的弹窗是英文；界面别处都是中文
+    onNotifyUser: makeUserNotifier({
+      title: '更新',
+      detail: '新版本已经下载好，重启应用就能用上。',
+      restartButtonText: '重启',
+      laterButtonText: '稍后',
+    }),
   })
 }
 
