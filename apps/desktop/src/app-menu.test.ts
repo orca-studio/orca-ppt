@@ -62,6 +62,19 @@ describe('应用菜单', () => {
     expect(sent).toEqual(['open', 'present'])
   })
 
+  it('文件菜单里有导出 PPTX;没有稿子、正在导出时是灰的', () => {
+    const item = (over: Parameters<typeof build>[0]) =>
+      (
+        build(over).find((menu) => menu.label === '文件')!.submenu as Array<{
+          label?: string
+          enabled?: boolean
+        }>
+      ).find((entry) => entry.label?.includes('PPTX'))!
+    expect(item({})).toMatchObject({ label: '导出 PPTX…', enabled: true })
+    expect(item({ canPresent: false }).enabled).toBe(false)
+    expect(item({ exporting: true })).toMatchObject({ label: '正在导出 PPTX…', enabled: false })
+  })
+
   it('没有稿子时放映和自动播放都是灰的', () => {
     const present = build({ canPresent: false }).find((item) => item.label === '放映')!
       .submenu as Array<{ enabled?: boolean }>

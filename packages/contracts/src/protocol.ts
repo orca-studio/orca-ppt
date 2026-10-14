@@ -9,6 +9,37 @@ import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } fro
  * 界面里有、这里没有的操作,不许存在(见 docs/ARCHITECTURE.md)。
  */
 
+/**
+ * 导出 PPTX 的降级:这一次翻页在 PowerPoint 里和网页不一样。档位和回退规则在 skill 的
+ * `references/transitions.md`「导出 PPTX」,这里只是把结果带回来。
+ */
+export const PptxDegraded = z.object({
+  /** 从第几页翻到第几页(从 1 数)。 */
+  from: z.number().int().positive(),
+  to: z.number().int().positive(),
+  /** 网页里用的手法,几个就用「 + 」连起来。 */
+  technique: z.string(),
+  tier: z.enum(['近似', '降级', '丢失']),
+  /** PowerPoint 里实际用的转场。 */
+  kind: z.enum(['morph', 'fade', 'wipe', 'none']),
+})
+
+/** 壳交回来的导出报告:skill 导出器的原始报告,只取用得到的几项。 */
+export const PptxExportReport = z.object({
+  slides: z.array(
+    z.object({
+      index: z.number().int().positive(),
+      /** 这一页导不出来的效果,人话。 */
+      lost: z.array(z.string()),
+      /** 转成图片的元素(PowerPoint 画不出来的)。 */
+      rasters: z.array(z.unknown()),
+    }),
+  ),
+  degraded: z.array(PptxDegraded),
+  /** 用到的字体。字体不嵌进文件,看的那台电脑要装。 */
+  fonts: z.array(z.string()),
+})
+
 /** 首页上指着一个同款时给人看什么。 */
 export const RecipeFocusShow = z.enum(['preview', 'prompt', 'none'])
 
@@ -712,6 +743,38 @@ export const requests = {
     }),
     result: z.object({}),
   },
+  /**
+   * 导出 PPTX。网页稿是作品本身,PPTX 是功能不完整的导出选项:每次翻页按 skill 的
+   * 「导出 PPTX」表回退,结果里说清哪几次翻页降级了、哪些效果导不出来、要装哪些字体。
+   *
+   * 要逐页渲染,只有壳做得到:server 推 `pptx.request`,壳导好回 `pptx.result`,
+   * server 再把文件放到 `path`。
+   */
+  'deck.exportPptx': {
+    params: z.object({
+      deckId: z.string(),
+      /** 存到哪。绝对路径,以 .pptx 结尾,所在目录要已经存在;同名文件会被覆盖。 */
+      path: z.string(),
+    }),
+    result: z.object({
+      path: z.string(),
+      slides: z.number().int().nonnegative(),
+      degraded: z.array(PptxDegraded),
+      lost: z.array(z.object({ slide: z.number().int().positive(), items: z.array(z.string()) })),
+      /** 转成图片的元素一共几个。 */
+      rasters: z.number().int().nonnegative(),
+      fonts: z.array(z.string()),
+    }),
+  },
+  /** 壳把 PPTX 导好了(或者导失败了)。只有壳会调。 */
+  'pptx.result': {
+    params: z.object({
+      requestId: z.string(),
+      report: PptxExportReport.optional(),
+      error: z.string().optional(),
+    }),
+    result: z.object({}),
+  },
   /** 壳把同款样片录好了(或者录失败了)。只有壳会调。 */
   'preview.result': {
     params: z.object({ requestId: z.string(), error: z.string().optional() }),
@@ -952,6 +1015,13 @@ export const pushes = {
     range: z
       .object({ from: z.number().int().nonnegative(), to: z.number().int().nonnegative() })
       .optional(),
+  }),
+  /** 请壳把一份稿子导成 PPTX,写到 `outPath`(应用数据目录里的临时文件)。 */
+  'pptx.request': z.object({
+    deckId: z.string(),
+    requestId: z.string(),
+    previewUrl: z.string(),
+    outPath: z.string(),
   }),
   /** 同款列表变了(样片录好了)。首页重新拉一次 catalog.recipes。 */
   'recipes.changed': z.object({}),

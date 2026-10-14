@@ -10,6 +10,7 @@ import type { MenuItemConstructorOptions } from 'electron'
  */
 export type MenuAction =
   | 'open'
+  | 'export-pptx'
   | 'present'
   | 'toggle-nav'
   | 'toggle-inspector'
@@ -26,13 +27,15 @@ export interface MenuOptions {
   isMac: boolean
   /** 没有打开的稿子时,放映应该是灰的。 */
   canPresent: boolean
+  /** 正在导出 PPTX。一次只导一份,导完之前菜单项是灰的。 */
+  exporting?: boolean
   /** 当前主题,用来打勾。 */
   theme: 'system' | 'light' | 'dark'
   send: (action: MenuAction) => void
 }
 
 export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { appName, isMac, canPresent, theme, send } = options
+  const { appName, isMac, canPresent, exporting = false, theme, send } = options
 
   const appMenu: MenuItemConstructorOptions[] = isMac
     ? [
@@ -57,6 +60,13 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
       label: '文件',
       submenu: [
         { label: '打开 deck 目录…', accelerator: 'CmdOrCtrl+O', click: () => send('open') },
+        { type: 'separator' },
+        {
+          label: exporting ? '正在导出 PPTX…' : '导出 PPTX…',
+          accelerator: 'Shift+CmdOrCtrl+E',
+          enabled: canPresent && !exporting,
+          click: () => send('export-pptx'),
+        },
         { type: 'separator' },
         isMac ? { role: 'close', label: '关闭窗口' } : { role: 'quit', label: `退出 ${appName}` },
       ],

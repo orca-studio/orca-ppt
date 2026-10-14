@@ -3,7 +3,7 @@ import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
 import { listSkill, readSkill } from './skill-content.js'
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, writeFile, realpath, stat } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, rm, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { homedir } from 'node:os'
@@ -24,6 +24,7 @@ import {
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
+import { pptxExportDir, pptxTargetProblem, summarizePptx } from './pptx.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyPlanEdit, applyTextEdit } from './edit.js'
 import { DeckControl } from './control.js'
@@ -244,6 +245,12 @@ export async function startServer(
     }
   >((payload) => bus.broadcast('preview.request', payload), 240_000)
 
+  // 导出 PPTX 要逐页渲染、截图,和录样片差不多慢
+  const pptxExports = new Roundtrip<
+    NonNullable<RequestParams<'pptx.result'>['report']>,
+    { previewUrl: string; outPath: string }
+  >((payload) => bus.broadcast('pptx.request', payload), 300_000)
+
   const queue = new RequestQueue((deckId, pending) =>
     bus.broadcast('requests.changed', { deckId, requests: pending }),
   )
@@ -346,6 +353,7 @@ export async function startServer(
         canvases.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
         previewRenders.failAll(AgentError.uiDisconnected())
+        pptxExports.failAll(AgentError.uiDisconnected())
       }
     })
   })
@@ -1099,6 +1107,32 @@ export async function startServer(
           previewUrl,
           slide: params.slide ?? 0,
         })
+        return {}
+      }
+      case 'deck.exportPptx': {
+        const params = parseParams('deck.exportPptx', raw)
+        const target = expandHome(params.path)
+        const problem = await pptxTargetProblem(target)
+        if (problem) throw new Error(problem)
+        const opened = await openDeck(deckPathOf(params.deckId))
+        const previewUrl = mountPreview(opened)
+        if (!previewUrl) throw new Error(AgentError.noBuild())
+
+        const dir = pptxExportDir()
+        await mkdir(dir, { recursive: true })
+        const outPath = join(dir, `${randomUUID()}.pptx`)
+        try {
+          const report = await pptxExports.request(params.deckId, { previewUrl, outPath })
+          // 不用 rename:临时目录和目标可能不在同一个卷上
+          await copyFile(outPath, target)
+          return summarizePptx(target, report)
+        } finally {
+          await rm(outPath, { force: true })
+        }
+      }
+      case 'pptx.result': {
+        const params = parseParams('pptx.result', raw)
+        pptxExports.settle(params.requestId, { value: params.report, error: params.error })
         return {}
       }
       case 'deck.stopPresent': {

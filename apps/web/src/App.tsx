@@ -21,6 +21,7 @@ import { CanvasControls, Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
+import { pptxSummary } from './pptx-summary.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
 
@@ -31,6 +32,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const deckRef = useRef<OpenedDeck | undefined>(undefined)
   // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
   const presentRef = useRef<() => void>(() => {})
+  const exportPptxRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
   const toggleInspectorRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
@@ -47,6 +49,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const thumbTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
@@ -235,6 +238,29 @@ export function App({ serverUrl }: { serverUrl: string }) {
         } catch (cause) {
           await next
             .request('preview.result', {
+              requestId: data.requestId,
+              error: cause instanceof Error ? cause.message : String(cause),
+            })
+            .catch(() => {})
+        }
+      })()
+    })
+    next.subscribe('pptx.request', (data) => {
+      void (async () => {
+        try {
+          if (!window.orca?.exportPptx) throw new Error('这个客户端导不了 PPTX')
+          const report = await window.orca.exportPptx({
+            previewUrl: data.previewUrl,
+            outPath: data.outPath,
+          })
+          // 报告的形状由 server 在边界上按契约校验
+          await next.request('pptx.result', {
+            requestId: data.requestId,
+            report: report as NonNullable<RequestParams<'pptx.result'>['report']>,
+          })
+        } catch (cause) {
+          await next
+            .request('pptx.result', {
               requestId: data.requestId,
               error: cause instanceof Error ? cause.message : String(cause),
             })
@@ -449,6 +475,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     window.orca?.onMenuAction?.((action) => {
       if (action === 'open') void pickDeck(open)
       else if (action === 'present') presentRef.current()
+      else if (action === 'export-pptx') exportPptxRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-inspector') toggleInspectorRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
@@ -684,13 +711,39 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   presentRef.current = present
 
+  /** 导出 PPTX。存到哪由人在保存对话框里选;导出本身走协议,agent 调的是同一个方法。 */
+  const exportPptx = useCallback(async () => {
+    const active = transport.current
+    const current = deckRef.current
+    if (!active || !current || !window.orca?.pickPptxPath) return
+    const path = await window.orca.pickPptxPath({
+      dir: current.deck.path,
+      name: current.deck.title,
+      ...(current.readOnly ? { readOnly: true } : {}),
+    })
+    if (!path) return
+    setExporting(true)
+    try {
+      const result = await active.request('deck.exportPptx', { deckId: current.deck.id, path })
+      await window.orca.pptxExported?.({ ...pptxSummary(result), path: result.path })
+    } catch (cause) {
+      await window.orca.pptxExported?.({
+        message: '没导出来',
+        detail: cause instanceof Error ? cause.message : String(cause),
+      })
+    } finally {
+      setExporting(false)
+    }
+  }, [])
+  exportPptxRef.current = () => void exportPptx()
+
   toggleNavRef.current = toggleNav
   toggleInspectorRef.current = toggleInspector
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
-    void window.orca?.setMenuState?.({ canPresent: Boolean(deck?.previewUrl), theme })
-  }, [deck?.previewUrl, theme])
+    void window.orca?.setMenuState?.({ canPresent: Boolean(deck?.previewUrl), exporting, theme })
+  }, [deck?.previewUrl, exporting, theme])
 
   /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
   const setHolder = useCallback(

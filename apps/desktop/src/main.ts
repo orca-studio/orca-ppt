@@ -20,6 +20,7 @@ import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
 import { recordPreview, type PreviewJob } from './preview-recorder.js'
+import { exportPptx, type PptxJob } from './pptx-exporter.js'
 import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
 
 /**
@@ -75,7 +76,9 @@ app.on('second-instance', () => {
 })
 
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
-function applyMenu(state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }): void {
+type MenuState = { canPresent: boolean; exporting?: boolean; theme: 'system' | 'light' | 'dark' }
+
+function applyMenu(state: MenuState): void {
   const send = (action: MenuAction) => {
     // 连接说明是壳自己的对话框,不用绕一圈去渲染层
     if (action === 'connect-agent') {
@@ -469,6 +472,17 @@ ipcMain.handle('deck:preview', (_event, job: PreviewJob) => {
 })
 
 /**
+ * 导出 PPTX。和录样片一样一次只导一份:都是隐藏窗口里逐页 seek,并行只会互相拖慢。
+ * 先写到 server 给的临时文件,挪到用户选的位置是 server 的事。
+ */
+let pptxTail: Promise<unknown> = Promise.resolve()
+ipcMain.handle('deck:export-pptx', (_event, job: PptxJob) => {
+  const run = pptxTail.then(() => exportPptx(job))
+  pptxTail = run.catch(() => {})
+  return run
+})
+
+/**
  * 主题。`system` 让 Electron 自己跟着系统走,`light`/`dark` 是用户在应用里显式选的。
  *
  * 壳这一层也要设:原生的菜单、对话框、滚动条是 Chromium 按 nativeTheme 画的,
@@ -505,13 +519,47 @@ ipcMain.handle('deck:pick', async () => {
   return result.canceled ? undefined : result.filePaths[0]
 })
 
-/** 菜单里的启用状态和勾选跟着界面走,渲染层变了就报一声。 */
+/**
+ * 导出 PPTX 存到哪。和打开目录一样,渲染层只拿到一个路径字符串,写文件的是 server。
+ * 默认放在稿子目录旁边;只读的稿子(同款样稿在 app 包里)放进「下载」。
+ */
 ipcMain.handle(
-  'app:menu-state',
-  (_event, state: { canPresent: boolean; theme: 'system' | 'light' | 'dark' }) => {
-    applyMenu(state)
+  'deck:pick-pptx',
+  async (_event, input: { dir: string; name: string; readOnly?: boolean }) => {
+    const dir = input.readOnly ? app.getPath('downloads') : input.dir
+    const name = input.name.replace(/[/\\:*?"<>|]/g, '-').trim() || 'deck'
+    const result = await dialog.showSaveDialog({
+      title: '导出 PPTX',
+      defaultPath: join(dir, `${name}.pptx`),
+      filters: [{ name: 'PowerPoint 演示文稿', extensions: ['pptx'] }],
+    })
+    return result.canceled ? undefined : result.filePath
   },
 )
+
+/**
+ * 导完了(或者导失败了):说清哪里和网页不一样,导成了就给一个「在访达中显示」。
+ * 文字由渲染层拼好。
+ */
+ipcMain.handle(
+  'deck:pptx-exported',
+  async (_event, input: { message: string; detail: string; path?: string }) => {
+    const reveal = isMac ? '在访达中显示' : '在文件夹中显示'
+    const result = await dialog.showMessageBox({
+      type: input.path ? 'info' : 'warning',
+      message: input.message,
+      detail: input.detail,
+      buttons: input.path ? ['好', reveal] : ['好'],
+      defaultId: 0,
+    })
+    if (input.path && result.response === 1) shell.showItemInFolder(input.path)
+  },
+)
+
+/** 菜单里的启用状态和勾选跟着界面走,渲染层变了就报一声。 */
+ipcMain.handle('app:menu-state', (_event, state: MenuState) => {
+  applyMenu(state)
+})
 
 /**
  * 自动更新:Electron 官方的 update.electronjs.org 读本仓的 GitHub Releases(仓库是公开的才能用),

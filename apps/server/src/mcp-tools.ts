@@ -1089,6 +1089,36 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'export_pptx',
+      // 不动稿子本身,所以算 read;写的是稿子之外的一个 .pptx
+      activity: () => ({ kind: 'read', label: '导出 PPTX', slides: [] }),
+      config: {
+        title: '导出 PPTX',
+        annotations: {
+          readOnlyHint: false,
+          // 同名文件会被覆盖
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+        description:
+          '把当前稿子导出成 PowerPoint 文件。网页稿是作品本身,PPTX 是功能不完整的导出:每次翻页按随附规范 references/transitions.md「导出 PPTX」那张表回退。结果里有哪几次翻页降级了、哪些效果导不出来、要装哪些字体(字体不嵌进文件)—— 这些要告诉用户。只在用户要 PowerPoint 文件时调它,几十秒才导完。',
+        inputSchema: {
+          path: z
+            .string()
+            .describe('存到哪:绝对路径,以 .pptx 结尾,所在目录要已经存在;同名文件会被覆盖')
+            .meta({ title: '保存位置' }),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('deck.exportPptx', {
+            deckId: await active.get(call),
+            path: String(args.path),
+          }),
+        ),
+    },
+    {
       name: 'autoplay',
       activity: (args) => ({
         kind: 'read',

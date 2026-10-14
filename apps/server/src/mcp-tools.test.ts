@@ -525,3 +525,22 @@ describe('shared page and image tools', () => {
     ).toBe(true)
   })
 })
+
+it('MCP 导出 PPTX 走 deck.exportPptx,结果原样给 agent', async () => {
+  const exported = {
+    path: '/tmp/a.pptx',
+    slides: 3,
+    degraded: [],
+    lost: [],
+    rasters: 0,
+    fonts: ['Inter'],
+  }
+  const { client, calls } = fakeClient({
+    'deck.current': { deckId: '/d' },
+    'deck.exportPptx': exported,
+  })
+  const { map } = toolsOf(client)
+  const result = await map.get('export_pptx')!.run({ path: '/tmp/a.pptx' })
+  expect(calls).toContainEqual(['deck.exportPptx', { deckId: '/d', path: '/tmp/a.pptx' }])
+  expect(JSON.stringify(result)).toContain('Inter')
+})

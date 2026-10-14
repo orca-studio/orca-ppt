@@ -22,7 +22,11 @@ declare global {
       /** 菜单里的动作。菜单只是另一个触发器,走的是同一条协议方法。 */
       onMenuAction?: (handler: (action: string) => void) => void
       /** 菜单里的启用状态和勾选,跟着界面走。 */
-      setMenuState?: (state: { canPresent: boolean; theme: string }) => Promise<void>
+      setMenuState?: (state: {
+        canPresent: boolean
+        exporting?: boolean
+        theme: string
+      }) => Promise<void>
       /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
       setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
       /** 全屏放映。稿子好不好只有放映能回答。 */
@@ -38,6 +42,16 @@ declare global {
         coverAt?: number
         range?: { from: number; to: number }
       }) => Promise<boolean>
+      /** 导出 PPTX(写到 server 给的临时文件),返回导出器的报告。 */
+      exportPptx?: (input: { previewUrl: string; outPath: string }) => Promise<unknown>
+      /** 壳弹保存对话框,只把路径交回来。 */
+      pickPptxPath?: (input: {
+        dir: string
+        name: string
+        readOnly?: boolean
+      }) => Promise<string | undefined>
+      /** 导完了(没给 path 就是导失败了),壳弹一个对话框说结果。 */
+      pptxExported?: (input: { message: string; detail: string; path?: string }) => Promise<void>
       renderThumbnails?: (input: {
         previewUrl: string
         slideCount: number
