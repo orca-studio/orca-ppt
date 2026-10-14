@@ -993,6 +993,8 @@ export const pushes = {
     slides: z.array(z.number().int().nonnegative()).optional(),
     /** 输出宽度。不给就是页胶片用的 320。 */
     width: z.number().int().positive().optional(),
+    /** 写到哪个目录(缩略图缓存里的一格)。不给就由壳自己找个临时目录。 */
+    outDir: z.string().optional(),
   }),
   /**
    * 请壳录一段同款样片。样片是**按内容寻址的缓存**:`outPath` 里带着样稿和它引用的

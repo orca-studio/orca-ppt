@@ -945,3 +945,40 @@ describe('导出 PPTX', () => {
     await expect(readFile(target)).rejects.toThrow()
   })
 })
+
+describe('页胶片缩略图缓存', () => {
+  it('第一次请壳渲到缓存里,内容不变再要就直接给,改了再渲', async () => {
+    const { id, dir } = await builtDeck(
+      '<div class="slides"><section>1</section><section>2</section></div>',
+    )
+    const requests: any[] = []
+    const listener = (raw: Buffer) => {
+      const message = JSON.parse(raw.toString())
+      if (message.channel !== 'thumbnails.request') return
+      requests.push(message.data)
+      void (async () => {
+        const paths = [0, 1].map((i) => join(message.data.outDir, `${i}.png`))
+        for (const path of paths) await writeFile(path, 'png')
+        await call('thumbnails.result', { requestId: message.data.requestId, paths })
+      })()
+    }
+    socket.on('message', listener)
+
+    const first = (await call('deck.thumbnails', { deckId: id })).data.paths
+    expect(requests).toHaveLength(1)
+    expect(requests[0].outDir.startsWith(process.env.ORCA_PPT_THUMBNAIL_DIR!)).toBe(true)
+    expect(first).toHaveLength(2)
+
+    const again = (await call('deck.thumbnails', { deckId: id })).data.paths
+    expect(requests).toHaveLength(1)
+    expect(again).toEqual(first)
+
+    await writeFile(
+      join(dir, 'deck.html'),
+      '<div class="slides"><section>一</section><section>2</section></div>',
+    )
+    await call('deck.thumbnails', { deckId: id })
+    socket.off('message', listener)
+    expect(requests).toHaveLength(2)
+  })
+})

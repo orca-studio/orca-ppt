@@ -59,6 +59,8 @@ declare global {
         slides?: number[]
         /** 输出宽度。不给就是 320。 */
         width?: number
+        /** 写进缩略图缓存的这一格。不给就是壳自己的临时目录。 */
+        outDir?: string
       }) => Promise<Array<string | null>>
       /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
       openFile?: (path: string) => Promise<string | undefined>

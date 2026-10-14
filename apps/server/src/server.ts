@@ -25,6 +25,13 @@ import {
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
 import { pptxExportDir, pptxTargetProblem, summarizePptx } from './pptx.js'
+import {
+  dropPartial,
+  partialDir,
+  readThumbnails,
+  storeThumbnails,
+  thumbnailSlot,
+} from './thumbnail-cache.js'
 import { DeckWatcher } from './deck-watch.js'
 import { applyPlanEdit, applyTextEdit } from './edit.js'
 import { DeckControl } from './control.js'
@@ -231,7 +238,7 @@ export async function startServer(
   // 一份稿子每页渲一张,比单张截图慢得多,给足时间。
   const thumbnails = new Roundtrip<
     Array<string | null>,
-    { previewUrl: string; slideCount: number; slides?: number[]; width?: number }
+    { previewUrl: string; slideCount: number; slides?: number[]; width?: number; outDir?: string }
   >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
   // 录一段样片要逐帧 seek 二三十秒的稿子,给足时间
   const previewRenders = new Roundtrip<
@@ -1174,13 +1181,28 @@ export async function startServer(
         const params = parseParams('deck.thumbnails', raw)
         const opened = await openDeck(deckPathOf(params.deckId))
         const previewUrl = mountPreview(opened)
-        if (!previewUrl) return { paths: [] }
+        if (!previewUrl || !opened.entryFile) return { paths: [] }
 
-        return {
-          paths: await thumbnails.request(params.deckId, {
+        // 内容没变就用上次渲的:打开稿子时左栏立刻有图,不用等每一页离屏渲一遍
+        const slot = await thumbnailSlot(opened.deck.path, opened.entryFile, 320)
+        const cached = await readThumbnails(slot, opened.slideCount)
+        if (cached) {
+          for (const path of cached) previews.allowFile(path)
+          return { paths: cached }
+        }
+        const outDir = await partialDir(slot)
+        try {
+          const rendered = await thumbnails.request(params.deckId, {
             previewUrl,
             slideCount: opened.slideCount,
-          }),
+            outDir,
+          })
+          const paths = await storeThumbnails(slot, outDir, rendered, opened.slideCount)
+          for (const path of paths) previews.allowFile(path ?? undefined)
+          return { paths }
+        } catch (cause) {
+          await dropPartial(outDir)
+          throw cause
         }
       }
       case 'preview.result': {

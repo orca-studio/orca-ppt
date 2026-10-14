@@ -284,6 +284,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
             slideCount: data.slideCount,
             ...(data.slides ? { slides: data.slides } : {}),
             ...(data.width ? { width: data.width } : {}),
+            ...(data.outDir ? { outDir: data.outDir } : {}),
           })
           await next.request('thumbnails.result', {
             requestId: data.requestId,

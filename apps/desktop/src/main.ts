@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import {
   BrowserWindow,
   Menu,
@@ -336,11 +336,22 @@ ipcMain.handle('deck:stop-present', () => {
  */
 const thumbnailQueue = new ThumbnailQueue()
 
+/** 缩略图缓存里的一格:`<根>/thumbnails/<稿子>/<键>…`(见 apps/server/src/thumbnail-cache.ts)。 */
+function isThumbnailDir(path: string): boolean {
+  return basename(dirname(dirname(path))) === 'thumbnails'
+}
+
 ipcMain.handle(
   'deck:thumbnails',
   async (
     event,
-    input: { previewUrl: string; slideCount: number; slides?: number[]; width?: number },
+    input: {
+      previewUrl: string
+      slideCount: number
+      slides?: number[]
+      width?: number
+      outDir?: string
+    },
   ) => {
     if (input.slideCount === 0) return []
     const key = `${event.sender.id}:${input.previewUrl}:${input.slides?.join(',') ?? 'all'}:${input.width ?? 320}`
@@ -400,7 +411,12 @@ ipcMain.handle(
         }
         await offscreen.webContents.executeJavaScript('document.fonts.ready')
 
-        const dir = join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
+        // 页胶片的图写进 server 给的缓存目录;壳也守一道,只认缩略图缓存里的一格。
+        // 没给(录制要的单页大图)就写临时目录,用完即弃,下次启动清掉
+        const dir =
+          input.outDir && isThumbnailDir(input.outDir)
+            ? input.outDir
+            : join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
         await mkdir(dir, { recursive: true })
 
         const paths: Array<string | null> = []
@@ -584,6 +600,8 @@ if (app.isPackaged) {
 }
 
 app.whenReady().then(() => {
+  // 临时缩略图只在当次用:server 拿到就转成 base64 交出去了,不留路径
+  void rm(join(app.getPath('userData'), 'thumbs'), { recursive: true, force: true })
   applyMenu({ canPresent: false, theme: 'system' })
   app.setAboutPanelOptions({
     applicationName: APP_NAME,
