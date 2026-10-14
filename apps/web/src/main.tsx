@@ -50,8 +50,8 @@ declare global {
         name: string
         readOnly?: boolean
       }) => Promise<string | undefined>
-      /** 导完了(没给 path 就是导失败了),壳弹一个对话框说结果。 */
-      pptxExported?: (input: { message: string; detail: string; path?: string }) => Promise<void>
+      /** 导出失败,壳弹一个对话框说原因。导成了不提示。 */
+      pptxFailed?: (reason: string) => Promise<void>
       renderThumbnails?: (input: {
         previewUrl: string
         slideCount: number

@@ -35,8 +35,8 @@ electron.contextBridge.exposeInMainWorld('orca', {
     electron.ipcRenderer.invoke('deck:export-pptx', input),
   pickPptxPath: (input: unknown): Promise<string | undefined> =>
     electron.ipcRenderer.invoke('deck:pick-pptx', input),
-  pptxExported: (input: unknown): Promise<void> =>
-    electron.ipcRenderer.invoke('deck:pptx-exported', input),
+  pptxFailed: (reason: string): Promise<void> =>
+    electron.ipcRenderer.invoke('deck:pptx-failed', reason),
   present: (input: unknown): Promise<boolean> => electron.ipcRenderer.invoke('deck:present', input),
   stopPresent: (): Promise<boolean> => electron.ipcRenderer.invoke('deck:stop-present'),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>

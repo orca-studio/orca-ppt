@@ -554,23 +554,16 @@ ipcMain.handle(
 )
 
 /**
- * 导完了(或者导失败了):说清哪里和网页不一样,导成了就给一个「在访达中显示」。
- * 文字由渲染层拼好。
+ * 导出失败才说话。导成了不提示:人在保存对话框里点下「保存」,这件事就结束了。
  */
-ipcMain.handle(
-  'deck:pptx-exported',
-  async (_event, input: { message: string; detail: string; path?: string }) => {
-    const reveal = isMac ? '在访达中显示' : '在文件夹中显示'
-    const result = await dialog.showMessageBox({
-      type: input.path ? 'info' : 'warning',
-      message: input.message,
-      detail: input.detail,
-      buttons: input.path ? ['好', reveal] : ['好'],
-      defaultId: 0,
-    })
-    if (input.path && result.response === 1) shell.showItemInFolder(input.path)
-  },
-)
+ipcMain.handle('deck:pptx-failed', async (_event, reason: string) => {
+  await dialog.showMessageBox({
+    type: 'warning',
+    message: '没导出来',
+    detail: reason,
+    buttons: ['好'],
+  })
+})
 
 /** 菜单里的启用状态和勾选跟着界面走,渲染层变了就报一声。 */
 ipcMain.handle('app:menu-state', (_event, state: MenuState) => {

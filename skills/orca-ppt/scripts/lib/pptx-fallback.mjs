@@ -27,9 +27,10 @@ export const ELEMENT_TECHNIQUES = {
 
 /** 引擎和稿子里有、但表里没有对应项的东西，导出时一律报出来，不默默丢掉。 */
 export const LOST = {
-  rhythm: "新元素「等主角落定再出现」的节奏",
-  anim: "页内动画（data-anim / data-step）",
-  video: "视频（导成静帧）",
+  // 说给看导出结果的人听：网页里是什么，PowerPoint 里变成什么
+  rhythm: "新内容等主角到位才出现：PowerPoint 里会和翻页同时出现",
+  anim: "页内动画：PowerPoint 里直接是放完的样子",
+  video: "视频：PowerPoint 里是一张静止画面",
 };
 
 /**

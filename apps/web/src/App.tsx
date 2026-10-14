@@ -21,7 +21,6 @@ import { CanvasControls, Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
-import { pptxSummary } from './pptx-summary.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
 
@@ -712,7 +711,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   presentRef.current = present
 
-  /** 导出 PPTX。存到哪由人在保存对话框里选;导出本身走协议,agent 调的是同一个方法。 */
+  /**
+   * 导出 PPTX。存到哪由人在保存对话框里选;导出本身走协议,agent 调的是同一个方法。
+   * 导成了不提示 —— 点下「保存」这件事就结束了;导失败才说。
+   */
   const exportPptx = useCallback(async () => {
     const active = transport.current
     const current = deckRef.current
@@ -725,13 +727,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
     if (!path) return
     setExporting(true)
     try {
-      const result = await active.request('deck.exportPptx', { deckId: current.deck.id, path })
-      await window.orca.pptxExported?.({ ...pptxSummary(result), path: result.path })
+      await active.request('deck.exportPptx', { deckId: current.deck.id, path })
     } catch (cause) {
-      await window.orca.pptxExported?.({
-        message: '没导出来',
-        detail: cause instanceof Error ? cause.message : String(cause),
-      })
+      await window.orca.pptxFailed?.(cause instanceof Error ? cause.message : String(cause))
     } finally {
       setExporting(false)
     }
