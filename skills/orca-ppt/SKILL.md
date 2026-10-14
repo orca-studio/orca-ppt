@@ -97,6 +97,8 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | `runtime/pairs.json` | 颜色配对表（哪个类压在哪个类上），`check-palettes.mjs` 读它 |
 | `runtime/engine.js` | reveal 初始化 + 各种转场的实现 + 录制接口 |
 | `scripts/capture.mjs` | 逐帧录视频（系统 Chrome，不下载浏览器），打印每次转场的帧区间；`--json` 出机器可读报告 |
+| `scripts/export-pptx.mjs` | 导出 PPTX（功能不完整的导出选项），按 `transitions.md`「导出 PPTX」回退，打印哪几次翻页降级；`--json` 出报告 |
+| `scripts/check-pptx.mjs` | 拿 `export-pptx.mjs` 的报告核对导出的包：结构、文字、共享元素的名字、每页的转场档位 |
 | `scripts/check-deck.mjs` | 核稿子有没有违反 `visual-spec.md` 里写死数值的规则（`npm run deck`） |
 | `scripts/check-palettes.mjs` | 核配色的对比度（`npm run palettes`），新建配色必须跑 |
 | `templates/starter.html` | 汇报稿起始文件 |

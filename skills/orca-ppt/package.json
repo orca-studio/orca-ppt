@@ -8,6 +8,7 @@
     "dev": "node scripts/gallery.mjs && npx serve .",
     "gallery": "node scripts/gallery.mjs",
     "capture": "node scripts/capture.mjs",
+    "pptx": "node scripts/export-pptx.mjs",
     "fonts": "node scripts/fetch-fonts.mjs",
     "palettes": "node scripts/check-palettes.mjs",
     "deck": "node scripts/check-deck.mjs",
