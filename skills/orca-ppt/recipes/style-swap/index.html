@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard" data-demo="style-swap">
+<head>
+  <meta charset="utf-8">
+  <title>同一个网页换风格</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700;900&family=Archivo:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;1,500&family=JetBrains+Mono:wght@400;700&display=block">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/soft-editorial.css">
+  <link rel="stylesheet" href="../../runtime/palettes/washi.css">
+  <link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 版式 standard
+     同款 style-swap 样稿：浏览器框（art/chrome.png）和左上角风格名位置整份不动。
+     框里是同一个虚构网站「栖云」，每页一种风格；元素按 data-id 配对，翻页时位置、字号、颜色、圆角连续过渡。
+     示意网页的样式在 mockup.css（style-swap 的局部例外，见 references/style-swap.md）—— 网页风格本身就是这份稿子的内容。
+     转场计划
+1→2  关系：同一个网站从「极简主义」换成「瑞士国际主义」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+2→3  关系：同一个网站从「瑞士国际主义」换成「玻璃拟态」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+3→4  关系：同一个网站从「玻璃拟态」换成「粗野主义」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+4→5  关系：同一个网站从「粗野主义」换成「赛博朋克」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+5→6  关系：同一个网站从「赛博朋克」换成「黑色科技极简」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+6→7  关系：同一个网站从「黑色科技极简」换成「极繁主义」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+7→8  关系：同一个网站从「极繁主义」换成「动效主导」，品牌、导航、标题、按钮、数据、色块都还在    手法：共享元素   共享：mk-screen / mk-art / brand / nav / head / btn …
+8→9  关系：同一页不变，翻过去背景开始推近、数据卡弹出、鼠标移到按钮上    手法：共享元素（全部原地不动）+ 页内动画
+-->
+
+<div class="slides">
+
+  <!-- 1 · 极简主义 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-min">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-min" class="mk mk-art mk-art-min" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" style="left:1296px; top:324px; width:332px; height:676px; opacity:0;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:348px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1052px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1472px; top:272px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:364px; top:416px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:358px; top:452px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:364px; top:650px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:364px; top:718px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:530px; top:718px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" style="left:364px; top:888px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" style="left:504px; top:888px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" style="left:624px; top:888px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" style="left:1316px; top:338px; opacity:0;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">极简主义</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Minimalism</p>
+  </section>
+  <!-- 2 · 瑞士国际主义 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-swiss">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-min" class="mk mk-art mk-art-min" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-glass" class="mk mk-art mk-art-glass" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="r1" class="mk mk-r1" data-auto-animate-delay="0.35" style="left:292px; top:320px; width:1336px; height:4px; opacity:1;"></div>
+    <div data-id="r2" class="mk mk-r2" data-auto-animate-delay="0.35" style="left:960px; top:324px; width:4px; height:676px; opacity:1;"></div>
+    <div data-id="b1" class="mk mk-b1" data-auto-animate-delay="0.35" style="left:1296px; top:324px; width:332px; height:676px; opacity:1;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:328px; top:270px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:982px; top:278px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1488px; top:270px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:328px; top:352px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:322px; top:396px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:328px; top:668px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:328px; top:728px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:514px; top:731px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" data-auto-animate-delay="0.16" style="left:992px; top:718px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:992px; top:808px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" style="left:992px; top:898px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" data-auto-animate-delay="0.35" style="left:1316px; top:338px; opacity:1;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">瑞士国际主义</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Swiss Style</p>
+  </section>
+  <!-- 3 · 玻璃拟态 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-glass">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-bru" class="mk mk-art mk-art-bru" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-glass" class="mk mk-art mk-art-glass" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" data-auto-animate-duration="0.5" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" data-auto-animate-duration="0.5" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" style="left:1142px; top:408px; width:420px; height:230px; opacity:1;"></div>
+    <div data-id="b2" class="mk mk-b2" data-auto-animate-delay="0.35" style="left:1142px; top:658px; width:420px; height:200px; opacity:1;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:348px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1032px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1458px; top:272px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:364px; top:428px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:358px; top:462px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:364px; top:676px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:364px; top:740px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:532px; top:740px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" style="left:1176px; top:438px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:1176px; top:538px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" data-auto-animate-delay="0.16" style="left:1176px; top:694px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" data-auto-animate-duration="0.5" style="left:1316px; top:338px; opacity:0;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">玻璃拟态</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Glassmorphism</p>
+  </section>
+  <!-- 4 · 粗野主义 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-bru">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-glass" class="mk mk-art mk-art-glass" style="left:964px; top:324px; width:664px; height:600px; border-radius:0; opacity:0;"></div>
+    <div data-id="mk-art-cy" class="mk mk-art mk-art-cy" style="left:964px; top:324px; width:664px; height:600px; border-radius:0; opacity:0;"></div>
+    <div data-id="mk-art-bru" class="mk mk-art mk-art-bru" style="left:964px; top:324px; width:664px; height:600px; border-radius:0; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" data-auto-animate-delay="0.35" style="left:292px; top:320px; width:1336px; height:4px; opacity:1;"></div>
+    <div data-id="r2" class="mk mk-r2" data-auto-animate-delay="0.35" style="left:960px; top:324px; width:4px; height:676px; opacity:1;"></div>
+    <div data-id="b1" class="mk mk-b1" style="left:964px; top:924px; width:664px; height:76px; opacity:1;"></div>
+    <div data-id="b2" class="mk mk-b2" data-auto-animate-duration="0.5" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:324px; top:268px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:622px; top:276px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1486px; top:266px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:328px; top:348px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:322px; top:406px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:328px; top:698px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:328px; top:808px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:530px; top:811px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" data-auto-animate-delay="0.16" style="left:992px; top:936px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:1192px; top:936px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" style="left:1392px; top:936px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" style="left:1128px; top:344px; rotate:8deg; opacity:0;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">粗野主义</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Brutalism</p>
+  </section>
+  <!-- 5 · 赛博朋克 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-cy">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-bru" class="mk mk-art mk-art-bru" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-dt" class="mk mk-art mk-art-dt" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-cy" class="mk mk-art mk-art-cy" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" data-auto-animate-duration="0.5" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" data-auto-animate-duration="0.5" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" style="left:1208px; top:742px; width:370px; height:120px; opacity:1;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:340px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1012px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1460px; top:270px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:364px; top:408px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:358px; top:444px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:364px; top:668px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:364px; top:732px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:544px; top:732px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" data-auto-animate-delay="0.16" style="left:1236px; top:770px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:1360px; top:770px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" style="left:1464px; top:770px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" style="left:1128px; top:344px; rotate:8deg; opacity:0;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">赛博朋克</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Cyberpunk</p>
+  </section>
+  <!-- 6 · 黑色科技极简 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-dt">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-cy" class="mk mk-art mk-art-cy" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-max" class="mk mk-art mk-art-max" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-dt" class="mk mk-art mk-art-dt" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" data-auto-animate-duration="0.5" style="left:1208px; top:742px; width:370px; height:120px; opacity:0;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:340px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1032px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1462px; top:272px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:364px; top:396px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:358px; top:432px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:364px; top:642px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:364px; top:710px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:524px; top:710px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" style="left:364px; top:858px; opacity:1;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:544px; top:858px; opacity:1;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" data-auto-animate-delay="0.16" style="left:704px; top:858px; opacity:1;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" style="left:1128px; top:344px; rotate:8deg; opacity:0;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">黑色科技极简</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Dark Tech</p>
+  </section>
+  <!-- 7 · 极繁主义 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-max">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-dt" class="mk mk-art mk-art-dt" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-mot" class="mk mk-art mk-art-mot" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-max" class="mk mk-art mk-art-max" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" data-auto-animate-delay="0.35" style="left:1402px; top:728px; width:170px; height:170px; opacity:1;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:332px; top:270px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:982px; top:276px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1452px; top:268px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:352px; top:352px; opacity:1;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:532px; top:458px; rotate:-4deg; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:592px; top:768px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:592px; top:852px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:796px; top:852px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" data-auto-animate-duration="0.5" style="left:364px; top:858px; opacity:0;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" data-auto-animate-duration="0.5" style="left:544px; top:858px; opacity:0;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" data-auto-animate-delay="0.16" data-auto-animate-duration="0.5" style="left:704px; top:858px; opacity:0;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" data-auto-animate-delay="0.35" style="left:1128px; top:344px; rotate:8deg; opacity:1;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">极繁主义</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Maximalism</p>
+  </section>
+  <!-- 8 · 动效主导 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5" class="mk-mot">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-max" class="mk mk-art mk-art-max" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:0;"></div>
+    <div data-id="mk-art-mot" class="mk mk-art mk-art-mot" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <div data-id="r1" class="mk mk-r1" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" data-auto-animate-duration="0.5" style="left:1402px; top:728px; width:170px; height:170px; opacity:0;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:340px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1032px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1462px; top:272px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" data-auto-animate-duration="0.5" style="left:352px; top:352px; opacity:0;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:356px; top:632px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:356px; top:758px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:356px; top:816px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:524px; top:816px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" style="left:364px; top:858px; opacity:0;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:544px; top:858px; opacity:0;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" data-auto-animate-delay="0.16" style="left:704px; top:858px; opacity:0;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" data-auto-animate-delay="0.25" style="left:336px; top:358px; opacity:1;">FLOW</p>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">动效主导</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Motion-first</p>
+  </section>
+  <!-- 9 · 动效主导（动起来） -->
+  <section data-auto-animate data-auto-animate-duration="0.4" data-hold="6" class="mk-mot">
+    <img src="art/chrome.png" alt="" style="left:256px; top:192px; width:1408px; height:808px;">
+    <div data-id="mk-screen" class="mk mk-screen" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></div>
+    <div data-id="mk-art-mot" class="mk mk-art mk-art-mot" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px; opacity:1;"></div>
+    <video class="mk mk-art mk-bgv" src="art/mot-bg.mp4" muted playsinline data-anim="fade .1s" style="left:292px; top:248px; width:1336px; height:752px; border-radius:0 0 14px 14px;"></video>
+    <div data-id="r1" class="mk mk-r1" style="left:292px; top:320px; width:1336px; height:4px; opacity:0;"></div>
+    <div data-id="r2" class="mk mk-r2" style="left:960px; top:324px; width:4px; height:676px; opacity:0;"></div>
+    <div data-id="b1" class="mk mk-b1" style="left:1402px; top:728px; width:170px; height:170px; opacity:0;"></div>
+    <div data-id="b2" class="mk mk-b2" style="left:1142px; top:658px; width:420px; height:200px; opacity:0;"></div>
+    <div data-id="b3" class="mk mk-b3" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <div data-id="b4" class="mk mk-b4" style="left:292px; top:248px; width:10px; height:10px; opacity:0;"></div>
+    <p data-id="brand" class="mk mk-brand" style="left:340px; top:278px; opacity:1;">栖云</p>
+    <p data-id="nav" class="mk mk-nav" style="left:1032px; top:280px; opacity:1;">产品 方案 价格 关于</p>
+    <p data-id="cta" class="mk mk-cta" style="left:1462px; top:272px; opacity:1;">免费试用</p>
+    <p data-id="eyebrow" class="mk mk-eyebrow" style="left:352px; top:352px; opacity:0;">AI 创作空间</p>
+    <p data-id="head" class="mk mk-head" style="left:356px; top:632px; opacity:1;">让灵感<br>自然流动</p>
+    <p data-id="sub" class="mk mk-sub" style="left:356px; top:758px; opacity:1;">写作、绘图、排版，在一个安静的地方完成。</p>
+    <p data-id="btn1" class="mk mk-btn1" style="left:356px; top:816px; opacity:1;">开始创作 →</p>
+    <p data-id="btn2" class="mk mk-btn2" style="left:524px; top:816px; opacity:1;">观看演示</p>
+    <p data-id="stat1" class="mk mk-stat1 mk-stat" style="left:364px; top:858px; opacity:0;"><b>120万</b>位创作者</p>
+    <p data-id="stat2" class="mk mk-stat2 mk-stat" data-auto-animate-delay="0.08" style="left:544px; top:858px; opacity:0;"><b>98%</b>好评率</p>
+    <p data-id="stat3" class="mk mk-stat3 mk-stat" data-auto-animate-delay="0.16" style="left:704px; top:858px; opacity:0;"><b>24/7</b>随时在线</p>
+    <p data-id="flow" class="mk mk-flow" style="left:336px; top:358px; opacity:1;">FLOW</p>
+    <div class="s-group" data-path="0 1372 498 0; 1.6 1372 484 0; 3.2 1372 498 0; 4.8 1372 484 0" style="left:1192px; top:408px; width:360px; height:180px;"><div class="mk-card" data-anim="zoom .6s @.3"><p class="mk-k" style="left:28px; top:24px;">实时预览</p><p class="mk-v" style="left:28px; top:50px;">60 fps</p><div class="mk-bars" style="left:190px; top:40px; height:110px;"><i data-anim="rise .5s @0.70" style="height:40px"></i><i data-anim="rise .5s @0.78" style="height:70px"></i><i data-anim="rise .5s @0.86" style="height:52px"></i><i data-anim="rise .5s @0.94" style="height:96px"></i><i data-anim="rise .5s @1.02" style="height:64px"></i><i data-anim="rise .5s @1.10" style="height:110px"></i></div></div></div>
+    <div class="s-group" data-path="0 1372 718 0; 1.6 1372 730 0; 3.2 1372 718 0; 4.8 1372 730 0" style="left:1192px; top:648px; width:360px; height:140px;"><div class="mk-card" data-anim="zoom .6s @.6"><p class="mk-k" style="left:28px; top:24px;">停留时长</p><p class="mk-v" style="left:28px; top:50px;">+128%</p></div></div>
+    <div class="s-group" data-anim="fade .3s @1.4" style="left:292px; top:248px; width:1336px; height:752px;"><img src="art/cursor.svg" alt="" data-path="1.4 1180 690 0; 2.4 520 640 0; 3.0 180 590 0" style="left:180px; top:590px; width:34px; height:34px;"></div>
+    <p class="t-h1" data-auto-animate-delay="0.45" style="left:292px; top:80px;">动效主导</p>
+    <p class="t-label t-dim" data-auto-animate-delay="0.5" style="left:292px; top:166px;">Motion-first</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

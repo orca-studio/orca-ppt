@@ -229,6 +229,43 @@ function auditSlide(spec) {
   return problems;
 }
 
+/**
+ * 同款 style-swap 框内的示意网页（references/style-swap.md 第 3、4 条）。在页面里跑。
+ * stage 是「终态」或「转场 50%」这样的标签：中途只核出框和字叠字，压边只在终态核 ——
+ * 移动途中字掠过同样在动的色块边是运动本身，停下来还压着才是错。
+ */
+function auditMockup(stage) {
+  const section = document.querySelector(".slides > section.present");
+  const out = [];
+  const add = (msg) => out.push({ rule: "示意网页", msg: `${stage}：${msg}` });
+  const screenEl = section.querySelector(":scope > .mk-screen");
+  if (!screenEl) { add("缺 .mk-screen（网页区域）"); return out; }
+  const rect = (el) => {
+    const r = el.getBoundingClientRect();
+    const o = { l: r.left, t: r.top, r: r.right, b: r.bottom, k: el.dataset.id || [...el.classList].join(".") };
+    if (el.tagName === "P") { // nowrap 的字会溢出盒子：盒子和文字取并集
+      const g = document.createRange(); g.selectNodeContents(el); const q = g.getBoundingClientRect();
+      if (q.width) { o.l = Math.min(o.l, q.left); o.r = Math.max(o.r, q.right); o.t = Math.min(o.t, q.top); o.b = Math.max(o.b, q.bottom); }
+    }
+    return o;
+  };
+  const S = rect(screenEl);
+  const hit = (a, c) => a.l < c.r - 1 && a.r > c.l + 1 && a.t < c.b - 1 && a.b > c.t + 1;
+  const inside = (a, c, tol) => a.l >= c.l - tol && a.r <= c.r + tol && a.t >= c.t - tol && a.b <= c.b + tol;
+  const shown = [...section.querySelectorAll(":scope > .mk")].filter((el) => el !== screenEl && +getComputedStyle(el).opacity >= 0.35);
+  const texts = shown.filter((el) => el.tagName === "P").map(rect);
+  const blocks = shown.filter((el) => el.tagName !== "P").map(rect).filter((b) => !inside(S, b, 2));
+  for (const el of shown) {
+    const b = rect(el);
+    if (!inside(b, S, 2)) add(`${b.k} 出了网页区域`);
+  }
+  for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++)
+    if (hit(texts[i], texts[j])) add(`${texts[i].k} 和 ${texts[j].k} 叠住`);
+  if (stage === "终态") for (const t of texts) for (const b of blocks)
+    if (hit(t, b) && !inside(t, b, 2)) add(`${t.k} 压在 ${b.k} 的边上`);
+  return out;
+}
+
 const browser = await chromium.launch({ channel: "chrome" });
 let total = 0;
 
@@ -246,13 +283,21 @@ for (const deck of decks) {
 
   const count = await page.evaluate(() => window.__capture.count());
   const found = [];
+  const styleSwap = await page.evaluate(() => document.documentElement.dataset.demo === "style-swap");
   let turns = {};
   for (let i = 0; i < count; i++) {
     // 切到这一页并冻住动画，再把时间轴推到转场、入场和页内动画（data-path 这类）都放完。
     // 页内动画的元素可以从画外开始走（灯从顶上落下来），量起点会误报出界，量的是它停下来的地方
     const { transition, scene } = await page.evaluate((n) => window.__capture.go(n), i);
+    if (styleSwap && i > 0) {
+      for (const f of [0.3, 0.5, 0.7]) {
+        await page.evaluate((ms) => window.__capture.seek(ms), transition * f);
+        for (const p of await page.evaluate(auditMockup, `转场 ${f * 100}%`)) found.push({ page: i + 1, ...p });
+      }
+    }
     await page.evaluate((ms) => window.__capture.seek(ms), transition + (scene || 0));
     const problems = await page.evaluate(auditSlide, SPEC);
+    if (styleSwap) problems.push(...(await page.evaluate(auditMockup, "终态")));
     for (const p of problems) found.push({ page: i + 1, ...p });
 
     // —— 绕圆心转一次不超过 180°（transitions.md「绕圆心转」）：rotate 按数值插值，
@@ -318,6 +363,25 @@ for (const deck of decks) {
     if (color) found.push({ page, rule: "行内样式", msg: `style 里写了色值「${color[2]}」（${color[1]}）。只写变量 var(--…)，换配色时才会跟着变` });
     if (/font-size\s*:\s*[\d.]+px/.test(style)) found.push({ page, rule: "行内样式", msg: `style 里写了像素字号「${style.match(/font-size\s*:\s*[\d.]+px/)[0]}」。用字号类` });
   }
+  // —— 自带样式表（visual-spec.md「颜色和形状」、style-swap.md）：只有同款 style-swap 能引一份，选择器只许管框里的 .mk 元素
+  const sheets = [...source.matchAll(/<link\b[^>]*>/g)].map((m) => m[0])
+    .filter((tag) => /rel=["']?stylesheet/.test(tag))
+    .map((tag) => (tag.match(/href=["']([^"']+)["']/) || [])[1])
+    .filter((href) => href && !/^(https?:)?\/\//.test(href) && !/(^|\/)(runtime|node_modules)\//.test(href));
+  if (sheets.length && !styleSwap) {
+    found.push({ page: 0, rule: "自带样式表", msg: `引了自己的样式表 ${sheets.join("、")}。颜色字体走主题和配色（themes.md）；只有同款 style-swap 框内的示意网页例外` });
+  } else if (sheets.length > 1) {
+    found.push({ page: 0, rule: "自带样式表", msg: `style-swap 只许一份自带样式表，引了 ${sheets.length} 份（style-swap.md 第 1 条）` });
+  } else if (sheets.length) {
+    const css = readFileSync(resolve(dirname(file), sheets[0]), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    // @keyframes / @font-face 里面的不是选择器；@media 里的照样核
+    const plain = css.replace(/@(keyframes|font-face)[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "").replace(/@[^{]*\{/g, "");
+    for (const m of plain.matchAll(/([^{}]+)\{[^{}]*\}/g)) {
+      for (const sel of m[1].split(",").map((x) => x.trim()).filter(Boolean)) {
+        if (!/\.mk[\w-]*/.test(sel)) found.push({ page: 0, rule: "自带样式表", msg: `${sheets[0]} 的选择器「${sel}」没带 .mk 类，会选中框外的东西（style-swap.md 第 2 条）` });
+      }
+    }
+  }
   for (const m of source.matchAll(/<[a-z]+[^>]*\s(fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)) {
     const page = pageAt(m.index);
     if (page) found.push({ page, rule: "行内样式", msg: `svg 上写了 ${m[1]}="${m[2]}"。用线条类 .l-*` });
@@ -330,7 +394,7 @@ for (const deck of decks) {
   const tail = errors.length === 0 ? (warns ? `✓（${warns} 条提醒）` : "✓") : `✗ ${errors.length} 条`;
   console.log(`${label.padEnd(40)} ${tail}`);
   for (const f of found) {
-    console.log(`   第 ${f.page} 页  ${f.level === "warn" ? "·" : "✗"} [${f.rule}] ${f.msg}`);
+    console.log(`   ${f.page ? `第 ${f.page} 页` : "全稿"}  ${f.level === "warn" ? "·" : "✗"} [${f.rule}] ${f.msg}`);
   }
   total += errors.length;
 }

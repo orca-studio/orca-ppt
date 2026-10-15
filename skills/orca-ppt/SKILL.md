@@ -133,7 +133,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 **做稿时：**
 
-- 不许写自己的 `<style>`。行内 style 只许写位置、尺寸和变量（`var(--…)`），不许写色值和像素字号 ——
+- 不许写自己的 `<style>`，也不许引自己的样式表（唯一例外：同款 `style-swap` 框内的示意网页，见 `references/style-swap.md`）。行内 style 只许写位置、尺寸和变量（`var(--…)`），不许写色值和像素字号 ——
   换主题、换配色时，写死的颜色和字号会漏掉。细则见 `visual-spec.md`「颜色和形状」。
 - 不许自己写 GSAP 或 CSS 动画。转场和页内动画只用规范里的属性。
 - 不改 `runtime/` 和 `scripts/`。觉得引擎有 bug，就报告。
