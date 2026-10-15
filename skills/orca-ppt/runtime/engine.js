@@ -136,8 +136,15 @@
     // top left !important，扇形就绕盒子左上角甩出去（录制时这条样式一直留着，扇形停在画面外）。
     // 标上 data-st-turn，由 tokens.css 里更具体的 !important 规则压回来：默认绕盒子中心，
     // 作者自己写了 transform-origin（比如指针绕底端）就用作者的
+    // 只标真的转了的：整份稿子里这个元素（按 data-id 认）至少有一页角度不是 0。
+    // 全程 0° 的元素照 reveal 默认绕左上角变形 —— 改成绕中心后，又平移又缩放的元素中途会冲出原来的范围
+    const turned = new Set();
+    for (const el of document.querySelectorAll(".reveal .slides > section [style*='rotate']")) {
+      if (el.dataset.id && parseFloat(el.style.rotate)) turned.add(el.dataset.id);
+    }
     for (const el of document.querySelectorAll(".reveal .slides > section [style*='rotate']")) {
       if (!el.style.rotate) continue;
+      if (!parseFloat(el.style.rotate) && !turned.has(el.dataset.id)) continue;
       el.dataset.stTurn = "";
       el.style.setProperty("--st-origin", el.style.transformOrigin || "50% 50%");
     }
@@ -154,6 +161,10 @@
 
   function ghostClone(child) {
     const clone = child.cloneNode(true);
+    // 视频的克隆体停在原视频当时那一帧（克隆出来的 <video> 默认从 0 开始，淡出时会跳回第一帧）
+    const vids = [...(child.matches("video") ? [child] : []), ...child.querySelectorAll("video")];
+    const cvids = [...(clone.matches("video") ? [clone] : []), ...clone.querySelectorAll("video")];
+    vids.forEach((v, i) => { cvids[i].pause(); cvids[i].currentTime = v.currentTime; });
     // 去掉 reveal 配对用的标记，避免克隆体被 auto-animate 当成共享元素
     for (const el of [clone, ...clone.querySelectorAll("*")]) {
       el.removeAttribute("data-id");
@@ -1026,7 +1037,8 @@
       if (g) p.next.before(g);
     }
     const tl = timeline();
-    tl.fromTo(ghosts, { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
+    // 从元素自己的透明度淡出：本来就透明（opacity:0 待命）的元素不能先被设成不透明再淡出，那会闪一下
+    tl.fromTo(ghosts, { autoAlpha: (_, el) => +getComputedStyle(el).opacity, y: 0 }, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
     // 写了页内动画的元素（或里面包着它们的组）入场归页内动画管：这里再让它上浮淡入，
     // 转场一结束它就已经看得见了，点击分步的「点一下才出来」就没了
     const BUILD = "[data-anim], [data-path], [data-lit], [data-step]";
@@ -1982,7 +1994,8 @@
   // ───────── 页面里的视频 ─────────
   // 放映模式：翻到这一页从头播，离开就停。
   // 录制模式：全部暂停，由 __capture.seek 按毫秒设 currentTime —— 和动画一样不靠真实时间。
-  const videosOf = (slide) => [...slide.querySelectorAll("video")];
+  // 上一页视频的淡出克隆体不算这一页的视频：不跟着播，不算进停留时长
+  const videosOf = (slide) => [...slide.querySelectorAll("video")].filter((v) => !v.closest(".st-ghost, .st-ghost-el"));
   function prepareVideos() {
     for (const v of document.querySelectorAll(".reveal .slides video")) {
       v.muted = true;
@@ -2323,6 +2336,10 @@
         videoMs = Math.max(videoMs, v.duration * 1000);
       }
       if (videoMs) hold = Math.max(hold, videoMs);
+      // 淡出的视频克隆体：等它解出停住的那一帧再开始录，否则前几帧是空的
+      for (const v of target.querySelectorAll(".st-ghost video, .st-ghost-el video, video.st-ghost-el")) {
+        if (v.readyState < 2) await new Promise((r) => { v.addEventListener("seeked", r, { once: true }); v.addEventListener("loadeddata", r, { once: true }); setTimeout(r, 2000); });
+      }
       // 有回顾屏时：停留至少要放完回顾，再定格 1.5 秒看清名单
       let recapMs = 0;
       if (recap) {
