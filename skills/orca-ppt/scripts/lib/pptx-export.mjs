@@ -373,7 +373,15 @@ export async function exportDeck(page, options = {}) {
           ? `${sel} { rotate: none !important; transform: none !important; transition: none !important; animation: none !important; }`
           : "");
       const clip = { x: m.origin.x + item.x, y: m.origin.y + item.y, width: item.w, height: item.h };
-      const png = await shot(style, clip, item.rot !== undefined ? sel : null);
+      // 画外待命的元素（分层视差的封面页，各层压在画布下方一两千像素）可能出了视口，截不到。
+      // 截图时临时挪进视口（独立的 translate 属性，叠在它自己的 transform 上），PPTX 里照旧写它在画外的位置
+      const into = (at, size, view) => (at < 0 ? -at : at + size > view ? view - (at + size) : 0);
+      const dx = into(clip.x, clip.width, VIEW.width);
+      const dy = into(clip.y, clip.height, VIEW.height);
+      const moved = dx || dy ? `${sel} { translate: ${dx}px ${dy}px !important; }` : "";
+      clip.x += dx;
+      clip.y += dy;
+      const png = await shot(style + moved, clip, item.rot !== undefined ? sel : null);
       const name = `s${i + 1}-${item.k}.png`;
       media.set(name, png);
       shapes.push({ ...item, media: name });

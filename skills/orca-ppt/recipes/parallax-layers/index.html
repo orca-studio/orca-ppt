@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 分层视差</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/editorial-forest.css">
+  <link rel="stylesheet" href="../../runtime/palettes/forest.css">
+</head>
+<body>
+<div class="reveal">
+<!-- 转场计划（主题 Editorial Forest，配色 forest，版式 standard）
+一张风景拆成四层：天空雪山 sky（底）→ 标题 title（夹在天空和林带之间）→ 林带 forest → 草地 meadow → 马 horses（顶）。
+每层整份稿子同一个 data-id、同一张图；一次翻页四层 + 标题一起动（transitions.md「分层视差」），
+同样的时长，越靠前的层走得越远 —— 观众看到的是一个有纵深的画面，不是五样东西各走各的。
+1→2  关系：画面从画外升起来，近的层追上远的层            手法：共享元素（分层视差·入画）  共享：sky title forest meadow horses
+2→3  关系：镜头往右摇，右边空出来放营地信息              手法：共享元素（分层视差·横摇）  共享：sky title forest meadow horses
+3→4  关系：镜头推近到两匹马                              手法：共享元素（分层视差·推近）  共享：sky forest meadow horses
+4→5  关系：镜头抬头看天，草地和马沉出画面                手法：共享元素（分层视差·抬头）  共享：sky forest meadow horses
+5→6  关系：镜头落回全景，标题位置换成结尾的一句话        手法：共享元素（分层视差·复位）  共享：sky forest meadow horses
+层的位移按纵深分档：天空 1 份，标题 2 份，林带 3 份，草地 4 份，马 4–5 份。
+示例内容：云岭牧场和营地信息都是虚构的，四层素材是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：四层在画面下方待命，越近的层压得越低 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-192px; top:1100px; width:2304px; height:1536px;">
+    <p data-id="title" class="t-display" style="left:0px; top:1960px; width:1920px; text-align:center;">云岭牧场</p>
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-384px; top:2140px; width:2688px; height:1041px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-384px; top:2620px; width:2688px; height:996px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:480px; top:2720px; width:960px; height:376px;">
+    <p class="t-label t-accent" style="left:360px; top:380px; width:1200px; text-align:center;">2026 夏季营地</p>
+    <p class="t-display" style="left:360px; top:450px; width:1200px; text-align:center;">上山去</p>
+    <p class="t-body t-dim" style="left:360px; top:660px; width:1200px; text-align:center;">翻一页，整座山从下面升上来。</p>
+  </section>
+
+  <!-- 2 全景：四层同时升到位，标题夹在天空和林带之间，树梢挡住字脚 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="2.5">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-192px; top:-430px; width:2304px; height:1536px;">
+    <p data-id="title" class="t-display" style="left:0px; top:400px; width:1920px; text-align:center;">云岭牧场</p>
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-384px; top:540px; width:2688px; height:1041px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-384px; top:780px; width:2688px; height:996px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:480px; top:620px; width:960px; height:376px;">
+  </section>
+
+  <!-- 3 横摇：镜头往右摇，四层往左走不同的距离，右边空出来放营地信息 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-292px; top:-430px; width:2304px; height:1536px;">
+    <p data-id="title" class="t-display" style="left:-200px; top:400px; width:1920px; text-align:center;">云岭牧场</p>
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-684px; top:540px; width:2688px; height:1041px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-724px; top:780px; width:2688px; height:996px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:120px; top:620px; width:960px; height:376px;">
+    <div class="s-surface" data-auto-animate-delay="0.8" style="left:1240px; top:160px; width:560px; height:560px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="0.9" style="left:1300px; top:220px;">营地在哪</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="0.98" style="left:1300px; top:280px; width:440px;">雪线下面的<br>一片高山草场</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.06" style="left:1300px; top:460px; width:440px;">从山脚镇子开车一小时，再走二十分钟土路。没有信号，有一整片云。</p>
+  </section>
+
+  <!-- 4 推近：镜头推向两匹马，近的层放大得多、远的层几乎不动 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="3">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-330px; top:-520px; width:2420px; height:1613px;">
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-760px; top:470px; width:3136px; height:1215px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-1000px; top:660px; width:3584px; height:1328px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:360px; top:420px; width:1440px; height:564px;">
+    <div class="s-surface" data-auto-animate-delay="0.9" style="left:120px; top:80px; width:800px; height:320px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:180px; top:130px;">住在草场上的</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.08" style="left:180px; top:190px; width:680px;">两匹老马，一整个下午</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.16" style="left:180px; top:280px; width:680px;">它们比营地来得早，也比我们待得久。</p>
+  </section>
+
+  <!-- 5 抬头：镜头往上看，草地和马沉出画面，林带只剩树梢 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="3">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-192px; top:-330px; width:2304px; height:1536px;">
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-384px; top:920px; width:2688px; height:1041px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-384px; top:1500px; width:2688px; height:996px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:480px; top:1400px; width:960px; height:376px;">
+    <div class="s-surface" data-auto-animate-delay="0.9" style="left:120px; top:120px; width:800px; height:440px;"></div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.0" style="left:180px; top:180px;">七月到九月</p>
+    <p class="t-display t-on-surface" data-auto-animate-delay="1.08" style="left:180px; top:240px;">躺着看云</p>
+    <p class="t-body t-on-surface" data-auto-animate-delay="1.16" style="left:180px; top:440px; width:680px;">午后的云从雪山背后翻过来，一个钟头换一种样子。</p>
+  </section>
+
+  <!-- 6 复位：镜头落回全景，标题的位置换成结尾的一句话 -->
+  <section data-page="closing" data-auto-animate data-auto-animate-duration="1.4" data-hold="2.5">
+    <img data-id="sky" src="art/sky.jpg" alt="" style="left:-192px; top:-430px; width:2304px; height:1536px;">
+    <p class="t-display" data-auto-animate-delay="1.0" style="left:0px; top:400px; width:1920px; text-align:center;">夏天，山上见</p>
+    <img data-id="forest" src="art/forest.webp" alt="" style="left:-384px; top:540px; width:2688px; height:1041px;">
+    <img data-id="meadow" src="art/meadow.webp" alt="" style="left:-384px; top:780px; width:2688px; height:996px;">
+    <img data-id="horses" src="art/horses.webp" alt="" style="left:480px; top:620px; width:960px; height:376px;">
+    <p class="t-label" data-auto-animate-delay="1.1" style="left:0px; top:300px; width:1920px; text-align:center;">云岭牧场 · 7 月 1 日开营</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

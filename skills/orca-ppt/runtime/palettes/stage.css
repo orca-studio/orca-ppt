@@ -1,0 +1,29 @@
+/* 配色：舞台
+ * 一句话：番茄红底 + 墨黑大字 + 奶油色的光。像一张剧场海报，中等亮度底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          番茄红（幕布）        --surface     奶油色（射灯、光柱、地上的光斑、面板）
+ *   --surface-2   深一档的红（次要面板）  --accent      金黄（强调）
+ *   --accent-soft 浅金                  --text / --text-dim  墨黑 / 深酱红
+ *   --text-on-surface 墨黑（奶油面板上的字）  --text-on-accent 墨黑
+ *   --accent-text 深酱红（金黄在红底上当字看不见,用墨色一档）
+ *
+ * 红底要压墨黑字，红只能取到这个亮度：再暗，黑字就读不动了（4.5:1）。
+ * 光是 --surface 叠在红底上（.s-light 写 --light-strength），所以光的颜色就是面板的颜色。
+ * 可以互变的颜色：accent ↔ accent-soft（同是金黄）。
+ * surface（奶油）和 surface-2（深红）不是同色系，不能互变。
+ */
+
+:root {
+  --bg: #d84a3a;
+  --surface: #f6e8c8;
+  --surface-2: #a8281f;
+  --text: #140b0a;
+  --text-dim: #4a1210;
+  --text-on-surface: #140b0a;
+  --accent: #ffd25e;
+  --accent-soft: #ffe39a;
+  --text-on-accent: #140b0a;
+  --accent-text: #22060a;
+}

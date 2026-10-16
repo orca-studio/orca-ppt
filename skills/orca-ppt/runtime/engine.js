@@ -1769,7 +1769,10 @@
   //   data-pivot="x y"                 枢轴点在元素自身的位置（px），默认元素中心。旋转也绕它。
   //   data-light="键"                  这个元素是光源：从枢轴点沿元素的「上方」射出一束楔形光。
   //     data-light-spread / -width / -on   半张角（度，默认 13）/ 出光口宽（px，默认 0）/ 几秒后亮（默认 0）
+  //     data-light-grow                    亮起时光束从出光口往外长出来的秒数（默认 0，一下全亮）。PowerPoint 的「擦除」顺着光束方向
   //   data-lit="键"                    只在同键光束照到的地方可见（clip-path 跟着光束每帧重算）。
+  //   data-light-spot="键"             光轴落地的那块光斑：引擎按灯每一帧的姿态算光轴和「过它中心的水平线」的交点，
+  //                                     把它横着挪过去；光还没长到地面时看不见。光斑不另写路径，和光束永远对得上。
   const LIGHT_L = 4000; // 光束长度：比画布对角线长，射到哪都出画
   const parseKeys = (str) =>
     str.split(";").map((k) => k.trim().split(/[\s,]+/).map(Number)).filter((k) => k.length >= 3 && k.every(Number.isFinite))
@@ -1897,33 +1900,45 @@
       spread: Math.tan(((+m.el.dataset.lightSpread || 13) * Math.PI) / 180),
       w: (+m.el.dataset.lightWidth || 0) / 2,
       on: +m.el.dataset.lightOn || 0,
+      grow: Math.max(0, +m.el.dataset.lightGrow || 0),
     }));
     const lit = own("[data-lit]");
+    const spots = own("[data-light-spot]");
     const anims = own("[data-anim]").map((el) => ({ el, step: stepOf(el), list: parseAnims(el) })).filter((x) => x.list.length);
-    if (!movers.length && !lit.length && !anims.length) return null;
+    if (!movers.length && !lit.length && !spots.length && !anims.length) return null;
 
     // 每一步多长。第 0 步总是有（可以是 0 秒），这样「进页先停住，点一下才出来」也成立
     const len = new Map([[0, 0]]);
     const bump = (s, t) => len.set(s, Math.max(len.get(s) ?? 0, t));
     for (const m of movers) bump(m.step, m.keys[m.keys.length - 1][0]);
-    for (const l of lights) bump(l.m.step, l.on);
+    for (const l of lights) bump(l.m.step, l.on + l.grow);
     for (const x of anims) for (const a of x.list) bump(x.step, a.at + a.len);
     const steps = [...len.keys()].sort((p, q) => p - q);
-    return { movers, lights, lit, anims, len, steps };
+    return { movers, lights, lit, spots, anims, len, steps };
   }
   function buildsFor(slide) {
     if (!slide) return null;
     for (const c of slide.querySelectorAll(".st-trail, .st-shine")) c.remove();
     const found = collectBuilds(slide);
     if (!found) return null;
-    const { movers, lights, lit, anims, len, steps } = found;
+    const { movers, lights, lit, spots, anims, len, steps } = found;
     for (const m of movers) {
       const el = m.el;
       const [px, py] = el.dataset.pivot ? el.dataset.pivot.trim().split(/[\s,]+/).map(Number) : [];
       const pivot = [Number.isFinite(px) ? px : el.offsetWidth / 2, Number.isFinite(py) ? py : el.offsetHeight / 2];
-      el.style.transformOrigin = `${pivot[0]}px ${pivot[1]}px`;
+      // 枢轴点、transform 都写成 important，transition 关掉：共享元素页上，reveal 给配上对的元素挂一条样式
+      // （transform-origin: top left、transform、transition 都带 !important），转场放完也不撤。不压过它，
+      // 写了 data-id 的元素再写 data-path 就会绕左上角转、钉在原地，或者每一帧都慢半拍地追
+      el.style.setProperty("transform-origin", `${pivot[0]}px ${pivot[1]}px`, "important");
+      el.style.setProperty("transition", "none", "important");
       m.rest = [el.offsetLeft + pivot[0], el.offsetTop + pivot[1]];
       m.pose = null;
+    }
+    for (const el of spots) {
+      if (el.parentElement !== slide) console.warn(`[orca-transition-skill] data-light-spot="${el.dataset.lightSpot}" 要写在页面的直接子元素上，落点按画布坐标算`);
+      if (!lights.some((l) => l.key === el.dataset.lightSpot)) console.warn(`[orca-transition-skill] data-light-spot="${el.dataset.lightSpot}" 找不到同键的 data-light（光源要写 data-path）`);
+      // 同 data-path 的元素：共享元素页上 reveal 的 !important 样式要压过去，transition 关掉
+      el.style.setProperty("transition", "none", "important");
     }
     for (const l of lights) {
       if (l.m.el.parentElement !== slide) console.warn(`[orca-transition-skill] data-light="${l.key}" 要写在页面的直接子元素上，光束按画布坐标算`);
@@ -1945,21 +1960,53 @@
     const apply = (t) => {
       for (const m of movers) {
         const [x, y, a] = (m.pose = poseAt(m.keys, t - start.get(m.step)));
-        m.el.style.transform = `translate(${x - m.rest[0]}px, ${y - m.rest[1]}px) rotate(${a}deg)`;
+        m.el.style.setProperty("transform", `translate(${x - m.rest[0]}px, ${y - m.rest[1]}px) rotate(${a}deg)`, "important");
       }
       for (const el of lit) {
         const l = lights.find((q) => q.key === el.dataset.lit);
-        if (!l || t - start.get(l.m.step) < l.on) { el.style.clipPath = "polygon(0 0, 0 0, 0 0)"; continue; }
+        const lit = l && t - start.get(l.m.step) - l.on;
+        if (!l || lit < 0) { el.style.clipPath = "polygon(0 0, 0 0, 0 0)"; continue; }
         const [x, y, a] = l.m.pose;
         const r = (a * Math.PI) / 180, dx = Math.sin(r), dy = -Math.cos(r), nx = Math.cos(r), ny = Math.sin(r);
-        const far = l.w + LIGHT_L * l.spread;
         const ox = el.offsetLeft, oy = el.offsetTop;
+        // 长出来：光束的长度从 0 涨到「两条边都射出这一层」为止，之后才放到 LIGHT_L。
+        // 只涨到出层为止，是为了让整段时间都花在看得见的那一截上 —— 涨到 LIGHT_L 的话，光在一半时间里就落了地
+        let len = LIGHT_L;
+        if (lit < l.grow) {
+          const reach = Math.max(...[-1, 1].map((s) => {
+            const ex = dx + nx * s * l.spread, ey = dy + ny * s * l.spread; // 这条边每沿光轴走 1px 走多远
+            const sx = x + nx * s * l.w - ox, sy = y + ny * s * l.w - oy;   // 这条边的起点（层坐标）
+            const exit = (p, v, size) => (v > 0 ? (size - p) / v : v < 0 ? -p / v : Infinity);
+            return Math.max(0, Math.min(exit(sx, ex, el.offsetWidth), exit(sy, ey, el.offsetHeight)));
+          }));
+          const u = lit / l.grow;
+          len = Math.min(LIGHT_L, reach) * (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2); // power2.inOut
+        }
+        l.len = len;
+        const far = l.w + len * l.spread;
         const pt = (along, side) => `${(x + dx * along + nx * side - ox).toFixed(1)}px ${(y + dy * along + ny * side - oy).toFixed(1)}px`;
-        el.style.clipPath = `polygon(${pt(0, -l.w)}, ${pt(0, l.w)}, ${pt(LIGHT_L, far)}, ${pt(LIGHT_L, -far)})`;
+        el.style.clipPath = `polygon(${pt(0, -l.w)}, ${pt(0, l.w)}, ${pt(len, far)}, ${pt(len, -far)})`;
+      }
+      for (const el of spots) {
+        const l = lights.find((q) => q.key === el.dataset.lightSpot);
+        const on = l && t - start.get(l.m.step) - l.on;
+        const r = l && (l.m.pose[2] * Math.PI) / 180;
+        const cx = el.offsetLeft + el.offsetWidth / 2, cy = el.offsetTop + el.offsetHeight / 2;
+        const dy = l ? -Math.cos(r) : 0;
+        if (!l || on < 0 || dy <= 1e-3) { el.style.setProperty("opacity", "0", "important"); continue; }
+        const [x, y] = l.m.pose;
+        const far = (cy - y) / dy; // 沿光轴走多远落到这条水平线上
+        // 光柱还在往外长：长到地面才亮，最后一成的路程里淡进来。没有被照的层量长度时，按同一条曲线涨到地面
+        let len = l.len;
+        if (on >= l.grow) len = LIGHT_L;
+        else if (len === undefined) { const u = on / l.grow; len = far * 1.1 * (u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2); }
+        const alpha = len >= LIGHT_L ? 1 : Math.max(0, Math.min(1, (len - far * 0.9) / (far * 0.1)));
+        el.style.setProperty("opacity", String(alpha), "important");
+        el.style.setProperty("transform", `translateX(${x + Math.sin(r) * far - cx}px)`, "important");
       }
     };
     const tl = gsap.timeline({ paused: true });
-    if (movers.length || lit.length) {
+    if (movers.length || lit.length || spots.length) {
       apply(0);
       const clock = { t: 0 };
       tl.to(clock, { t: total, duration: Math.max(total, 0.001), ease: "none", onUpdate: () => apply(clock.t) }, 0);
