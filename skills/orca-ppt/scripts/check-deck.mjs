@@ -226,6 +226,16 @@ function auditSlide(spec) {
     }
   }
 
+  // —— 毛玻璃卡片上的文字必须加 .t-on-glass（visual-spec.md「毛玻璃卡片」）。
+  //    玻璃的底是照片，不是 --bg：继承 --text 的话，浅底配色的深字压在暗玻璃上就读不出来
+  for (const glass of [...section.querySelectorAll(".s-glass")].filter(visible)) {
+    const gb = box(glass);
+    for (const t of texts) {
+      if (!contains(gb, box(t)) || t.closest(".t-on-glass")) continue;
+      add("毛玻璃上的文字", `${name(t)} 压在 .s-glass 上但没加 .t-on-glass（visual-spec.md「毛玻璃卡片」）`);
+    }
+  }
+
   return problems;
 }
 
@@ -266,6 +276,63 @@ function auditMockup(stage) {
   return out;
 }
 
+/**
+ * 毛玻璃卡片上的字读不读得动（visual-spec.md「毛玻璃卡片」）。玻璃的底是照片，颜色只有截图里有，
+ * DOM 和配色表都量不出来：把玻璃上的字藏起来截一张，量字底下那块的亮度，和字色算对比度。
+ * 取亮的那头（第 90 百分位）而不是平均 —— 字压在一块亮斑上就读不动了，平均会把它抹掉。
+ */
+async function auditGlass(page) {
+  const targets = await page.evaluate(() => {
+    const section = document.querySelector(".slides > section.present");
+    // 转场留下的上一页的字（淡出完 opacity 是 0，还在 DOM 里）不算，沿父链累乘，同 auditSlide
+    const shown = (el) => {
+      let o = 1;
+      for (let n = el; n && n !== section.parentElement; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity);
+      return o >= 0.05;
+    };
+    const out = [];
+    for (const glass of section.querySelectorAll(".s-glass")) {
+      if (!shown(glass)) continue;
+      const g = glass.getBoundingClientRect();
+      for (const t of section.querySelectorAll(".t-on-glass")) {
+        if (!shown(t)) continue;
+        const b = t.getBoundingClientRect();
+        if (b.left < g.left - 1 || b.right > g.right + 1 || b.top < g.top - 1 || b.bottom > g.bottom + 1) continue;
+        out.push({ text: (t.textContent || "").trim().slice(0, 18), color: getComputedStyle(t).color,
+                   clip: { x: b.left, y: b.top, width: b.width, height: b.height } });
+      }
+    }
+    return out;
+  });
+  if (!targets.length) return [];
+  const hide = await page.addStyleTag({ content: ".slides > section.present .t-on-glass { visibility: hidden !important; }" });
+  const problems = [];
+  for (const t of targets) {
+    const png = (await page.screenshot({ clip: t.clip })).toString("base64");
+    const ratio = await page.evaluate(async ({ png, color }) => {
+      const lum = (r, g, b) => {
+        const c = [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+      };
+      const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+      const ctx = Object.assign(document.createElement("canvas"), { width: img.width, height: img.height }).getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      const px = ctx.getImageData(0, 0, img.width, img.height).data;
+      const ls = [];
+      for (let i = 0; i < px.length; i += 4) ls.push(lum(px[i], px[i + 1], px[i + 2]));
+      ls.sort((a, b) => a - b);
+      const bg = ls[Math.floor(ls.length * 0.9)];
+      const fg = lum(...color.match(/[\d.]+/g).slice(0, 3).map(Number));
+      return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+    }, { png, color: t.color });
+    if (ratio < 4.5) {
+      problems.push({ rule: "毛玻璃对比度", msg: `「${t.text}」和底下的照片只有 ${ratio.toFixed(2)}:1（要 4.5:1）。换一块暗一点的地方放卡片，或者挪镜头（visual-spec.md「毛玻璃卡片」）`, level: "error" });
+    }
+  }
+  await hide.evaluate((el) => el.remove());
+  return problems;
+}
+
 const browser = await chromium.launch({ channel: "chrome" });
 let total = 0;
 
@@ -298,6 +365,7 @@ for (const deck of decks) {
     await page.evaluate((ms) => window.__capture.seek(ms), transition + (scene || 0));
     const problems = await page.evaluate(auditSlide, SPEC);
     if (styleSwap) problems.push(...(await page.evaluate(auditMockup, "终态")));
+    problems.push(...(await auditGlass(page)));
     for (const p of problems) found.push({ page: i + 1, ...p });
 
     // —— 绕圆心转一次不超过 180°（transitions.md「绕圆心转」）：rotate 按数值插值，

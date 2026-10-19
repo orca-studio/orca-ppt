@@ -14,6 +14,8 @@
   --type-h1: 72px;        /* 内容页标题 */
   --type-h2: 48px;        /* 条目、小标题 */
   --type-body: 36px;      /* 说明文字 */
+  /* 第六档，只给文字镂空（.s-knockout 里的 .t-knockout）用：字是窗，窗要大 */
+  --type-knockout: 320px;
 
   /* 颜色：一个背景、两个面、两级文字、一个强调色、一个强调色的弱化版 */
   --bg: #0b0b0f;
@@ -89,6 +91,29 @@ html, body, .reveal { background: var(--bg); }
    洞沿带一圈强调色描边：洞压在纯色底（尤其是纯黑）上时，洞里洞外一个样，
    没有描边就看不出这是个圆，只看得见卡片自己的边。 */
 .s-spot    { border-radius: 50%; border: 3px solid var(--accent); box-shadow: 0 0 0 4000px var(--scrim); }
+/* 文字镂空：一块色块，字从里面挖掉，后面的照片从字里透出来；色块自上而下淡出，和照片接上。
+   相当于 PowerPoint 里「矩形 + 文本框 → 合并形状 · 剪除」再给剪出来的形状上渐变填充。
+   结构（写法见 visual-spec.md「文字镂空」）：
+     <div class="s-knockout"> <svg viewBox="0 0 W H"> <mask id="…"> <rect/> <text class="t-knockout">字</text> </mask>
+                                                     <rect mask="url(#…)"/> </svg> </div>
+   色块颜色用 --knockout，默认 --surface；淡出位置用 --knockout-fade（中间色标，默认 55%：
+   那里还剩 85% 不透明，再往下到底边全透明）。mask 里的黑白是挖洞用的亮度，不是配色，不随配色变。 */
+.s-knockout { pointer-events: none;
+              -webkit-mask-image: linear-gradient(#000, rgb(0 0 0 / 0.85) var(--knockout-fade, 55%), transparent);
+              mask-image: linear-gradient(#000, rgb(0 0 0 / 0.85) var(--knockout-fade, 55%), transparent); }
+.s-knockout > svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+.s-knockout > svg > rect { fill: var(--knockout, var(--surface)); }
+.s-knockout mask > rect { fill: #fff; }
+.s-knockout mask > text { fill: #000; }
+.t-knockout { font-size: var(--type-knockout); font-weight: 700; letter-spacing: -0.03em; text-anchor: middle; }
+/* 毛玻璃卡片：压在整页照片上的文字卡。卡片后面的照片模糊着透出来，换哪张照片都搭，镜头一动底色跟着变。
+   **不跟配色走**：它的底是照片，不是 --bg，配色里没有哪个颜色能保证压在任意照片上都读得动 ——
+   所以用一层固定的暗色加模糊，字固定用白色（.t-on-glass）。照片太亮时字会不清楚，check-deck 按截图量对比度。
+   不压在照片上的地方用 .s-surface：底下是纯色，玻璃没东西可透。 */
+.s-glass { background: rgb(12 14 20 / 0.5); border-radius: var(--radius-l);
+           -webkit-backdrop-filter: blur(28px) saturate(1.4); backdrop-filter: blur(28px) saturate(1.4);
+           box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.18); }
+.t-on-glass { color: #fff; }
 
 /* 页内动画（transitions.md「页内动画」）。
    .s-group：把几个形状编成一组一起动（灯头 + 灯身），组里的子元素按组的左上角绝对定位。

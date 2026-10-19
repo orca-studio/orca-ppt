@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 文字镂空封面 · 杭州</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/washi.css">
+</head>
+<body>
+<div class="reveal">
+<!-- 转场计划（主题 Clearing，配色 washi，色块用二级面的苔绿灰，版式 standard）
+和上海那份同一个配方，换了照片、配色和一个专属镜头：湖景上压两层雾（fog-a、fog-b，同一张透明底的雾图），
+封面雾浓，翻到第一站时两层雾往左右散开、变淡，断桥露出来。两张照片：湖景 lake（前两站）和茶山 tea（后两站）。
+换照片不靠「旧的淡出、新的入场」（没配对的旧元素只淡出 0.35 秒，看着像硬切）：前后两页都写两张照片，
+要隐去的那张写 opacity:0，它们都是共享元素，整个转场时长里交叉淡化，镜头还能同时推拉。
+1→2  关系：雾散开，封面收成角标，镜头推向断桥            手法：共享元素（形态变换）  共享：lake fog-a fog-b veil
+2→3  关系：镜头沿湖摇到南岸山上的塔，角标和卡片不动      手法：共享元素                共享：lake veil card
+3→4  关系：换到另一处地方（茶山）                        手法：共享元素（照片交叉淡化）  共享：lake tea veil card
+4→5  关系：镜头推到山脚的村子                            手法：共享元素                共享：lake tea veil card
+5→6  关系：回到湖上，雾又合拢，角标放回封面              手法：共享元素（形态变换 + 照片交叉淡化）  共享：lake tea fog-a fog-b veil
+示例内容：文案是示意，三张照片都是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：雾很浓，湖和远山若隐若现 -->
+  <section data-page="cover" data-auto-animate data-hold="2.5">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:-192px; top:-108px; width:2304px; height:1296px;">
+    <img data-id="fog-a" src="art/fog.webp" alt="" style="left:-240px; top:140px; width:1920px; height:1080px; opacity:0.95;">
+    <img data-id="fog-b" src="art/fog.webp" alt="" style="left:240px; top:200px; width:1920px; height:1080px; opacity:0.9;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:0px; top:0px; width:1920px; height:720px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-1"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-1)"/>
+      </svg>
+    </div>
+    <p class="t-label t-on-surface" style="left:360px; top:120px; width:1200px; text-align:center;">City Walk · 2026</p>
+    <p class="t-h2 t-on-surface" style="left:360px; top:500px; width:1200px; text-align:center;">一湖，一雾，慢一天</p>
+  </section>
+
+  <!-- 2 断桥：两层雾往左右散开，镜头推向桥 -->
+  <section data-auto-animate data-auto-animate-duration="1.8" data-hold="3">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:-960px; top:-540px; width:2880px; height:1620px;">
+    <img data-id="fog-a" src="art/fog.webp" alt="" style="left:-2400px; top:140px; width:1920px; height:1080px; opacity:0.35;">
+    <img data-id="fog-b" src="art/fog.webp" alt="" style="left:2400px; top:200px; width:1920px; height:1080px; opacity:0.35;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-2"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-2)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" data-auto-animate-delay="1.2" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="1.30" style="left:1260px; top:500px;">第一站 · 断桥</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="1.38" style="left:1260px; top:560px; width:480px;">雾里的桥</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="1.46" style="left:1260px; top:660px; width:480px;">桥还在，湖对岸先看不见了。等太阳出来，雾自己会散。</p>
+  </section>
+
+  <!-- 3 雷峰塔：镜头沿湖摇到左边，南岸山上的塔 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="3">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:0px; top:-420px; width:2880px; height:1620px;">
+    <img data-id="tea" src="art/tea.jpg" alt="" style="left:0px; top:-420px; width:2880px; height:1620px; opacity:0;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-3"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-3)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第二站 · 雷峰塔</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">湖边的塔</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">塔在南岸的山上，雾大的时候只看得见塔尖。</p>
+  </section>
+
+  <!-- 4 茶山：两张照片交叉淡化（两页都写两张，用 opacity 换），茶山同时拉开到全景；角标和卡片不动 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="3">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:0px; top:-420px; width:2880px; height:1620px; opacity:0;">
+    <img data-id="tea" src="art/tea.jpg" alt="" style="left:-192px; top:-216px; width:2304px; height:1296px;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-4"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-4)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第三站 · 龙井茶山</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">一层一层的绿</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">茶垄顺着山坡往上走，走累了就坐下喝一杯。</p>
+  </section>
+
+  <!-- 5 龙井村：镜头推到山脚的白墙黑瓦 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="3">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:-192px; top:-108px; width:2304px; height:1296px; opacity:0;">
+    <img data-id="tea" src="art/tea.jpg" alt="" style="left:0px; top:-488px; width:2880px; height:1620px;">
+    <img data-id="fog-a" src="art/fog.webp" alt="" style="left:-240px; top:140px; width:1920px; height:1080px; opacity:0;">
+    <img data-id="fog-b" src="art/fog.webp" alt="" style="left:240px; top:200px; width:1920px; height:1080px; opacity:0;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-5"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-5)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第四站 · 龙井村</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">山脚的白墙</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">白墙黑瓦的房子挤在山脚，门口晒着茶。</p>
+  </section>
+
+  <!-- 6 结尾：茶山淡出，湖景和雾在原地淡入（上一页已在封面的位置透明待命），角标放回封面的大小 -->
+  <section data-page="closing" data-auto-animate data-auto-animate-duration="1.4" data-hold="2.5">
+    <img data-id="lake" src="art/hangzhou.jpg" alt="" style="left:-192px; top:-108px; width:2304px; height:1296px;">
+    <img data-id="tea" src="art/tea.jpg" alt="" style="left:0px; top:-488px; width:2880px; height:1620px; opacity:0;">
+    <img data-id="fog-a" src="art/fog.webp" alt="" style="left:-240px; top:140px; width:1920px; height:1080px; opacity:0.95;">
+    <img data-id="fog-b" src="art/fog.webp" alt="" style="left:240px; top:200px; width:1920px; height:1080px; opacity:0.9;">
+    <div data-id="veil" class="s-knockout" style="--knockout: var(--surface-2); left:0px; top:0px; width:1920px; height:720px;">
+      <svg viewBox="0 0 1920 720">
+        <mask id="ko-6"><rect width="1920" height="720"/><text class="t-knockout" x="960" y="460">HANGZHOU</text></mask>
+        <rect width="1920" height="720" mask="url(#ko-6)"/>
+      </svg>
+    </div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.1" style="left:360px; top:120px; width:1200px; text-align:center;">City Walk · 2026</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.2" style="left:360px; top:500px; width:1200px; text-align:center;">等下一场雾，再来</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

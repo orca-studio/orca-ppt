@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 文字镂空封面 · 重庆</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/neon-night.css">
+</head>
+<body>
+<div class="reveal">
+<!-- 转场计划（主题 Clearing，配色 neon-night，版式 standard）
+和上海那份同一个配方，换了照片、配色和一个专属镜头：照片是一张竖长的夜景（1920×2880），
+镜头从山顶一层一层往下沉 —— 轻轨那一层、吊脚楼那一层、江上的桥、江边的船，最后拉开看整条江。
+CHONGQING 有 9 个字母，超过一行 8 个：色块的 viewBox 按同样比例放大到 2240×840，字在画面上就小一号，字号类不变。
+夜景是暗的：色块用配色里亮的霓虹粉，字孔是一个个暗的窗。所有页的色块写 --knockout-fade: 85%，字和封面那行副标题都落在实的那一截上。
+1→2  关系：封面收成角标，镜头往下沉到轻轨穿楼那一层      手法：共享元素（形态变换）  共享：city veil
+2→3  关系：再往下沉到吊脚楼                              手法：共享元素                共享：city veil card
+3→4  关系：再往下，推近江上的红桥                        手法：共享元素                共享：city veil card
+4→5  关系：沉到江边，推近江上的游船                      手法：共享元素                共享：city veil card
+5→6  关系：镜头拉开看整条江，角标放回封面的大小          手法：共享元素（形态变换）    共享：city veil
+示例内容：文案是示意，照片是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：镜头先往下挪 300，山顶亮着的楼正好在字后面（字孔里是霓虹，不是暗夜空） -->
+  <section data-page="cover" data-auto-animate data-hold="2.5">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:0px; top:-300px; width:1920px; height:2880px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:0px; top:0px; width:1920px; height:720px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-1"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-1)"/>
+      </svg>
+    </div>
+    <p class="t-label t-on-surface" style="left:360px; top:120px; width:1200px; text-align:center;">City Walk · 2026</p>
+    <p class="t-h2 t-on-surface" style="left:360px; top:500px; width:1200px; text-align:center;">一座山，叠着一座城</p>
+  </section>
+
+  <!-- 2 李子坝：封面收成角标，镜头往下沉，轻轨从楼里穿出来 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="3">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:0px; top:-756px; width:1920px; height:2880px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-2"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-2)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" data-auto-animate-delay="1.2" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="1.30" style="left:1260px; top:500px;">第一站 · 李子坝</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="1.38" style="left:1260px; top:560px; width:480px;">穿楼而过的轻轨</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="1.46" style="left:1260px; top:660px; width:480px;">车开进居民楼，站台就在楼里。</p>
+  </section>
+
+  <!-- 3 洪崖洞：再往下沉，吊脚楼一层一层挂在崖上 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="3">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:0px; top:-1080px; width:1920px; height:2880px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-3"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-3)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第二站 · 洪崖洞</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">往下长的楼</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">从顶楼进门，一层层走到江边，还在同一栋楼里。</p>
+  </section>
+
+  <!-- 4 千厮门大桥：再往下，推近江上的红桥 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="3">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:0px; top:-1520px; width:2496px; height:3744px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-4"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-4)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第三站 · 千厮门大桥</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">江上的红桥</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">桥从吊脚楼旁边跨过江，夜里整座亮着。</p>
+  </section>
+
+  <!-- 5 嘉陵江：沉到江边，推近江上的游船 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="3">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:-576px; top:-2337px; width:2496px; height:3744px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:120px; top:80px; width:720px; height:270px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-5"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-5)"/>
+      </svg>
+    </div>
+    <div data-id="card" class="s-glass" style="left:1200px; top:440px; width:600px; height:480px;"></div>
+    <p class="t-label t-on-glass" data-auto-animate-delay="0.80" style="left:1260px; top:500px;">第四站 · 嘉陵江</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:1260px; top:560px; width:480px;">夜游的船</p>
+    <p class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:1260px; top:660px; width:480px;">游船一条接一条亮着灯，从吊脚楼底下开过去。</p>
+  </section>
+
+  <!-- 6 结尾：沉到江面，角标放回封面的大小 -->
+  <section data-page="closing" data-auto-animate data-auto-animate-duration="1.6" data-hold="2.5">
+    <img data-id="city" src="art/chongqing.jpg" alt="" style="left:0px; top:-1800px; width:1920px; height:2880px;">
+    <div data-id="veil" class="s-knockout" style="--knockout-fade: 85%; left:0px; top:0px; width:1920px; height:720px;">
+      <svg viewBox="0 0 2240 840">
+        <mask id="ko-6"><rect width="2240" height="840"/><text class="t-knockout" x="1120" y="537">CHONGQING</text></mask>
+        <rect width="2240" height="840" mask="url(#ko-6)"/>
+      </svg>
+    </div>
+    <p class="t-label t-on-surface" data-auto-animate-delay="1.1" style="left:360px; top:120px; width:1200px; text-align:center;">City Walk · 2026</p>
+    <p class="t-h2 t-on-surface" data-auto-animate-delay="1.2" style="left:360px; top:500px; width:1200px; text-align:center;">夜还长，往下走</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

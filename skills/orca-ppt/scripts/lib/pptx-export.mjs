@@ -211,6 +211,15 @@ function measure(index) {
     const uniform = sides.every((s) => s.width === sides[0].width && s.color === sides[0].color);
     if (bordered && !uniform) reasons.push("单边描边");
 
+    // mask / clip-path 管的是整棵子树：孩子拆出去单独截，就截不到遮罩（文字镂空的色块淡出会丢，导成一块实心）。
+    // 里面没有要导成文本框的字时整块截；有字的（片尾名单）照旧拆开，字还是字
+    const masks = reasons.includes("mask") || reasons.includes("clip-path");
+    if (masks && ![...textBlocks.keys()].some((block) => el.contains(block))) {
+      el.dataset.pptxK = String(k);
+      items.push({ ...base, k: k++, kind: "raster", whole: true, reason: reasons.join("、") });
+      skipInside.add(el);
+      continue;
+    }
     if (reasons.length) {
       // 自己的底色和装饰截成图，里面的孩子照常导（文字还是文字）
       el.dataset.pptxK = String(k);

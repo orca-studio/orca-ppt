@@ -30,6 +30,7 @@
 | `style-swap` | 同一个网页换风格 | 比稿、改版提案、讲网页风格：同一个网页一页换一种风格，框不动，标题按钮在框里变样 | [style-swap/RECIPE.md](style-swap/RECIPE.md) |
 | `parallax-layers` | 分层视差 | 地点、营地、园区介绍：一张风景拆成几层，翻页时近的层挪得远，镜头在照片里升起、横摇、推近、抬头 | [parallax-layers/RECIPE.md](parallax-layers/RECIPE.md) |
 | `stage-spotlight` | 舞台射灯 | 讲者 / 嘉宾逐个介绍：标题 O 里一盏灯，剪影站成一排，翻一页灯转向一个人，光扫过的字变色（页内动画） | [stage-spotlight/RECIPE.md](stage-spotlight/RECIPE.md) |
+| `city-cutout` | 文字镂空封面 | 城市、地点、项目介绍：照片从标题的字里透出来，封面收成角标，镜头在照片里推拉横移讲几个地方 | [city-cutout/RECIPE.md](city-cutout/RECIPE.md) |
 
 ## 怎么用一个同款
 
