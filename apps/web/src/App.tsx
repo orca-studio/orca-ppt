@@ -174,6 +174,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
       }
     })
 
+    // 转场计划写在稿子的注释里,跟着稿子一起变。只在打开时读一次的话,agent 把样稿改成
+    // 别的内容之后,右栏的「关系 / 手法」还停在样稿那份。
+    next.subscribe('transition.changed', (data) => {
+      setDeck((current) => {
+        if (!current || current.deck.id !== data.deckId) return current
+        const merged = { ...current, transitions: data.transitions, transitionPlan: data.plan }
+        deckRef.current = merged
+        return merged
+      })
+    })
+
     next.subscribe('mcp.activity', (data) => {
       setAgent((prev) => reduce(prev, data))
       // agent 改完一处,画布上那一处要自己闪一下 —— 页胶片只说得出「哪一页」,
