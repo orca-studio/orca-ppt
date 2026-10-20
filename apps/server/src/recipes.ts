@@ -34,12 +34,18 @@ export async function listRecipes(skillPath: string | undefined): Promise<Recipe
     const meta = frontmatter(text)
     if (!meta.id || !meta.title || meta.id !== dir) continue
     const order = Number(meta.order)
+    // 自带的封面图(frontmatter 的 poster,相对配方目录):首页卡片的静态封面用它,不再从样片里取帧。
+    // 文件不在、或者出了 skill 目录就不给 —— 退回样片的封面
+    const poster = meta.poster
+      ? await withinSkill(skillPath, resolve(root, dir, meta.poster))
+      : undefined
     recipes.push({
       order: Number.isFinite(order) ? order : -Infinity,
       id: meta.id,
       title: meta.title,
       mode: meta.mode ?? '汇报稿',
       ...(meta.summary ? { summary: meta.summary } : {}),
+      ...(poster ? { poster } : {}),
       prompt: recipePrompt({
         id: meta.id,
         title: meta.title,

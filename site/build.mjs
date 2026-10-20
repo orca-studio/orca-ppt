@@ -73,6 +73,10 @@ function readRecipes() {
     if (relative(SKILL, dir).startsWith('..')) throw new Error(`${id} 的 sample 出了 skill 目录`)
     if (!existsSync(join(dir, 'index.html'))) throw new Error(`${id} 没有样稿 ${dir}/index.html`)
     const range = /^(\d+)-(\d+)$/.exec(meta.preview ?? '')
+    // 自带的封面图(poster,相对配方目录):卡片封面用它,不从样片里取帧。和 app 首页一样
+    const poster = meta.poster ? resolve(root, id, meta.poster) : null
+    if (poster && (relative(SKILL, poster).startsWith('..') || !existsSync(poster)))
+      throw new Error(`${id} 的 poster 不在 skill 里或文件不存在：${meta.poster}`)
     list.push({
       id,
       title: meta.title,
@@ -84,6 +88,7 @@ function readRecipes() {
       path: relative(SKILL, dir).split('/').join('/') + '/',
       range: range ? { from: +range[1], to: +range[2] } : null,
       cover: Number.isFinite(+meta.cover) && meta.cover !== undefined ? +meta.cover : null,
+      poster,
       pages: (readFileSync(join(dir, 'index.html'), 'utf8').match(/<section[\s>]/g) || []).length,
     })
   }
@@ -235,9 +240,10 @@ function media(recipe) {
   }
   mkdirSync(join(OUT, 'media'), { recursive: true })
   cpSync(video, join(OUT, 'media', `${recipe.id}.mp4`))
-  cpSync(video.replace(/\.mp4$/, '.jpg'), join(OUT, 'media', `${recipe.id}.jpg`))
+  const cover = recipe.poster ?? video.replace(/\.mp4$/, '.jpg')
+  cpSync(cover, join(OUT, 'media', `${recipe.id}.jpg`))
   // 老示例站的缩略图地址(skill 的 README 引着 examples/<name>/thumb.jpg),用封面顶上
-  cpSync(video.replace(/\.mp4$/, '.jpg'), join(OUT, recipe.path, 'thumb.jpg'))
+  cpSync(cover, join(OUT, recipe.path, 'thumb.jpg'))
   return { video: `media/${recipe.id}.mp4?v=${key}`, poster: `media/${recipe.id}.jpg?v=${key}` }
 }
 

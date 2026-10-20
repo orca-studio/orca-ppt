@@ -926,6 +926,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [steps, setSteps] = useState<{ done: number; clicks: number } | undefined>(undefined)
   const deckId = deck?.deck.id
   useEffect(() => setSteps(undefined), [deckId])
+  // 回到首页时重拉同款列表:样稿或引擎改过的话缓存键变了,server 借这一下排重录。
+  // 只在连上时拉一次的话,不重启应用首页就一直放旧样片
+  useEffect(() => {
+    if (deckId !== undefined) return
+    const active = transport.current
+    if (!active) return
+    void active
+      .request('catalog.recipes', {})
+      .then((result) => setRecipes(result.recipes))
+      .catch(() => {})
+  }, [deckId])
 
   const onSlideChange = useCallback((index: number) => {
     if (index !== slideRef.current) setSelection(null)

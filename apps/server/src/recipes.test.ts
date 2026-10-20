@@ -37,6 +37,18 @@ describe('listRecipes', () => {
     expect(await listRecipes(skill)).toEqual([])
   })
 
+  it('frontmatter 的 poster 指向配方目录里的封面图:文件在才给,不在就退回样片的封面', async () => {
+    const skill = await realpath(await mkdtemp(join(tmpdir(), 'recipes-')))
+    await mkdir(join(skill, 'recipes/a'), { recursive: true })
+    await mkdir(join(skill, 'recipes/b'), { recursive: true })
+    await writeFile(join(skill, 'recipes/a/RECIPE.md'), recipe('a', 'poster: cover.jpg\n'))
+    await writeFile(join(skill, 'recipes/a/cover.jpg'), 'jpg')
+    await writeFile(join(skill, 'recipes/b/RECIPE.md'), recipe('b', 'poster: missing.jpg\n'))
+    const byId = Object.fromEntries((await listRecipes(skill)).map((r) => [r.id, r]))
+    expect(byId.a?.poster).toBe(join(skill, 'recipes/a/cover.jpg'))
+    expect(byId.b?.poster).toBeUndefined()
+  })
+
   it('没有 skill 或没有 recipes 目录时是空的', async () => {
     expect(await listRecipes(undefined)).toEqual([])
     expect(await listRecipes(await mkdtemp(join(tmpdir(), 'recipes-')))).toEqual([])

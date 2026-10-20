@@ -798,13 +798,17 @@ export async function startServer(
                 return {
                   ...recipe,
                   preview: files.video,
-                  ...((await exists(files.poster)) ? { poster: files.poster } : {}),
+                  // 配方自带封面图时用它(listRecipes 已经放在 recipe.poster 里),否则用样片的封面帧
+                  ...(!recipe.poster && (await exists(files.poster))
+                    ? { poster: files.poster }
+                    : {}),
                 }
               }
               // 没命中:排进后台录一份。样稿改过的话上一份样片还在(录好新的才删),先放旧的
               queuePreview(recipe.id, files.key)
               const stale = await stalePreview(files)
-              if (stale) return { ...recipe, ...stale }
+              if (stale)
+                return { ...recipe, ...stale, ...(recipe.poster ? { poster: recipe.poster } : {}) }
               if (previewGaveUp(recipe.id, files.key)) return { ...recipe, previewFailed: true }
               return recipe
             }),
