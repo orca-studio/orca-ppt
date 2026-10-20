@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 产品展示（竞选自我介绍的变种）</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/palettes/midnight.css">
+</head>
+<body>
+<div class="reveal">
+<!-- 转场计划（无主题，配色 midnight，版式 standard）
+黑屋子里一盏吊灯：光照到哪，哪里才看得见。灯是一张透明底的实物图（art/lamp.webp），挂在吊线下面绕吊点转；
+光束、光圈由引擎按灯的姿态画，同页的 .s-lit 是被照亮的那一层 —— 光圈里看得见，光圈外只剩一点余光（transitions.md「吊灯」）。
+灯写 data-lamp="x y len angle on reach [pool]"：angle、reach 按「吊点 → 要照的东西的中心」算（RECIPE.md「页面结构」）。
+四件器具的照片在 .s-lit 里，跟着光显影；每章的说明文字在 .s-lit 外面，一直读得清，整组从画面下方升上来、讲完推出画面上方。
+开场的开灯不占一页：封面的灯写 data-lamp-on="0.6"，进页先关着，0.6 秒后自己亮起来（页内动画）。
+四次章节切换，灯各用一种动作，不重复同一招：摆过去 / 关灯换位（data-lamp-via="dark"）/ 降下来推近 / 反向大摆。
+1→2  关系：封面让位给一排器具                手法：共享元素（标题出画、器具入画、灯收上去）      共享：lamp lit kicker title sub p0–p3 t0
+2→3  关系：一排里挑出第一件                  手法：共享元素（灯摆过去，第一件放大，其余沉下去）  共享：lamp lit p0–p3 toc t0 t1
+3→4  关系：换到第二件                        手法：共享元素（关灯换位，上一章出画、这一章入画）  共享：lamp lit p0–p3 t0 t1 t2
+4→5  关系：凑近第三件                        手法：共享元素（灯降下来，凑近第三件）              共享：lamp lit p0–p3 t1 t2 t3
+5→6  关系：换到第四件                        手法：共享元素（灯反向大摆）                        共享：lamp lit p0–p3 t2 t3
+6→7  关系：讲完了，四件回到一排              手法：共享元素（灯回正中、光圈放大）                共享：lamp lit p0–p3 t3
+示例内容：DARKROOM 和四件器具都是虚构的，照片和灯是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：进页时关着灯，屋里只剩一点余光；0.6 秒后灯自己亮起来，光圈里显出标题（data-lamp-on，页内动画） -->
+  <section data-auto-animate data-page="cover" data-hold="2">
+    <div data-id="lamp" class="s-lamp" data-lamp="960 -40 140 0.0 1 350 720" data-lamp-on="0.6">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <p data-id="kicker" class="t-label t-dim" style="left:120px; top:460px; width:1680px; height:40px; text-align:center;">DARKROOM · 手冲套装</p>
+      <p data-id="title" class="t-display" style="left:120px; top:520px; width:1680px; height:160px; text-align:center;">暗房手冲</p>
+      <p data-id="sub" class="t-h2 t-dim" style="left:120px; top:700px; width:1680px; height:60px; text-align:center;">一盏灯，四件器具</p>
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:120px; top:1200px; width:360px; height:360px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:1580px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:560px; top:1200px; width:360px; height:360px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:1580px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1000px; top:1200px; width:360px; height:360px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:1580px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:1440px; top:1200px; width:360px; height:360px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:1580px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+  </section>
+  <!-- 2 一排：灯收上去、光圈放大；标题推出画面上方，四件器具从下面升上来 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2">
+    <div data-id="lamp" class="s-lamp" data-lamp="960 -40 100 0.0 1 350 1100">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <p data-id="kicker" class="t-label t-dim" style="left:120px; top:-600px; width:1680px; height:40px; text-align:center;">DARKROOM · 手冲套装</p>
+      <p data-id="title" class="t-display" style="left:120px; top:-540px; width:1680px; height:160px; text-align:center;">暗房手冲</p>
+      <p data-id="sub" class="t-h2 t-dim" style="left:120px; top:-360px; width:1680px; height:60px; text-align:center;">一盏灯，四件器具</p>
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:120px; top:360px; width:360px; height:360px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:740px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:560px; top:360px; width:360px; height:360px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:740px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1000px; top:360px; width:360px; height:360px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:740px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:1440px; top:360px; width:360px; height:360px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:740px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+    <p data-id="toc" class="t-label t-dim" style="left:120px; top:120px; width:720px; height:40px;">ONE LAMP · FOUR TOOLS</p>
+    <p data-id="t0-k" class="t-label t-dim" style="left:1000px; top:1400px; width:720px; height:40px;">01 · Grinder</p>
+    <p data-id="t0-h" class="t-display" style="left:1000px; top:1460px; width:800px; height:160px;">手摇磨豆机</p>
+    <p data-id="t0-b" class="t-body" style="left:1000px; top:1660px; width:720px; height:120px;">锥刀从上往下磨，粗细一格一格调。手冲用中细的那几格，一杯的豆子慢慢摇完。</p>
+  </section>
+  <!-- 3 磨豆机（摆过去）：灯绕吊点往左摆，照着放大的磨豆机；其余三件沉下去 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="lamp" class="s-lamp" data-lamp="960 -40 140 34.5 1 467">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:200px; top:280px; width:640px; height:640px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:1580px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:1580px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:1580px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:1580px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+    <p data-id="toc" class="t-label t-dim" style="left:120px; top:-120px; width:720px; height:40px;">ONE LAMP · FOUR TOOLS</p>
+    <p data-id="t0-k" class="t-label t-dim" style="left:1000px; top:400px; width:720px; height:40px;">01 · Grinder</p>
+    <p data-id="t0-h" class="t-display" style="left:1000px; top:460px; width:800px; height:160px;">手摇磨豆机</p>
+    <p data-id="t0-b" class="t-body" style="left:1000px; top:660px; width:720px; height:120px;">锥刀从上往下磨，粗细一格一格调。手冲用中细的那几格，一杯的豆子慢慢摇完。</p>
+    <p data-id="t1-k" class="t-label t-dim" style="left:120px; top:1400px; width:720px; height:40px;">02 · Kettle</p>
+    <p data-id="t1-h" class="t-display" style="left:120px; top:1460px; width:800px; height:160px;">细嘴手冲壶</p>
+    <p data-id="t1-b" class="t-body" style="left:120px; top:1660px; width:720px; height:120px;">壶嘴又细又长，水流细而稳。绕着圈注水，粉层一点点鼓起来。</p>
+  </section>
+  <!-- 4 手冲壶（关灯换位）：灯先灭，黑着挪到右边，再亮起来照着手冲壶 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="2.5">
+    <div data-id="lamp" class="s-lamp" data-lamp="1360 -40 140 0.0 1 330" data-lamp-via="dark">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:1580px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:1040px; top:280px; width:640px; height:640px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:1580px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:1580px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:1580px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+    <p data-id="t0-k" class="t-label t-dim" style="left:1000px; top:-500px; width:720px; height:40px;">01 · Grinder</p>
+    <p data-id="t0-h" class="t-display" style="left:1000px; top:-440px; width:800px; height:160px;">手摇磨豆机</p>
+    <p data-id="t0-b" class="t-body" style="left:1000px; top:-240px; width:720px; height:120px;">锥刀从上往下磨，粗细一格一格调。手冲用中细的那几格，一杯的豆子慢慢摇完。</p>
+    <p data-id="t1-k" class="t-label t-dim" style="left:120px; top:400px; width:720px; height:40px;">02 · Kettle</p>
+    <p data-id="t1-h" class="t-display" style="left:120px; top:460px; width:800px; height:160px;">细嘴手冲壶</p>
+    <p data-id="t1-b" class="t-body" style="left:120px; top:660px; width:720px; height:120px;">壶嘴又细又长，水流细而稳。绕着圈注水，粉层一点点鼓起来。</p>
+    <p data-id="t2-k" class="t-label t-dim" style="left:120px; top:1400px; width:720px; height:40px;">03 · Dripper</p>
+    <p data-id="t2-h" class="t-display" style="left:120px; top:1460px; width:800px; height:160px;">陶瓷滤杯</p>
+    <p data-id="t2-b" class="t-body" style="left:120px; top:1660px; width:720px; height:120px;">杯壁上的肋骨给空气留出路，水流过粉层的速度更均匀。</p>
+  </section>
+  <!-- 5 滤杯（降下来）：灯顺着吊线往下降，滤杯放大，像凑近了看 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="lamp" class="s-lamp" data-lamp="1360 -40 200 0.0 1 350">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:1580px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:1580px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1040px; top:360px; width:640px; height:640px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:1580px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:1580px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+    <p data-id="t1-k" class="t-label t-dim" style="left:120px; top:-500px; width:720px; height:40px;">02 · Kettle</p>
+    <p data-id="t1-h" class="t-display" style="left:120px; top:-440px; width:800px; height:160px;">细嘴手冲壶</p>
+    <p data-id="t1-b" class="t-body" style="left:120px; top:-240px; width:720px; height:120px;">壶嘴又细又长，水流细而稳。绕着圈注水，粉层一点点鼓起来。</p>
+    <p data-id="t2-k" class="t-label t-dim" style="left:120px; top:400px; width:720px; height:40px;">03 · Dripper</p>
+    <p data-id="t2-h" class="t-display" style="left:120px; top:460px; width:800px; height:160px;">陶瓷滤杯</p>
+    <p data-id="t2-b" class="t-body" style="left:120px; top:660px; width:720px; height:120px;">杯壁上的肋骨给空气留出路，水流过粉层的速度更均匀。</p>
+    <p data-id="t3-k" class="t-label t-dim" style="left:1000px; top:1400px; width:720px; height:40px;">04 · Cup</p>
+    <p data-id="t3-h" class="t-display" style="left:1000px; top:1460px; width:800px; height:160px;">厚壁陶杯</p>
+    <p data-id="t3-b" class="t-body" style="left:1000px; top:1660px; width:720px; height:120px;">厚陶壁留得住温度，胡桃木杯碟端起来不烫手。</p>
+  </section>
+  <!-- 6 咖啡杯（反向大摆）：灯收回去，绕右边的吊点一路摆向左边的杯子 -->
+  <section data-auto-animate data-auto-animate-duration="1.4" data-hold="2.5">
+    <div data-id="lamp" class="s-lamp" data-lamp="1360 -40 140 52.7 1 746">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:200px; top:1200px; width:640px; height:640px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:1580px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:1580px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1040px; top:1200px; width:640px; height:640px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:1580px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:200px; top:280px; width:640px; height:640px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:1580px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+    </div>
+    <p data-id="t2-k" class="t-label t-dim" style="left:120px; top:-500px; width:720px; height:40px;">03 · Dripper</p>
+    <p data-id="t2-h" class="t-display" style="left:120px; top:-440px; width:800px; height:160px;">陶瓷滤杯</p>
+    <p data-id="t2-b" class="t-body" style="left:120px; top:-240px; width:720px; height:120px;">杯壁上的肋骨给空气留出路，水流过粉层的速度更均匀。</p>
+    <p data-id="t3-k" class="t-label t-dim" style="left:1000px; top:400px; width:720px; height:40px;">04 · Cup</p>
+    <p data-id="t3-h" class="t-display" style="left:1000px; top:460px; width:800px; height:160px;">厚壁陶杯</p>
+    <p data-id="t3-b" class="t-body" style="left:1000px; top:660px; width:720px; height:120px;">厚陶壁留得住温度，胡桃木杯碟端起来不烫手。</p>
+  </section>
+  <!-- 7 结尾：灯回到正中，四件器具回到一排，最后那句话在光里 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <div data-id="lamp" class="s-lamp" data-lamp="960 -40 100 0.0 1 350 1100">
+      <img src="art/lamp.webp" alt="" data-mouth="0.81" style="width:320px; height:210px;">
+    </div>
+    <div data-id="lit" class="s-lit">
+      <img data-id="p0" src="art/grinder.webp" alt="" style="left:120px; top:360px; width:360px; height:360px;">
+      <p data-id="p0-n" class="t-h2" style="left:120px; top:740px; width:360px; height:60px; text-align:center;">手摇磨豆机</p>
+      <img data-id="p1" src="art/kettle.webp" alt="" style="left:560px; top:360px; width:360px; height:360px;">
+      <p data-id="p1-n" class="t-h2" style="left:560px; top:740px; width:360px; height:60px; text-align:center;">细嘴手冲壶</p>
+      <img data-id="p2" src="art/dripper.webp" alt="" style="left:1000px; top:360px; width:360px; height:360px;">
+      <p data-id="p2-n" class="t-h2" style="left:1000px; top:740px; width:360px; height:60px; text-align:center;">陶瓷滤杯</p>
+      <img data-id="p3" src="art/cup.webp" alt="" style="left:1440px; top:360px; width:360px; height:360px;">
+      <p data-id="p3-n" class="t-h2" style="left:1440px; top:740px; width:360px; height:60px; text-align:center;">厚壁陶杯</p>
+      <p data-id="end" class="t-h1" style="left:120px; top:880px; width:1680px; height:100px; text-align:center;">慢一点，煮好一杯。</p>
+    </div>
+    <p data-id="t3-k" class="t-label t-dim" style="left:1000px; top:-500px; width:720px; height:40px;">04 · Cup</p>
+    <p data-id="t3-h" class="t-display" style="left:1000px; top:-440px; width:800px; height:160px;">厚壁陶杯</p>
+    <p data-id="t3-b" class="t-body" style="left:1000px; top:-240px; width:720px; height:120px;">厚陶壁留得住温度，胡桃木杯碟端起来不烫手。</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

@@ -70,6 +70,13 @@ html, body, .reveal { background: var(--bg); }
 /* 强调色的文字档，不是 --accent —— 理由见上面 --accent-text。
    压在强调色块上的文字是另一回事，用 .t-on-accent。 */
 .t-accent  { color: var(--accent-text); }
+/* 渐变字：核心那一行字（封面的英文标题、章节的英文名）横着走三档颜色，默认 强调色 → 柔和强调色 → 主面色。
+   写在包着字的 <span> 上：<p class="t-h1" style="…"><span class="t-gradient">About me.</span></p> ——
+   渐变铺满的是字本身，不是整个文字框，短字也走得完三档；写在 p 上的话，框比字宽多少，后面的颜色就丢多少。
+   三档都来自配色，换配色跟着变；想换某一档就在行内写变量，比如 style="--grad-b: var(--surface-2)"（只许写变量）。
+   深底配色上最好看。只给一两行大字用：满屏渐变就没有重点了。 */
+.t-gradient { background: linear-gradient(90deg, var(--grad-a, var(--accent)), var(--grad-b, var(--accent-soft)) 55%, var(--grad-c, var(--surface)));
+              -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
 .t-dim     { color: var(--text-dim); }
 .t-on-surface { color: var(--text-on-surface); }
 /* 强调色块（.s-accent / .s-accent-soft）上的文字。Bento 的 highlight 格必须用它 ——
@@ -122,6 +129,26 @@ html, body, .reveal { background: var(--bg); }
 .s-group > * { position: absolute; margin: 0; }
 /* 光的浓淡用 --light-strength 调（0–1，默认 0.16 是一层薄光；舞台射灯那种实在的光柱写 0.5 左右） */
 .s-light::before { content: ""; position: absolute; inset: 0; background: var(--surface); opacity: var(--light-strength, 0.16); }
+
+/* 吊灯（transitions.md「吊灯」）：<div class="s-lamp" data-id="lamp" data-lamp="x y len angle on [reach] [pool]">
+   里面放一张透明底的灯图 <img style="width; height" data-mouth>。铺满画布，不写 left/top/width/height。
+   engine.js 把灯图挂在吊线下面绕吊点转，光束、光圈画在灯后面（.lamp-light），灯压在内容上面（.lamp-rig）。
+   **灯光是固定的暖白**，不跟配色：光就是光，和 .s-glass 不跟配色一个道理。只用在深底配色上。
+   .s-lamp 自己不写 z-index：光在内容下面、灯在内容上面，两层要插在 .s-lit 前后。 */
+.s-lamp { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); pointer-events: none; }
+.s-lamp > .lamp-light { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; z-index: 0; }
+.s-lamp > .lamp-rig { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; z-index: 3; }
+.lamp-rig > .lamp-cord { position: absolute; left: -1.5px; top: 0; width: 3px; background: color-mix(in oklab, var(--text) 30%, var(--bg)); }
+.lamp-rig > .lamp-body { position: absolute; left: 0; top: 0; display: block; background: center / 100% 100% no-repeat; }
+.lamp-beam-0 { stop-color: rgb(255 236 200 / 0.26); }
+.lamp-beam-1 { stop-color: rgb(255 236 200 / 0); }
+.lamp-halo-0 { stop-color: rgb(255 236 200 / 0.28); }
+.lamp-halo-1 { stop-color: rgb(255 236 200 / 0.1); }
+.lamp-halo-2 { stop-color: rgb(255 236 200 / 0); }
+/* 被灯照亮的那一层：铺满画布，里面的东西按画布坐标绝对定位。光圈里看得见，光圈外只剩一点余光，
+   没开灯时整层都只剩余光（遮罩由 engine.js 按灯的姿态每帧写）。说明文字放在这一层外面，一直读得清。 */
+.s-lit { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); z-index: 1; pointer-events: none; }
+.s-lit > * { position: absolute; margin: 0; }
 /* data-anim 的副本（引擎生成，不要手写）。
    .st-trail：拖影飞入跟在后面的几份，模糊一点像残影。
    .st-shine：擦亮那道高光 —— 字透明，斜向渐变按字形裁出来，引擎量出字的左右边界，推着 background-position 只在字上扫一遍。

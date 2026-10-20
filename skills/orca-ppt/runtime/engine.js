@@ -1054,6 +1054,7 @@
         || (p.attr === "swap" ? SWAP_D : p.next.hasAttribute("data-roll") ? ROLL_D : TEXT_D);
       (p.attr === "swap" ? swapTween : textTween)(tl, g, p.next, d);
     }
+    lampTweens(tl, section, source);
     return tl;
   }
 
@@ -1166,6 +1167,174 @@
     tl.set(sameOld, { autoAlpha: 0 }, Math.max(d, landed));
     return tl;
   };
+
+  // ───────── 吊灯（.s-lamp，transitions.md「吊灯」）─────────
+  // <div class="s-lamp" data-id="lamp" data-lamp="x y len angle on reach pool">
+  //   <img src="art/lamp.webp" alt="" style="width:320px; height:210px;" data-mouth="0.81">
+  // </div>
+  //   x y    吊点（天花板上的那一点，通常在画布顶上方）
+  //   len    吊线长：吊点到灯顶
+  //   angle  整盏灯绕吊点转多少度。0 朝下，正数往左照，负数往右照
+  //   on     0–1，开灯程度：灯的亮度、光束、光圈、被照亮那一层的亮度
+  //   reach  光圈离罩口多远（沿灯轴，px），可省略，默认 520
+  //   pool   照亮的范围（半径，px），可省略，默认按光束在光圈处的宽度算
+  // 灯是一张透明底的实物图，引擎把它挂在吊线下面整体绕吊点转 —— 吊灯就是这么动的。
+  // data-mouth 是罩口在图里的高度比例（0–1），光束从那里打出去。
+  // 光束、光圈画在灯后面；同页的 .s-lit 是「被照亮的那一层」：光圈里看得见，光圈外只剩一点余光。
+  // 共享元素页里前后两页同一个 data-id 的灯：参数在转场时间线里补间，每帧重画。
+  // 灯写 data-lamp-via="dark" 时，先关灯、黑着挪过去、再开灯（换场景用）。
+  // 灯写 data-lamp-on="秒" 时，进页先关着，过这么久自己亮起来（开场用，见 lampIntro）。
+  const LAMP = { reach: 520, spread: 0.42, blur: 24, ambient: 0.07, offBright: 0.3 };
+  const LAMP_KEYS = ["x", "y", "len", "angle", "on", "reach", "pool"];
+  function lampPose(el) {
+    const v = (el.dataset.lamp || "").trim().split(/\s+/).map(Number);
+    if (v.length === 5) v.push(LAMP.reach);
+    if (v.length === 6) v.push(0);
+    if (v.length !== 7 || v.some((n) => !Number.isFinite(n))) {
+      console.error(`[orca-transition-skill] .s-lamp 的 data-lamp 要写「x y len angle on」五个数，可再加 reach、pool，现在是「${el.dataset.lamp ?? ""}」`);
+      return null;
+    }
+    const p = Object.fromEntries(LAMP_KEYS.map((k, i) => [k, v[i]]));
+    p.angle = ranged(".s-lamp", "angle", p.angle, -75, 75);
+    p.on = ranged(".s-lamp", "on", p.on, 0, 1);
+    p.reach = ranged(".s-lamp", "reach", p.reach, 120, 1600);
+    return p;
+  }
+  let lampSeq = 0;
+  function buildLamp(host) {
+    const img = host.querySelector(":scope > img");
+    if (!img) {
+      console.error("[orca-transition-skill] .s-lamp 里要放一张灯的图：<img src=\"…\" style=\"width:…; height:…;\" data-mouth=\"0.8\">");
+      return false;
+    }
+    const w = parseFloat(img.style.width), h = parseFloat(img.style.height);
+    if (!(w > 0 && h > 0)) {
+      console.error("[orca-transition-skill] .s-lamp 里的灯图要在 style 里写 width 和 height（px）");
+      return false;
+    }
+    const id = ++lampSeq;
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.setAttribute("class", "lamp-light");
+    svg.innerHTML = `<defs>
+        <linearGradient id="lamp-beam-${id}" gradientUnits="userSpaceOnUse"><stop offset="0" class="lamp-beam-0"/><stop offset="1" class="lamp-beam-1"/></linearGradient>
+        <radialGradient id="lamp-halo-${id}"><stop offset="0" class="lamp-halo-0"/><stop offset="0.6" class="lamp-halo-1"/><stop offset="1" class="lamp-halo-2"/></radialGradient>
+        <filter id="lamp-soft-${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${LAMP.blur}"/></filter>
+      </defs>
+      <ellipse fill="url(#lamp-halo-${id})"/>
+      <path fill="url(#lamp-beam-${id})" filter="url(#lamp-soft-${id})"/>`;
+    const rig = document.createElement("div");
+    rig.className = "lamp-rig";
+    const cord = document.createElement("i");
+    cord.className = "lamp-cord";
+    // 灯图换成背景图画的 div：reveal 会把前后两页 src 相同的 <img> 自动配成共享元素，
+    // 翻页时给它加 transform: none !important，盖掉这里给灯定的位置，灯就脱离吊线
+    const body = document.createElement("i");
+    body.className = "lamp-body";
+    body.style.width = `${w}px`;
+    body.style.height = `${h}px`;
+    body.style.backgroundImage = `url("${img.src}")`;
+    rig.append(cord, body);
+    host.replaceChildren(svg, rig);
+    host._lamp = {
+      w, h, mouth: +(img.dataset.mouth ?? 0.8), svg, rig, cord, img: body,
+      halo: svg.querySelector("ellipse"), beam: svg.querySelector("path"),
+      beamGrad: svg.querySelector(`#lamp-beam-${id}`),
+      lit: [...contentOf(host.closest("section")).querySelectorAll(":scope > .s-lit")],
+    };
+    return true;
+  }
+  const f1 = (n) => n.toFixed(1);
+  // 没写 pool 时照亮的半径：光圈半径再放大一点，光圈边上的东西也读得清
+  const autoPool = (host, { reach }) => (host._lamp.w * 0.42 + reach * LAMP.spread) * 1.2 * 1.35;
+  function drawLamp(host, { x, y, len, angle, on, reach, pool }) {
+    const P = host._lamp;
+    const a = (angle * Math.PI) / 180;
+    // 绕吊点顺时针转 angle：朝下的灯轴 (0, 1) 转成 (-sin, cos)
+    const dir = [-Math.sin(a), Math.cos(a)];
+    const across = [-dir[1], dir[0]];
+    P.rig.style.transform = `translate(${f1(x)}px, ${f1(y)}px) rotate(${angle.toFixed(2)}deg)`;
+    P.cord.style.height = `${f1(len)}px`;
+    P.img.style.transform = `translate(${f1(-P.w / 2)}px, ${f1(len)}px)`;
+    P.img.style.filter = `brightness(${(LAMP.offBright + (1 - LAMP.offBright) * on).toFixed(3)})`;
+    const d0 = len + P.h * P.mouth;
+    const m = [x + dir[0] * d0, y + dir[1] * d0];
+    // 光束和罩口一样宽，从罩口里面一截开始：模糊会把光束起点淡掉，淡掉的那段藏在灯图后面，
+    // 露出来的部分从罩口边上就是亮的，罩口和光束之间不留暗缝
+    const back = LAMP.blur * 2;
+    const s = [m[0] - dir[0] * back, m[1] - dir[1] * back];
+    const w0 = P.w * 0.47, w1 = w0 + reach * 1.8 * LAMP.spread;
+    const far = [m[0] + dir[0] * reach * 1.8, m[1] + dir[1] * reach * 1.8];
+    const pt = (q) => `${f1(q[0])} ${f1(q[1])}`;
+    P.beam.setAttribute("d", `M${pt([s[0] + across[0] * w0, s[1] + across[1] * w0])}L${pt([far[0] + across[0] * w1, far[1] + across[1] * w1])}L${pt([far[0] - across[0] * w1, far[1] - across[1] * w1])}L${pt([s[0] - across[0] * w0, s[1] - across[1] * w0])}Z`);
+    for (const [k, v] of Object.entries({ x1: s[0], y1: s[1], x2: far[0], y2: far[1] })) P.beamGrad.setAttribute(k, f1(v));
+    const c = [m[0] + dir[0] * reach, m[1] + dir[1] * reach];
+    const hr = (w0 + reach * LAMP.spread) * 1.2;
+    for (const [k, v] of Object.entries({ cx: c[0], cy: c[1], rx: hr, ry: hr * 0.9 })) P.halo.setAttribute(k, f1(v));
+    P.svg.style.opacity = on.toFixed(3);
+    // 被照亮的那一层：光圈里亮，往外渐暗到余光。没开灯时整层只剩余光
+    const r = pool > 0 ? pool : autoPool(host, { reach });
+    const inner = (LAMP.ambient + (1 - LAMP.ambient) * on).toFixed(3);
+    const mask = `radial-gradient(ellipse ${f1(r)}px ${f1(r * 0.9)}px at ${f1(c[0])}px ${f1(c[1])}px, rgb(0 0 0 / ${inner}) 0%, rgb(0 0 0 / ${inner}) 50%, rgb(0 0 0 / ${LAMP.ambient}) 100%)`;
+    for (const el of P.lit) {
+      el.style.webkitMaskImage = mask;
+      el.style.maskImage = mask;
+    }
+  }
+  function prepareLamps() {
+    for (const host of document.querySelectorAll(".reveal .slides > section .s-lamp")) {
+      const section = host.closest("section");
+      if (host.parentElement !== contentOf(section)) console.warn("[orca-transition-skill] .s-lamp 要写在页面的直接子元素上，灯按画布坐标画");
+      if (section.querySelectorAll(".s-lamp").length > 1) console.warn("[orca-transition-skill] 一页只放一盏 .s-lamp：被照亮的那一层（.s-lit）只认一盏灯");
+      const pose = lampPose(host);
+      if (!pose || !buildLamp(host)) continue;
+      host._pose = pose;
+      drawLamp(host, pose);
+    }
+    for (const lit of document.querySelectorAll(".reveal .slides > section .s-lit")) {
+      if (!lit.closest("section").querySelector(".s-lamp")) console.warn("[orca-transition-skill] .s-lit 所在的页没有 .s-lamp，这一层会一直是黑的");
+    }
+  }
+  // 进页开灯：灯写 data-lamp-on="秒" 时，进这一页时灯是关着的，过这么久自己亮起来（页内动画，不占一页）。
+  // 只写在开场那一页：从上一页的灯转场过来时，转场会把灯直接补间到亮着的样子
+  const LAMP_ON_S = 0.8;
+  function lampIntro(slide) {
+    const host = contentOf(slide).querySelector(":scope > .s-lamp[data-lamp-on]");
+    if (!host?._pose) return null;
+    const delay = Math.max(0, +host.dataset.lampOn || 0);
+    const state = { ...host._pose, on: 0 };
+    drawLamp(host, state);
+    const tl = gsap.timeline({ paused: true });
+    tl.to(state, { on: host._pose.on, duration: LAMP_ON_S, ease: "power2.out", onUpdate: () => drawLamp(host, state) }, delay);
+    tl.data = { stops: [delay + LAMP_ON_S] };
+    return tl;
+  }
+  // 共享元素页：同 data-id 的灯，参数从上一页补间到这一页，和 reveal 的 auto-animate 同时长、同曲线
+  function lampTweens(tl, section, source) {
+    const d = +section.dataset.autoAnimateDuration || 0.9;
+    for (const host of section.querySelectorAll(":scope > .s-lamp[data-id]")) {
+      const prev = source.querySelector(`:scope > .s-lamp[data-id="${host.dataset.id}"]`);
+      if (!prev?._pose || !host._pose) continue;
+      const from = { ...prev._pose }, to = { ...host._pose };
+      // 只有一边写了 pool 时，另一边换成按光束算出来的值，免得补间从 0 起跳
+      if (!from.pool !== !to.pool) {
+        if (!from.pool) from.pool = autoPool(prev, from);
+        else to.pool = autoPool(host, to);
+      }
+      const state = { ...from };
+      const draw = () => drawLamp(host, state);
+      if (host.dataset.lampVia === "dark") {
+        // 关灯 → 黑着挪过去 → 开灯
+        const pose = Object.fromEntries(LAMP_KEYS.filter((k) => k !== "on").map((k) => [k, to[k]]));
+        tl.fromTo(state, { ...from }, { on: 0, duration: d * 0.35, ease: "power2.in", onUpdate: draw }, 0);
+        tl.to(state, { ...pose, duration: d * 0.4, ease: "power2.inOut", onUpdate: draw }, d * 0.3);
+        tl.to(state, { on: to.on, duration: d * 0.35, ease: "power2.out", onUpdate: draw }, d * 0.65);
+      } else {
+        tl.fromTo(state, { ...from }, { ...to, duration: d, ease: "power2.inOut", onUpdate: draw }, 0);
+      }
+    }
+  }
 
   // ───────── 故事模式 ─────────
   // 照片 <img class="st-photo" width height data-anchors="名字:…; 名字:…">，坐标是原图像素：
@@ -1749,12 +1918,17 @@
   const hasScenes = (slide) => !!(window.OrcaMotion && slide?.querySelector(".mo-scene"));
   function sceneFor(slide) {
     const motion = hasScenes(slide) ? window.OrcaMotion.build(slide) : null;
+    const lamp = lampIntro(slide);
     const builds = buildsFor(slide);
-    if (!motion || !builds) return motion || builds;
-    const tl = gsap.timeline({ paused: true }).add(motion, 0).add(builds, 0);
-    // 场景动画算在第 0 步里：第 0 步至少要等场景放完
-    const stops = builds.data.stops.slice();
-    stops[0] = Math.max(stops[0], motion.duration());
+    const extra = [motion, lamp].filter(Boolean);
+    if (!extra.length) return builds;
+    if (!builds && extra.length === 1) return extra[0];
+    const tl = gsap.timeline({ paused: true });
+    if (builds) tl.add(builds, 0);
+    for (const x of extra) tl.add(x, 0);
+    // 场景动画、开灯算在第 0 步里：第 0 步至少要等它们放完
+    const stops = builds ? builds.data.stops.slice() : [0];
+    stops[0] = Math.max(stops[0], ...extra.map((x) => x.duration()));
     for (let i = 1; i < stops.length; i++) stops[i] = Math.max(stops[i], stops[i - 1]);
     tl.data = { stops };
     return tl;
@@ -2296,6 +2470,7 @@
   window.__orcaAdvance = advance;
 
   prepare();
+  prepareLamps();
   prepareStory();
   prepareVideos();
   prepareRecaps();

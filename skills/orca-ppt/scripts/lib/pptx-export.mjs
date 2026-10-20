@@ -86,12 +86,24 @@ function measure(index) {
   };
   const RASTER_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "svg", "IFRAME", "PICTURE", "OBJECT", "EMBED"]);
 
+  // 渐变字（background-clip: text）：PowerPoint 的文本框画不出按字形裁的渐变，字照常导会变成透明字压在一块渐变色块上。
+  // 整块截成图，字不进文本框（和文字镂空一样，在 PowerPoint 里不能改字）
+  const clipsText = (el) => {
+    const cs = getComputedStyle(el);
+    return cs.backgroundClip === "text" || cs.webkitBackgroundClip === "text";
+  };
+  const gradientText = (node) => {
+    for (let n = node.parentElement; n && n !== section; n = n.parentElement) if (clipsText(n)) return true;
+    return false;
+  };
+
   // 页内文字：按「所在的块级元素」分组，每组一个文本框
   const textBlocks = new Map();
   const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
   for (let t = walker.nextNode(); t; t = walker.nextNode()) {
     if (!t.data.trim()) continue;
     if (t.parentElement.closest("svg")) continue;
+    if (gradientText(t)) continue;
     const block = blockOf(t);
     if (!textBlocks.has(block)) textBlocks.set(block, []);
     textBlocks.get(block).push(t);
@@ -188,6 +200,13 @@ function measure(index) {
     if (RASTER_TAGS.has(tag) || el instanceof SVGSVGElement) {
       el.dataset.pptxK = String(k);
       items.push({ ...base, k: k++, kind: "raster", whole: true, reason: tag === "VIDEO" ? "视频导成静帧" : `<${tag.toLowerCase()}>` });
+      skipInside.add(el);
+      continue;
+    }
+
+    if (clipsText(el)) {
+      el.dataset.pptxK = String(k);
+      items.push({ ...base, k: k++, kind: "raster", whole: true, reason: "渐变字" });
       skipInside.add(el);
       continue;
     }
