@@ -1,14 +1,17 @@
 ---
 id: spotlight-opening
-title: 手电筒开场
+title: 发布会开场
 mode: 汇报稿
 order: 14
 summary: 一盏手电筒旋转着落到画面中间，扫一圈，光照到哪藏着的品牌名就亮到哪；手电筒往左走出画面、主面色贴着它被拉进来，品牌名拖影飞入、擦亮落版，再接进正文
 preview: 1-3
-cover: 4.2
+cover: 2.68
+poster: cover.jpg
 ---
 
-# 手电筒开场
+# 发布会开场
+
+手法：手电筒开场
 
 ## 参考拆解
 

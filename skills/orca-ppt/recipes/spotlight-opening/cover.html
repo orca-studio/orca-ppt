@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>封面 · 发布会开场</title>
+  <!-- 首页卡片的封面（RECIPE.md 的 poster），不是演示稿：把样片里分在几页的三样东西拼进一个画面 ——
+       手电筒、它拉进来的主色幕布、幕布上完整的品牌名。主题、配色、手电筒的形状都和样稿一样。
+       改了这页要重出封面图：node scripts/render-cover.mjs recipes/spotlight-opening/cover.html -->
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/forest.css">
+</head>
+<body style="margin:0;">
+<div class="cover-canvas reveal" style="position:relative; width:1920px; height:1080px; overflow:hidden; background:var(--bg);">
+  <!-- 幕布：手电筒从右边拉进来的主面色，前沿贴着灯头（840） -->
+  <div class="s-surface" style="position:absolute; left:840px; top:0px; width:1080px; height:1080px; border-radius:0;"></div>
+  <!-- 光束：从灯头射进幕布，罩住品牌名（主面色上的一层米色薄光） -->
+  <div style="position:absolute; left:0px; top:0px; width:1920px; height:1080px; background:var(--bg); opacity:0.16;
+              clip-path:polygon(840px 494px, 1920px 250px, 1920px 830px, 840px 586px);"></div>
+  <!-- 手电筒：和样稿同一组形状（灯头 + 灯身），转 90° 灯头朝右，贴在幕布前沿 -->
+  <div class="s-group" style="position:absolute; left:742px; top:540px; width:196px; height:144px; transform-origin:98px 0px; transform:rotate(90deg);">
+    <div class="s-surface" style="left:52px; top:0px; width:92px; height:46px; border-radius:0 0 46px 46px;"></div>
+    <div class="s-surface" style="left:0px; top:38px; width:196px; height:106px; border-radius:20px;"></div>
+  </div>
+  <!-- 品牌名和副标题：落在幕布上、光里 -->
+  <p class="t-display t-on-surface" style="position:absolute; margin:0; left:840px; top:450px; width:1080px; text-align:center;">LUMEO</p>
+  <p class="t-label t-on-surface" style="position:absolute; margin:0; left:840px; top:650px; width:1080px; text-align:center;">晨屿照明 · 2026 新品发布</p>
+</div>
+</body>
+</html>

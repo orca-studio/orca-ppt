@@ -1,15 +1,17 @@
 ---
 id: spec-wall
-title: 实拍接进参数墙
+title: 产品参数介绍
 mode: 汇报稿
 order: 10
 summary: 实拍视频停在拨号盘上，硬切成同一位置的椭圆，椭圆长成参数墙的主格，一束聚光在格子之间移动
 sample: ../../examples/spec-wall
 preview: 2-5
-cover: 6.5
+cover: 2
 ---
 
-# 实拍接进参数墙
+# 产品参数介绍
+
+手法：实拍接进参数墙
 
 ## 参考拆解
 

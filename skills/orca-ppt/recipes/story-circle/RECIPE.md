@@ -1,6 +1,6 @@
 ---
 id: story-circle
-title: 一张照片接一张照片
+title: 演变故事
 mode: 故事稿
 order: 4
 summary: 用整页照片讲演变，镜头推近照片里的一个形状，切到下一张照片里同样位置、同样大小的形状，再拉远
@@ -8,7 +8,9 @@ sample: ../../examples/story-circle
 cover: 3.6
 ---
 
-# 一张照片接一张照片
+# 演变故事
+
+手法：一张照片接一张照片
 
 ## 参考拆解
 

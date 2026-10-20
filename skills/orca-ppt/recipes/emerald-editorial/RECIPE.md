@@ -1,15 +1,17 @@
 ---
 id: emerald-editorial
-title: 序号块钻进章节
+title: 分章节工作汇报
 mode: 汇报稿
 order: 7
 summary: 封面的深蓝横条裂成议程的四个序号块，镜头钻进 01 进入章节页，左半幅蓝面板再撑满整页，变成数据页的底色
 sample: ../../examples/emerald-editorial
 preview: 2-5
-cover: 8
+cover: 0.3
 ---
 
-# 序号块钻进章节
+# 分章节工作汇报
+
+手法：序号块钻进章节
 
 ## 参考拆解
 

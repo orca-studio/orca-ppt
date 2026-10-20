@@ -5,7 +5,7 @@
  * 在 tokens.css 之后引入。规则见 references/themes.md。
  *
  * 圆角全部为 0：色块铺满一栏或整屏，同一块色块在 .s-surface / .s-accent 之间换色时不会顺带变圆角。
- * 同款「四栏产品切换」（recipes/drink-showcase）用的就是这一套。
+ * 同款「新品发布」（recipes/drink-showcase，四栏产品切换）用的就是这一套。
  *
  * 覆盖的类：
  *   .t-label  24px 产品说明：不转大写、字距收回 —— 说明是一句话，不是眉题
