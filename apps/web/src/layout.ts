@@ -4,8 +4,8 @@
  * 都记在本地 —— 每次开应用都要重新调一遍的设置等于没有。
  *
  * 左栏只有开和关 —— 以前的「大纲」(只有标题)给长稿子用,而同款和一般演示稿就五到二十页,
- * 导航器里已经有标题了。右栏(转场 / 页 / 稿子)默认开着:转场的关系和手法是这个产品最
- * 独特的东西;但只想看稿子的时候要能收起来,内容多的时候要能拖宽。
+ * 导航器里已经有标题了。右栏(转场 / 页 / 稿子)默认收起:平时用处不大,画布才是主角;
+ * 要看转场的关系和手法时从工具栏或 ⌥⌘0 打开,内容多的时候要能拖宽。
  */
 export interface Layout {
   /** 左栏(页胶片)开着。 */
@@ -17,12 +17,17 @@ export interface Layout {
 }
 
 const KEY = 'orca-ppt.layout'
+/**
+ * 存储格式的版本。v2 起右栏默认收起:旧版每次调布局都把 inspector: true(当时的默认值)
+ * 一起存下来,分不出哪些是用户自己打开的,所以旧版存的右栏开关不认,回到默认。
+ */
+const VERSION = 2
 
 /** 右栏能拖到的范围。再窄转场说明折得没法读,再宽画布就不是主角了。 */
 export const INSPECTOR_MIN = 260
 export const INSPECTOR_MAX = 560
 
-export const DEFAULT_LAYOUT: Layout = { nav: true, inspector: true, inspectorWidth: null }
+export const DEFAULT_LAYOUT: Layout = { nav: true, inspector: false, inspectorWidth: null }
 
 export function clampInspectorWidth(width: number): number {
   return Math.round(Math.min(INSPECTOR_MAX, Math.max(INSPECTOR_MIN, width)))
@@ -33,6 +38,7 @@ export function readLayout(): Layout {
     const raw = localStorage.getItem(KEY)
     if (!raw) return DEFAULT_LAYOUT
     const parsed = JSON.parse(raw) as {
+      v?: unknown
       nav?: unknown
       inspector?: unknown
       inspectorWidth?: unknown
@@ -46,7 +52,9 @@ export function readLayout(): Layout {
             ? parsed.nav !== 'off'
             : DEFAULT_LAYOUT.nav,
       inspector:
-        typeof parsed.inspector === 'boolean' ? parsed.inspector : DEFAULT_LAYOUT.inspector,
+        parsed.v === VERSION && typeof parsed.inspector === 'boolean'
+          ? parsed.inspector
+          : DEFAULT_LAYOUT.inspector,
       inspectorWidth:
         typeof parsed.inspectorWidth === 'number' && Number.isFinite(parsed.inspectorWidth)
           ? clampInspectorWidth(parsed.inspectorWidth)
@@ -60,7 +68,7 @@ export function readLayout(): Layout {
 
 export function writeLayout(layout: Layout): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(layout))
+    localStorage.setItem(KEY, JSON.stringify({ v: VERSION, ...layout }))
   } catch {
     // 记不住就记不住,这一次仍然生效
   }
