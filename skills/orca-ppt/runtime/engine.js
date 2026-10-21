@@ -941,6 +941,103 @@
     tl.set(shadow, { autoAlpha: 0 }, hand);
   }
 
+  // ───────── 翻面（data-flip，transitions.md「翻面」）─────────
+  // 前后两页键相同的 data-flip 元素是同一张卡片：它从上一页的位置走到这一页的位置，大小、圆角一起变；
+  // 内容不同时边走边翻 —— 横向压成一条线，侧面朝前的那一刻换成这一页的内容，再展开。
+  // 换的那一刻宽度是 0，所以字永远不会镜像。PowerPoint 里「水平翻转 + 平滑」就是这么动的。
+  // 内容相同时不翻，只走过去、变过去（整页的窗收成一格）。
+  // data-flip-mode="fade"：不压扁，沿同一条路走，前半程淡出、后半程换成新内容淡入 —— 跟着卡片走的文字用它。
+  // 卡片里写 data-fill="slide" 的图是「幻灯片背景填充」：按画布坐标铺满，卡片走到哪露出哪一块，
+  // 引擎每帧把它往卡片走的反方向挪，画一直和画布对齐（prepareFills 把 <img> 换成 .s-fill）。
+  const FLIP_D = 0.9;
+  const FLIP_TEXT_OUT = 0.45;  // fade：前 45% 淡出，后 45% 淡入，中间空一小段
+  const px = (n) => `${f1(n)}px`;
+  const fillsOf = (el) => [...el.querySelectorAll(":scope > .s-fill")];
+  function prepareFills() {
+    for (const img of document.querySelectorAll(".reveal .slides > section img[data-fill]")) {
+      const host = img.parentElement;
+      const section = img.closest("section");
+      if (img.dataset.fill !== "slide") {
+        console.error(`[orca-transition-skill] data-fill 只认 "slide"（按画布坐标铺满），现在是「${img.dataset.fill}」`);
+        continue;
+      }
+      if (host.parentElement !== section || !host.style.left || !host.style.top) {
+        console.error("[orca-transition-skill] data-fill=\"slide\" 的图要放在页面直接子元素（窗）里，窗的 style 写 left / top（px）");
+        continue;
+      }
+      // 换成背景图画的 <i>：reveal 会把前后两页 src 相同的 <img> 自动配成共享元素，给它加 transform 拉走
+      const fill = document.createElement("i");
+      fill.className = "s-fill";
+      fill.style.backgroundImage = `url("${img.src}")`;
+      fill.style.left = px(-parseFloat(host.style.left));
+      fill.style.top = px(-parseFloat(host.style.top));
+      img.replaceWith(fill);
+    }
+  }
+  // 比较两张卡片的内容：图（含 .s-fill 的背景图）、字、类名
+  const faceOf = (el) => [
+    el.className, el.textContent.trim(),
+    ...[...el.querySelectorAll("*")].map((n) => n.getAttribute("src") || n.style.backgroundImage || ""),
+  ].join("|");
+  function flipPairs(section, source) {
+    const pairs = [];
+    for (const el of section.querySelectorAll(":scope > [data-flip]")) {
+      if (isRuntime(el)) continue;
+      const key = el.dataset.flip;
+      const old = source.querySelector(`:scope > [data-flip="${key}"]`);
+      if (!old) continue;
+      if (el.dataset.id || old.dataset.id) {
+        console.error(`[orca-transition-skill] 翻面 data-flip="${key}" 不要同时写 data-id：两页内容不同，reveal 配成共享元素会和翻面抢着动`);
+      }
+      if (section.querySelectorAll(`[data-flip="${key}"]`).length > 1) {
+        console.error(`[orca-transition-skill] 一页里只能有一个 data-flip="${key}"`);
+      }
+      pairs.push({ old, next: el });
+    }
+    return pairs;
+  }
+  function flipTween(tl, ghost, next, d) {
+    const ease = "power2.inOut";
+    const a = box(ghost);
+    const b = box(next);
+    if (next.dataset.flipMode === "fade") {
+      const dx = b.left - a.left, dy = b.top - a.top;
+      gsap.set(next, { autoAlpha: 0 });
+      tl.fromTo(ghost, { x: 0, y: 0 }, { x: dx, y: dy, duration: d, ease }, 0);
+      tl.fromTo(ghost, { autoAlpha: +getComputedStyle(ghost).opacity }, { autoAlpha: 0, duration: d * FLIP_TEXT_OUT, ease: "power1.in" }, 0);
+      tl.fromTo(next, { x: -dx, y: -dy }, { x: 0, y: 0, duration: d, ease }, 0);
+      tl.fromTo(next, { autoAlpha: 0 }, { autoAlpha: 1, duration: d * FLIP_TEXT_OUT, ease: "power1.out" }, d * (1 - FLIP_TEXT_OUT));
+      return;
+    }
+    const turn = faceOf(ghost) !== faceOf(next);
+    // 补间时直接改 left / top / width / height（不用 transform 缩放）：卡片里的画要按画布坐标反着挪，
+    // 缩放会把画也缩了。走完把这一页元素的样式原样还回去
+    const saved = [next, ...fillsOf(next)].map((el) => [el, el.style.cssText]);
+    const state = { e: 0 };
+    const at = (k) => a[k] + (b[k] - a[k]) * state.e;
+    const draw = () => {
+      if (state.e >= 1) {
+        for (const [el, css] of saved) el.style.cssText = css;
+        ghost.style.visibility = "hidden";
+        return;
+      }
+      const L = at("left"), T = at("top");
+      for (const el of [ghost, next]) {
+        Object.assign(el.style, {
+          left: px(L), top: px(T), width: px(at("width")), height: px(at("height")),
+          borderRadius: px(at("borderRadius")),
+          transform: turn ? `scaleX(${Math.abs(Math.cos(Math.PI * state.e)).toFixed(4)})` : "",
+        });
+        for (const f of fillsOf(el)) Object.assign(f.style, { left: px(-L), top: px(-T) });
+      }
+      const shown = !turn || state.e >= 0.5;
+      ghost.style.visibility = shown ? "hidden" : "";
+      next.style.visibility = shown ? "" : "hidden";
+    };
+    draw();
+    tl.to(state, { e: 1, duration: d, ease, onUpdate: draw }, 0);
+  }
+
   // 找出两页里键相同的 data-swap / data-text 元素对
   function elementPairs(section, source) {
     const pairs = [];
@@ -1006,8 +1103,10 @@
     const currSame = sameIn(section);
     // 元素级的原地替换 / 文字级匹配：旧元素照常克隆出来，但不跟着淡出，交给下面的 swapTween / textTween
     const pairs = elementPairs(section, source);
-    const pairedOld = new Set(pairs.map((p) => p.old));
-    const pairedNew = new Set(pairs.map((p) => p.next));
+    // 翻面也一样：旧卡片克隆出来，交给 flipTween
+    const flips = flipPairs(section, source);
+    const pairedOld = new Set([...pairs, ...flips].map((p) => p.old));
+    const pairedNew = new Set([...pairs, ...flips].map((p) => p.next));
     const ghostOf = new Map();
 
     // 旧页没配对的元素克隆出来淡出。克隆不整层放在最上面或最下面，而是按旧页里的上下关系插进新页：
@@ -1031,8 +1130,8 @@
       if (pairedOld.has(child)) ghostOf.set(child, clone);
       else ghosts.push(clone);
     }
-    // 替换对的旧元素压在新元素正下方，交叉溶解时层次才对
-    for (const p of pairs) {
+    // 替换对、翻面对的旧元素压在新元素正下方，交叉溶解时层次才对
+    for (const p of [...pairs, ...flips]) {
       const g = ghostOf.get(p.old);
       if (g) p.next.before(g);
     }
@@ -1053,6 +1152,10 @@
       const d = +p.next.dataset.duration
         || (p.attr === "swap" ? SWAP_D : p.next.hasAttribute("data-roll") ? ROLL_D : TEXT_D);
       (p.attr === "swap" ? swapTween : textTween)(tl, g, p.next, d);
+    }
+    for (const p of flips) {
+      const g = ghostOf.get(p.old);
+      if (g) flipTween(tl, g, p.next, +p.next.dataset.duration || FLIP_D);
     }
     lampTweens(tl, section, source);
     return tl;
@@ -2470,6 +2573,7 @@
   window.__orcaAdvance = advance;
 
   prepare();
+  prepareFills();
   prepareLamps();
   prepareStory();
   prepareVideos();

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 度假一日行程</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/editorial-forest.css">
+  <link rel="stylesheet" href="../../runtime/palettes/midnight.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Editorial Forest，配色 midnight，版式 standard）
+1→2  关系：整页的窗收成第一格，四个空窗露出来，标题升到页顶          手法：共享元素 + 翻面（画相同，只收不翻）  共享：title；翻面 window
+2→3  关系：亮着的窗右移一格翻到正午，整页的画换成正午，字跟着窗走     手法：共享元素 + 翻面 + 原地替换  共享：title；翻面 window, time, name, desc；替换 bg
+3→4  关系：亮着的窗右移一格翻到黄昏                                   手法：共享元素 + 翻面 + 原地替换  同上
+4→5  关系：亮着的窗右移一格翻到夜晚                                   手法：共享元素 + 翻面 + 原地替换  同上
+5→6  关系：夜晚那扇窗撑满整页，标题退场，结尾的话出来                 手法：共享元素 + 翻面（画相同，只撑开不翻）  翻面 window
+连续五次共享元素：一排窗「顺序往前走」，同一个动作重复正是看点（transitions.md「组合规则」）。
+四个空窗 .s-frost 和压暗层 .s-veil 每页同位置，原地不动；整页的画 data-swap="bg" 和翻面同时长（0.9 秒）。
+窗里的画写 data-fill="slide"，和整页的画对齐：窗走到哪露出哪一块。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：整页就是一扇窗（铺满画布，圆角 0），清晨的原画；四个磨砂空窗已经排在它下面 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <img data-swap="bg" src="art/morning.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;">
+      <img data-fill="slide" src="art/morning.webp" alt="">
+    </div>
+    <p data-id="title" class="t-display t-on-glass" style="left:0px; top:360px; width:1920px; text-align:center;">在鸥屿过一天</p>
+    <p class="t-label t-on-glass" style="left:0px; top:560px; width:1920px; text-align:center;">鸥屿海岸民宿 · 从清晨到夜晚的四个去处</p>
+  </section>
+
+  <!-- 2 清晨：整页的窗收成第一格，画不换（还是清晨），所以不翻；标题升到页顶 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <img data-swap="bg" src="art/morning.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" data-duration="1.2" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;">
+      <img data-fill="slide" src="art/morning.webp" alt="">
+    </div>
+    <p data-id="title" class="t-h1 t-on-glass" style="left:0px; top:120px; width:1920px; text-align:center;">在鸥屿过一天</p>
+    <p data-flip="time" class="t-label t-on-glass" data-auto-animate-delay="0.8" style="left:160px; top:400px; width:280px; text-align:center;">06:30 · 清晨</p>
+    <p data-flip="name" class="t-h2 t-on-glass" data-auto-animate-delay="0.88" style="left:160px; top:440px; width:280px; text-align:center;">草坡看雾</p>
+    <p data-flip="desc" class="t-body t-on-glass" data-auto-animate-delay="0.96" style="left:160px; top:520px; width:280px; text-align:center;">跟着管家走上草坡，看雾从海面上一点点散开。</p>
+  </section>
+
+  <!-- 3 正午：亮着的窗右移一格，边走边翻，侧面朝前时换成正午的画；整页的画同时换掉 -->
+  <section data-auto-animate data-hold="2.5">
+    <img data-swap="bg" src="art/noon.webp" alt="" data-duration="0.9" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;">
+      <img data-fill="slide" src="art/noon.webp" alt="">
+    </div>
+    <p data-id="title" class="t-h1 t-on-glass" style="left:0px; top:120px; width:1920px; text-align:center;">在鸥屿过一天</p>
+    <p data-flip="time" class="t-label t-on-glass" data-flip-mode="fade" style="left:600px; top:400px; width:280px; text-align:center;">12:00 · 正午</p>
+    <p data-flip="name" class="t-h2 t-on-glass" data-flip-mode="fade" style="left:600px; top:440px; width:280px; text-align:center;">出海午餐</p>
+    <p data-flip="desc" class="t-body t-on-glass" data-flip-mode="fade" style="left:600px; top:520px; width:280px; text-align:center;">帆船绕过两座礁石岛，午饭是船上现烤的鱼。</p>
+  </section>
+
+  <!-- 4 黄昏：亮着的窗右移一格，边走边翻，侧面朝前时换成黄昏的画；整页的画同时换掉 -->
+  <section data-auto-animate data-hold="2.5">
+    <img data-swap="bg" src="art/dusk.webp" alt="" data-duration="0.9" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;">
+      <img data-fill="slide" src="art/dusk.webp" alt="">
+    </div>
+    <p data-id="title" class="t-h1 t-on-glass" style="left:0px; top:120px; width:1920px; text-align:center;">在鸥屿过一天</p>
+    <p data-flip="time" class="t-label t-on-glass" data-flip-mode="fade" style="left:1040px; top:400px; width:280px; text-align:center;">18:10 · 黄昏</p>
+    <p data-flip="name" class="t-h2 t-on-glass" data-flip-mode="fade" style="left:1040px; top:440px; width:280px; text-align:center;">露台晚餐</p>
+    <p data-flip="desc" class="t-body t-on-glass" data-flip-mode="fade" style="left:1040px; top:520px; width:280px; text-align:center;">太阳贴着海平线落下，晚餐摆在朝西的露台上。</p>
+  </section>
+
+  <!-- 5 夜晚：亮着的窗右移一格，边走边翻，侧面朝前时换成夜晚的画；整页的画同时换掉 -->
+  <section data-auto-animate data-hold="2.5">
+    <img data-swap="bg" src="art/night.webp" alt="" data-duration="0.9" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;">
+      <img data-fill="slide" src="art/night.webp" alt="">
+    </div>
+    <p data-id="title" class="t-h1 t-on-glass" style="left:0px; top:120px; width:1920px; text-align:center;">在鸥屿过一天</p>
+    <p data-flip="time" class="t-label t-on-glass" data-flip-mode="fade" style="left:1480px; top:400px; width:280px; text-align:center;">21:00 · 夜晚</p>
+    <p data-flip="name" class="t-h2 t-on-glass" data-flip-mode="fade" style="left:1480px; top:440px; width:280px; text-align:center;">草地观星</p>
+    <p data-flip="desc" class="t-body t-on-glass" data-flip-mode="fade" style="left:1480px; top:520px; width:280px; text-align:center;">关掉院子里的灯，躺在草地上看月亮走过海湾。</p>
+  </section>
+
+  <!-- 6 结尾：夜晚那扇窗撑满整页，画不换，所以不翻 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <img data-swap="bg" src="art/night.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div class="s-veil"></div>
+    <div class="s-frost" style="left:120px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:560px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1000px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div class="s-frost" style="left:1440px; top:280px; width:360px; height:680px; border-radius:180px;"></div>
+    <div data-flip="window" class="s-window" data-duration="1.2" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;">
+      <img data-fill="slide" src="art/night.webp" alt="">
+    </div>
+    <p class="t-display t-on-glass" data-auto-animate-delay="0.9" style="left:0px; top:360px; width:1920px; text-align:center;">给你留一扇窗</p>
+    <p class="t-label t-on-glass" data-auto-animate-delay="1.0" style="left:0px; top:560px; width:1920px; text-align:center;">鸥屿海岸民宿 · 示例内容，品牌和行程都是虚构的</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

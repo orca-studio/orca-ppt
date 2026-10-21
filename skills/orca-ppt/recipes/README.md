@@ -32,6 +32,7 @@
 | `stage-spotlight` | 嘉宾介绍 | 讲者 / 嘉宾逐个介绍：标题 O 里一盏灯，剪影站成一排，翻一页灯转向一个人，光扫过的字变色（页内动画） | [stage-spotlight/RECIPE.md](stage-spotlight/RECIPE.md) |
 | `city-cutout` | 城市漫游 | 城市、地点、项目介绍：照片从标题的字里透出来，封面收成角标，镜头在照片里推拉横移讲几个地方 | [city-cutout/RECIPE.md](city-cutout/RECIPE.md) |
 | `pendant-lamp` | 竞选自我介绍 | 竞选、自我介绍：黑屋子里一盏吊灯，基础信息、个人技能、兴趣爱好一章一件物件，灯每页换一种动作去照亮下一件（另有产品展示变种） | [pendant-lamp/RECIPE.md](pendant-lamp/RECIPE.md) |
+| `window-card-flip` | 度假一日行程 | 酒店、民宿、目的地介绍：同一处风景的几个时刻，一排窗里亮着的那扇边走边翻面，翻过来是下一个时刻，窗里的画和背后的画对齐 | [window-card-flip/RECIPE.md](window-card-flip/RECIPE.md) |
 
 ## 怎么用一个同款
 

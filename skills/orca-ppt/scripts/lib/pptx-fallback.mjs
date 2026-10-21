@@ -21,6 +21,7 @@ export const PAGE_TECHNIQUES = {
 export const ELEMENT_TECHNIQUES = {
   turn: { name: "绕圆心转", tier: "保真" },
   swap: { name: "原地替换", tier: "保真" },
+  flip: { name: "翻面", tier: "近似" },
   text: { name: "文字级匹配", tier: "降级" },
   roll: { name: "逐位滚轮", tier: "降级" },
 };
@@ -35,19 +36,19 @@ export const LOST = {
 
 /**
  * 进入第 i 页的那次翻页用什么转场。facts 是在页面里量的：
- *   { st, autoAnimate, shared: [跟上一页共有的 data-id], match, turn, swap, text, roll, duration, direction }
+ *   { st, autoAnimate, shared: [跟上一页共有的 data-id], match, turn, swap, flip, text, roll, duration, direction }
  * 返回 { kind, duration, dir, technique, tier, elements: [{ name, tier }] }
  */
 export function pageTransition(facts) {
   const elements = [];
-  for (const key of ["turn", "swap", "text", "roll"]) {
+  for (const key of ["turn", "swap", "flip", "text", "roll"]) {
     if (facts[key]) elements.push(ELEMENT_TECHNIQUES[key]);
   }
   let technique = null;
   if (facts.st) {
     technique = PAGE_TECHNIQUES[facts.st];
     if (!technique) throw new Error(`data-st="${facts.st}" 在「导出 PPTX」表里没有对应项`);
-  } else if (facts.autoAnimate && (facts.shared.length || facts.turn || facts.swap || facts.text)) {
+  } else if (facts.autoAnimate && (facts.shared.length || facts.turn || facts.swap || facts.flip || facts.text)) {
     technique = PAGE_TECHNIQUES.shared;
   }
   // 原地替换、文字级匹配不写 data-st，也没有共享元素时：平滑会把同名元素交叉淡化

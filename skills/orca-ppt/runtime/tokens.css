@@ -121,6 +121,21 @@ html, body, .reveal { background: var(--bg); }
            -webkit-backdrop-filter: blur(28px) saturate(1.4); backdrop-filter: blur(28px) saturate(1.4);
            box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.18); }
 .t-on-glass { color: #fff; }
+/* 窗（transitions.md「翻面」）：透过它看到整页那张画的这一块 —— PowerPoint 里形状填充选「幻灯片背景填充」。
+   里面放 <img data-fill="slide">，engine.js 换成 .s-fill 按画布坐标铺满，窗走到哪露出哪一块。
+   白边和上半截托字的渐暗画在 ::after 上，压在画上面；窗上的字用 .t-on-glass（窗里是照片，不跟配色走，道理同 .s-glass）。
+   .s-frost 是磨砂的空窗：后面的画模糊着透出来，整页换画时跟着变，和 .s-window 排在一起当「还没轮到的那几格」。
+   .s-veil 把整页的画压暗一层（上重下轻），窗里没压暗的原画就显得亮。 */
+.s-window { overflow: hidden; border-radius: var(--radius-l); box-shadow: 0 24px 48px rgb(0 0 0 / 0.45); }
+.s-window::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+                   box-shadow: inset 0 0 0 3px rgb(255 255 255 / 0.92);
+                   background: linear-gradient(180deg, rgb(10 14 22 / 0.6) 0%, rgb(10 14 22 / 0.4) 38%, rgb(10 14 22 / 0) 62%); }
+.s-window > .s-fill { position: absolute; display: block; width: var(--canvas-w); height: var(--canvas-h); background: center / cover no-repeat; }
+.s-frost { background: rgb(255 255 255 / 0.28); border-radius: var(--radius-l);
+           -webkit-backdrop-filter: blur(10px) saturate(0.8); backdrop-filter: blur(10px) saturate(0.8);
+           box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.24); }
+.s-veil { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); pointer-events: none;
+          background: linear-gradient(180deg, rgb(0 0 0 / 0.78) 0%, rgb(0 0 0 / 0.34) 26%, rgb(0 0 0 / 0.16) 60%, rgb(0 0 0 / 0.42) 100%); }
 
 /* 页内动画（transitions.md「页内动画」）。
    .s-group：把几个形状编成一组一起动（灯头 + 灯身），组里的子元素按组的左上角绝对定位。

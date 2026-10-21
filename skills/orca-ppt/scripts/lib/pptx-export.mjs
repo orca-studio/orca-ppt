@@ -69,6 +69,7 @@ function measure(index) {
       if (n.dataset.id) return n.dataset.id;
       if (n.dataset.match) return `match-${n.dataset.match}`;
       if (n.dataset.swap) return `swap-${n.dataset.swap}`;
+      if (n.dataset.flip) return `flip-${n.dataset.flip}`;
       if (n.dataset.text) return `text-${n.dataset.text}`;
     }
     return null;
@@ -302,6 +303,7 @@ function measure(index) {
     direction: section.dataset.stDirection || null,
     turn: q("[data-st-turn]"),
     swap: q("[data-swap]"),
+    flip: q("[data-flip]"),
     text: q("[data-text]:not([data-roll])"),
     roll: q("[data-roll]"),
     lost: [
