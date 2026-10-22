@@ -911,6 +911,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const current = filmstrip.current?.querySelector<HTMLElement>('button[data-current="true"]')
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
     current?.scrollIntoView({ block: 'nearest', behavior: calm ? 'auto' : 'smooth' })
+    // 焦点还留在之前点过的那页上的话,按键翻页后它的焦点框露出来,看着像两页都选中了。焦点跟着当前页走
+    const focused = document.activeElement
+    if (current && focused !== current && filmstrip.current?.contains(focused)) {
+      current.focus({ preventScroll: true })
+    }
   }, [slide, deck?.slideCount])
 
   /** 这份稿子用的主题,显示人读的那个名字。 */
