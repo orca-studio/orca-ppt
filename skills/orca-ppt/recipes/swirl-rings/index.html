@@ -13,11 +13,12 @@
 <div class="reveal">
 
 <!-- 转场计划（主题 Clearing，配色 mist，版式 standard）
-1→2  关系：封面的字退场，两组圆环先后回旋长出来，拼成一个 S        手法：页内动画（回旋）
+封面  左边标题，右边一个缩小的 S 先后回旋出来                       页内动画（回旋）
+1→2  关系：封面淡出，正文的两组圆环先后回旋长出来，拼成一个 S        手法：页内动画（回旋）
 2→3  关系：换一组内容：旧的 S 淡出，新的两组再回旋一次              手法：同上
 3→4  关系：同上                                                    手法：同上
 4→5  关系：同上                                                    手法：同上
-5→6  关系：S 淡出，结尾的话出来                                     手法：新元素入场
+5→6  关系：S 淡出，一整圈（四次季度复盘）回旋出来，圆心是年底      手法：页内动画（回旋）
 页内动画（transitions.md「入场和强调」）：每组是一个 .s-group，框 720×720、中心就是圆心，写 data-anim="spin"，
 绕圆心逆时针转一圈、由小长大；左组 @0，右组 @0.45。组里的扇形、序号、文字、圆心都跟着组转。
 两组圆心相距 480 = 内径 120 + 外径 360：左组的外圈深色接上右组的内圈深色，S 的笔画连成一条。
@@ -26,11 +27,33 @@
 
 <div class="slides">
 
-  <!-- 1 封面：只有字；下一页两组圆环先后回旋长出来 -->
-  <section data-page="cover" data-auto-animate data-hold="2">
-    <p class="t-label t-dim" style="left:0px; top:360px; width:1920px; text-align:center;">栖岸咖啡 · 2027 年度计划</p>
-    <p class="t-display" style="left:0px; top:420px; width:1920px; text-align:center;">两步走</p>
-    <p class="t-body t-dim" style="left:0px; top:620px; width:1920px; text-align:center;">上半年站稳，下半年扩张</p>
+  <!-- 1 封面：左边标题；右边一个缩小的 S，两组先后绕自己的圆心回旋出来 —— 正文每页都是这个动作 -->
+  <section data-page="cover" data-auto-animate data-hold="3">
+    <p class="t-label t-dim" style="left:120px; top:340px;">栖岸咖啡 · 2027 年度计划</p>
+    <p class="t-display" style="left:120px; top:400px;">两步走</p>
+    <p class="t-body t-dim" style="left:120px; top:600px; width:640px;">上半年站稳，下半年扩张</p>
+    <div class="s-group" style="left:856px; top:180px; width:720px; height:720px; scale:0.6;">
+      <div class="s-group s-lift" data-anim="spin 1.2s @0.2" style="left:0px; top:0px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-text" d="M48 84 V46"/><path class="l-text" d="M48 52 C48 32 32 24 16 26 C16 44 30 54 48 52 Z"/><path class="l-text" d="M48 46 C48 28 62 18 80 20 C80 38 66 46 48 46 Z"/></svg>
+      <p class="t-label t-dim" style="left:260px; top:340px; width:200px; text-align:center;">上半年</p>
+      <p class="t-h2" style="left:260px; top:374px; width:200px; text-align:center;">站稳</p>
+    </div>
+    </div>
+    <div class="s-group" style="left:1144px; top:180px; width:720px; height:720px; scale:0.6;">
+      <div class="s-group s-lift" data-anim="spin 1.2s @0.65" style="left:0px; top:0px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M28 86 V12"/><path class="l-on-surface" d="M28 16 H74 L62 32 L74 48 H28"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">下半年</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">扩张</p>
+    </div>
+    </div>
   </section>
 
   <!-- 2 全年：上半年站稳、下半年扩张：左组绕自己的圆心回旋长出来，右组晚 0.45 秒跟上，拼成一个 S -->
@@ -245,10 +268,41 @@
     </div>
   </section>
 
-  <!-- 6 结尾 -->
-  <section data-auto-animate data-hold="2">
-    <p class="t-display" style="left:0px; top:400px; width:1920px; text-align:center;">年底见</p>
-    <p class="t-body t-dim" style="left:0px; top:600px; width:1920px; text-align:center;">每季度复盘一次，按这六件事对表</p>
+  <!-- 6 结尾：两组半圆变成一整圈，四个象限是四次季度复盘，圆心写「2027 年底」，整圈回旋出来 -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3.5">
+    <p class="t-label t-dim" style="left:120px; top:340px;">两步走完，是一整圈</p>
+    <p class="t-display" style="left:120px; top:400px;">年底见</p>
+    <p class="t-body t-dim" style="left:120px; top:600px; width:640px;">每季度复盘一次，按这六件事对表</p>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0.1" style="left:1000px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:109.7px; width:80px; text-align:center; rotate:-45deg;">Q1</p>
+      <div class="s-group" style="left:98.6px; top:173.6px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">三月底</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">菜单与会员</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:109.7px; width:80px; text-align:center; rotate:45deg;">Q2</p>
+      <div class="s-group" style="left:381.4px; top:173.6px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">六月底</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">上半年对表</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:562.3px; width:80px; text-align:center; rotate:-45deg;">Q3</p>
+      <div class="s-group" style="left:381.4px; top:456.4px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">九月底</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">新店与外卖</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:562.3px; width:80px; text-align:center; rotate:45deg;">Q4</p>
+      <div class="s-group" style="left:98.6px; top:456.4px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">十二月</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">全年对表</p>
+      </div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M48 12 L58 36 L84 38 L64 54 L70 80 L48 66 L26 80 L32 54 L12 38 L38 36 Z"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">2027</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">年底</p>
+    </div>
   </section>
 
 </div>
