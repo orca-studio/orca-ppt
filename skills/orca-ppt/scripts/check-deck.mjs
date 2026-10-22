@@ -102,6 +102,14 @@ function auditSlide(spec) {
   //    容差 8px：量的是 bounding box，描边（.s-ring 这类 border 圆）和字形的
   //    抗锯齿边会把它撑大几个像素。4px 的溢出是度量误差，不是构图错误。
   const SLACK = 8;
+  const waitingOffstage = (el) => {
+    if (!el?.dataset.id || !section.contains(el)) return false;
+    const b = box(el);
+    return (b.bottom <= 0 || b.top >= CANVAS_H || b.right <= 0 || b.left >= CANVAS_W) &&
+      [...document.querySelectorAll(".slides > section [data-id]")].some((other) =>
+        other !== el && other.closest("section") !== section &&
+        other.dataset.id === el.dataset.id && other.tagName === el.tagName);
+  };
   for (const el of all) {
     if (!el.getAttribute("style")?.includes("left")) continue;
     const b = box(el);
@@ -109,12 +117,8 @@ function auditSlide(spec) {
     if (isFullBleed(el, b)) continue;
     // Only fully offstage, explicitly paired elements may wait outside the canvas
     // (整组归位的起点、焦点移交的入画 / 出画). Partially clipped elements still fail,
-    // as do unmatched accidental overflow elements.
-    if (el.dataset.id &&
-        (b.bottom <= 0 || b.top >= CANVAS_H || b.right <= 0 || b.left >= CANVAS_W) &&
-        [...document.querySelectorAll(".slides > section [data-id]")].some((other) =>
-          other !== el && other.closest("section") !== section &&
-          other.dataset.id === el.dataset.id && other.tagName === el.tagName)) continue;
+    // as do unmatched accidental overflow elements. 组在画外待命时，组里的东西跟着组走，也不量
+    if (waitingOffstage(el) || waitingOffstage(el.parentElement.closest(".s-group[data-id]"))) continue;
     const out = [];
     if (b.left < SAFE.left - SLACK) out.push(`左 ${Math.round(b.left)}`);
     if (b.right > SAFE.right + SLACK) out.push(`右 ${Math.round(b.right)}`);
