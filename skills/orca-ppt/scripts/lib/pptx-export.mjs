@@ -118,6 +118,13 @@ function measure(index) {
   const transformText = (s, cs) =>
     cs.textTransform === "uppercase" ? s.toUpperCase() : cs.textTransform === "lowercase" ? s.toLowerCase() : s;
 
+  // 竖排标点：浏览器靠字体的 vert 特性把「，。」挪到字格右上角，Mac 版 PowerPoint 不套这个特性，
+  // 标点落在左下角，像挂在下一个字头上。导出时直接换成 Unicode 的竖排专用字符（U+FE10–FE19、FE30–FE44）
+  const VERTICAL_PUNCT = {
+    "，": "\uFE10", "、": "\uFE11", "。": "\uFE12", "：": "\uFE13", "；": "\uFE14", "！": "\uFE15", "？": "\uFE16",
+    "…": "\uFE19", "—": "\uFE31", "（": "\uFE35", "）": "\uFE36", "《": "\uFE3D", "》": "\uFE3E",
+    "「": "\uFE41", "」": "\uFE42", "『": "\uFE43", "』": "\uFE44",
+  };
   function textOf(block, o) {
     const cs = getComputedStyle(block);
     // 竖排（writing-mode: vertical-rl）：一「行」是一列，从右往左排。按列分组，写进 PowerPoint 的竖排文本框（eaVert）。
@@ -156,7 +163,7 @@ function measure(index) {
           line = { top, left, runs: [] };
           lines.push(line);
         }
-        const text = /\s/.test(ch) ? " " : transformText(ch, ecs);
+        const text = /\s/.test(ch) ? " " : vertical ? (VERTICAL_PUNCT[ch] ?? ch) : transformText(ch, ecs);
         const last = line.runs.at(-1);
         if (last && last.key === key) last.text += text;
         else line.runs.push({ key, ...style, text });
