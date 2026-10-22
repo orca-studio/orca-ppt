@@ -171,6 +171,21 @@ html, body, .reveal { background: var(--bg); }
 .s-prism.is-reflect { -webkit-box-reflect: below 4px linear-gradient(transparent 62%, rgb(0 0 0 / 0.28)); }
 /* 立体柱上的字（底座侧面的数字）：取柱子的颜色压深一档，白底座上读得动。--prism 写在字自己身上 */
 .t-prism { --prism: var(--accent); color: color-mix(in oklab, var(--prism) 70%, black); }
+/* 渐变的圆环扇形（同款 swirl-rings）：一个铺满组的正圆，--hole 以内挖空，--band-in 到 --band-out 是深色的一圈，其余是浅色（--surface-2）。
+   深色那圈顺着圆周从浅到深：从 --arc-start 角起顺时针转 90°，颜色从 --arc-a 走到 --arc-b
+   （主面色 --surface 的浓度，0–1，余下的掺页面底色）。几块扇形接着排，一块的终点是下一块的起点，一路看是越走越深的一条带子。
+   象限用 clip-path: inset(…) 裁。行内只写这几个变量。 */
+.s-arc {
+  --hole: 120px; --band-in: 280px; --band-out: 360px; --arc-start: 0deg; --arc-a: 1; --arc-b: 1;
+  --arc-from: color-mix(in oklab, var(--surface) calc(var(--arc-a) * 100%), var(--bg));
+  --arc-to: color-mix(in oklab, var(--surface) calc(var(--arc-b) * 100%), var(--bg));
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--surface-2) var(--band-in), transparent calc(var(--band-in) + 1px), transparent var(--band-out), var(--surface-2) calc(var(--band-out) + 1px)),
+    conic-gradient(from var(--arc-start), var(--arc-from), var(--arc-to) 90deg, var(--arc-to));
+  -webkit-mask: radial-gradient(circle closest-side, transparent var(--hole), #000 calc(var(--hole) + 1px));
+  mask: radial-gradient(circle closest-side, transparent var(--hole), #000 calc(var(--hole) + 1px));
+}
 /* 落在地上的软阴影：一个椭圆，中间深、往外淡没 */
 .s-shadow { border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / 0.36), rgb(0 0 0 / 0)); }
 /* 一组拼起来的形状整体投一道柔和的影子（拼成 S 的扇形）。写在 .s-group 上，影子跟着组转 */
