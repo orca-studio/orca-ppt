@@ -729,6 +729,8 @@ export async function startServer(
           // 做同款:从同款的样稿起头,主题和配色沿用样稿的
           const sample = await recipeEntry(catalog.skillPath, params.from.slice('recipe:'.length))
           if (!sample) throw new Error(`不认识的同款:${params.from}(id 来自 list_recipes)`)
+          if (sample.kind === 'example')
+            throw new Error(`${params.from} 是案例,不是同款:案例只能打开看,不能做同款`)
           await instantiateSample({
             sampleDir: sample.dir,
             entry: sample.entry,
@@ -769,8 +771,13 @@ export async function startServer(
       case 'recipe.focus': {
         const params = parseParams('recipe.focus', raw)
         const recipes = await listRecipes(catalog.skillPath)
-        if (!recipes.some((recipe) => recipe.id === params.id))
-          throw new Error(`RECIPE_NOT_FOUND: 没有这个同款:${params.id}`)
+        const target = recipes.find((recipe) => recipe.id === params.id)
+        if (!target) throw new Error(`RECIPE_NOT_FOUND: 没有这个同款:${params.id}`)
+        // 案例卡片只有封面:没有样片可播,也没有「做同款」可打开
+        if (target.kind === 'example' && params.show !== 'none')
+          throw new Error(
+            `${params.id} 是案例:首页只放封面,没有样片和「做同款」,用 present_recipe 打开看`,
+          )
         // 样片和「做同款」只在首页上有:开着稿子就先关掉,和点「首页」一样
         if (params.show !== 'none') {
           for (const deckId of [...openDecks.keys()])
@@ -797,7 +804,8 @@ export async function startServer(
               if (await exists(files.video)) {
                 return {
                   ...recipe,
-                  preview: files.video,
+                  // 案例首页只放封面:录了也只取封面帧,不给样片
+                  ...(recipe.kind === 'recipe' ? { preview: files.video } : {}),
                   // 配方自带封面图时用它(listRecipes 已经放在 recipe.poster 里),否则用样片的封面帧
                   ...(!recipe.poster && (await exists(files.poster))
                     ? { poster: files.poster }
@@ -808,7 +816,15 @@ export async function startServer(
               queuePreview(recipe.id, files.key)
               const stale = await stalePreview(files)
               if (stale)
-                return { ...recipe, ...stale, ...(recipe.poster ? { poster: recipe.poster } : {}) }
+                return {
+                  ...recipe,
+                  ...(recipe.kind === 'recipe'
+                    ? stale
+                    : stale.poster
+                      ? { poster: stale.poster }
+                      : {}),
+                  ...(recipe.poster ? { poster: recipe.poster } : {}),
+                }
               if (previewGaveUp(recipe.id, files.key)) return { ...recipe, previewFailed: true }
               return recipe
             }),

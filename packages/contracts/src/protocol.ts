@@ -386,6 +386,7 @@ export const requests = {
   },
   /**
    * 同款:skill 里 `recipes/<id>/RECIPE.md` 的配方。首页就是同款画廊。
+   * 案例(`examples/<id>/EXAMPLE.md`)也在这张列表里,`kind` 区分:只能打开看,不能做同款。
    *
    * 同款**不是起始文件**:界面不从它建稿,只给人看样片、复制 `prompt` 贴进自己的 agent ——
    * agent 读配方、照着做。所以这里没有「从同款新建」的方法,也不该有。
@@ -395,6 +396,11 @@ export const requests = {
     result: z.object({
       recipes: z.array(
         z.object({
+          /**
+           * recipe:同款,一个能换内容复刻的手法,有「做同款」。
+           * example:案例,一整份完整的稿子,只给人看,首页只放封面,没有样片和「做同款」。
+           */
+          kind: z.enum(['recipe', 'example']),
           id: z.string(),
           title: z.string(),
           /** 汇报稿还是故事稿,原样取自配方。 */
@@ -407,8 +413,8 @@ export const requests = {
           poster: z.string().optional(),
           /** 样片重试几次都没录成。没有 preview 也没有这个,就是还在录。 */
           previewFailed: z.boolean().optional(),
-          /** 「做同款」的 agent 提示词,用户复制后贴进自己的 agent。 */
-          prompt: z.string(),
+          /** 「做同款」的 agent 提示词,用户复制后贴进自己的 agent。案例没有。 */
+          prompt: z.string().optional(),
         }),
       ),
     }),

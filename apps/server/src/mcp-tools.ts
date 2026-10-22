@@ -271,7 +271,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '查看同款',
         description:
-          '列出首页展示的同款配方（参考作品的内容结构 + 动效原则），含每个同款的「做同款」提示词。配方正文用 read_skill 读 recipes/<id>/RECIPE.md。',
+          '列出首页展示的同款配方（参考作品的内容结构 + 动效原则），含每个同款的「做同款」提示词。配方正文用 read_skill 读 recipes/<id>/RECIPE.md。kind 为 example 的是案例：一整份完整的稿子（examples/<id>/index.html），只能打开看，没有提示词，不能做同款，也没有样片。',
         annotations: looking,
       },
       run: async () => json(await call('catalog.recipes', {})),
@@ -283,7 +283,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         title: '放映同款样稿',
         annotations: looking,
         description:
-          '在应用的工作台里打开某个同款的样稿（只读），和首页点卡片一样。id 来自 list_recipes。看完用 close_deck 回首页。',
+          '在应用的工作台里打开某个同款的样稿或案例（只读），和首页点卡片一样。id 来自 list_recipes。看完用 close_deck 回首页。',
         inputSchema: { id: z.string().describe('list_recipes 返回的同款 id') },
       },
       run: async (args) => {
@@ -307,7 +307,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         // 光标指那张卡的样片:visual_target 认这个 action,返回卡片的位置
         _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
-          '在首页播某个同款卡片上的样片，和鼠标停在卡片上一样。给用户介绍同款、挑同款时用。开着稿子的话应用会先关掉它回首页。on=false 停下。id 来自 list_recipes。',
+          '在首页播某个同款卡片上的样片，和鼠标停在卡片上一样。给用户介绍同款、挑同款时用。案例（kind=example）没有样片。开着稿子的话应用会先关掉它回首页。on=false 停下。id 来自 list_recipes。',
         inputSchema: {
           id: z.string().describe('list_recipes 返回的同款 id'),
           on: z.boolean().optional().describe('不给就是播;false 停下').meta({ title: '播放' }),
@@ -334,7 +334,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         // 光标指那张卡上的「做同款」按钮
         _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
-          '在首页打开某个同款的「做同款」弹窗，用户能看到并复制那段提示词，和点卡片上的「做同款」一样。开着稿子的话应用会先关掉它回首页。open=false 收起。提示词正文 list_recipes 里也有。',
+          '在首页打开某个同款的「做同款」弹窗，用户能看到并复制那段提示词，和点卡片上的「做同款」一样。开着稿子的话应用会先关掉它回首页。open=false 收起。提示词正文 list_recipes 里也有。案例（kind=example）没有这个弹窗。',
         inputSchema: {
           id: z.string().describe('list_recipes 返回的同款 id'),
           open: z.boolean().optional().describe('不给就是打开;false 收起').meta({ title: '打开' }),

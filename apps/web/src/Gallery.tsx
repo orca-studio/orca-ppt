@@ -11,6 +11,7 @@ export type RecipeFocus = PushData<'recipe.focus'> & { seq: number }
 /**
  * 没有打开稿子时的首屏:**同款画廊**。看样片,在卡片右上角复制「做同款」的提示词,贴进
  * 自己的 agent —— agent 读 skill 里的配方、照着做,做完在这里打开。
+ * 案例(一整份完整的稿子)也排在这里,只放封面、点开看,没有样片和「做同款」。
  *
  * 界面不从同款建稿:同款是配方,不是起始文件。通用的设计原则和审美(主题、配色、内容
  * 组织、逐页动效)内化在 skill 里,在 agent 侧用,不在这儿做成选择。
@@ -77,7 +78,7 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 const canPreview = () =>
   matchMedia('(hover: hover) and (pointer: fine)').matches && !reducedMotion()
 
-/** 一张同款卡。 */
+/** 一张同款卡。案例也用它:少了样片和「做同款」。 */
 function RecipeCard({
   recipe,
   onPresent,
@@ -106,6 +107,7 @@ function RecipeCard({
   }, [focus?.seq, focus?.show])
 
   const playing = (hover && canPreview()) || (pointed && !reducedMotion())
+  const example = recipe.kind === 'example'
 
   useEffect(() => {
     const el = video.current
@@ -144,9 +146,9 @@ function RecipeCard({
           className="gallery-play"
           onClick={onPresent}
           // 不用 title:原生提示跟着鼠标,正好压在悬停预览上
-          aria-label={`打开「${recipe.title}」的样稿`}
+          aria-label={`打开「${recipe.title}」的${example ? '案例' : '样稿'}`}
         >
-          {recipe.preview ? (
+          {recipe.preview && !example ? (
             <video
               // 样片换了(缓存录好了新的一份)就整个换掉元素,不然还播着旧的
               key={recipe.preview}
@@ -163,24 +165,38 @@ function RecipeCard({
           ) : (
             // 样片是按样稿现录的,第一次打开首页要等一会儿
             <span className="gallery-placeholder">
-              {recipe.previewFailed ? '样片没生成出来，点开直接看样稿' : '正在生成样片…'}
+              {example
+                ? recipe.previewFailed
+                  ? '封面没生成出来，点开直接看'
+                  : '正在生成封面…'
+                : recipe.previewFailed
+                  ? '样片没生成出来，点开直接看样稿'
+                  : '正在生成样片…'}
             </span>
           )}
         </button>
-        <Button
-          variant="primary"
-          size="sm"
-          className="gallery-copy"
-          on={open}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          onClick={() => setOpen((value) => !value)}
-        >
-          做同款
-        </Button>
-        {open && <PromptMenu prompt={recipe.prompt} onClose={() => setOpen(false)} />}
+        {recipe.prompt && (
+          <Button
+            variant="primary"
+            size="sm"
+            className="gallery-copy"
+            on={open}
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            onClick={() => setOpen((value) => !value)}
+          >
+            做同款
+          </Button>
+        )}
+        {open && recipe.prompt && (
+          <PromptMenu prompt={recipe.prompt} onClose={() => setOpen(false)} />
+        )}
       </div>
-      <span className="gallery-title gallery-title--center">{recipe.title}</span>
+      <span className="gallery-title gallery-title--center">
+        {recipe.title}
+        {/* 没有「做同款」的卡片要说清为什么:它是一整份稿子,不是手法 */}
+        {example && <span className="gallery-kind">案例</span>}
+      </span>
     </article>
   )
 }

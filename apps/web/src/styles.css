@@ -1081,6 +1081,15 @@ body[data-resizing] iframe {
   white-space: nowrap;
 }
 
+.gallery-kind {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
 .gallery-empty,
 .gallery-error {
   color: var(--muted);

@@ -55,6 +55,62 @@ describe('listRecipes', () => {
   })
 })
 
+const example = (id: string, extra = '') => `---
+id: ${id}
+title: 人物生平介绍
+${extra}---
+`
+
+describe('案例', () => {
+  it('examples/<id>/EXAMPLE.md 进列表:kind 是 example,没有做同款的提示词', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    await mkdir(join(skill, 'examples/ink-portrait'), { recursive: true })
+    await writeFile(join(skill, 'examples/ink-portrait/EXAMPLE.md'), example('ink-portrait'))
+    const [item] = await listRecipes(skill)
+    expect(item).toMatchObject({ kind: 'example', id: 'ink-portrait', title: '人物生平介绍' })
+    expect(item?.prompt).toBeUndefined()
+  })
+
+  it('已经被同款的 sample 指着、或和同款撞了 id 的不再单列;_assets 不算', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    await mkdir(join(skill, 'recipes/drink'), { recursive: true })
+    await writeFile(
+      join(skill, 'recipes/drink/RECIPE.md'),
+      recipe('drink', 'sample: ../../examples/showcase\n'),
+    )
+    for (const id of ['showcase', 'drink', '_assets', 'solo']) {
+      await mkdir(join(skill, 'examples', id), { recursive: true })
+      await writeFile(join(skill, 'examples', id, 'EXAMPLE.md'), example(id))
+    }
+    const items = await listRecipes(skill)
+    expect(items.map((item) => [item.kind, item.id])).toEqual([
+      ['recipe', 'drink'],
+      ['example', 'solo'],
+    ])
+  })
+
+  it('和同款按 order 一起排', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    await mkdir(join(skill, 'recipes/a'), { recursive: true })
+    await writeFile(join(skill, 'recipes/a/RECIPE.md'), recipe('a', 'order: 1\n'))
+    await mkdir(join(skill, 'examples/b'), { recursive: true })
+    await writeFile(join(skill, 'examples/b/EXAMPLE.md'), example('b', 'order: 2\n'))
+    expect((await listRecipes(skill)).map((item) => item.id)).toEqual(['b', 'a'])
+  })
+
+  it('入口是 examples/<id>/index.html,默认只录第一页取封面', async () => {
+    const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
+    await mkdir(join(skill, 'examples/solo'), { recursive: true })
+    await writeFile(join(skill, 'examples/solo/EXAMPLE.md'), example('solo'))
+    await writeFile(join(skill, 'examples/solo/index.html'), '')
+    expect(await recipeEntry(skill, 'solo')).toMatchObject({
+      kind: 'example',
+      entry: join(skill, 'examples/solo/index.html'),
+      range: { from: 0, to: 0 },
+    })
+  })
+})
+
 describe('recipeEntry', () => {
   it('只给认得的同款,而且要有样稿', async () => {
     const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
