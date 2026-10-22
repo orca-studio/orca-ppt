@@ -2069,11 +2069,12 @@
   // 入场 / 强调（data-anim）：PowerPoint 动画窗格里最常用的那几种，写成「效果 方向 时长 @开始」，几段用分号隔开：
   //   data-anim="trail right .5s @.2; shine .8s @.9"
   //   fade 淡入 / rise 上浮 / zoom 弹出 / fly 方向 飞入 / wipe 方向 擦除 / trail 方向 拖影飞入 / shine 擦亮 / out 淡出
+  //   spin 回旋（转一圈由小长大）/ emerge 升起（飞入 + 遮罩：从自己的底边里升上来）
   //   方向是「从哪边来」：fly right 从右边飞进来，wipe left 从左往右擦出来。
   // 点击分步（data-step="n"）：写了的元素（或它所在的组）等第 n 次按翻页键才动，没写的是第 0 步，进页自己动。
   //   放映时每一步放完停住，按键放下一步；全部放完再按才翻页。录制没人按键，步与步之间空 STEP_GAP 秒连着放。
   const STEP_GAP = 0.6;
-  const ANIM_DUR = { fade: 0.5, rise: 0.6, zoom: 0.5, fly: 0.6, wipe: 0.7, trail: 0.6, shine: 0.9, out: 0.4 };
+  const ANIM_DUR = { fade: 0.5, rise: 0.6, zoom: 0.5, fly: 0.6, wipe: 0.7, trail: 0.6, shine: 0.9, out: 0.4, spin: 1.2, emerge: 0.8 };
   const ANIM_DIR = { fly: "down", wipe: "left", trail: "right" };
   const TRAIL = [0.45, 0.28, 0.14]; // 拖影：每份副本的不透明度，越往后越淡
   const TRAIL_LAG = 0.05;           // 拖影：副本之间错开的秒数
@@ -2156,6 +2157,16 @@
       }
       case "out":
         tl.fromTo(el, { autoAlpha: 1 }, { autoAlpha: 0, duration: d, ease: "power1.in", immediateRender: false }, at);
+        break;
+      case "spin":
+        // PowerPoint「回旋」：绕自己的中心逆时针转一整圈，同时从 0 长到原大。
+        // 绕的是元素框的中心 —— 一组扇形要绕圆心转，就把它们编进一个 .s-group，组的框以圆心为中心
+        tl.fromTo(el, { autoAlpha: 0, scale: 0, rotation: 360 }, { autoAlpha: 1, scale: 1, rotation: 0, duration: d, ease: "power2.out" }, at);
+        break;
+      case "emerge":
+        // 飞入 + 遮罩：元素从自己的底边下面升上来，底边以下一直看不见（PowerPoint 里压一块和底色一样的矩形）。
+        // 往下挪了几成，底下就裁掉几成，两者同一条缓动，看得见的部分底边钉在原处
+        tl.fromTo(el, { yPercent: 100, clipPath: "inset(0% 0% 100% 0%)" }, { yPercent: 0, clipPath: "inset(0% 0% 0% 0%)", duration: d, ease: "power3.out" }, at);
         break;
     }
   }

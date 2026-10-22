@@ -1,0 +1,28 @@
+/* 配色：雾蓝
+ * 一句话：雾蓝灰底 + 深靛蓝 + 米白。安静、有纸感，像一张印在灰蓝卡纸上的图解,浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          雾蓝灰              --surface     深靛蓝（圆环的深色那一圈、深色圆心）
+ *   --surface-2   米白（圆环的浅色那一圈、浅色圆心）  --accent      麦黄（少量点缀）
+ *   --accent-soft 浅麦黄
+ *   --text / --text-dim  深靛蓝 / 灰靛
+ *   --text-on-surface    米白（靛蓝上的文字）
+ *   --text-on-accent     深靛蓝（麦黄、浅麦黄上的文字）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（麦黄 ↔ 浅麦黄，同色系）。
+ * surface（深靛蓝）和 surface-2（米白）明度差太大，不能互变。
+ */
+
+:root {
+  --bg: #c3ccd6;
+  --surface: #2e3555;
+  --surface-2: #f4efe4;
+  --text: #2e3555;
+  --text-dim: #4a5370;
+  --text-on-surface: #f4efe4;
+  --accent: #e2b45a;
+  --accent-soft: #efd59c;
+  --text-on-accent: #2e3555;
+  --accent-text: #6f4c10;
+}

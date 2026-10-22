@@ -78,15 +78,22 @@
 | `.s-window` | 一扇窗：白边、投影，透过它看到整页那张画的这一块（里面放 `<img data-fill="slide">`），上半截渐暗托字 | 一排窗里亮着的那扇，翻面时走一格换一幅画（见 `transitions.md`「翻面」） |
 | `.s-frost` | 磨砂的空窗：后面的画模糊着透出来 | 和 `.s-window` 排在一起当没轮到的那几格 |
 | `.s-veil` | 铺满画布的压暗层，上重下轻 | 压在整页的画上，让窗里没压暗的原画显得亮 |
+| `.s-prism` | 一根等轴立体方柱：顶面菱形、左右两个侧面，颜色写 `--prism`（左面压暗、顶面提亮自动算）。`.is-glass` 玻璃外壳，`.is-base` 白底座，`.is-open` 不画顶面，`.is-reflect` 底下一道倒影 | 立体柱状图（见「立体柱」） |
+| `.s-shadow` | 落在地上的软阴影：一个中间深、往外淡没的椭圆 | 立体柱、立着的物件脚下 |
+| `.s-lift` | 一组形状整体投一道柔和的影子，写在 `.s-group` 上 | 拼起来的扇形、圆环（同款 `swirl-rings`） |
 
 线条类（只用在 `<svg>` 里的 `path` / `polyline` / `line` 上）：`.l-accent` `.l-surface` `.l-text` 线宽 6，`.l-dim` 线宽 2（基线、参考线）。
 不许在 svg 上写 `stroke` 颜色，虚线可以写 `stroke-dasharray`。
+压在 `.s-surface` 上的线用 `.l-on-surface`，压在彩色立体柱上的用 `.l-on-glass`（白）。
+**小图标**也是线：一个 `<svg viewBox="0 0 96 96">` 画成 48×48，线宽 6 在画面上就是 3px，一个图标最多 3 条 `path`。
 
 文字颜色类 `.t-on-surface`：放在 `.s-surface` 形状上面的文字用它。默认主题下和普通文字同色，浅色主题下会变成浅色。
 **`.t-metric` 放在面板上时必须再加它** —— `.t-metric` 自己是 `--accent-text`，那是给页面底
 准备的深色，压在深面板上就成了深字压深底。
 
 文字颜色类 `.t-on-glass`：放在 `.s-glass` 上面的文字用它，固定白色，不跟配色走（理由见「毛玻璃卡片」）。
+
+文字颜色类 `.t-prism`：写在立体柱底座上的数字，取柱子的颜色压深一档（`style="--prism: var(--cat-1)"`，和那根柱子写同一个）。
 
 文字颜色类 `.t-on-accent`：放在 `.s-accent` / `.s-accent-soft` 上面的文字用它。
 **强调块上的文字一律加它**，不要靠继承 `--text` —— 全局只有一个文字色的话，
@@ -106,6 +113,29 @@
   胶囊形的窗（`.s-window`、`.s-frost`）同理，圆角写宽度的一半（宽 360 写 `180px`）。
 - **强调色（`.s-accent` `.s-dot` `.t-metric` `.t-accent`）的面积加起来，不超过画面的 15%。**
   满屏强调色只出现在遮挡剪辑的色块里；带领头元素的遮挡剪辑，接住色块的那块整页面板也算（`transitions.md`「遮挡剪辑」）。
+
+### 立体柱（`.s-prism`）
+
+几个并列的占比、完成度做成一排等轴立体柱：玻璃外壳是 100%，彩色的数值段从白底座里升上来。PowerPoint 里是菱形 + 两个平行四边形拼成一个盒子，
+复制成外壳、数值、底座三段，再压一块和底色一样的矩形当遮罩。完整写法照抄同款 `glass-bars` 的样稿：
+
+```html
+<div class="s-shadow" style="left:160px; top:808px; width:240px; height:64px;"></div>
+<div class="s-prism is-base" style="left:240px; top:640px; width:160px; height:200px;"></div>
+<div data-id="q1" class="s-prism" data-anim="emerge .8s @.9" style="left:240px; top:440px; width:160px; height:240px; --prism:var(--cat-1);"></div>
+<div class="s-prism is-base is-open is-reflect" style="left:240px; top:640px; width:160px; height:200px;"></div>
+<p data-text="n1" data-roll class="t-h2 t-prism" style="left:320px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">50</p>
+<div class="s-prism is-glass" style="left:240px; top:240px; width:160px; height:600px;"></div>
+```
+
+1. 宽一律 160：顶面菱形 160×40，侧面上沿的斜率是 1:4。数值、底座、外壳三段左右对齐。
+2. **从后往前写**：影子 → 底座（带顶面）→ 数值 → 底座的前一半（`.is-open`，盖住数值升起时露出来的底角）→ 底座上的字 → 玻璃外壳。
+3. 数值段的底边（`top + height`）等于底座的 `top + 40`（底座顶面的前角）；元素高 = 侧面高 + 40，侧面高按百分比 × 满格算，取整到 1px。
+4. 颜色：一排柱子各用一种分类色 `--cat-1` … `--cat-5`（不跟配色走，和 `.t-on-glass` 的白字一样），只写变量；
+   只强调一根时用 `var(--accent)`，其余写 `var(--surface-2)`。
+5. 柱子上的小图标放进数值段里（`.s-prism` 的子元素按柱子的左上角定位），写 `bottom` 不写 `top`，柱子原地长高时它贴着底座跟着走：
+   `<svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);">`，线用 `.l-on-glass`。
+6. 底座侧面的字顺着侧面斜：右面 `transform:skewY(-14deg)`，左面 `skewY(14deg)`。不要给这些字写会改 transform 的页内动画（飞入、上浮），用 `fade`。
 
 ### 文字镂空（`.s-knockout`）
 

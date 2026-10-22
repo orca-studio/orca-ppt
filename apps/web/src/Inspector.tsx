@@ -99,6 +99,8 @@ const EFFECT_LABEL: Record<string, string> = {
   trail: '拖影飞入',
   shine: '擦亮',
   out: '淡出',
+  spin: '回旋',
+  emerge: '升起',
 }
 
 /** 方向写的是「从哪边来」。 */

@@ -191,9 +191,11 @@ function measure(index) {
     if (outside(b) && !identity) continue;
     const rot = rotationOf(cs);
     const turn = turnOf(el);
-    // 旋转的元素：盒子按没转的样子量（中心不变，尺寸取布局尺寸），旋转写进 rot
+    // 旋转的元素：盒子按没转的样子量（中心不变，尺寸取布局尺寸），旋转写进 rot。
+    // <svg> 没有 offsetWidth（斜贴在立体柱侧面的小图标），布局尺寸从算好的样式里取
+    const lw = el.offsetWidth ?? parseFloat(cs.width), lh = el.offsetHeight ?? parseFloat(cs.height);
     const geo = rot || turn
-      ? { x: b.x + b.w / 2 - el.offsetWidth / 2, y: b.y + b.h / 2 - el.offsetHeight / 2, w: el.offsetWidth, h: el.offsetHeight }
+      ? { x: b.x + b.w / 2 - lw / 2, y: b.y + b.h / 2 - lh / 2, w: lw, h: lh }
       : b;
     const base = { identity, turn, label: label(el), ...geo, ...(rot || turn ? { rot } : {}) };
 

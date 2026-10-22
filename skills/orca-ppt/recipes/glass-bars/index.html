@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 门店指标对比</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/pewter.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Clearing，配色 pewter，版式 standard）
+1→2  关系：五根空玻璃柱依次飞进来，数值从底座里依次升起                手法：页内动画（飞入 + 升起）
+2→3  关系：同一组柱子，换成二季度的数：数值段原地长高，数字逐位滚       手法：共享元素（q1–q5）+ 文字级匹配（逐位滚轮 n1–n5、title）
+3→4  关系：换一个指标：旧的数值淡掉，新的一组重新升起                   手法：页内动画（升起）+ 文字级匹配（n1–n5、title）
+4→5  关系：同一组柱子，换成复购率：数值段原地落下                       手法：共享元素（s1–s5）+ 文字级匹配
+5→6  关系：柱子退场，结尾的话出来                                       手法：新元素入场
+每根柱子从后往前叠：影子 .s-shadow → 底座 .s-prism.is-base（带顶面）→ 数值 .s-prism → 底座前一半 .is-open（盖住数值的底）→ 字 → 玻璃 .is-glass。
+数值写 data-anim="emerge"：从自己的底边下面升上来，底边以下看不见；底边就是底座顶面的前角，升起时像从底座里长出来。
+数值高度：侧面高 = 400 × 百分比，元素高 = 侧面高 + 40（顶面菱形），底边固定在 y=680。
+示例内容：青柚茶饮、五家门店和全部数字都是虚构的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <p class="t-label t-dim" style="left:0px; top:360px; width:1920px; text-align:center;">青柚茶饮 · 2027 上半年</p>
+    <p class="t-display" style="left:0px; top:420px; width:1920px; text-align:center;">五家店成绩单</p>
+    <p class="t-body t-dim" style="left:0px; top:620px; width:1920px; text-align:center;">完成度、满意度、复购率</p>
+  </section>
+
+  <!-- 2 一季度完成度：五根空柱子（玻璃外壳 + 底座）从左边依次飞进来，彩色的数值段再从底座里依次升起，底座侧面的数字跟着出来 -->
+  <section data-auto-animate data-hold="3.5">
+    <p data-text="title" class="t-h1" style="left:120px; top:80px;">一季度目标完成度</p>
+    <p data-text="sub" class="t-label t-dim" style="left:120px; top:176px;">按季度目标计 · 五家门店</p>
+    <div class="s-shadow" data-anim="fly left .7s @0" style="left:160px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" data-anim="fly left .7s @0" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q1" class="s-prism" data-anim="emerge .8s @0.9" style="left:240px; top:440px; width:160px; height:240px; --prism:var(--cat-1);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M26 34 H70"/><path class="l-on-glass" d="M30 34 L36 84 H60 L66 34"/><path class="l-on-glass" d="M50 34 L58 12"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" data-anim="fly left .7s @0" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" data-anim="fade .4s @0.5" style="left:264px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">滨江店</p>
+    <p data-text="n1" data-roll class="t-h2 t-prism" data-anim="fade .4s @1.3" style="left:320px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">50</p>
+    <p class="t-label t-prism" data-anim="fade .4s @1.3" style="left:320px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">%</p>
+    <div class="s-prism is-glass" data-anim="fly left .7s @0" style="left:240px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" data-anim="fly left .7s @0.08" style="left:480px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" data-anim="fly left .7s @0.08" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q2" class="s-prism" data-anim="emerge .8s @1.05" style="left:560px; top:500px; width:160px; height:180px; --prism:var(--cat-2);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M20 78 C20 42 44 20 78 18 C78 54 56 78 20 78 Z"/><path class="l-on-glass" d="M20 78 L58 40"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" data-anim="fly left .7s @0.08" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" data-anim="fade .4s @0.58" style="left:584px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">北门店</p>
+    <p data-text="n2" data-roll class="t-h2 t-prism" data-anim="fade .4s @1.45" style="left:640px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">35</p>
+    <p class="t-label t-prism" data-anim="fade .4s @1.45" style="left:640px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">%</p>
+    <div class="s-prism is-glass" data-anim="fly left .7s @0.08" style="left:560px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" data-anim="fly left .7s @0.16" style="left:800px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" data-anim="fly left .7s @0.16" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q3" class="s-prism" data-anim="emerge .8s @1.2" style="left:880px; top:380px; width:160px; height:300px; --prism:var(--cat-3);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 14 A34 34 0 1 1 47.9 14 Z"/><path class="l-on-glass" d="M48 14 V82 M19 31 L77 65 M19 65 L77 31"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" data-anim="fly left .7s @0.16" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" data-anim="fade .4s @0.66" style="left:904px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">城西店</p>
+    <p data-text="n3" data-roll class="t-h2 t-prism" data-anim="fade .4s @1.6" style="left:960px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">65</p>
+    <p class="t-label t-prism" data-anim="fade .4s @1.6" style="left:960px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">%</p>
+    <div class="s-prism is-glass" data-anim="fly left .7s @0.16" style="left:880px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" data-anim="fly left .7s @0.24" style="left:1120px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" data-anim="fly left .7s @0.24" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q4" class="s-prism" data-anim="emerge .8s @1.35" style="left:1200px; top:460px; width:160px; height:220px; --prism:var(--cat-4);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 34 A14 14 0 1 1 47.9 34 Z"/><path class="l-on-glass" d="M48 10 V20 M48 76 V86 M10 48 H20 M76 48 H86 M21 21 L28 28 M68 68 L75 75 M21 75 L28 68 M68 28 L75 21"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" data-anim="fly left .7s @0.24" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" data-anim="fade .4s @0.74" style="left:1224px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">大学城</p>
+    <p data-text="n4" data-roll class="t-h2 t-prism" data-anim="fade .4s @1.75" style="left:1280px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">45</p>
+    <p class="t-label t-prism" data-anim="fade .4s @1.75" style="left:1280px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">%</p>
+    <div class="s-prism is-glass" data-anim="fly left .7s @0.24" style="left:1200px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" data-anim="fly left .7s @0.32" style="left:1440px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" data-anim="fly left .7s @0.32" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q5" class="s-prism" data-anim="emerge .8s @1.5" style="left:1520px; top:280px; width:160px; height:400px; --prism:var(--cat-5);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 80 C20 60 12 44 22 30 C32 18 44 24 48 34 C52 24 64 18 74 30 C84 44 76 60 48 80 Z"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" data-anim="fly left .7s @0.32" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" data-anim="fade .4s @0.82" style="left:1544px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">机场店</p>
+    <p data-text="n5" data-roll class="t-h2 t-prism" data-anim="fade .4s @1.9" style="left:1600px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">90</p>
+    <p class="t-label t-prism" data-anim="fade .4s @1.9" style="left:1600px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">%</p>
+    <div class="s-prism is-glass" data-anim="fly left .7s @0.32" style="left:1520px; top:240px; width:160px; height:600px;"></div>
+  </section>
+
+  <!-- 3 二季度完成度：柱子不动，五段数值原地长到新的高度，数字逐位滚到新的数 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-text="title" class="t-h1" style="left:120px; top:80px;">二季度目标完成度</p>
+    <p data-text="sub" class="t-label t-dim" style="left:120px; top:176px;">按季度目标计 · 五家门店</p>
+    <div class="s-shadow" style="left:160px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q1" class="s-prism" style="left:240px; top:352px; width:160px; height:328px; --prism:var(--cat-1);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M26 34 H70"/><path class="l-on-glass" d="M30 34 L36 84 H60 L66 34"/><path class="l-on-glass" d="M50 34 L58 12"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:264px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">滨江店</p>
+    <p data-text="n1" data-roll class="t-h2 t-prism" style="left:320px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">72</p>
+    <p class="t-label t-prism" style="left:320px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">%</p>
+    <div class="s-prism is-glass" style="left:240px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:480px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q2" class="s-prism" style="left:560px; top:408px; width:160px; height:272px; --prism:var(--cat-2);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M20 78 C20 42 44 20 78 18 C78 54 56 78 20 78 Z"/><path class="l-on-glass" d="M20 78 L58 40"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:584px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">北门店</p>
+    <p data-text="n2" data-roll class="t-h2 t-prism" style="left:640px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">58</p>
+    <p class="t-label t-prism" style="left:640px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">%</p>
+    <div class="s-prism is-glass" style="left:560px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:800px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q3" class="s-prism" style="left:880px; top:320px; width:160px; height:360px; --prism:var(--cat-3);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 14 A34 34 0 1 1 47.9 14 Z"/><path class="l-on-glass" d="M48 14 V82 M19 31 L77 65 M19 65 L77 31"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:904px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">城西店</p>
+    <p data-text="n3" data-roll class="t-h2 t-prism" style="left:960px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">80</p>
+    <p class="t-label t-prism" style="left:960px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">%</p>
+    <div class="s-prism is-glass" style="left:880px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1120px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q4" class="s-prism" style="left:1200px; top:376px; width:160px; height:304px; --prism:var(--cat-4);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 34 A14 14 0 1 1 47.9 34 Z"/><path class="l-on-glass" d="M48 10 V20 M48 76 V86 M10 48 H20 M76 48 H86 M21 21 L28 28 M68 68 L75 75 M21 75 L28 68 M68 28 L75 21"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1224px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">大学城</p>
+    <p data-text="n4" data-roll class="t-h2 t-prism" style="left:1280px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">66</p>
+    <p class="t-label t-prism" style="left:1280px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">%</p>
+    <div class="s-prism is-glass" style="left:1200px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1440px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="q5" class="s-prism" style="left:1520px; top:260px; width:160px; height:420px; --prism:var(--cat-5);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 80 C20 60 12 44 22 30 C32 18 44 24 48 34 C52 24 64 18 74 30 C84 44 76 60 48 80 Z"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1544px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">机场店</p>
+    <p data-text="n5" data-roll class="t-h2 t-prism" style="left:1600px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">95</p>
+    <p class="t-label t-prism" style="left:1600px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">%</p>
+    <div class="s-prism is-glass" style="left:1520px; top:240px; width:160px; height:600px;"></div>
+  </section>
+
+  <!-- 4 满意度：换一个指标，旧的数值段淡掉，新的一组从底座里重新升起 -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3.5">
+    <p data-text="title" class="t-h1" style="left:120px; top:80px;">顾客满意度</p>
+    <p data-text="sub" class="t-label t-dim" style="left:120px; top:176px;">上半年问卷 · 五家门店</p>
+    <div class="s-shadow" style="left:160px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s1" class="s-prism" data-anim="emerge .8s @0" style="left:240px; top:312px; width:160px; height:368px; --prism:var(--cat-1);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M26 34 H70"/><path class="l-on-glass" d="M30 34 L36 84 H60 L66 34"/><path class="l-on-glass" d="M50 34 L58 12"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:264px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">滨江店</p>
+    <p data-text="n1" data-roll class="t-h2 t-prism" style="left:320px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">82</p>
+    <p class="t-label t-prism" style="left:320px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">%</p>
+    <div class="s-prism is-glass" style="left:240px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:480px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s2" class="s-prism" data-anim="emerge .8s @0.15" style="left:560px; top:384px; width:160px; height:296px; --prism:var(--cat-2);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M20 78 C20 42 44 20 78 18 C78 54 56 78 20 78 Z"/><path class="l-on-glass" d="M20 78 L58 40"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:584px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">北门店</p>
+    <p data-text="n2" data-roll class="t-h2 t-prism" style="left:640px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">64</p>
+    <p class="t-label t-prism" style="left:640px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">%</p>
+    <div class="s-prism is-glass" style="left:560px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:800px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s3" class="s-prism" data-anim="emerge .8s @0.3" style="left:880px; top:280px; width:160px; height:400px; --prism:var(--cat-3);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 14 A34 34 0 1 1 47.9 14 Z"/><path class="l-on-glass" d="M48 14 V82 M19 31 L77 65 M19 65 L77 31"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:904px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">城西店</p>
+    <p data-text="n3" data-roll class="t-h2 t-prism" style="left:960px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">90</p>
+    <p class="t-label t-prism" style="left:960px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">%</p>
+    <div class="s-prism is-glass" style="left:880px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1120px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s4" class="s-prism" data-anim="emerge .8s @0.44999999999999996" style="left:1200px; top:356px; width:160px; height:324px; --prism:var(--cat-4);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 34 A14 14 0 1 1 47.9 34 Z"/><path class="l-on-glass" d="M48 10 V20 M48 76 V86 M10 48 H20 M76 48 H86 M21 21 L28 28 M68 68 L75 75 M21 75 L28 68 M68 28 L75 21"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1224px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">大学城</p>
+    <p data-text="n4" data-roll class="t-h2 t-prism" style="left:1280px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">71</p>
+    <p class="t-label t-prism" style="left:1280px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">%</p>
+    <div class="s-prism is-glass" style="left:1200px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1440px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s5" class="s-prism" data-anim="emerge .8s @0.6" style="left:1520px; top:256px; width:160px; height:424px; --prism:var(--cat-5);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 80 C20 60 12 44 22 30 C32 18 44 24 48 34 C52 24 64 18 74 30 C84 44 76 60 48 80 Z"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1544px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">机场店</p>
+    <p data-text="n5" data-roll class="t-h2 t-prism" style="left:1600px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">96</p>
+    <p class="t-label t-prism" style="left:1600px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">%</p>
+    <div class="s-prism is-glass" style="left:1520px; top:240px; width:160px; height:600px;"></div>
+  </section>
+
+  <!-- 5 复购率：柱子不动，数值原地落到新的高度 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-text="title" class="t-h1" style="left:120px; top:80px;">三十天复购率</p>
+    <p data-text="sub" class="t-label t-dim" style="left:120px; top:176px;">上半年会员数据 · 五家门店</p>
+    <div class="s-shadow" style="left:160px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s1" class="s-prism" style="left:240px; top:476px; width:160px; height:204px; --prism:var(--cat-1);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M26 34 H70"/><path class="l-on-glass" d="M30 34 L36 84 H60 L66 34"/><path class="l-on-glass" d="M50 34 L58 12"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:240px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:264px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">滨江店</p>
+    <p data-text="n1" data-roll class="t-h2 t-prism" style="left:320px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">41</p>
+    <p class="t-label t-prism" style="left:320px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-1);">%</p>
+    <div class="s-prism is-glass" style="left:240px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:480px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s2" class="s-prism" style="left:560px; top:528px; width:160px; height:152px; --prism:var(--cat-2);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M20 78 C20 42 44 20 78 18 C78 54 56 78 20 78 Z"/><path class="l-on-glass" d="M20 78 L58 40"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:560px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:584px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">北门店</p>
+    <p data-text="n2" data-roll class="t-h2 t-prism" style="left:640px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">28</p>
+    <p class="t-label t-prism" style="left:640px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-2);">%</p>
+    <div class="s-prism is-glass" style="left:560px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:800px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s3" class="s-prism" style="left:880px; top:420px; width:160px; height:260px; --prism:var(--cat-3);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 14 A34 34 0 1 1 47.9 14 Z"/><path class="l-on-glass" d="M48 14 V82 M19 31 L77 65 M19 65 L77 31"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:880px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:904px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">城西店</p>
+    <p data-text="n3" data-roll class="t-h2 t-prism" style="left:960px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">55</p>
+    <p class="t-label t-prism" style="left:960px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-3);">%</p>
+    <div class="s-prism is-glass" style="left:880px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1120px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s4" class="s-prism" style="left:1200px; top:496px; width:160px; height:184px; --prism:var(--cat-4);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 34 A14 14 0 1 1 47.9 34 Z"/><path class="l-on-glass" d="M48 10 V20 M48 76 V86 M10 48 H20 M76 48 H86 M21 21 L28 28 M68 68 L75 75 M21 75 L28 68 M68 28 L75 21"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1200px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1224px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">大学城</p>
+    <p data-text="n4" data-roll class="t-h2 t-prism" style="left:1280px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">36</p>
+    <p class="t-label t-prism" style="left:1280px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-4);">%</p>
+    <div class="s-prism is-glass" style="left:1200px; top:240px; width:160px; height:600px;"></div>
+    <div class="s-shadow" style="left:1440px; top:808px; width:240px; height:64px;"></div>
+    <div class="s-prism is-base" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <div data-id="s5" class="s-prism" style="left:1520px; top:392px; width:160px; height:288px; --prism:var(--cat-5);"><svg viewBox="0 0 96 96" style="left:96px; bottom:44px; width:48px; height:48px; transform:skewY(-14deg);"><path class="l-on-glass" d="M48 80 C20 60 12 44 22 30 C32 18 44 24 48 34 C52 24 64 18 74 30 C84 44 76 60 48 80 Z"/></svg></div>
+    <div class="s-prism is-base is-open is-reflect" style="left:1520px; top:640px; width:160px; height:200px;"></div>
+    <p class="t-label t-dim" style="left:1544px; top:704px; width:32px; writing-mode:vertical-rl; transform:skewY(14deg);">机场店</p>
+    <p data-text="n5" data-roll class="t-h2 t-prism" style="left:1600px; top:706px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">62</p>
+    <p class="t-label t-prism" style="left:1600px; top:764px; width:80px; text-align:center; transform:skewY(-14deg); --prism:var(--cat-5);">%</p>
+    <div class="s-prism is-glass" style="left:1520px; top:240px; width:160px; height:600px;"></div>
+  </section>
+
+  <!-- 6 结尾 -->
+  <section data-auto-animate data-hold="2">
+    <p class="t-display" style="left:0px; top:400px; width:1920px; text-align:center;">下半年见</p>
+    <p class="t-body t-dim" style="left:0px; top:600px; width:1920px; text-align:center;">机场店的做法推到另外四家</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

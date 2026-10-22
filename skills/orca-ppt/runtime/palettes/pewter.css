@@ -1,0 +1,28 @@
+/* 配色：锡灰
+ * 一句话：中灰底 + 白 + 炭黑字。像摆在灰色台面上的一组玻璃器皿，让彩色的数据当主角,中等亮度底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          中灰                --surface     近白（立体柱的底座、白卡片）
+ *   --surface-2   浅灰（小卡片）       --accent      炭黑（少量强调条）
+ *   --accent-soft 深灰
+ *   --text / --text-dim  炭黑 / 深灰
+ *   --text-on-surface    炭黑（白底座上的文字）
+ *   --text-on-accent     近白（炭黑、深灰上的文字）
+ *
+ * 柱子的颜色不从这里取：并列的几根各用一种分类色（tokens.css 的 --cat-1…5）。
+ * 可以互变的颜色：accent ↔ accent-soft（炭黑 ↔ 深灰，同色系）；surface ↔ surface-2（近白 ↔ 浅灰）。
+ */
+
+:root {
+  --bg: #a2aab2;
+  --surface: #f3f3f1;
+  --surface-2: #d6dbe0;
+  --text: #1f2328;
+  --text-dim: #353b42;
+  --text-on-surface: #1f2328;
+  --accent: #2b3036;
+  --accent-soft: #4a5159;
+  --text-on-accent: #f3f3f1;
+  --accent-text: #1f2328;
+}

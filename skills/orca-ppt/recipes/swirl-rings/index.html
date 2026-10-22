@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 两阶段规划</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/mist.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Clearing，配色 mist，版式 standard）
+1→2  关系：封面的字退场，两组圆环先后回旋长出来，拼成一个 S        手法：页内动画（回旋）
+2→3  关系：换一组内容：旧的 S 淡出，新的两组再回旋一次              手法：同上
+3→4  关系：同上                                                    手法：同上
+4→5  关系：同上                                                    手法：同上
+5→6  关系：S 淡出，结尾的话出来                                     手法：新元素入场
+页内动画（transitions.md「入场和强调」）：每组是一个 .s-group，框 720×720、中心就是圆心，写 data-anim="spin"，
+绕圆心逆时针转一圈、由小长大；左组 @0，右组 @0.45。组里的扇形、序号、文字、圆心都跟着组转。
+两组圆心相距 480 = 内径 120 + 外径 360：左组的外圈深色接上右组的内圈深色，S 的笔画连成一条。
+示例内容：栖岸咖啡和全部计划都是虚构的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：只有字；下一页两组圆环先后回旋长出来 -->
+  <section data-page="cover" data-auto-animate data-hold="2">
+    <p class="t-label t-dim" style="left:0px; top:360px; width:1920px; text-align:center;">栖岸咖啡 · 2027 年度计划</p>
+    <p class="t-display" style="left:0px; top:420px; width:1920px; text-align:center;">两步走</p>
+    <p class="t-body t-dim" style="left:0px; top:620px; width:1920px; text-align:center;">上半年站稳，下半年扩张</p>
+  </section>
+
+  <!-- 2 全年：上半年站稳、下半年扩张：左组绕自己的圆心回旋长出来，右组晚 0.45 秒跟上，拼成一个 S -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">全年两步走</p>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0" style="left:360px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:109.7px; width:80px; text-align:center; rotate:-45deg;">01</p>
+      <div class="s-group" style="left:98.6px; top:173.6px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">换新菜单</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">春季上新八款</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:562.3px; width:80px; text-align:center; rotate:45deg;">02</p>
+      <div class="s-group" style="left:98.6px; top:456.4px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">会员升级</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">积分换成储值</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:562.3px; width:80px; text-align:center; rotate:-45deg;">03</p>
+      <div class="s-group" style="left:381.4px; top:456.4px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">店长培训</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">每店一名店长</p>
+      </div>
+      <div class="s-surface-2" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-text" d="M48 84 V46"/><path class="l-text" d="M48 52 C48 32 32 24 16 26 C16 44 30 54 48 52 Z"/><path class="l-text" d="M48 46 C48 28 62 18 80 20 C80 38 66 46 48 46 Z"/></svg>
+      <p class="t-label t-dim" style="left:260px; top:340px; width:200px; text-align:center;">上半年</p>
+      <p class="t-h2" style="left:260px; top:374px; width:200px; text-align:center;">站稳</p>
+    </div>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0.45" style="left:840px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:206.9px; top:222.9px; width:80px; text-align:center; rotate:-45deg;">04</p>
+      <div class="s-group" style="left:42px; top:117px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">新开三店</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">城东城南机场</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:222.9px; width:80px; text-align:center; rotate:45deg;">05</p>
+      <div class="s-group" style="left:438px; top:117px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">上线外卖</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">两个平台同步</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:449.1px; width:80px; text-align:center; rotate:-45deg;">06</p>
+      <div class="s-group" style="left:438px; top:513px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">秋季联名</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">和本地书店合作</p>
+      </div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M28 86 V12"/><path class="l-on-surface" d="M28 16 H74 L62 32 L74 48 H28"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">下半年</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">扩张</p>
+    </div>
+  </section>
+
+  <!-- 3 门店：老店做深、新店做广：左组绕自己的圆心回旋长出来，右组晚 0.45 秒跟上，拼成一个 S -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">门店：先做深，再做广</p>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0" style="left:360px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:109.7px; width:80px; text-align:center; rotate:-45deg;">01</p>
+      <div class="s-group" style="left:98.6px; top:173.6px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">翻新装修</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">三家老店轮流</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:562.3px; width:80px; text-align:center; rotate:45deg;">02</p>
+      <div class="s-group" style="left:98.6px; top:456.4px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">延长营业</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">周末到晚十点</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:562.3px; width:80px; text-align:center; rotate:-45deg;">03</p>
+      <div class="s-group" style="left:381.4px; top:456.4px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">增加座位</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">二楼改成座区</p>
+      </div>
+      <div class="s-surface-2" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-text" d="M16 46 L48 18 L80 46"/><path class="l-text" d="M24 40 V80 H72 V40"/><path class="l-text" d="M42 80 V58 H54 V80"/></svg>
+      <p class="t-label t-dim" style="left:260px; top:340px; width:200px; text-align:center;">老店</p>
+      <p class="t-h2" style="left:260px; top:374px; width:200px; text-align:center;">做深</p>
+    </div>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0.45" style="left:840px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:206.9px; top:222.9px; width:80px; text-align:center; rotate:-45deg;">04</p>
+      <div class="s-group" style="left:42px; top:117px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">选址</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">人流过万的街口</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:222.9px; width:80px; text-align:center; rotate:45deg;">05</p>
+      <div class="s-group" style="left:438px; top:117px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">试营业</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">先开两周再定</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:449.1px; width:80px; text-align:center; rotate:-45deg;">06</p>
+      <div class="s-group" style="left:438px; top:513px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">开业活动</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">首周买一送一</p>
+      </div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M48 86 C30 62 22 50 22 38 A26 26 0 1 1 74 38 C74 50 66 62 48 86 Z"/><path class="l-on-surface" d="M48 30 A8 8 0 1 1 47.9 30 Z"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">新店</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">做广</p>
+    </div>
+  </section>
+
+  <!-- 4 团队：先招人、再带人：左组绕自己的圆心回旋长出来，右组晚 0.45 秒跟上，拼成一个 S -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">团队：先招人，再带人</p>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0" style="left:360px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:109.7px; width:80px; text-align:center; rotate:-45deg;">01</p>
+      <div class="s-group" style="left:98.6px; top:173.6px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">校园招聘</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">三所学校</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:562.3px; width:80px; text-align:center; rotate:45deg;">02</p>
+      <div class="s-group" style="left:98.6px; top:456.4px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">内推奖励</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">每人五百元</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:562.3px; width:80px; text-align:center; rotate:-45deg;">03</p>
+      <div class="s-group" style="left:381.4px; top:456.4px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">试岗一周</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">合适再签约</p>
+      </div>
+      <div class="s-surface-2" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-text" d="M48 16 A14 14 0 1 1 47.9 16 Z"/><path class="l-text" d="M20 84 C20 62 32 52 48 52 C64 52 76 62 76 84"/></svg>
+      <p class="t-label t-dim" style="left:260px; top:340px; width:200px; text-align:center;">招人</p>
+      <p class="t-h2" style="left:260px; top:374px; width:200px; text-align:center;">进来</p>
+    </div>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0.45" style="left:840px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:206.9px; top:222.9px; width:80px; text-align:center; rotate:-45deg;">04</p>
+      <div class="s-group" style="left:42px; top:117px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">师徒制</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">一个带两个</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:222.9px; width:80px; text-align:center; rotate:45deg;">05</p>
+      <div class="s-group" style="left:438px; top:117px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">月度考核</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">出品与服务</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:449.1px; width:80px; text-align:center; rotate:-45deg;">06</p>
+      <div class="s-group" style="left:438px; top:513px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">晋升通道</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">半年评一次</p>
+      </div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M34 22 A11 11 0 1 1 33.9 22 Z M64 22 A11 11 0 1 1 63.9 22 Z"/><path class="l-on-surface" d="M12 80 C12 62 22 52 34 52 C46 52 56 62 56 80"/><path class="l-on-surface" d="M50 58 C54 54 58 52 64 52 C76 52 84 62 84 80"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">带人</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">留下</p>
+    </div>
+  </section>
+
+  <!-- 5 会员：线上、线下各三件：左组绕自己的圆心回旋长出来，右组晚 0.45 秒跟上，拼成一个 S -->
+  <section data-auto-animate data-auto-animate-duration="0.6" data-hold="3">
+    <p class="t-h1" style="left:120px; top:80px;">会员：线上线下各三件</p>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0" style="left:360px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) calc(50% + 4px) 0 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface-2) 121px, var(--surface-2) 280px, var(--surface) 281px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:109.7px; width:80px; text-align:center; rotate:-45deg;">01</p>
+      <div class="s-group" style="left:98.6px; top:173.6px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">线上点单</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">到店免排队</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:93.7px; top:562.3px; width:80px; text-align:center; rotate:45deg;">02</p>
+      <div class="s-group" style="left:98.6px; top:456.4px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">储值卡</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">充二百送二十</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:546.3px; top:562.3px; width:80px; text-align:center; rotate:-45deg;">03</p>
+      <div class="s-group" style="left:381.4px; top:456.4px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">生日券</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">当月任意一杯</p>
+      </div>
+      <div class="s-surface-2" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-text" d="M30 10 H66 A6 6 0 0 1 72 16 V80 A6 6 0 0 1 66 86 H30 A6 6 0 0 1 24 80 V16 A6 6 0 0 1 30 10 Z"/><path class="l-text" d="M42 76 H54"/></svg>
+      <p class="t-label t-dim" style="left:260px; top:340px; width:200px; text-align:center;">线上</p>
+      <p class="t-h2" style="left:260px; top:374px; width:200px; text-align:center;">常来</p>
+    </div>
+    <div class="s-group s-lift" data-anim="spin 1.2s @0.45" style="left:840px; top:180px; width:720px; height:720px;">
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 calc(50% + 4px) calc(50% + 4px) 0);"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(0 0 calc(50% + 4px) calc(50% + 4px));"></div>
+      <div class="s-surface-2" style="left:0px; top:0px; width:720px; height:720px; border-radius:50%; background:radial-gradient(circle closest-side, transparent 120px, var(--surface) 121px, var(--surface) 200px, var(--surface-2) 201px); clip-path:inset(calc(50% + 4px) 0 0 calc(50% + 4px));"></div>
+      <p class="t-h2 t-on-surface" style="left:206.9px; top:222.9px; width:80px; text-align:center; rotate:-45deg;">04</p>
+      <div class="s-group" style="left:42px; top:117px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">会员日</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">每月八号</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:222.9px; width:80px; text-align:center; rotate:45deg;">05</p>
+      <div class="s-group" style="left:438px; top:117px; width:240px; height:90px; rotate:45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">杯子回收</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">自带杯减三元</p>
+      </div>
+      <p class="t-h2 t-on-surface" style="left:433.1px; top:449.1px; width:80px; text-align:center; rotate:-45deg;">06</p>
+      <div class="s-group" style="left:438px; top:513px; width:240px; height:90px; rotate:-45deg;">
+        <p class="t-h2" style="left:0px; top:0px; width:240px; text-align:center;">品鉴会</p>
+        <p class="t-label t-dim" style="left:0px; top:62px; width:240px; text-align:center;">每季一次</p>
+      </div>
+      <div class="s-surface" style="left:260px; top:260px; width:200px; height:200px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:336px; top:284px; width:48px; height:48px;"><path class="l-on-surface" d="M26 34 H70"/><path class="l-on-surface" d="M30 34 L36 84 H60 L66 34"/><path class="l-on-surface" d="M50 34 L58 12"/></svg>
+      <p class="t-label t-on-surface" style="left:260px; top:340px; width:200px; text-align:center;">线下</p>
+      <p class="t-h2 t-on-surface" style="left:260px; top:374px; width:200px; text-align:center;">多待</p>
+    </div>
+  </section>
+
+  <!-- 6 结尾 -->
+  <section data-auto-animate data-hold="2">
+    <p class="t-display" style="left:0px; top:400px; width:1920px; text-align:center;">年底见</p>
+    <p class="t-body t-dim" style="left:0px; top:600px; width:1920px; text-align:center;">每季度复盘一次，按这六件事对表</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

@@ -36,6 +36,14 @@
   /* 镂空聚焦的幕布颜色，压暗但不全黑 */
   --scrim: rgba(0, 0, 0, 0.72);
 
+  /* 分类色：几根并列的柱子各用一种颜色时（立体柱 .s-prism 的 --prism），不跟配色走 ——
+     和 .t-on-glass 的白字一样是固定值。一组柱子按 1、2、3… 顺着用，最多 5 种 */
+  --cat-1: #e08a3c;  /* 橙 */
+  --cat-2: #cc4fb4;  /* 洋红 */
+  --cat-3: #5b45b5;  /* 紫 */
+  --cat-4: #2f9e96;  /* 青 */
+  --cat-5: #7fb23a;  /* 绿 */
+
   --radius-s: 8px;
   --radius-m: 24px;
   --radius-l: 40px;
@@ -137,6 +145,37 @@ html, body, .reveal { background: var(--bg); }
 .s-veil { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); pointer-events: none;
           background: linear-gradient(180deg, rgb(0 0 0 / 0.78) 0%, rgb(0 0 0 / 0.34) 26%, rgb(0 0 0 / 0.16) 60%, rgb(0 0 0 / 0.42) 100%); }
 
+/* 立体柱（visual-spec.md「立体柱」）：一根等轴的方柱，顶面菱形高 40、左右两个侧面，全用背景渐变画，不用 clip-path ——
+   页内动画「升起」（emerge）要用 clip-path 裁底边，两个不能写在同一个元素上。宽 160（顶面菱形 160×40），高至少 60。
+   颜色写 --prism（只写变量：var(--cat-1)、var(--accent)），左面压暗、顶面提亮由这里算。
+   .is-glass 玻璃外壳；.is-base 白底座（--surface）；.is-open 不画顶面（底座的前一半，压在数值柱前面）；
+   .is-reflect 底下一道淡淡的倒影。 */
+.s-prism {
+  --prism: var(--accent);
+  --pl: color-mix(in oklab, var(--prism) 78%, black);
+  --pr: var(--prism);
+  --pt: color-mix(in oklab, var(--prism) 72%, white);
+  background:
+    linear-gradient(to top left, var(--pt) calc(50% - .5px), transparent calc(50% + .5px)) 0 0 / 50% 20px no-repeat,
+    linear-gradient(to top right, var(--pt) calc(50% - .5px), transparent calc(50% + .5px)) 100% 0 / 50% 20px no-repeat,
+    linear-gradient(to top right, var(--pl) calc(50% - .5px), var(--pt) calc(50% + .5px)) 0 20px / 50% 20px no-repeat,
+    linear-gradient(to top left, var(--pr) calc(50% - .5px), var(--pt) calc(50% + .5px)) 100% 20px / 50% 20px no-repeat,
+    linear-gradient(90deg, var(--pl) 50%, var(--pr) 50%) 0 40px / 100% calc(100% - 60px) no-repeat,
+    linear-gradient(to top right, transparent calc(50% - .5px), var(--pl) calc(50% + .5px)) 0 100% / 50% 20px no-repeat,
+    linear-gradient(to top left, transparent calc(50% - .5px), var(--pr) calc(50% + .5px)) 100% 100% / 50% 20px no-repeat;
+}
+.s-prism > * { position: absolute; margin: 0; }
+.s-prism.is-glass { --pl: rgb(255 255 255 / 0.14); --pr: rgb(255 255 255 / 0.24); --pt: rgb(255 255 255 / 0.46); }
+.s-prism.is-base { --prism: var(--surface); --pl: color-mix(in oklab, var(--prism) 88%, black); }
+.s-prism.is-open { --pt: transparent; }
+.s-prism.is-reflect { -webkit-box-reflect: below 4px linear-gradient(transparent 62%, rgb(0 0 0 / 0.28)); }
+/* 立体柱上的字（底座侧面的数字）：取柱子的颜色压深一档，白底座上读得动。--prism 写在字自己身上 */
+.t-prism { --prism: var(--accent); color: color-mix(in oklab, var(--prism) 70%, black); }
+/* 落在地上的软阴影：一个椭圆，中间深、往外淡没 */
+.s-shadow { border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / 0.36), rgb(0 0 0 / 0)); }
+/* 一组拼起来的形状整体投一道柔和的影子（拼成 S 的扇形）。写在 .s-group 上，影子跟着组转 */
+.s-lift { filter: drop-shadow(0 16px 24px rgb(0 0 0 / 0.16)); }
+
 /* 页内动画（transitions.md「页内动画」）。
    .s-group：把几个形状编成一组一起动（灯头 + 灯身），组里的子元素按组的左上角绝对定位。
    .s-light：光束照亮的那一层底色 —— 主面色压在页面底上的一层薄光，层里的字照常用页面底上的文字色。
@@ -194,6 +233,10 @@ html, body, .reveal { background: var(--bg); }
 .l-surface { stroke: var(--surface); }
 .l-text    { stroke: var(--text); }
 .l-dim     { stroke: var(--text-dim); stroke-width: 2; }
+/* 压在面板上、彩色立体柱上的线（小图标）：面板上的字色 / 固定白色，和 .t-on-surface / .t-on-glass 同理 */
+.l-on-surface, .l-on-glass { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+.l-on-surface { stroke: var(--text-on-surface); }
+.l-on-glass { stroke: #fff; }
 
 /* 遮挡剪辑用的色块，由 engine.js 创建 */
 .st-mask { position: absolute; left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); background: var(--accent); z-index: 10; }
