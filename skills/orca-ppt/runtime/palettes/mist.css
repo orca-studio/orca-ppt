@@ -1,16 +1,16 @@
 /* 配色：雾蓝
- * 一句话：晴空浅蓝底 + 深靛蓝 + 米白。清爽、有纸感，像一张印在浅蓝卡纸上的图解,浅底。
+ * 一句话：晴空浅蓝底 + 深靛蓝 + 米白，一条从琥珀烧到火橙的强调带。清爽，冷底上一道暖色往前冲,浅底。
  * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
  *
  * 变量映射：
  *   --bg          晴空浅蓝             --surface     深靛蓝（圆环的深色那一圈、深色圆心）
- *   --surface-2   米白（圆环的浅色那一圈、浅色圆心）  --accent      麦黄（少量点缀）
- *   --accent-soft 浅麦黄
+ *   --surface-2   米白（圆环的浅色那一圈、浅色圆心）  --accent      火橙（渐变带热的一头）
+ *   --accent-soft 琥珀（渐变带浅的一头）
  *   --text / --text-dim  深靛蓝 / 灰靛
  *   --text-on-surface    米白（靛蓝上的文字）
- *   --text-on-accent     深靛蓝（麦黄、浅麦黄上的文字）
+ *   --text-on-accent     墨靛（火橙、琥珀上的文字）
  *
- * 可以互变的颜色：accent ↔ accent-soft（麦黄 ↔ 浅麦黄，同色系）。
+ * 可以互变的颜色：accent ↔ accent-soft（火橙 ↔ 琥珀，同色系，中间经过橙色）。
  * surface（深靛蓝）和 surface-2（米白）明度差太大，不能互变。
  */
 
@@ -21,8 +21,8 @@
   --text: #2e3555;
   --text-dim: #4f5a78;
   --text-on-surface: #fffaf0;
-  --accent: #e2b45a;
-  --accent-soft: #efd59c;
-  --text-on-accent: #2e3555;
-  --accent-text: #6f4c10;
+  --accent: #ec5a24;
+  --accent-soft: #f8b23a;
+  --text-on-accent: #191c30;
+  --accent-text: #a8360c;
 }
