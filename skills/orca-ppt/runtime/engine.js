@@ -2561,11 +2561,13 @@
   //   - 转场在跑：把剩下的部分压到 FINISH_S 秒放完，再翻；
   //   - 压着的这段时间里又按了：当成要跳过去，放完后直接跳到目标页（跳页本来就没有转场）。
   // 宿主（比如 OrcaPPT 的画布、自动播放）要往前翻时调 window.__orcaAdvance()，别直接 Reveal.next()。
+  // 人明说要去下一页（点了页胶片上的下一页）时调 window.__orcaAdvance({ page: true })：转场照样先放完，
+  // 但不再一步一步推页内动画 —— 不然页内动画正在放时点下一页，只放完这一步、页不动，页胶片和画布就对不上了。
   const FINISH_S = 0.15;
   let queued = 0;
   const cssTransitions = () =>
     document.getAnimations().filter((a) => a instanceof CSSTransition && a.playState === "running");
-  function advance() {
+  function advance({ page = false } = {}) {
     if (CAPTURE) return Reveal.next();
     if (queued) {
       queued++;
@@ -2574,11 +2576,11 @@
     // 共享元素走 reveal 的 auto-animate，是 CSS transition，不在 current 里，要一起看
     const running = cssTransitions();
     if (!current?.isActive() && running.length === 0) {
-      if (stepNext()) return "step";
+      if (!page && stepNext()) return "step";
       return Reveal.next();
     }
     // 转场在跑、这一页有页内动画：只把转场压完，接着放第 0 步，不翻页
-    const stepped = !!scene?.data?.stops;
+    const stepped = !page && !!scene?.data?.stops;
 
     queued = 1;
     const done = [];

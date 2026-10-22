@@ -77,6 +77,8 @@ const SPOTLIGHT_TTL_MS = 8_000
  * (见 skills/orca-ppt/runtime/engine.js)。老稿子的引擎没有它,就退回 Reveal.next()。
  */
 const ADVANCE = 'window.__orcaAdvance ? window.__orcaAdvance() : Reveal.next()'
+/** 明说要去下一页:转场先放完,页内动画不再一步一步推。老引擎不认参数,照旧。 */
+const NEXT_PAGE = 'window.__orcaAdvance ? window.__orcaAdvance({ page: true }) : Reveal.next()'
 
 /** 这一页在画布上的情况。右栏「页」那一档显示它。 */
 export interface SlideInfo {
@@ -506,7 +508,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         const index = Math.trunc(slide)
         void ref.current
           ?.executeJavaScript(
-            `Reveal.getIndices().h + 1 === ${index} ? (${ADVANCE}) : Reveal.slide(${index})`,
+            `Reveal.getIndices().h + 1 === ${index} ? (${NEXT_PAGE}) : Reveal.slide(${index})`,
           )
           .catch(() => {})
       },
