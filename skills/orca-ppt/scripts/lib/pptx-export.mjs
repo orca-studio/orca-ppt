@@ -120,6 +120,9 @@ function measure(index) {
 
   function textOf(block, o) {
     const cs = getComputedStyle(block);
+    // 竖排（writing-mode: vertical-rl）：一「行」是一列，从右往左排。按列分组，写进 PowerPoint 的竖排文本框（eaVert）。
+    // 按横排的办法按 top 分行的话，每个字都成了单独的一行，换列时又并回前一行 —— 大字重影、多列挤成一列
+    const vertical = cs.writingMode.startsWith("vertical");
     const lines = [];
     const range = document.createRange();
     for (const node of textBlocks.get(block)) {
@@ -147,9 +150,10 @@ function measure(index) {
         const r = [...range.getClientRects()].find((x) => x.width > 0 || x.height > 0);
         if (!r) continue; // 折叠掉的空白
         const top = r.top - origin.top;
+        const left = r.left - origin.left;
         let line = lines.at(-1);
-        if (!line || top > line.top + fontSize * 0.6) {
-          line = { top, left: r.left - origin.left, runs: [] };
+        if (!line || (vertical ? Math.abs(left - line.left) > fontSize * 0.6 : top > line.top + fontSize * 0.6)) {
+          line = { top, left, runs: [] };
           lines.push(line);
         }
         const text = /\s/.test(ch) ? " " : transformText(ch, ecs);
@@ -170,7 +174,7 @@ function measure(index) {
     if (!kept.length) return null;
     const align = { center: "ctr", right: "r", end: "r", justify: "just" }[cs.textAlign] ?? "l";
     const lh = cs.lineHeight === "normal" ? parseFloat(cs.fontSize) * 1.2 : parseFloat(cs.lineHeight);
-    return { align, lineHeight: lh, lines: kept };
+    return { align, lineHeight: lh, lines: kept, ...(vertical ? { vertical: true } : {}) };
   }
 
   const items = [];
@@ -464,6 +468,7 @@ export async function exportDeck(page, options = {}) {
               line: item.line,
               text: item.text && {
                 insets: item.text.insets,
+                vertical: item.text.vertical,
                 paras: item.text.lines.map((l) => ({ align: item.text.align, lineHeight: item.text.lineHeight, runs: l.runs })),
               },
             };

@@ -302,3 +302,43 @@ describe('同款样稿导出 PPTX', () => {
     expect(failed).toEqual([])
   }, 240_000)
 })
+
+describe('竖排文字', () => {
+  it('写成 eaVert 文本框，一列一段', async () => {
+    const { buildPptx } = await lib('pptx-write.mjs')
+    const { readZip } = await lib('zip.mjs')
+    const run = (text: string) => ({ text, font: 'Kaiti SC', size: 36, color: '111111', alpha: 1 })
+    const pptx = buildPptx({
+      media: new Map(),
+      slides: [
+        {
+          background: { color: 'ffffff' },
+          transition: { kind: 'none' },
+          shapes: [
+            {
+              type: 'sp',
+              name: 's1 t 1',
+              x: 100,
+              y: 100,
+              w: 130,
+              h: 400,
+              geom: 'rect',
+              text: {
+                insets: { l: 0, t: 0, r: 0, b: 0 },
+                vertical: true,
+                paras: ['争渡，争渡，', '惊起一滩鸥鹭。'].map((l) => ({
+                  align: 'l',
+                  lineHeight: 65,
+                  runs: [run(l)],
+                })),
+              },
+            },
+          ],
+        },
+      ],
+    }) as Buffer
+    const xml = (readZip(pptx) as Map<string, Buffer>).get('ppt/slides/slide1.xml')!.toString()
+    expect(xml).toContain('<a:bodyPr vert="eaVert"')
+    expect(xml.match(/<a:p>/g)).toHaveLength(2)
+  })
+})
