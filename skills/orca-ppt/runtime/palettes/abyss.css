@@ -1,0 +1,31 @@
+/* 配色：深海
+ * 一句话：深藏青底 + 白 + 一点暖黄。像夜里打着灯的展柜：白的、透明的、彩色的东西压在暗底上都发亮,**深底**。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          深藏青              --surface     近白（立体柱的底座、白卡片）
+ *   --surface-2   深一档的蓝灰（小卡片）  --accent      暖黄（目标线、重点）
+ *   --accent-soft 浅暖黄
+ *   --text / --text-dim  近白 / 蓝灰
+ *   --text-on-surface    深藏青（白底座上的文字）
+ *   --text-on-accent     深藏青（暖黄、浅暖黄上的文字）
+ *   --accent-text        暖黄（深底上的强调字，强调色本身就够亮）
+ *
+ * 柱子的颜色不从这里取：并列的几根各用一种分类色（tokens.css 的 --cat-1…5）。玻璃外壳是半透明白，深底上最通透。
+ * 可以互变的颜色：accent ↔ accent-soft（暖黄 ↔ 浅暖黄，同色系）。
+ * surface（近白）和 surface-2（深蓝灰）明度差太大，不能互变。
+ * 背景就是深色：不需要整页深色形状（themes.md「深底配色要当心」）。
+ */
+
+:root {
+  --bg: #121a2a;
+  --surface: #f1f3f6;
+  --surface-2: #2a3449;
+  --text: #eef1f6;
+  --text-dim: #a3adc1;
+  --text-on-surface: #182033;
+  --accent: #ffd25a;
+  --accent-soft: #ffe39a;
+  --text-on-accent: #121a2a;
+  --accent-text: #ffd25a;
+}
