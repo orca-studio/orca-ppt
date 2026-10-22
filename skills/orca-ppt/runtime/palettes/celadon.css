@@ -1,0 +1,29 @@
+/* 配色：青瓷
+ * 一句话：宣纸米底 + 松绿 + 青瓷绿，国风水墨插画压得住。浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          宣纸米（带一点绿）     --surface     松绿（深色整页、深色竖签）
+ *   --surface-2   素绢白（浅色竖签、卡片）  --accent      青瓷绿（签头、圆章）
+ *   --accent-soft 淡青（青瓷绿的浅档）
+ *   --text / --text-dim  墨绿 / 苔灰
+ *   --text-on-surface    宣纸米（松绿上的字）
+ *   --text-on-accent     墨绿（青瓷绿、淡青上的字）
+ *   --accent-text        深松绿（米底上的强调字）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（青瓷绿 ↔ 淡青，同色系）。
+ * surface（松绿）和 surface-2（素绢白）明度差太大，不能互变。
+ */
+
+:root {
+  --bg: #eeecd9;
+  --surface: #2e5236;
+  --surface-2: #f8f6ea;
+  --text: #22392a;
+  --text-dim: #56664f;
+  --text-on-surface: #f3f0dc;
+  --accent: #9cc28a;
+  --accent-soft: #cfe1bd;
+  --text-on-accent: #1d3323;
+  --accent-text: #2f6a35;
+}

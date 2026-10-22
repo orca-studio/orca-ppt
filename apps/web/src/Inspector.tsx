@@ -101,6 +101,7 @@ const EFFECT_LABEL: Record<string, string> = {
   out: '淡出',
   spin: '回旋',
   emerge: '升起',
+  ink: '墨晕',
 }
 
 /** 方向写的是「从哪边来」。 */

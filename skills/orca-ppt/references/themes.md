@@ -12,6 +12,7 @@
 | `soft-editorial.css` | 奶油纸面，粉 / 黄绿 / 桃三色大圆角卡片；Cormorant Garamond + Work Sans | frontend-slides bold-template-pack |
 | `emerald-editorial.css` | 饱和翡翠绿画布，深海军蓝反转面板，燕麦米交替面；圆角全零，4px 结构线；Bodoni Moda 900 + Manrope | beautiful-html-templates/emerald-editorial |
 | `editorial-tri-tone.css` | 腮红粉画布，酒红深面板，奶油黄卡片；胶囊标签 + 大圆角卡片；Bricolage Grotesque + Instrument Serif + JetBrains Mono | beautiful-html-templates/editorial-tri-tone |
+| `ink-wash.css` | 宣纸底，楷体标题、宋体正文（都是系统字），两头圆的竖签；配 `celadon` 青瓷配色 | 一条抖音国风人物介绍 PPT（案例 `examples/ink-portrait`） |
 | `cobalt-grid.css` | 米色纸面 + 一种钴蓝，严格双色；方格纸底、扫描线纹理，圆角全零；Newsreader + Hanken Grotesk + DM Mono。默认配色 `cobalt` | beautiful-html-templates/cobalt-grid |
 | `neo-grid.css` | 墨黑 / 纸白 / 荧光柠檬黄的网格面板，圆角全零；全大写粗体标题 + 等宽小标签，棋盘格小方块；Space Grotesk + JetBrains Mono。默认配色 `lemon` | beautiful-html-templates/neo-grid-bold |
 | `ledger.css` | 纸白底 + 深海军蓝面板 + 一点赤橙；数字 Inter 600、标题 Source Serif 4、刻度和出处 JetBrains Mono，小圆角。默认配色 `ledger` | 本 skill 自己的，给经营汇报（同款 `recipes/data-report`） |

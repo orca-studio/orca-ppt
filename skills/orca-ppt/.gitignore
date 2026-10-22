@@ -29,6 +29,7 @@ examples/*
 !examples/forest-bento/
 !examples/spec-wall/
 !examples/forest-timeline/
+!examples/ink-portrait/
 
 # 稿子引用的素材（整页视频的片源）
 !examples/_assets/

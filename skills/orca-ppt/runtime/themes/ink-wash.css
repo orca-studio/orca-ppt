@@ -1,0 +1,37 @@
+/* 主题：Ink Wash（水墨。取自一条抖音国风人物介绍 PPT：宣纸、青绿水墨插画、毛笔字标题、竖排）
+ * 标签：texture
+ * 一句话：历史人物、传统文化、诗词讲读 —— 宣纸底，楷书标题，正文宋体
+ * 默认配色：celadon
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 字体全用系统字，不打包：标题楷体（Kaiti SC / Windows 的 KaiTi），正文宋体（Songti SC / SimSun）。
+ * 中文书法字体动辄几兆，楷体是 mac 和 Windows 都自带的毛笔字。
+ * 竖排写在元素上（writing-mode: vertical-rl），主题不管排版方向。
+ *
+ * 圆角放大：--radius-l 做竹签、书签那种两头圆的竖条。
+ *
+ * 本主题新增的类（只在本主题下有效）：
+ *   .t-label  宋体小字，24px，字距放开：竖签上的副题、年份、落款 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 4px;
+  --radius-m: 12px;
+  --radius-l: 90px;
+
+  --font: "Songti SC", "STSong", "SimSun", serif;
+  --font-brush: "Kaiti SC", "STKaiti", "KaiTi", "Songti SC", serif;
+}
+
+/* 标题用楷书：粗一档，字距放开一点，像题字 */
+.t-display, .t-h1 { font-family: var(--font-brush); font-weight: 700; letter-spacing: 0.06em; line-height: 1.1; }
+.t-h2, .t-metric { font-family: var(--font-brush); font-weight: 700; letter-spacing: 0.04em; line-height: 1.2; }
+.t-body { font-weight: 400; line-height: 1.8; letter-spacing: 0.04em; }
+
+.t-label {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.2em;
+  line-height: 1.4;
+  white-space: nowrap;
+}

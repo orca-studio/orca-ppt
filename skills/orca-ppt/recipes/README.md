@@ -103,7 +103,7 @@ poster: cover.jpg          # 自带封面图（相对本目录），首页卡片
 - `create_deck` 不能 `from: recipe:<案例 id>`：案例是给 agent 学风格怎么贯穿一整份稿子的，不是起头的样稿。
 - 已经被某个同款的 `sample` 指着的示例不用写 `EXAMPLE.md`，首页已经有它那张同款卡。
 
-`EXAMPLE.md` 只有 frontmatter，键的意思和同款一样：
+`EXAMPLE.md` 开头的 frontmatter 给应用读，键的意思和同款一样；正文可选，写给 agent：看这份稿子学什么（见 `examples/ink-portrait/EXAMPLE.md`）。
 
 ```yaml
 ---
@@ -119,3 +119,4 @@ poster: cover.jpg          # 自带封面图，可省略
 ```
 
 标准和同款样稿一样：至少 6 页、0 错误、标题写场景。
+`examples/` 在 `skills/orca-ppt/.gitignore` 里是白名单，新案例要加一行 `!examples/<id>/`，不然整个目录不进仓库。

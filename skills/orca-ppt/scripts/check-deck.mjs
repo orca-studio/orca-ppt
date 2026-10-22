@@ -156,9 +156,20 @@ function auditSlide(spec) {
   }
 
   // —— 文字被截断：写了 width 的不换行文字，内容放不下
+  const vertical = (el) => getComputedStyle(el).writingMode.startsWith("vertical");
   for (const el of [...section.querySelectorAll(".t-display, .t-metric, .t-h1, .t-label")].filter(visible)) {
+    if (vertical(el)) continue;
     if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) {
       add("文字截断", `${name(el)} 放不下（需要 ${el.scrollWidth}，只有 ${el.clientWidth}）`);
+    }
+  }
+  // 竖排的字（writing-mode: vertical-rl）：一列写不下就往框外折一列，不换行的就从框底下冒出去 ——
+  // 框外的字盖在别的东西上，擦除（clip-path）的框外部分还会被直接裁掉。两个方向都量
+  for (const el of [...section.querySelectorAll("[class*='t-']")].filter(visible).filter(vertical)) {
+    if (el.scrollHeight > el.clientHeight + 1 && el.clientHeight > 0) {
+      add("文字截断", `${name(el)} 竖排一列放不下（需要高 ${el.scrollHeight}，只有 ${el.clientHeight}）`);
+    } else if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) {
+      add("文字截断", `${name(el)} 竖排折出了框（需要宽 ${el.scrollWidth}，只有 ${el.clientWidth}）`);
     }
   }
 
