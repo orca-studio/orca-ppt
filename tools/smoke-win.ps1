@@ -92,6 +92,9 @@ Get-Process OrcaPPT -ErrorAction SilentlyContinue | Stop-Process -Force
 Wait-Until { -not (Test-Mcp) } 15 '关掉应用后 MCP 还在'
 $shortcut = Find-Shortcut | Where-Object { $_.FullName.StartsWith($programs) } | Select-Object -First 1
 Write-Host "从快捷方式打开:$($shortcut.FullName)"
+# 这条路接不到输出,让 Electron 把日志写进文件
+$env:ELECTRON_ENABLE_LOGGING = 'file'
+$env:ELECTRON_LOG_FILE = Join-Path $shots 'shortcut-electron.log'
 Start-Process $shortcut.FullName
 try {
   Wait-Until { Test-Mcp } 60 "从快捷方式打开后 MCP($mcp)没起来"
@@ -99,6 +102,8 @@ try {
 } catch {
   Save-Screenshot 'shortcut-failure.png'
   Write-Diagnostics
+  Write-Host "--- $env:ELECTRON_LOG_FILE ---"
+  if (Test-Path $env:ELECTRON_LOG_FILE) { Get-Content $env:ELECTRON_LOG_FILE -Tail 80 | Write-Host }
   throw
 }
 

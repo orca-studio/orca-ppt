@@ -36,13 +36,23 @@ const squirrelEvent = handleSquirrelEvent(() => app.quit())
 
 const here = dirname(fileURLToPath(import.meta.url))
 // server 用 utilityProcess 起:独立进程、崩了不带走窗口,而且不依赖 RunAsNode fuse(见 server-supervisor.ts)
-const supervisor = new ServerSupervisor((entry, env) =>
-  utilityProcess.fork(entry, [], {
-    stdio: ['ignore', 'pipe', 'inherit'],
+// stderr 不用 'inherit':Windows 上从快捷方式打开时主进程没有 stderr 句柄,继承不到就起不来。
+// 接成管道,由主进程转写 —— 主进程没有 stderr 时写进去的就丢掉,不影响 server
+const supervisor = new ServerSupervisor((entry, env) => {
+  const child = utilityProcess.fork(entry, [], {
+    stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, ...env },
     serviceName: 'Orca PPT Server',
-  }),
-)
+  })
+  child.stderr?.on('data', (chunk: Buffer) => {
+    try {
+      process.stderr.write(chunk)
+    } catch {
+      // 没有地方可写
+    }
+  })
+  return child
+})
 const isMac = process.platform === 'darwin'
 
 /**
