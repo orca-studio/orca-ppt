@@ -151,7 +151,7 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
       submenu: [
         {
           // 怎么连 agent 是**设置**,不该常驻在工作面板上
-          label: '连接 agent…',
+          label: '连接 AI 助手…',
           click: () => send('connect-agent'),
         },
       ],

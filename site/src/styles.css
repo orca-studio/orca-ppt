@@ -691,9 +691,8 @@ code {
   list-style: none;
   margin: 24px 0 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  display: flex;
+  justify-content: center;
 }
 .contact-options a {
   display: flex;
@@ -723,11 +722,6 @@ code {
 @media (hover: hover) and (pointer: fine) {
   .contact-options a:hover {
     background: rgba(255, 255, 255, 0.7);
-  }
-}
-@media (max-width: 640px) {
-  .contact-options {
-    grid-template-columns: 1fr;
   }
 }
 

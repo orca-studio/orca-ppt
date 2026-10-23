@@ -100,7 +100,7 @@ describe('应用菜单', () => {
 })
 
 describe('帮助', () => {
-  it('连接 agent 在菜单里 —— 那是设置,不该常驻在工作面板上', () => {
+  it('连接 AI 助手在菜单里 —— 那是设置,不该常驻在工作面板上', () => {
     const sent: string[] = []
     const template = buildMenuTemplate({
       appName: 'Orca PPT',

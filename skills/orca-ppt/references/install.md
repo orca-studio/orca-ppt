@@ -15,14 +15,14 @@
 
 1. **应用开着吗?** MCP 由应用自己提供(`http://127.0.0.1:6722/mcp`),应用没开就连不上。
    请用户打开 OrcaPPT。
-2. **MCP 加过没有?** 没加过就请用户加一次(在他自己的终端里跑):
+2. **MCP 加过没有?** 没加过就请用户加一次(在用户自己的终端里跑):
 
    ```bash
    claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
    codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp
    ```
 
-   其他宿主按各自的方式加这个地址。应用菜单「帮助 > 连接 agent…」也能拷到这行命令。
+   其他宿主按 https://ppt.orca-studio.ai/llms.txt 里对应的一节加。
 3. **应用刚重启过?** 有的宿主在应用重启的空档里连失败一次,之后就不再自己重试 ——
    应用早就好了,这边还显示断开。Claude Code 里请用户运行 `/mcp`,选 orca-ppt 重新连接。
 

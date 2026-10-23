@@ -513,19 +513,24 @@ ipcMain.handle('app:theme', (_event, source: 'system' | 'light' | 'dark') => {
 /** server 起在哪个端口,连接说明要用。 */
 let serverPort = 0
 
-/** 「帮助 > 连接 agent…」:给出一行命令,点一下就拷走。 */
+/**
+ * 「帮助 > 连接 AI 助手…」:给一句发给助手的话,点一下就拷走。连接交给助手自己做 ——
+ * 各家加 MCP 的入口不一样,llms.txt 按助手分别写了步骤,应用不替别家写配置。
+ */
 async function showConnectAgent(): Promise<void> {
   const url = `http://127.0.0.1:${serverPort}/mcp`
-  const command = `claude mcp add --transport http orca-ppt ${url}`
+  const prompt =
+    '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。'
   const result = await dialog.showMessageBox({
     type: 'info',
-    message: '让 agent 代你操作',
-    detail: `${APP_NAME} 开着的时候,MCP 挂在\n${url}\n\nClaude Code:\n${command}\n\nCodex:\ncodex mcp add orca-ppt --url ${url}`,
-    buttons: ['拷贝 Claude Code 的命令', '好'],
+    message: '连上你的 AI 助手',
+    detail: `把这句话发给你的 AI 助手(WorkBuddy、Codex、Claude Code 等),它会自己连上:\n\n${prompt}\n\n要手动加的话,${APP_NAME} 开着的时候 MCP 地址是\n${url}`,
+    buttons: ['拷贝这句话', '拷贝 MCP 地址', '好'],
     defaultId: 0,
-    cancelId: 1,
+    cancelId: 2,
   })
-  if (result.response === 0) clipboard.writeText(command)
+  if (result.response === 0) clipboard.writeText(prompt)
+  if (result.response === 1) clipboard.writeText(url)
 }
 
 ipcMain.handle('deck:pick', async () => {

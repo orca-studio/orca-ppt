@@ -14,4 +14,4 @@ npx serve site/dist           # 本地看
 - main 上 `site/` 或同款样稿有改动时,`.github/workflows/site.yml` 自动部署到 Cloudflare。
 - `src/_headers` 是 Cloudflare 的响应头配置:`llms.txt` 要带 `charset=utf-8`,不然浏览器里中文是乱码。
 - 交流群是企业微信群,二维码不过期。图只有一份:`src/contact/wecom-group-qrcode.jpg`,
-  官网和根目录 `README.md` 都引它。联系方式沿用 Jevbot 的(X、微信、交流群)。
+  官网和根目录 `README.md` 都引它。联系方式只留这个群。

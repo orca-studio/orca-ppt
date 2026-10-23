@@ -110,7 +110,8 @@ player.addEventListener('close', () => frame.removeAttribute('src'))
 
 for (const box of document.querySelectorAll('[data-copy]')) {
   const button = box.querySelector('button')
-  const text = box.querySelector('code').textContent.trim()
+  // HTML 格式化会把长句折行,复制时把换行和缩进并回一个空格
+  const text = box.querySelector('code').textContent.trim().replace(/\s+/g, ' ')
   button.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(text)
