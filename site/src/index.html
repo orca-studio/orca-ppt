@@ -374,7 +374,15 @@
         <a class="player-new" target="_blank" rel="noopener">新窗口打开 ↗</a>
         <button type="button" class="player-close" aria-label="关闭">×</button>
       </div>
-      <div class="player-stage"><iframe title="样稿" allow="fullscreen"></iframe></div>
+      <div class="player-stage">
+        <iframe title="样稿" allow="fullscreen"></iframe>
+        <button type="button" class="player-nav player-prev" aria-label="上一页">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
+        </button>
+        <button type="button" class="player-nav player-next" aria-label="下一页">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5" /></svg>
+        </button>
+      </div>
     </dialog>
 
     <script src="main.js" defer></script>

@@ -17,6 +17,9 @@ for (const link of document.querySelectorAll('[data-play]')) {
     player.querySelector('.player-title').textContent = link.dataset.title
     player.querySelector('.player-new').href = link.href
     frame.src = link.href
+    // 新开的样稿从第一页起;按钮状态等它加载好再按实际情况更新
+    prev.disabled = true
+    next.disabled = false
     player.showModal()
     frame.addEventListener(
       'load',
@@ -24,6 +27,7 @@ for (const link of document.querySelectorAll('[data-play]')) {
         // 焦点给样稿,方向键直接翻页。焦点在样稿里时 Esc 到不了 dialog,在样稿里也接一下
         // (抢在 reveal 前面:它拿 Esc 开总览)
         frame.contentWindow?.focus()
+        watchDeck()
         frame.contentDocument?.addEventListener(
           'keydown',
           (key) => {
@@ -40,6 +44,41 @@ for (const link of document.querySelectorAll('[data-play]')) {
   })
 }
 player.querySelector('.player-close').addEventListener('click', closePlayer)
+
+// 左右两个圆钮。往后翻走引擎的 __orcaAdvance(转场没放完会先放完,页内分步一步一步推),
+// 往回翻直接切(引擎本来就是往回不播转场)。点完把焦点还给样稿,方向键接着能用
+const prev = player.querySelector('.player-prev')
+const next = player.querySelector('.player-next')
+const deck = () => frame.contentWindow
+prev.addEventListener('click', () => {
+  deck()?.Reveal?.prev()
+  deck()?.focus()
+})
+next.addEventListener('click', () => {
+  const win = deck()
+  if (win?.__orcaAdvance) win.__orcaAdvance()
+  else win?.Reveal?.next()
+  win?.focus()
+})
+// 第一页没有上一页;最后一页的页内分步也放完了,就没有下一页
+function syncNav() {
+  const reveal = deck()?.Reveal
+  if (!reveal?.isReady?.()) return
+  const step = deck().__orcaStep?.() ?? { done: 0, clicks: 0 }
+  prev.disabled = reveal.isFirstSlide()
+  next.disabled = reveal.isLastSlide() && step.done >= step.clicks
+}
+function watchDeck() {
+  const win = deck()
+  if (!win?.Reveal) return
+  const start = () => {
+    win.Reveal.on('slidechanged', syncNav)
+    win.document.addEventListener('orca:step', syncNav)
+    syncNav()
+  }
+  if (win.Reveal.isReady()) start()
+  else win.Reveal.on('ready', start)
+}
 // 点窗口外的暗处关掉
 player.addEventListener('click', (event) => {
   if (event.target === player) closePlayer()
