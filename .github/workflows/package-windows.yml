@@ -1,0 +1,59 @@
+# 试打 Windows 安装包:任意分支或提交,出一份未签名的 Setup.exe,在这台 Windows 机器上
+# 静默安装、启动、确认 MCP 起来、截屏、卸载(tools/smoke-win.ps1)。安装包和截图放进这次
+# 运行的 artifact,不发 Release、不碰签名凭据。
+# 正式发版走 release-build.yml 里的 windows 那一步,见 docs/RELEASE.md。
+name: Package Windows (test)
+
+on:
+  # 手动触发要求这个文件已经在 main 上;在那之前推到 windows/ 开头的分支上试
+  push:
+    branches: ['windows/**']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 要打包的分支、tag 或提交
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: windows-2022
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install -g pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          (cd skills/orca-ppt && npm ci --no-audit --no-fund)
+      - name: Build the Squirrel installer (unsigned)
+        run: node tools/release-win.mjs
+      - name: Install, launch, uninstall
+        shell: pwsh
+        run: tools/smoke-win.ps1 dist/release
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        # 冒烟测试失败也传上去:截图和安装包都是排查的材料
+        if: always()
+        with:
+          name: orca-ppt-windows-${{ github.run_id }}
+          path: |
+            dist/release
+            dist/smoke
+          if-no-files-found: error
+          retention-days: 7

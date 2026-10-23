@@ -1,6 +1,7 @@
 # 第二步:查一次公证结果。还在处理就正常结束,稍后再跑;通过就 staple 应用、用它重做 dmg 再公证一次
 # (要签名证书;这一次等结果,通常几分钟)、staple dmg、做 Gatekeeper 检查,
-# 把 dmg、zip、SHA256SUMS.txt 发到本仓的 GitHub Release(公开,不是草稿 —— 自动更新只认公开的)。
+# 把 dmg、zip、Windows 安装包(Setup.exe、RELEASES、nupkg)、SHA256SUMS.txt 发到本仓的
+# GitHub Release(公开,不是草稿 —— 自动更新只认公开的)。
 # 结构照 orca-studio/Compositor 的 release-finalize.yml,见 docs/RELEASE.md。
 name: Publish Orca PPT
 
@@ -70,20 +71,31 @@ jobs:
           DMG="$(node -p "require('./release.json').dmg.name")"
           ZIP="$(node -p "require('./release.json').zip.name")"
           [[ "$TAG" == "v$VERSION" ]] || { echo "release.json 里 tag 和版本对不上" >&2; exit 1; }
+          # Windows 那台机器的产物:和 macOS 同一个 tag、同一个版本才发
+          [[ -f release-win.json ]] || { echo "没有 Windows 的产物(build 里 windows 那一步失败了?)" >&2; exit 1; }
+          [[ "$(node -p "require('./release-win.json').tag")" == "$TAG" ]] || { echo "Windows 产物的 tag 对不上" >&2; exit 1; }
+          SETUP="$(node -p "require('./release-win.json').setup")"
+          NUPKG="$(node -p "require('./release-win.json').nupkg")"
+          cat SHA256SUMS-win.txt >> SHA256SUMS.txt
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "$TAG 已经发布过,不覆盖" >&2; exit 1
           fi
           # 再传一份不带版本号的 dmg:官网的下载按钮指向 releases/latest/download/ 下这个固定名字,
           # 发新版不用改官网。和带版本号的那份是同一个文件
           cp "$DMG" OrcaPPT-mac-arm64.dmg
-          gh release create "$TAG" "$DMG" OrcaPPT-mac-arm64.dmg "$ZIP" SHA256SUMS.txt \
+          cp "$SETUP" OrcaPPT-win-x64-Setup.exe
+          # RELEASES 必须叫这个名字、放在 Release 根上:update.electronjs.org 按这个固定名字去取
+          gh release create "$TAG" "$DMG" OrcaPPT-mac-arm64.dmg "$ZIP" \
+            "$SETUP" OrcaPPT-win-x64-Setup.exe RELEASES "$NUPKG" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Orca PPT $VERSION" \
-            --notes "Orca PPT $VERSION(macOS,Apple Silicon)。下载 \`$DMG\` 安装;已安装的版本会自动更新。"
+            --notes "Orca PPT $VERSION。macOS(Apple Silicon)下载 \`$DMG\`,Windows(x64)下载 \`$SETUP\`;已安装的版本会自动更新。"
           # 匿名下载回来对一遍摘要:确认发出去的就是公证过的那一份
           mkdir -p ../verify && cd ../verify
           curl -fsSL -o "$DMG" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$DMG"
-          curl -fsSL -o "$ZIP" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$ZIP"
+          for name in "$ZIP" "$SETUP" RELEASES "$NUPKG"; do
+            curl -fsSL -o "$name" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$name"
+          done
           shasum -a 256 -c ../release/SHA256SUMS.txt
           echo "已发布 [$TAG](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG)。" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove temporary keychain

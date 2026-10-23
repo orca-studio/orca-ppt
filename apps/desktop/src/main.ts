@@ -18,6 +18,7 @@ import {
 import { paddedRect, type Rect } from './anchor-crop.js'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
+import { handleSquirrelEvent, isSquirrelFirstRun } from './squirrel.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
 import { exportPptx, type PptxJob } from './pptx-exporter.js'
 import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
@@ -30,6 +31,8 @@ const APP_NAME = 'Orca PPT'
 app.setName(APP_NAME)
 // Keep the existing profile, preferences, and guest storage when the display name changes.
 app.setPath('userData', join(app.getPath('appData'), 'OrcaPPT'))
+// Windows 上安装、更新、卸载时 Squirrel 起的那一次:只处理快捷方式就退出,不开窗口(见 squirrel.ts)
+const squirrelEvent = handleSquirrelEvent(() => app.quit())
 
 const here = dirname(fileURLToPath(import.meta.url))
 // server 用 utilityProcess 起:独立进程、崩了不带走窗口,而且不依赖 RunAsNode fuse(见 server-supervisor.ts)
@@ -561,9 +564,10 @@ ipcMain.handle('app:menu-state', (_event, state: MenuState) => {
 /**
  * 自动更新:Electron 官方的 update.electronjs.org 读本仓的 GitHub Releases(仓库是公开的才能用),
  * 有新版就下载,弹窗问要不要重启。只在发布版里开 —— 开发时的应用没签名,Squirrel.Mac 也更新不了它。
- * Release 里要有 `OrcaPPT-darwin-<arch>-<版本>.zip`(见 docs/RELEASE.md)。
+ * Release 里 macOS 要有 `OrcaPPT-darwin-<arch>-<版本>.zip`,Windows 要有 `RELEASES` 和 `.nupkg`
+ * (见 docs/RELEASE.md)。
  */
-if (app.isPackaged) {
+if (app.isPackaged && !squirrelEvent && !isSquirrelFirstRun()) {
   updateElectronApp({
     updateSource: {
       type: UpdateSourceType.ElectronPublicUpdateService,
@@ -581,6 +585,7 @@ if (app.isPackaged) {
 }
 
 app.whenReady().then(() => {
+  if (squirrelEvent) return
   // 临时缩略图只在当次用:server 拿到就转成 base64 交出去了,不留路径
   void rm(join(app.getPath('userData'), 'thumbs'), { recursive: true, force: true })
   applyMenu({ canPresent: false, theme: 'system' })

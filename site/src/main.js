@@ -1,4 +1,26 @@
-// 官网的三件小事:顶栏滚动后加分隔线、点同款弹窗放映、复制命令。
+// 官网的几件小事:顶栏滚动后加分隔线、下载按钮跟着访客的系统走、点同款弹窗放映、复制命令。
+
+// Windows 访客:顶栏那个按钮换成 Windows 版;两个平台并排的地方,把 Windows 版挪到前面、
+// 换成实心按钮。认不出(手机、Linux)就按 Mac 优先,不藏任何一个
+const isWindows =
+  /^win/i.test(navigator.userAgentData?.platform || navigator.platform || '') ||
+  /Windows/.test(navigator.userAgent)
+if (isWindows) {
+  const win = document.querySelector('[data-download="win"]')
+  for (const link of document.querySelectorAll('[data-download="auto"]')) {
+    link.href = win.href
+    link.textContent = '下载 Windows 版'
+  }
+  for (const row of document.querySelectorAll('[data-platforms]')) {
+    const mac = row.querySelector('[data-download="mac"]')
+    const win = row.querySelector('[data-download="win"]')
+    row.insertBefore(win, mac)
+    if (mac.classList.contains('btn-solid')) {
+      mac.classList.replace('btn-solid', 'btn-ghost')
+      win.classList.replace('btn-ghost', 'btn-solid')
+    }
+  }
+}
 
 const nav = document.querySelector('[data-nav]')
 const onScroll = () => nav.toggleAttribute('data-scrolled', window.scrollY > 8)
@@ -94,9 +116,9 @@ for (const box of document.querySelectorAll('[data-copy]')) {
       await navigator.clipboard.writeText(text)
       button.textContent = '已复制'
     } catch {
-      // 剪贴板不让写(非安全上下文等):选中文字,让人自己 Cmd+C
+      // 剪贴板不让写(非安全上下文等):选中文字,让人自己复制
       getSelection().selectAllChildren(box.querySelector('code'))
-      button.textContent = '按 ⌘C'
+      button.textContent = isWindows ? '按 Ctrl+C' : '按 ⌘C'
     }
     clearTimeout(button._t)
     button._t = setTimeout(() => (button.textContent = '复制'), 1600)

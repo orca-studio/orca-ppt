@@ -1,4 +1,5 @@
 # 第一步:打包、签名、做 dmg 和 zip、提交 Apple 公证。不等公证结果。
+# 同一次运行里另起一台 Windows 机器出 Squirrel 安装包,产物一起交给「Publish Orca PPT」。
 # 手动触发,填一个已经推送的版本 tag(和 apps/desktop/package.json 的 version 一致)。
 # 结构照 orca-studio/Compositor 的 release-build.yml,见 docs/RELEASE.md。
 name: Build and submit notarization
@@ -74,3 +75,46 @@ jobs:
       - name: Remove temporary keychain
         if: always()
         run: tools/ci-keychain.sh delete
+
+  windows:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: windows-2022
+    timeout-minutes: 60
+    environment: release
+    defaults:
+      run:
+        shell: bash
+    env:
+      SOURCE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check tag format
+        run: '[[ "$SOURCE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install -g pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          (cd skills/orca-ppt && npm ci --no-audit --no-fund)
+      - name: Build the Squirrel installer
+        env:
+          # 没配就出未签名的安装包,见 docs/RELEASE.md
+          WINDOWS_SIGN_WITH_PARAMS: ${{ secrets.WINDOWS_SIGN_WITH_PARAMS }}
+        run: node tools/release-win.mjs
+      - name: Install, launch, uninstall
+        shell: pwsh
+        run: tools/smoke-win.ps1 dist/release
+      - name: Save pending artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: orca-ppt-pending-${{ github.run_id }}-${{ github.run_attempt }}-win
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 14

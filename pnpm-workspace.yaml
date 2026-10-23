@@ -8,3 +8,5 @@ allowBuilds:
   esbuild: true
   # 下载当前平台的 Electron 二进制。没有它桌面壳装得上但起不来。
   electron: true
+  # 把宿主架构的 7-Zip 拷成 vendor/7z.exe。没有它 Windows 上做不出 Squirrel 安装包。
+  electron-winstaller: true

@@ -6,7 +6,7 @@
     <title>Orca PPT · 和 AI 一起，把想法做成演示稿</title>
     <meta
       name="description"
-      content="Orca PPT 是 Mac 上的演示稿工作台：连上你已经在用的 AI 助手，它来做稿，翻页时标题滑走、卡片展开成整页、数字长成图表。看到喜欢的效果，一键做同款。免费开源。"
+      content="Orca PPT 是 Mac 和 Windows 上的演示稿工作台：连上你已经在用的 AI 助手，它来做稿，翻页时标题滑走、卡片展开成整页、数字长成图表。看到喜欢的效果，一键做同款。免费开源。"
     />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="brand/orca-icon.png" type="image/png" />
@@ -55,7 +55,7 @@
           <a
             class="btn btn-solid btn-sm"
             href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
-            data-download
+            data-download="auto"
             >下载 Mac 版</a
           >
         </div>
@@ -65,22 +65,30 @@
     <main id="main">
       <section class="hero">
         <div class="wrap hero-copy">
-          <p class="eyebrow">Mac 上的 AI 演示稿工作台</p>
+          <p class="eyebrow">Mac 和 Windows 上的 AI 演示稿工作台</p>
           <h1>和 AI 一起，<br />把想法做成演示稿。</h1>
           <p class="lede">
             连上你已经在用的 AI 助手，它来做稿。翻页时标题滑到新位置，卡片展开成整页，数字长成图表
             —— 像发布会那样连贯，不是一页一页地硬切。
           </p>
-          <div class="cta-row">
+          <div class="cta-row" data-platforms>
             <a
               class="btn btn-solid"
               href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
-              data-download
+              data-download="mac"
               >下载 Mac 版 <span aria-hidden="true">↓</span></a
+            >
+            <a
+              class="btn btn-ghost"
+              href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe"
+              data-download="win"
+              >下载 Windows 版 <span aria-hidden="true">↓</span></a
             >
             <a class="btn btn-ghost" href="#recipes">先看看同款</a>
           </div>
-          <p class="fineprint">免费开源 · macOS 12 以上 · Apple Silicon</p>
+          <p class="fineprint">
+            免费开源 · macOS 12 以上（Apple Silicon）· Windows 10 以上（64 位）
+          </p>
         </div>
 
         <figure class="wrap hero-shot">
@@ -157,13 +165,24 @@
             <li>
               <span class="step-n">01</span>
               <h3>装上 Orca PPT</h3>
-              <p>下载后把应用拖进「应用程序」，打开它。之后有新版本会自动更新。</p>
-              <a
-                class="text-link"
-                href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
-                data-download
-                >下载 Mac 版 ↓</a
-              >
+              <p>
+                Mac 上把应用拖进「应用程序」，Windows
+                上双击安装包，然后打开它。之后有新版本会自动更新。
+              </p>
+              <p class="download-links" data-platforms>
+                <a
+                  class="text-link"
+                  href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
+                  data-download="mac"
+                  >下载 Mac 版 ↓</a
+                >
+                <a
+                  class="text-link"
+                  href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe"
+                  data-download="win"
+                  >下载 Windows 版 ↓</a
+                >
+              </p>
             </li>
             <li>
               <span class="step-n">02</span>
@@ -265,7 +284,11 @@
             </details>
             <details>
               <summary>支持 Windows 吗？</summary>
-              <p>支持。Windows 安装包还在准备，出了会在这里提供下载。</p>
+              <p>
+                支持 Windows 10 以上的 64 位版本，装好之后和 Mac
+                版一样会自动更新。第一次运行安装包时， Windows
+                可能提示「已保护你的电脑」：点「更多信息」，再点「仍要运行」。
+              </p>
             </details>
           </div>
         </div>
@@ -277,12 +300,18 @@
             <img src="brand/orca-icon.png" alt="" width="56" height="56" />
             <h2>下一份稿子，<br />让它动起来。</h2>
             <p>从一个同款开始，补上你的内容。</p>
-            <div class="cta-row cta-center">
+            <div class="cta-row cta-center" data-platforms>
               <a
                 class="btn btn-solid"
                 href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg"
-                data-download
+                data-download="mac"
                 >下载 Mac 版 <span aria-hidden="true">↓</span></a
+              >
+              <a
+                class="btn btn-ghost"
+                href="https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe"
+                data-download="win"
+                >下载 Windows 版 <span aria-hidden="true">↓</span></a
               >
               <a
                 class="btn btn-ghost"
@@ -293,7 +322,7 @@
               >
             </div>
             <p class="fineprint">
-              macOS 12 以上 · Apple Silicon ·
+              macOS 12 以上（Apple Silicon）· Windows 10 以上（64 位）·
               <a
                 href="https://github.com/orca-studio/orca-ppt/releases"
                 target="_blank"

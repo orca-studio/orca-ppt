@@ -1,6 +1,6 @@
 # Orca PPT
 
-> Orca PPT 是一个本地桌面应用（macOS），用户在里面看、改、放映会动的演示稿。它不带 AI，
+> Orca PPT 是一个本地桌面应用（macOS / Windows），用户在里面看、改、放映会动的演示稿。它不带 AI，
 > 而是通过 MCP 把工作台的全部操作交给用户自己的 AI 助手。这份文件写给 AI 助手：
 > 怎么替用户装好 Orca PPT、把你自己连上它。连上之后怎么做稿，以 MCP 连接时返回的 instructions 为准，这里不重复。
 
@@ -8,7 +8,7 @@
 
 用户说「只装 skill」或不想装应用时，跳到下面「不装应用，只装 skill」。否则：
 
-1. **装好 Orca PPT 并打开。** 已经装了（`/Applications/Orca PPT.app` 存在）就跳过安装，见下面「安装 Orca PPT」。
+1. **装好 Orca PPT 并打开。** 先判断用户的系统，已经装了就跳过安装，见下面「安装 Orca PPT」。
    应用开着时，MCP 在 `http://127.0.0.1:6722/mcp`（Streamable HTTP，本机，无鉴权）。
    检查办法：向这个地址 GET，返回 HTTP 406 就说明应用在跑（它只接受 MCP 的 POST）；连不上就是没开。
 2. **把你自己连上。** 判断你自己是哪个 AI 助手，按下面对应的一节把 MCP 加上。服务器名一律用 `orca-ppt`。
@@ -21,10 +21,19 @@
 
 ## 安装 Orca PPT
 
-要求 macOS 12 以上、Apple Silicon（`uname -m` 是 `arm64`）；不满足就如实告诉用户，改走「只装 skill」。
+先判断系统，再走对应的一节：
 
-安装包约 200 MB，下载要几分钟。命令有超时限制的话，用后台下载或调长超时；下载被打断时用
-`curl -C -` 续传，不要从头再下。
+- 能跑 `uname -s` 且输出 `Darwin`：macOS，走「macOS」。
+- PowerShell 里 `$env:OS` 是 `Windows_NT`（cmd 里 `echo %OS%`）：Windows，走「Windows」。
+- 都不是（Linux 等）：没有桌面应用，如实告诉用户，改走「只装 skill」。
+
+两个安装包都约 200 MB，下载要几分钟。命令有超时限制的话，用后台下载或调长超时；下载被打断时用
+`curl -C -` 续传，不要从头再下。装好之后 Orca PPT 会自己更新，不用你管。
+
+### macOS
+
+要求 macOS 12 以上、Apple Silicon（`uname -m` 是 `arm64`）；不满足就如实告诉用户，改走「只装 skill」。
+已经装了（`/Applications/Orca PPT.app` 存在）就只做最后一步 `open -a "Orca PPT"`。
 
 ```bash
 curl -fL -C - -o /tmp/OrcaPPT.dmg https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg
@@ -39,7 +48,29 @@ open -a "Orca PPT"
 - `TeamIdentifier` 不是 `R2MFZSZP4R`，或 `spctl` 不是 accepted，就停下：不要拷进「应用程序」，卸载 DMG 并告诉用户。
 - 新版 macOS 上 `hdiutil attach` 会提示已废弃，可以忽略，命令照常生效。
 - 写不进 `/Applications` 或命令被你的权限拦下时，把下载链接给用户，请用户双击 DMG、把应用拖进「应用程序」。
-- 之后 Orca PPT 会自己更新，不用你管。
+
+### Windows
+
+要求 Windows 10 以上、64 位（`$env:PROCESSOR_ARCHITECTURE` 是 `AMD64`）；不满足就如实告诉用户，改走「只装 skill」。
+已经装了（`$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe` 存在）就只做最后一步 `Start-Process`。
+
+在 PowerShell 里运行。装到当前用户目录，不需要管理员权限：
+
+```powershell
+$setup = "$env:TEMP\OrcaPPT-Setup.exe"
+curl.exe -fL -C - -o $setup https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe
+curl.exe -fsSL -o "$env:TEMP\OrcaPPT-SHA256SUMS.txt" https://github.com/orca-studio/orca-ppt/releases/latest/download/SHA256SUMS.txt
+$hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+Select-String -Quiet -SimpleMatch $hash "$env:TEMP\OrcaPPT-SHA256SUMS.txt"   # 应为 True
+Start-Process $setup -ArgumentList '--silent' -Wait
+Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"
+```
+
+- 摘要对不上（输出 `False`）就停下：不要运行安装包，删掉它并告诉用户。
+- 安装包装完通常会自己打开应用；这时再 `Start-Process` 也没关系，只会把已开的窗口带到前面，不会开第二个。
+- 开始菜单和桌面上会有「Orca PPT」的快捷方式，告诉用户以后从那里打开。
+- 命令被你的权限拦下时，把下载链接给用户，请用户双击安装包。Windows 提示「已保护你的电脑」时，
+  点「更多信息」，再点「仍要运行」。
 
 ## 不要替用户做的事
 

@@ -458,6 +458,12 @@ code {
   color: var(--dim) !important;
   overflow-wrap: anywhere;
 }
+.download-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: auto;
+}
 .text-link {
   margin-top: auto;
   font-weight: 600;

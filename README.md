@@ -2,7 +2,7 @@
 
 **和 AI 一起，把想法做成演示稿。**
 
-[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [官网](https://ppt.orca-studio.ai) · [联系我们](#联系我们)
+[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe) · [官网](https://ppt.orca-studio.ai) · [联系我们](#联系我们)
 
 ## 开始使用
 
@@ -28,7 +28,9 @@
    它会下载安装、完成配置；需要你动手的地方（比如重启助手、在设置里点「信任」）会告诉你。
    支持 WorkBuddy、Codex、Claude Code，其他支持 MCP 的助手一般也可以。
    想自己装也行：[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg)
-   （macOS 12 以上，Apple Silicon），拖进「应用程序」，再把上面那句话发给助手。
+   （macOS 12 以上，Apple Silicon）拖进「应用程序」，或者
+   [下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe)
+   （Windows 10 以上，64 位）双击安装，再把上面那句话发给助手。
 
    以后每次用，都**先打开 Orca PPT，再打开 AI 助手**。之后有新版本，Orca PPT 会自动更新。
 
