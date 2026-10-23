@@ -1,6 +1,6 @@
 # Windows 安装包冒烟测试:在 CI 的 Windows 机器上静默安装 → 确认快捷方式和 MCP 起来了 →
 # 截一张屏 → 卸载 → 确认卸干净了。用法:pwsh tools/smoke-win.ps1 dist/release
-# 截图写到 dist/smoke/,跟着 artifact 一起传上去,看一眼窗口和菜单长什么样。
+# 截图和应用日志写到 dist/smoke/,跟着 artifact 一起传上去;失败时也截、也打出日志。
 param([Parameter(Mandatory)][string]$ReleaseDir)
 $ErrorActionPreference = 'Stop'
 
@@ -27,6 +27,15 @@ function Test-Mcp {
   }
 }
 
+function Save-Screenshot([string]$name) {
+  Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+  $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+  $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+  [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+  $bitmap.Save((Join-Path $shots $name), [System.Drawing.Imaging.ImageFormat]::Png)
+  Write-Host "截图:$shots\$name"
+}
+
 function Wait-Until([scriptblock]$check, [int]$seconds, [string]$what) {
   $deadline = (Get-Date).AddSeconds($seconds)
   while ((Get-Date) -lt $deadline) {
@@ -47,22 +56,31 @@ if (-not (Test-Path (Join-Path $appDir.FullName 'resources\skill\SKILL.md'))) { 
 Wait-Until { Find-Shortcut } 30 '开始菜单 / 桌面上没出现 Orca PPT 的快捷方式'
 Write-Host "快捷方式:$((Find-Shortcut).FullName -join ', ')"
 
-# Squirrel 装完会带 --squirrel-firstrun 起一次应用;没起就自己起
-if (-not (Get-Process OrcaPPT -ErrorAction SilentlyContinue)) {
-  Write-Host '安装后应用没有自己起来,手动启动'
-  Start-Process $exe
+# --silent 装完不会自己起应用。直接起 app-* 里那个真正的 exe(根目录的 OrcaPPT.exe 只是 Squirrel 的
+# 转发器),把它的输出接到文件里:主进程和 server 的报错都在这里
+Get-Process OrcaPPT -ErrorAction SilentlyContinue | Stop-Process -Force
+$env:ELECTRON_ENABLE_LOGGING = '1'
+$stdout = Join-Path $shots 'app-stdout.log'
+$stderr = Join-Path $shots 'app-stderr.log'
+Start-Process (Join-Path $appDir.FullName 'OrcaPPT.exe') -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+try {
+  Wait-Until { Test-Mcp } 90 "MCP($mcp)没起来"
+  Write-Host 'MCP 起来了'
+  # 等界面画完再截屏
+  Start-Sleep -Seconds 8
+  Save-Screenshot 'workbench.png'
+} catch {
+  Save-Screenshot 'failure.png'
+  Write-Host '--- 进程 ---'
+  Get-Process OrcaPPT -ErrorAction SilentlyContinue | Format-Table Id, StartTime, MainWindowTitle | Out-String | Write-Host
+  Write-Host '--- 端口 6722 ---'
+  Get-NetTCPConnection -LocalPort 6722 -ErrorAction SilentlyContinue | Out-String | Write-Host
+  foreach ($log in @($stdout, $stderr)) {
+    Write-Host "--- $log ---"
+    if (Test-Path $log) { Get-Content $log -Tail 80 | Write-Host }
+  }
+  throw
 }
-Wait-Until { Test-Mcp } 90 "MCP($mcp)没起来"
-Write-Host 'MCP 起来了'
-
-# 等界面画完再截屏
-Start-Sleep -Seconds 8
-Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-$bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-$bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-[System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
-$bitmap.Save((Join-Path $shots 'workbench.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-Write-Host "截图:$shots\workbench.png"
 
 Write-Host '卸载'
 Get-Process OrcaPPT -ErrorAction SilentlyContinue | Stop-Process -Force
