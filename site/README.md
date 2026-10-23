@@ -12,5 +12,5 @@ npx serve site/dist           # 本地看
   加同款不用改官网。
 - 下载按钮指向 `releases/latest/download/OrcaPPT-mac-arm64.dmg`,发布工作流每次都会传这个固定名字。
 - main 上 `site/` 或同款样稿有改动时,`.github/workflows/site.yml` 自动部署到 Cloudflare。
-- 微信群二维码会过期,换的时候两处一起换:`src/contact/wechat-group-qrcode.png` 和 `docs/contact/wechat-group-qrcode.png`,
-  有效期也有两处:`src/index.html` 和根目录 `README.md`。联系方式沿用 Jevbot 的(X、微信、交流群)。
+- 交流群是企业微信群,二维码不过期。图只有一份:`src/contact/wecom-group-qrcode.jpg`,
+  官网和根目录 `README.md` 都引它。联系方式沿用 Jevbot 的(X、微信、交流群)。

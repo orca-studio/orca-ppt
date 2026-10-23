@@ -2,7 +2,61 @@
 
 **和 AI 一起，把想法做成演示稿。**
 
-[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [官网](https://ppt.orca-studio.ai) · [关注更新](https://x.com/jevbot_dev) · [联系我们](#联系我们)
+[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [官网](https://ppt.orca-studio.ai) · [联系我们](#联系我们)
+
+## 开始使用
+
+有两种用法，做出来的稿子是一样的，区别在于有没有工作台：
+
+|                            | 装 Orca PPT 应用     | 只装 Orca PPT skill |
+| -------------------------- | -------------------- | ------------------- |
+| 在画面上点一下，指给 AI 看 | ✓                    |                     |
+| 同款首页，点「做同款」     | ✓                    |                     |
+| 实时预览、双击改字、撤销   | ✓                    |                     |
+| 浏览器放映、导出 PPTX      | ✓                    | ✓                   |
+| 需要                       | Mac（Apple Silicon） | Node.js             |
+
+### 用法一：装 Orca PPT 应用（推荐）
+
+1. **让 AI 助手装好 Orca PPT 并连上它。** Orca PPT 自己不带 AI，由你已经在用的 AI 助手来安装和使用它。
+   把下面这句话发给你的 AI 助手：
+
+   ```
+   读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。
+   ```
+
+   它会下载安装、完成配置；需要你动手的地方（比如重启助手、在设置里点「信任」）会告诉你。
+   支持 WorkBuddy、Codex、Claude Code，其他支持 MCP 的助手一般也可以。
+   想自己装也行：[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg)
+   （macOS 12 以上，Apple Silicon），拖进「应用程序」，再把上面那句话发给助手。
+
+   以后每次用，都**先打开 Orca PPT，再打开 AI 助手**。之后有新版本，Orca PPT 会自动更新。
+
+2. **做第一份稿子。** 在 Orca PPT 首页挑一个同款，点「做同款」，把复制的那段话贴给 AI 助手，补上你的内容。
+
+### 用法二：只装 Orca PPT skill
+
+skill 是 Orca PPT 的设计规范和脚本，AI 助手照着它直接做出 HTML 稿子。不需要装应用，也不限于 Mac。
+
+1. **让 AI 助手装好 skill。** 把下面这句话发给你的 AI 助手：
+
+   ```
+   读 https://ppt.orca-studio.ai/llms.txt ，按「不装应用，只装 skill」那一节，把 Orca PPT 的 skill 装好。
+   ```
+
+   电脑上要有 Node.js；录视频、导出 PPTX 还要装 Chrome。
+
+2. **做第一份稿子。** 直接跟它说「用 orca-ppt 做一份……」；想照某个效果做，先在
+   [官网](https://ppt.orca-studio.ai) 挑一个同款，再说「照 orca-ppt 的 forest-timeline 同款做一份……」。
+3. **放映。** 成品是一个 HTML 文件，用浏览器打开，方向键翻页。
+
+### 安装、接入遇到问题？进交流群
+
+<a href="site/src/contact/wecom-group-qrcode.jpg"><img src="site/src/contact/wecom-group-qrcode.jpg" width="160" height="160" alt="企业微信群二维码"></a>
+
+微信或企业微信扫码加入。也可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
+
+## 它能做什么
 
 ![Orca PPT](./docs/brand/social-card-1200x630.png)
 
@@ -11,8 +65,6 @@ Orca PPT 是一个桌面应用，让你用自己的 AI 助手做出**会动的�
 而不是一页一页地硬切。
 
 你不用学排版，也不用调动画。告诉 AI 你要讲什么，它来做；哪里不满意，在画面上指给它看。
-
-## 你可以用它做什么
 
 ### 看到喜欢的效果，就「做同款」
 
@@ -23,7 +75,7 @@ Orca PPT 是一个桌面应用，让你用自己的 AI 助手做出**会动的�
 
 点卡片本身，可以打开样稿一页页翻着看：每两页之间是怎么衔接的，旁边都写着。
 
-> 现在有 20 个同款：竞选自我介绍、发布会开场、团队介绍、年度回顾与规划、新品发布、季度数据报告……
+> 现在有二十多个同款：竞选自我介绍、发布会开场、团队介绍、年度回顾与规划、新品发布、季度数据报告……
 > 每个都能在 [ppt.orca-studio.ai](https://ppt.orca-studio.ai) 上直接看它动起来。
 
 ### 自己给主题，从头做一份
@@ -44,37 +96,15 @@ AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右�
 成品是你电脑上的一个普通文件夹，用浏览器打开就能放映，方向键翻页。
 在 Orca PPT 里也可以全屏放映。
 
-## 怎么开始
-
-1. **准备一个 AI 助手。** Orca PPT 自己不带 AI，而是连接你已经在用的，支持 MCP 的都可以。
-   还没有 AI 助手？可以试试 [Jevbot](https://jevbot.dev)。
-2. **装上 Orca PPT。** 从 [ppt.orca-studio.ai](https://ppt.orca-studio.ai) 下载 Mac 版
-   （macOS 12 以上，Apple Silicon），拖进「应用程序」打开。之后有新版本会自动更新。
-3. **把 AI 助手连上 Orca PPT。** 应用开着的时候，把这个 MCP 地址加到你的 AI 助手里，只做一次：
-
-   ```
-   http://127.0.0.1:6722/mcp
-   ```
-
-   用命令行的助手一般一行就加好，比如：
-
-   ```bash
-   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp   # Claude Code
-   codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp               # Codex
-   ```
-
-   其他助手在各自的 MCP 设置里添加这个地址，名字填 `orca-ppt`。
-
-4. **挑一个同款，点「做同款」**，把复制的那段话贴给 AI 助手，补上你的内容。
-
 ## 常见问题
 
 **需要会写代码吗？**
-不需要。你只要会跟 AI 助手说话。连接 AI 助手时要把一个地址加到它的设置里（命令行的助手是粘贴运行一行命令），只做一次。
+不需要。你只要会跟 AI 助手说话。连接 AI 助手也是发一句话给它，让它自己配置，只做一次。
 
 **能导出成 PowerPoint 吗？**
-还不能，正在做。成品本身是网页形式的演示稿，动效最完整。导出 PPTX 后，共享元素、形态变换这类连贯动效
-靠 PowerPoint 的「平滑」保留；有些转场会退成淡入淡出，导出时会告诉你是哪几页。
+能。在 Orca PPT 的「文件」菜单里选「导出 PPTX…」，也可以让 AI 助手帮你导出。成品本身是网页形式的演示稿，
+动效最完整。导出 PPTX 后，共享元素、形态变换这类连贯动效靠 PowerPoint 的「平滑」保留；有些转场会退成
+淡入淡出，导出时会告诉你是哪几页。
 
 **要付费吗？**
 Orca PPT 是开源的，MIT 许可，免费使用。
@@ -92,25 +122,9 @@ Orca PPT 是开源的，MIT 许可，免费使用。
 
 ## 联系我们
 
-<table>
-  <tr>
-    <td align="center" valign="top" width="33%">
-      <a href="https://x.com/jevbot_dev"><img src="docs/contact/x-logo.png" width="140" height="140" alt="X"></a>
-      <p><a href="https://x.com/jevbot_dev"><strong>@jevbot_dev ↗</strong></a></p>
-      <p><sub>产品动态</sub></p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <a href="docs/contact/wechat-qrcode.png"><img src="docs/contact/wechat-qrcode.png" width="140" height="140" alt="微信二维码"></a>
-      <p><strong>加微信</strong></p>
-      <p><sub>扫码添加 · 点开放大</sub></p>
-    </td>
-    <td align="center" valign="top" width="33%">
-      <a href="docs/contact/wechat-group-qrcode.png"><img src="docs/contact/wechat-group-qrcode.png" width="140" height="140" alt="微信群二维码"></a>
-      <p><strong>加入交流群</strong></p>
-      <p><sub>微信或企业微信扫码<br>2026 年 10 月 15 日前有效</sub></p>
-    </td>
-  </tr>
-</table>
+<a href="site/src/contact/wecom-group-qrcode.jpg"><img src="site/src/contact/wecom-group-qrcode.jpg" width="160" height="160" alt="企业微信群二维码"></a>
+
+微信或企业微信扫码，加入交流群。
 
 使用中遇到问题，也可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
 

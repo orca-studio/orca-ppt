@@ -1,0 +1,107 @@
+# Orca PPT
+
+> Orca PPT 是一个本地桌面应用（macOS），用户在里面看、改、放映会动的演示稿。它不带 AI，
+> 而是通过 MCP 把工作台的全部操作交给用户自己的 AI 助手。这份文件写给 AI 助手：
+> 怎么替用户装好 Orca PPT、把你自己连上它。连上之后怎么做稿，以 MCP 连接时返回的 instructions 为准，这里不重复。
+
+## 你要做的事
+
+用户说「只装 skill」或不想装应用时，跳到下面「不装应用，只装 skill」。否则：
+
+1. **装好 Orca PPT 并打开。** 已经装了（`/Applications/Orca PPT.app` 存在）就跳过安装，见下面「安装 Orca PPT」。
+   应用开着时，MCP 在 `http://127.0.0.1:6722/mcp`（Streamable HTTP，本机，无鉴权）。
+   检查办法：向这个地址 GET，返回 HTTP 406 就说明应用在跑（它只接受 MCP 的 POST）；连不上就是没开。
+2. **把你自己连上。** 判断你自己是哪个 AI 助手，按下面对应的一节把 MCP 加上。服务器名一律用 `orca-ppt`。
+3. **请用户重启你**（大多数助手只在启动时连接 MCP，你通常没法自己重启）。
+   告诉用户：以后每次使用，都要先开 Orca PPT，再开 AI 助手。
+4. **验证。** 重启后调用 `deck_status`。返回 `NO_DECK_OPEN`（还没打开稿子）或当前稿子的页数，都说明连上了。
+   如果找不到这个工具，按对应一节检查。
+5. **告诉用户可以开始了**：在 Orca PPT 首页挑一个同款点「做同款」，把复制的那段话发给你；
+   或者直接跟你说要做什么稿子。
+
+## 安装 Orca PPT
+
+要求 macOS 12 以上、Apple Silicon（`uname -m` 是 `arm64`）；不满足就如实告诉用户，改走「只装 skill」。
+
+安装包约 200 MB，下载要几分钟。命令有超时限制的话，用后台下载或调长超时；下载被打断时用
+`curl -C -` 续传，不要从头再下。
+
+```bash
+curl -fL -C - -o /tmp/OrcaPPT.dmg https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg
+hdiutil attach -nobrowse -readonly -mountpoint /tmp/orca-ppt-dmg /tmp/OrcaPPT.dmg
+codesign -dv "/tmp/orca-ppt-dmg/Orca PPT.app" 2>&1 | grep TeamIdentifier   # 应为 R2MFZSZP4R
+spctl -a -vv "/tmp/orca-ppt-dmg/Orca PPT.app"                             # 应为 accepted / Notarized Developer ID
+cp -R "/tmp/orca-ppt-dmg/Orca PPT.app" /Applications/
+hdiutil detach /tmp/orca-ppt-dmg
+open -a "Orca PPT"
+```
+
+- `TeamIdentifier` 不是 `R2MFZSZP4R`，或 `spctl` 不是 accepted，就停下：不要拷进「应用程序」，卸载 DMG 并告诉用户。
+- 新版 macOS 上 `hdiutil attach` 会提示已废弃，可以忽略，命令照常生效。
+- 写不进 `/Applications` 或命令被你的权限拦下时，把下载链接给用户，请用户双击 DMG、把应用拖进「应用程序」。
+- 之后 Orca PPT 会自己更新，不用你管。
+
+## 不要替用户做的事
+
+- 助手要求用户「批准 / 信任」某个 MCP 的，让用户自己在界面里点，不要去改批准记录文件。
+- 改配置文件前先读一遍原文件，只追加 `orca-ppt` 这一条，不要动别的条目；改之前留一份备份。
+
+## WorkBuddy
+
+用户级 MCP 写在 `~/.workbuddy/mcp.json`（设了 `WORKBUDDY_CONFIG_DIR` 时在那个目录下）。
+文件不存在就新建；已存在就往 `mcpServers` 里加一项：
+
+```json
+{
+  "mcpServers": {
+    "orca-ppt": {
+      "type": "streamableHttp",
+      "url": "http://127.0.0.1:6722/mcp",
+      "timeout": 300000
+    }
+  }
+}
+```
+
+写完之后，按这个顺序请用户操作（顺序不能换）：
+
+1. **先重启 WorkBuddy。** 不重启的话，「我的 MCP」里看不到 `orca-ppt`，也就没法信任。
+2. **信任。** 在侧边栏把鼠标移到「专家 · 技能 · 连接器」上，在弹出的菜单里点「连接器」，再点「自定义连接器」，
+   打开「MCP 服务管理」；在「我的 MCP」里找到 `orca-ppt`，它下面有一行「首次连接此 MCP 服务需要您的信任确认」，
+   点右边的「信任」。信任后马上连上，不用再重启。
+3. **新建一个任务**，在新任务里就能用 orca-ppt 的工具了（旧任务里看不到）。
+
+## Codex
+
+```bash
+codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp
+```
+
+## Claude Code
+
+```bash
+claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
+```
+
+## 其他 AI 助手
+
+在它的 MCP 设置里加一个服务器：名字 `orca-ppt`，连接方式选 HTTP / Streamable HTTP，
+地址 `http://127.0.0.1:6722/mcp`。如果它只支持 stdio（本地命令）方式的 MCP，现在还接不上，如实告诉用户。
+
+## 不装应用，只装 skill
+
+用户说「只装 skill」，或者不想装 Orca PPT 应用时，走这条路。成品是一个 HTML 文件，浏览器打开就能放映；
+没有工作台（不能在画面上点选元素），也没有同款首页。
+
+1. 需要 Node.js；录视频、导出 PPTX 还要系统里装了 Chrome（脚本用系统 Chrome，不下载浏览器）。
+2. 取得 `skills/orca-ppt/` 这个目录：`git clone https://github.com/orca-studio/orca-ppt`，
+   或下载仓库压缩包解开。
+3. 把这个目录放进（或软链接进）你自己读取 skill 的目录，目录名用 `orca-ppt`。
+   Claude Code 是 `~/.claude/skills/orca-ppt`。
+4. 在这个目录里运行 `npm ci`（装 reveal.js、GSAP、playwright-core）。
+5. 之后按 `SKILL.md` 做稿。用户提到同款名字（比如「照 forest-timeline 做」）时读 `recipes/README.md`。
+
+## 更多
+
+- [README](https://github.com/orca-studio/orca-ppt/blob/main/README.md)：给人看的介绍和上手步骤
+- [开发者文档](https://github.com/orca-studio/orca-ppt/blob/main/docs/DEVELOPMENT.md)：架构、MCP 工具、从源码运行
