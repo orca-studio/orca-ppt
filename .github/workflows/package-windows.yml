@@ -1,6 +1,6 @@
 # 试打 Windows 安装包:任意分支或提交,出一份未签名的 Setup.exe,在这台 Windows 机器上
-# 静默安装、启动、确认 MCP 起来、截屏、卸载(tools/smoke-win.ps1)。安装包和截图放进这次
-# 运行的 artifact,不发 Release、不碰签名凭据。
+# 静默安装、启动、确认 MCP 起来、截屏、卸载(tools/smoke-win.ps1)。artifact 里只有截图,
+# 不发 Release、不碰签名凭据。
 # 正式发版走 release-build.yml 里的 windows 那一步,见 docs/RELEASE.md。
 name: Package Windows (test)
 
@@ -47,18 +47,12 @@ jobs:
       - name: Install, launch, uninstall
         shell: pwsh
         run: tools/smoke-win.ps1 dist/release
-      # 截图和日志单独一份(几百 KB),看结果不用连安装包一起下。失败了也传
+      # 只传截图:安装包没签名,不该从这里流出去;正式的安装包从 Release 下载。
+      # 失败时也传(failure.png / shortcut-failure.png),日志在这一步的输出里
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: orca-ppt-windows-smoke-${{ github.run_id }}
-          path: dist/smoke
+          name: orca-ppt-windows-screenshots-${{ github.run_id }}
+          path: dist/smoke/*.png
           if-no-files-found: warn
-          retention-days: 7
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
-        with:
-          name: orca-ppt-windows-${{ github.run_id }}
-          path: dist/release
-          if-no-files-found: error
           retention-days: 7

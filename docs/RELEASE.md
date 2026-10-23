@@ -64,8 +64,8 @@ macOS 的 job 一个字没改,Windows 的改动在 `tools/package.mjs` 里都挂
 `/v /fd SHA256 /tr http://timestamp.acs.microsoft.com /td SHA256 /dlib <Azure.CodeSigning.Dlib.dll> /dmdf <metadata.json>`,
 dlib 和 metadata 要在 job 里先准备好。签上之后,官网 FAQ 里那句 SmartScreen 的说明可以删掉。
 
-**试打**:Actions → **Package Windows (test)**,填分支或提交;这个工作流进 `main` 之前,推到 `windows/`
-开头的分支上也会自动跑。它做同样的打包和冒烟测试,安装包和截图放进 artifact,不发 Release。
+**试打**:Actions → **Package Windows (test)**,填分支或提交;推到 `windows/` 开头的分支上也会自动跑。
+它做同样的打包和冒烟测试,artifact 里只有截图(失败时的日志在冒烟测试那一步的输出里),不发 Release。
 
 ## 一次性配置
 
