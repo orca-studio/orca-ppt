@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { realpath } from 'node:fs/promises'
 import { deckRevision } from './decks.js'
 import { planPreview } from './preview.js'
-import { PreviewHost, parseRange } from './preview-host.js'
+import { PreviewHost, parseRange, assetFilePath } from './preview-host.js'
 
 /**
  * `/asset` 是个文件服务,越界必须拒绝 —— 它服务的是用户机器上的绝对路径。
@@ -127,5 +127,16 @@ describe('parseRange', () => {
     expect(parseRange('bytes=1000-', 1000)).toBe('unsatisfiable')
     expect(parseRange('bytes=0-1,5-9', 1000)).toBeUndefined()
     expect(parseRange(undefined, 1000)).toBeUndefined()
+  })
+})
+
+describe('assetFilePath', () => {
+  it('Windows 上去掉盘符前面那个 /', () => {
+    expect(assetFilePath('/C:/Users/me/a b.png', 'win32')).toBe('C:/Users/me/a b.png')
+  })
+  it('macOS 和 Windows 上的非盘符路径原样', () => {
+    expect(assetFilePath('/Users/me/a.png', 'darwin')).toBe('/Users/me/a.png')
+    expect(assetFilePath('/C:/x.png', 'darwin')).toBe('/C:/x.png')
+    expect(assetFilePath('/x.png', 'win32')).toBe('/x.png')
   })
 })

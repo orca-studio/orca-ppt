@@ -47,13 +47,18 @@ jobs:
       - name: Install, launch, uninstall
         shell: pwsh
         run: tools/smoke-win.ps1 dist/release
+      # 截图和日志单独一份(几百 KB),看结果不用连安装包一起下。失败了也传
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        # 冒烟测试失败也传上去:截图和安装包都是排查的材料
+        if: always()
+        with:
+          name: orca-ppt-windows-smoke-${{ github.run_id }}
+          path: dist/smoke
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: orca-ppt-windows-${{ github.run_id }}
-          path: |
-            dist/release
-            dist/smoke
+          path: dist/release
           if-no-files-found: error
           retention-days: 7

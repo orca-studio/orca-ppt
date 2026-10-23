@@ -16,7 +16,10 @@ export function useAssetOrigin(serverUrl: string): void {
 
 export function assetUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined
+  // Windows 的 `C:\a\b.png` 写成 `/C:/a/b.png`,server 那头再去掉开头的 `/`(preview-host.ts)
+  // 只认盘符开头的:macOS 的文件名里可以有 `\`
+  const slashed = /^[A-Za-z]:[\\/]/.test(path) ? '/' + path.replace(/\\/g, '/') : path
   // 路径里可能有空格、中文、# —— 逐段编码,分隔符留着。
-  const encoded = path.split('/').map(encodeURIComponent).join('/')
+  const encoded = slashed.split('/').map(encodeURIComponent).join('/')
   return `${origin}/asset${encoded}`
 }
