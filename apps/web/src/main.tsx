@@ -34,14 +34,6 @@ declare global {
       /** 关掉放映窗口。 */
       stopPresent?: () => Promise<boolean>
       /** 离屏渲每一页的缩略图。不碰可见画布。 */
-      /** 录一段同款样片(按内容寻址的缓存,写到哪由 server 定)。 */
-      renderPreview?: (input: {
-        previewUrl: string
-        outPath: string
-        posterPath: string
-        coverAt?: number
-        range?: { from: number; to: number }
-      }) => Promise<boolean>
       /** 导出 PPTX(写到 server 给的临时文件),返回导出器的报告。 */
       exportPptx?: (input: { previewUrl: string; outPath: string }) => Promise<unknown>
       /** 壳弹保存对话框,只把路径交回来。 */

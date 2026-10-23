@@ -60,14 +60,7 @@ import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
 import { instantiate, instantiateSample, listTemplates } from './templates.js'
 import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
-import {
-  ensureDir,
-  exists,
-  previewDir,
-  previewFiles,
-  pruneOthers,
-  stalePreview,
-} from './recipe-preview.js'
+import { dropOldPreviews } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 
 /**
@@ -240,19 +233,7 @@ export async function startServer(
     Array<string | null>,
     { previewUrl: string; slideCount: number; slides?: number[]; width?: number; outDir?: string }
   >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
-  // 录一段样片要逐帧 seek 二三十秒的稿子,给足时间
-  const previewRenders = new Roundtrip<
-    true,
-    {
-      previewUrl: string
-      outPath: string
-      posterPath: string
-      coverAt?: number
-      range?: { from: number; to: number }
-    }
-  >((payload) => bus.broadcast('preview.request', payload), 240_000)
-
-  // 导出 PPTX 要逐页渲染、截图,和录样片差不多慢
+  // 导出 PPTX 要逐页渲染、截图,给足时间
   const pptxExports = new Roundtrip<
     NonNullable<RequestParams<'pptx.result'>['report']>,
     { previewUrl: string; outPath: string }
@@ -359,7 +340,6 @@ export async function startServer(
         captures.failAll(AgentError.uiDisconnected())
         canvases.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
-        previewRenders.failAll(AgentError.uiDisconnected())
         pptxExports.failAll(AgentError.uiDisconnected())
       }
     })
@@ -382,68 +362,8 @@ export async function startServer(
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
-  // 样片缓存也要能被首页卡片取到
-  await ensureDir(previewDir())
-  await previews.allow(previewDir())
-
-  /**
-   * 样片缓存的后台队列。一次只录一个(壳里一个隐藏窗口),同一份内容只排一次。
-   * 录失败了隔一会儿再试(录制器偶尔赶上窗口刚起来、稿子正在改),最多试几次;
-   * 不立刻重试 —— 不然首页每拉一次列表就重录一遍。
-   */
-  const PREVIEW_ATTEMPTS = 3
-  const PREVIEW_RETRY_MS = 20_000
-  const queuedPreviews = new Set<string>()
-  const failedPreviews = new Map<string, number>()
-  const previewGaveUp = (id: string, key: string) =>
-    (failedPreviews.get(`${id}:${key}`) ?? 0) >= PREVIEW_ATTEMPTS
-  let previewTail: Promise<void> = Promise.resolve()
-  /** 录制参数进缓存键:改了 frontmatter 的 preview / cover 就重录。 */
-  const previewOptions = (found: RecipeSource) =>
-    JSON.stringify({ coverAt: found.coverAt, range: found.range })
-
-  function queuePreview(id: string, key: string) {
-    const tag = `${id}:${key}`
-    if (queuedPreviews.has(tag) || previewGaveUp(id, key)) return
-    // 没有窗口就没有录制器;等界面连上、下次拉列表时再排
-    if (bus.connectionCount === 0) return
-    queuedPreviews.add(tag)
-    previewTail = previewTail.then(async () => {
-      try {
-        const found = await recipeEntry(catalog.skillPath, id)
-        if (!found) return
-        const files = await previewFiles(id, found.dir, found.entry, previewOptions(found))
-        if (files.key !== key || (await exists(files.video))) return
-        await ensureDir(dirname(files.video))
-        const mount = previews.mount(planPreview(found.dir, found.entry))
-        // 不 unmount:同一个入口共用一个挂载点,人可能正开着这份样稿
-        await previewRenders.request(`recipe:${id}`, {
-          previewUrl: `http://127.0.0.1:${port}${mount.urlPath}`,
-          outPath: files.video,
-          posterPath: files.poster,
-          ...(found.coverAt !== undefined ? { coverAt: found.coverAt } : {}),
-          ...(found.range ? { range: found.range } : {}),
-        })
-        if (!(await exists(files.video))) throw new Error('壳说录好了,但样片文件不在')
-        await pruneOthers(files)
-        bus.broadcast('recipes.changed', {})
-      } catch (error) {
-        const attempts = (failedPreviews.get(tag) ?? 0) + 1
-        failedPreviews.set(tag, attempts)
-        console.error(
-          `[orca-ppt] 同款「${id}」的样片没录成(第 ${attempts} 次):`,
-          error instanceof Error ? error.message : error,
-        )
-        // 首页收到 recipes.changed 会重新拉列表:还能再试就借这一下重新排队,试满了卡片显示失败
-        setTimeout(
-          () => bus.broadcast('recipes.changed', {}),
-          attempts < PREVIEW_ATTEMPTS ? PREVIEW_RETRY_MS : 0,
-        ).unref()
-      } finally {
-        queuedPreviews.delete(tag)
-      }
-    })
-  }
+  // 旧版本在首页现录的样片缓存,现在封面跟着同款放在 skill 里了,清掉一次
+  void dropOldPreviews()
 
   /** 稿子目录在不在 skill 里。两边都 realpath 再比 —— 软链路径(/tmp → /private/tmp)这里踩过。 */
   async function insideSkill(path: string): Promise<boolean> {
@@ -778,7 +698,7 @@ export async function startServer(
           throw new Error(
             `${params.id} 是案例:首页只放封面,没有样片和「做同款」,用 present_recipe 打开看`,
           )
-        // 样片和「做同款」只在首页上有:开着稿子就先关掉,和点「首页」一样
+        // 「做同款」只在首页上有:开着稿子就先关掉,和点「首页」一样
         if (params.show !== 'none') {
           for (const deckId of [...openDecks.keys()])
             await dispatchUnlocked('deck.close', { deckId })
@@ -789,47 +709,7 @@ export async function startServer(
       case 'catalog.recipes': {
         parseParams('catalog.recipes', raw)
         // 每次现读:写配方、改样稿时不用重启应用就能在首页看到。
-        const recipes = await listRecipes(catalog.skillPath)
-        return {
-          recipes: await Promise.all(
-            recipes.map(async (recipe) => {
-              const found = await recipeEntry(catalog.skillPath, recipe.id)
-              if (!found) return recipe
-              const files = await previewFiles(
-                recipe.id,
-                found.dir,
-                found.entry,
-                previewOptions(found),
-              )
-              if (await exists(files.video)) {
-                return {
-                  ...recipe,
-                  // 案例首页只放封面:录了也只取封面帧,不给样片
-                  ...(recipe.kind === 'recipe' ? { preview: files.video } : {}),
-                  // 配方自带封面图时用它(listRecipes 已经放在 recipe.poster 里),否则用样片的封面帧
-                  ...(!recipe.poster && (await exists(files.poster))
-                    ? { poster: files.poster }
-                    : {}),
-                }
-              }
-              // 没命中:排进后台录一份。样稿改过的话上一份样片还在(录好新的才删),先放旧的
-              queuePreview(recipe.id, files.key)
-              const stale = await stalePreview(files)
-              if (stale)
-                return {
-                  ...recipe,
-                  ...(recipe.kind === 'recipe'
-                    ? stale
-                    : stale.poster
-                      ? { poster: stale.poster }
-                      : {}),
-                  ...(recipe.poster ? { poster: recipe.poster } : {}),
-                }
-              if (previewGaveUp(recipe.id, files.key)) return { ...recipe, previewFailed: true }
-              return recipe
-            }),
-          ),
-        }
+        return { recipes: await listRecipes(catalog.skillPath) }
       }
       case 'deck.showSlide': {
         const params = parseParams('deck.showSlide', raw)
@@ -1224,14 +1104,6 @@ export async function startServer(
           await dropPartial(outDir)
           throw cause
         }
-      }
-      case 'preview.result': {
-        const params = parseParams('preview.result', raw)
-        previewRenders.settle(
-          params.requestId,
-          params.error ? { error: params.error } : { value: true },
-        )
-        return {}
       }
       case 'thumbnails.result': {
         const params = parseParams('thumbnails.result', raw)

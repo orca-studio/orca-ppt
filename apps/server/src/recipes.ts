@@ -66,8 +66,8 @@ async function card(
   kind: Recipe['kind'],
 ): Promise<Recipe & { order: number }> {
   const order = Number(meta.order)
-  // 自带的封面图(frontmatter 的 poster,相对自己的目录):首页卡片的静态封面用它,不再从样片里取帧。
-  // 文件不在、或者出了 skill 目录就不给 —— 退回样片的封面
+  // 封面图(frontmatter 的 poster,相对自己的目录),跟着同款放在 skill 里。
+  // 文件不在、或者出了 skill 目录就不给 —— 首页卡片显示占位
   const poster = meta.poster ? await withinSkill(skillPath, resolve(home, meta.poster)) : undefined
   return {
     order: Number.isFinite(order) ? order : -Infinity,
@@ -123,17 +123,7 @@ export async function recipeEntry(
   if (!dir) return undefined
   const entry = await existing(join(dir, 'index.html'))
   if (!entry) return undefined
-  // 封面取样片第几秒(cover)。写错了不猜,交给录制器取默认
-  const cover = Number(meta.cover)
-  return {
-    kind: known.kind,
-    dir,
-    entry,
-    title: known.title,
-    coverAt: Number.isFinite(cover) ? cover : undefined,
-    // 案例首页只放封面:只录封面那一页,从里面取一帧(preview 可以改成别的页)
-    range: pageRange(meta.preview) ?? (example ? { from: 0, to: 0 } : undefined),
-  }
+  return { kind: known.kind, dir, entry, title: known.title }
 }
 
 export interface RecipeSource {
@@ -141,19 +131,6 @@ export interface RecipeSource {
   dir: string
   entry: string
   title: string
-  /** 封面取样片第几秒。 */
-  coverAt: number | undefined
-  /** 样片只录这几页(下标,含两头)。案例默认只录第一页。 */
-  range: { from: number; to: number } | undefined
-}
-
-/** 样片录哪几页:`preview: 4-5`(页号从 1 数,含两头)→ 下标。写错了就录整份。 */
-export function pageRange(value: string | undefined): { from: number; to: number } | undefined {
-  const match = value?.match(/^(\d+)\s*-\s*(\d+)$/)
-  if (!match) return undefined
-  const from = Number(match[1]) - 1
-  const to = Number(match[2]) - 1
-  return from >= 0 && to >= from ? { from, to } : undefined
 }
 
 /** 真实路径落在 skill 目录以内才返回(先 realpath 再比,软链绕不出去)。 */

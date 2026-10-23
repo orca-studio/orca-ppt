@@ -196,7 +196,7 @@ describe('deck.editPlan', () => {
 
 describe('recipe.focus', () => {
   it('没有这个同款就报错', async () => {
-    expect((await call('recipe.focus', { id: 'no-such-recipe', show: 'preview' })).ok).toBe(false)
+    expect((await call('recipe.focus', { id: 'no-such-recipe', show: 'prompt' })).ok).toBe(false)
   })
 })
 

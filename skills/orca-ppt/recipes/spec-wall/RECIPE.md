@@ -7,6 +7,7 @@ summary: 实拍视频停在拨号盘上，硬切成同一位置的椭圆，椭�
 sample: ../../examples/spec-wall
 preview: 2-5
 cover: 2
+poster: poster.jpg
 ---
 
 # 产品参数介绍

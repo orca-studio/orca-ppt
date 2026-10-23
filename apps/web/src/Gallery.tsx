@@ -5,13 +5,16 @@ import { assetUrl } from './assets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
 export type Recipe = RequestResult<'catalog.recipes'>['recipes'][number]
-/** agent 在首页指着的同款:播样片还是打开「做同款」。seq 每来一次请求加一。 */
+/** agent 在首页指着的同款:打开还是收起「做同款」。seq 每来一次请求加一。 */
 export type RecipeFocus = PushData<'recipe.focus'> & { seq: number }
 
 /**
- * 没有打开稿子时的首屏:**同款画廊**。看样片,在卡片右上角复制「做同款」的提示词,贴进
- * 自己的 agent —— agent 读 skill 里的配方、照着做,做完在这里打开。
- * 案例(一整份完整的稿子)也排在这里,只放封面、点开看,没有样片和「做同款」。
+ * 没有打开稿子时的首屏:**同款画廊**。看封面,点开样稿看它动起来,在卡片右上角复制
+ * 「做同款」的提示词,贴进自己的 agent —— agent 读 skill 里的配方、照着做,做完在这里打开。
+ * 案例(一整份完整的稿子)也排在这里,点开看,没有「做同款」。
+ *
+ * 封面是同款自带的图(frontmatter 的 `poster`),不在这里现录样片:以前悬停播样片,
+ * 第一次打开要等二十多段样片在后台录完,首页一直是「正在生成」。
  *
  * 界面不从同款建稿:同款是配方,不是起始文件。通用的设计原则和审美(主题、配色、内容
  * 组织、逐页动效)内化在 skill 里,在 agent 侧用,不在这儿做成选择。
@@ -22,10 +25,10 @@ export interface GalleryProps {
   recipes: Recipe[] | undefined
   /** 点卡片:在工作台里打开这个同款的样稿(只读)。 */
   onPresent: (id: string) => void
-  /** agent 指着的同款(preview_recipe / show_recipe_prompt),和人悬停、点按钮效果一样。 */
+  /** agent 指着的同款(show_recipe_prompt),和人点「做同款」效果一样。 */
   focus?: RecipeFocus | undefined
   /**
-   * agent 正指着的那张卡(id):摆成和鼠标悬停一样 —— 样片在播、「做同款」露出来。
+   * agent 正指着的那张卡(id):摆成和鼠标悬停一样 —— 「做同款」露出来。
    * 不然 Jevbot 的光标和高亮框指着一块空地,看的人不知道点的是什么。
    */
   pointed?: string | undefined
@@ -70,15 +73,7 @@ export function Gallery({ recipes, onPresent, focus, pointed, onUnpoint, error }
   )
 }
 
-/**
- * 样片悬停才播:一屏好几段视频同时放,既吵又费电。触屏没有悬停(点一下会误触发),
- * 用户开了减少动效也不自动播 —— 封面已经说明了这个同款长什么样。
- */
-const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
-const canPreview = () =>
-  matchMedia('(hover: hover) and (pointer: fine)').matches && !reducedMotion()
-
-/** 一张同款卡。案例也用它:少了样片和「做同款」。 */
+/** 一张同款卡。案例也用它:少了「做同款」。 */
 function RecipeCard({
   recipe,
   onPresent,
@@ -94,8 +89,6 @@ function RecipeCard({
   onUnpoint: () => void
 }) {
   const card = useRef<HTMLElement>(null)
-  const video = useRef<HTMLVideoElement>(null)
-  const [hover, setHover] = useState(false)
   const [open, setOpen] = useState(false)
 
   // agent 指过来:每来一次请求(seq)照做一次,人中途按 Esc 收起后再请求也能再打开
@@ -106,24 +99,7 @@ function RecipeCard({
       card.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [focus?.seq, focus?.show])
 
-  const playing = (hover && canPreview()) || (pointed && !reducedMotion())
   const example = recipe.kind === 'example'
-
-  useEffect(() => {
-    const el = video.current
-    if (!el) return
-    if (playing) {
-      void el.play().catch(() => {})
-      return
-    }
-    // 移开就回到封面:停在播到一半的那一帧,看着像卡住了。
-    // load() 把元素重置到初始状态,poster 重新露出来,下次悬停从头播。
-    if (!el.paused || el.currentTime > 0) {
-      el.pause()
-      el.load()
-    }
-    // 样片换了(缓存刚录好)也要重新判断:鼠标正停在卡片上时,新换上来的元素该接着播
-  }, [playing, recipe.preview])
 
   return (
     <article
@@ -132,47 +108,25 @@ function RecipeCard({
       data-recipe={recipe.id}
       data-pointed={pointed || undefined}
       className="gallery-recipe"
-      onMouseEnter={() => setHover(true)}
       onMouseLeave={() => {
-        setHover(false)
         // 人自己摸过这张卡,agent 指的那一下就算看完了
         if (pointed) onUnpoint()
       }}
     >
       <div className="gallery-media">
-        {/* 样片区整块是打开样稿的按钮;「做同款」压在右上角,和它是兄弟不是子元素(按钮里不能套按钮) */}
+        {/* 封面整块是打开样稿的按钮;「做同款」压在右上角,和它是兄弟不是子元素(按钮里不能套按钮) */}
         <button
           type="button"
           className="gallery-play"
           onClick={onPresent}
-          // 不用 title:原生提示跟着鼠标,正好压在悬停预览上
+          // 不用 title:原生提示跟着鼠标,挡在封面上
           aria-label={`打开「${recipe.title}」的${example ? '案例' : '样稿'}`}
         >
-          {recipe.preview && !example ? (
-            <video
-              // 样片换了(缓存录好了新的一份)就整个换掉元素,不然还播着旧的
-              key={recipe.preview}
-              ref={video}
-              src={assetUrl(recipe.preview)}
-              poster={assetUrl(recipe.poster)}
-              muted
-              loop
-              playsInline
-              preload="metadata"
-            />
-          ) : recipe.poster ? (
+          {recipe.poster ? (
             <img src={assetUrl(recipe.poster)} alt="" />
           ) : (
-            // 样片是按样稿现录的,第一次打开首页要等一会儿
-            <span className="gallery-placeholder">
-              {example
-                ? recipe.previewFailed
-                  ? '封面没生成出来，点开直接看'
-                  : '正在生成封面…'
-                : recipe.previewFailed
-                  ? '样片没生成出来，点开直接看样稿'
-                  : '正在生成样片…'}
-            </span>
+            // frontmatter 没写 poster(或者图不在):同款照样能点开看
+            <span className="gallery-placeholder">没有封面，点开直接看</span>
           )}
         </button>
         {recipe.prompt && (

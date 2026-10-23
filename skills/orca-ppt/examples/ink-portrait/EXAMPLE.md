@@ -6,6 +6,7 @@ order: 24
 summary: 历史人物、诗词讲读：国风水墨从头贯穿 —— 插画一团团墨晕出来，竖签进章节，一生分几段逐根展开
 preview: 1-1
 cover: 6
+poster: poster.jpg
 ---
 
 # 人物生平介绍（案例）

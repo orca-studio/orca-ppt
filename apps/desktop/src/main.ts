@@ -19,7 +19,6 @@ import { paddedRect, type Rect } from './anchor-crop.js'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
-import { recordPreview, type PreviewJob } from './preview-recorder.js'
 import { exportPptx, type PptxJob } from './pptx-exporter.js'
 import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
 
@@ -477,18 +476,7 @@ ipcMain.handle(
 )
 
 /**
- * 同款样片。一次只录一个(两个隐藏窗口逐帧录二三十秒的稿子,并行只会互相拖慢)。
- * 写到哪由 server 定(按内容寻址的缓存),录制器自己再守一道只写缓存目录。
- */
-let previewTail: Promise<unknown> = Promise.resolve()
-ipcMain.handle('deck:preview', (_event, job: PreviewJob) => {
-  const run = previewTail.then(() => recordPreview(job))
-  previewTail = run.catch(() => {})
-  return run.then(() => true)
-})
-
-/**
- * 导出 PPTX。和录样片一样一次只导一份:都是隐藏窗口里逐页 seek,并行只会互相拖慢。
+ * 导出 PPTX。一次只导一份:隐藏窗口里逐页 seek,并行只会互相拖慢。
  * 先写到 server 给的临时文件,挪到用户选的位置是 server 的事。
  */
 let pptxTail: Promise<unknown> = Promise.resolve()

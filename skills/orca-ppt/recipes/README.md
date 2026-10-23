@@ -50,14 +50,14 @@
 
 ## 写一个新同款
 
-一个目录一个同款：`recipes/<id>/`，里面三样东西：
+一个目录一个同款：`recipes/<id>/`，里面这几样东西：
 
 | 文件 | 内容 |
 | --- | --- |
 | `RECIPE.md` | 配方。开头 frontmatter 给机器读（应用的同款列表靠它），正文给 agent 读 |
+| `poster.jpg` | 首页卡片和官网的封面，**必须有**。写好样稿和 frontmatter 后跑 `node scripts/render-poster.mjs recipes/<id>`：按 `preview` / `cover` 截一张 1280×720，并在 frontmatter 补上 `poster: poster.jpg`。封面跟着同款进仓库，应用和官网都不现录样片；样稿改了画面就重跑一次（加 `--force`） |
 | `index.html` | 能跑的样稿，用占位内容把整个配方演一遍，**至少 6 页**（首页点进去要能看完一份完整的稿子，不只是演完手法）。`examples/` 里已经有合适的稿子时不放这个，用 frontmatter 的 `sample` 指过去 |
-| 样片、封面 | 不用自己放。OrcaPPT 按样稿内容自动录一份缓存在应用数据目录，样稿、引擎或 `preview` / `cover` 一改就重录。样片只录 `preview` 指定的几页 —— 首页悬停是让人一眼看到看点，不是把整份稿子放一遍 |
-| `cover.html` + `cover.jpg` | 可选。样片里没有哪一帧能一眼说清这个同款时（主角和结果分在几页里），用样稿的主题、配色和元素拼一页封面：页面里铺一个 1920×1080 的 `.cover-canvas`，`node scripts/render-cover.mjs recipes/<id>/cover.html` 截成 `cover.jpg`，frontmatter 写 `poster: cover.jpg`。封面要能看出标题说的场景，主角、结果都在画面里 |
+| `cover.html` + `cover.jpg` | 可选，代替 `poster.jpg`。样稿里没有哪一帧能一眼说清这个同款时（主角和结果分在几页里），用样稿的主题、配色和元素拼一页封面：页面里铺一个 1920×1080 的 `.cover-canvas`，`node scripts/render-cover.mjs recipes/<id>/cover.html` 截成 `cover.jpg`，frontmatter 写 `poster: cover.jpg`。封面要能看出标题说的场景，主角、结果都在画面里 |
 
 `RECIPE.md` 的 frontmatter：
 
@@ -69,9 +69,9 @@ mode: 汇报稿               # 汇报稿 / 故事稿
 order: 13                  # 上架序号，大的排在首页前面。新同款写现有最大值 + 1，就排第一张
 sample: ../../examples/x   # 样稿用 examples/ 里现成的那份（相对本目录，不能出 skill 目录）。可省略（用本目录的 index.html）
 summary: 一句话，什么场合用  # 不是标签
-preview: 4-5               # 样片只录这几页（页号从 1 数，含两头）：只放这个同款的看点。可省略（录整份）
-cover: 4.9                 # 首页封面取样片第几秒，可省略（默认 75% 处）
-poster: cover.jpg          # 自带封面图（相对本目录），首页卡片和官网的静态封面用它，不从样片取帧。可省略
+preview: 4-5               # 看点在哪几页（页号从 1 数，含两头）：render-poster 从这里截封面。可省略（整份）
+cover: 4.9                 # 封面取看点开头算的第几秒，可省略（默认 75% 处）
+poster: poster.jpg         # 封面图（相对本目录），首页卡片和官网都用它。render-poster 会写上
 ---
 ```
 
@@ -99,7 +99,7 @@ poster: cover.jpg          # 自带封面图（相对本目录），首页卡片
 
 和同款的区别：
 
-- 首页卡片**只放封面，不放样片**，也**没有「做同款」**，点开在工作台里看整份稿子。卡片标题后面标「案例」。
+- 首页卡片**没有「做同款」**，点开在工作台里看整份稿子。卡片标题后面标「案例」。封面一样要有，同样用 `render-poster.mjs` 截。
 - `create_deck` 不能 `from: recipe:<案例 id>`：案例是给 agent 学风格怎么贯穿一整份稿子的，不是起头的样稿。
 - 已经被某个同款的 `sample` 指着的示例不用写 `EXAMPLE.md`，首页已经有它那张同款卡。
 
@@ -114,7 +114,7 @@ order: 24                  # 和同款共用上架序号
 summary: 一句话，什么场合用
 preview: 1-1               # 封面从哪一页取。可省略（第一页）
 cover: 2.5                 # 封面取那一页的第几秒，可省略（默认 75% 处）
-poster: cover.jpg          # 自带封面图，可省略
+poster: poster.jpg         # 封面图，render-poster 会写上
 ---
 ```
 

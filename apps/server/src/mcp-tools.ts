@@ -271,7 +271,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '查看同款',
         description:
-          '列出首页展示的同款配方（参考作品的内容结构 + 动效原则），含每个同款的「做同款」提示词。配方正文用 read_skill 读 recipes/<id>/RECIPE.md。kind 为 example 的是案例：一整份完整的稿子（examples/<id>/index.html），只能打开看，没有提示词，不能做同款，也没有样片。',
+          '列出首页展示的同款配方（参考作品的内容结构 + 动效原则），含每个同款的「做同款」提示词。配方正文用 read_skill 读 recipes/<id>/RECIPE.md。kind 为 example 的是案例：一整份完整的稿子（examples/<id>/index.html），只能打开看，没有提示词，不能做同款。',
         annotations: looking,
       },
       run: async () => json(await call('catalog.recipes', {})),
@@ -292,33 +292,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         // 不同步的话,下一个工具就报 DOCUMENT_CHANGED,而恢复要走一次需要批准的 open_deck。
         active.set(presented.deckId)
         return json(presented)
-      },
-    },
-    {
-      name: 'preview_recipe',
-      activity: (args) => ({
-        kind: 'read',
-        label: args.on === false ? '停掉同款样片' : '播放同款样片',
-        slides: [],
-      }),
-      config: {
-        title: '播放同款样片',
-        annotations: looking,
-        // 光标指那张卡的样片:visual_target 认这个 action,返回卡片的位置
-        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
-        description:
-          '在首页播某个同款卡片上的样片，和鼠标停在卡片上一样。给用户介绍同款、挑同款时用。案例（kind=example）没有样片。开着稿子的话应用会先关掉它回首页。on=false 停下。id 来自 list_recipes。',
-        inputSchema: {
-          id: z.string().describe('list_recipes 返回的同款 id'),
-          on: z.boolean().optional().describe('不给就是播;false 停下').meta({ title: '播放' }),
-        },
-      },
-      run: async (args) => {
-        const on = args.on !== false
-        await call('recipe.focus', { id: String(args.id), show: on ? 'preview' : 'none' })
-        // 开着的稿子被关了(首页才有样片),接下来要操作稿子得重新打开
-        if (on) active.clear()
-        return text(on ? '首页上这张同款卡片在播样片了。' : '样片停了。')
       },
     },
     {

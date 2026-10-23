@@ -10,8 +10,7 @@
   },
   "dependencies": {
     "@orca-ppt/contracts": "workspace:*",
-    "update-electron-app": "^3.3.0",
-    "webm-muxer": "5.1.4"
+    "update-electron-app": "^3.3.0"
   },
   "productName": "Orca PPT"
 }

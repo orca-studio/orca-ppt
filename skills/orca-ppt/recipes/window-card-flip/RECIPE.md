@@ -6,6 +6,7 @@ order: 21
 summary: 酒店、民宿、目的地介绍：同一处风景从清晨到夜晚，一排四扇窗，翻一页亮着的那扇边走边翻面，换成下一个时刻
 preview: 2-5
 cover: 7
+poster: poster.jpg
 ---
 
 # 度假一日行程

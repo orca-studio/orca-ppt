@@ -60,7 +60,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [layout, setLayout] = useState<Layout>(readLayout)
-  /** agent 在首页指着的同款(preview_recipe / show_recipe_prompt)。seq 让同一个请求再发一次也生效。 */
+  /** agent 在首页指着的同款(show_recipe_prompt)。seq 让同一个请求再发一次也生效。 */
   const [recipeFocus, setRecipeFocus] = useState<RecipeFocus>()
   /** agent 正指着的同款卡片:摆成悬停的样子(见 Gallery 的 pointed)。 */
   const [pointedRecipe, setPointedRecipe] = useState<string>()
@@ -232,29 +232,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (data.deckId === deckRef.current?.deck.id) void window.orca?.stopPresent?.()
     })
 
-    // 同款样片也只有壳录得了。录好之后 server 会推 recipes.changed。
-    next.subscribe('preview.request', (data) => {
-      void (async () => {
-        try {
-          if (!window.orca?.renderPreview) throw new Error('这个客户端录不了样片')
-          await window.orca.renderPreview({
-            previewUrl: data.previewUrl,
-            outPath: data.outPath,
-            posterPath: data.posterPath,
-            ...(data.coverAt !== undefined ? { coverAt: data.coverAt } : {}),
-            ...(data.range ? { range: data.range } : {}),
-          })
-          await next.request('preview.result', { requestId: data.requestId })
-        } catch (cause) {
-          await next
-            .request('preview.result', {
-              requestId: data.requestId,
-              error: cause instanceof Error ? cause.message : String(cause),
-            })
-            .catch(() => {})
-        }
-      })()
-    })
     next.subscribe('pptx.request', (data) => {
       void (async () => {
         try {
@@ -278,13 +255,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
         }
       })()
     })
-    next.subscribe('recipes.changed', () => {
-      void next
-        .request('catalog.recipes', {})
-        .then((result) => setRecipes(result.recipes))
-        .catch(() => {})
-    })
-
     // 缩略图也只有壳渲得了(隐藏窗口,不碰可见画布)。
     next.subscribe('thumbnails.request', (data) => {
       void (async () => {
@@ -1221,7 +1191,7 @@ function PaneResizer({
 }
 
 /**
- * 首页同款卡片上的光标目标:preview_recipe 指样片,show_recipe_prompt 指「做同款」按钮。
+ * 首页同款卡片上的光标目标:show_recipe_prompt 指「做同款」按钮。
  * 准备阶段 server 可能刚关掉稿子,首页还没画出来,所以等它一会儿。
  */
 async function homeTarget(
@@ -1235,7 +1205,7 @@ async function homeTarget(
   if (data.phase === 'track' && data.targetId !== targetId) return measuredAt()
   // 先把卡片摆成悬停的样子,「做同款」才画得出来 —— 光标到的时候那儿得有个按钮
   point(id)
-  const selector = `${data.action === 'preview_recipe' ? '.gallery-play' : '.gallery-copy'}`
+  const selector = '.gallery-copy'
   let element: HTMLElement | null = null
   for (let waited = 0; waited <= 1500; waited += 50) {
     element =

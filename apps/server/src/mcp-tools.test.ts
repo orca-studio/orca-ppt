@@ -338,16 +338,13 @@ it('MCP 放映不给页号就从第一页，stop_present 走 deck.stopPresent', 
   expect(calls).toContainEqual(['deck.stopPresent', { deckId: '/d' }])
 })
 
-it('MCP 在首页指着同款:播样片、打开做同款,都走 recipe.focus', async () => {
+it('MCP 在首页打开做同款走 recipe.focus;播样片的工具已经没有了', async () => {
   const { client, calls } = fakeClient()
   const { map } = toolsOf(client)
-  await map.get('preview_recipe')!.run({ id: 'ring-timeline' })
-  await map.get('preview_recipe')!.run({ id: 'ring-timeline', on: false })
+  expect(map.has('preview_recipe')).toBe(false)
   await map.get('show_recipe_prompt')!.run({ id: 'ring-timeline' })
   await map.get('show_recipe_prompt')!.run({ id: 'ring-timeline', open: false })
   expect(calls.filter(([method]) => method === 'recipe.focus').map(([, p]) => p)).toEqual([
-    { id: 'ring-timeline', show: 'preview' },
-    { id: 'ring-timeline', show: 'none' },
     { id: 'ring-timeline', show: 'prompt' },
     { id: 'ring-timeline', show: 'none' },
   ])
@@ -367,7 +364,6 @@ it('首页上的光标定位不要求开着稿子,也不带 deckId', async () =>
   ])
   const meta = (name: string) =>
     (map.get(name)!.config as { _meta?: Record<string, unknown> })._meta?.['dev.jevbot/ui']
-  expect(meta('preview_recipe')).toEqual({ version: 1, visual: true })
   expect(meta('show_recipe_prompt')).toEqual({ version: 1, visual: true })
 })
 

@@ -39,7 +39,7 @@ describe('Transport', () => {
     vi.stubGlobal('WebSocket', FakeSocket)
     const transport = new Transport('ws://x')
     const seen: unknown[] = []
-    transport.subscribe('recipes.changed', (data) => seen.push(data))
+    transport.subscribe('present.stop', (data) => seen.push(data))
     transport.connect()
     transport.close()
     vi.advanceTimersByTime(600)
@@ -47,7 +47,7 @@ describe('Transport', () => {
     expect(transport.state).toBe('closed')
     FakeSocket.all[0]!.dispatchEvent(
       new MessageEvent('message', {
-        data: JSON.stringify({ channel: 'recipes.changed', sequence: 0, data: {} }),
+        data: JSON.stringify({ channel: 'present.stop', sequence: 0, data: { deckId: 'd' } }),
       }),
     )
     expect(seen).toEqual([])

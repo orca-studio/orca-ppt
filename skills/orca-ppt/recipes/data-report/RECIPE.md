@@ -6,6 +6,7 @@ order: 11
 summary: 用户给一份经营表格，读数、做图、标出处；总览里的一格展开成图表，季度柱子拆成月份
 preview: 1-3
 cover: 10.6
+poster: poster.jpg
 ---
 
 # 经营数据汇报

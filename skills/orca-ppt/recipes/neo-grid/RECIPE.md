@@ -6,6 +6,7 @@ order: 5
 summary: 墨黑、纸白、荧光柠檬黄的网格面板拼成封面，翻页时同一组面板重排成数字格，最亮的那格撑满整页成为结论
 preview: 1-3
 cover: 5.1
+poster: poster.jpg
 ---
 
 # 路演关键数据

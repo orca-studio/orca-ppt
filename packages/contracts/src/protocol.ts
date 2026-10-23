@@ -41,13 +41,13 @@ export const PptxExportReport = z.object({
 })
 
 /** 首页上指着一个同款时给人看什么。 */
-export const RecipeFocusShow = z.enum(['preview', 'prompt', 'none'])
+export const RecipeFocusShow = z.enum(['prompt', 'none'])
 
 /**
  * 首页上的动作:指的是同款卡片,不是哪份稿子里的东西。`visual.prepare` 对它们不带 deckId,
  * 推给界面的 `visual.request` 里 deckId 是空串。
  */
-export const HOME_VISUAL_ACTIONS = ['preview_recipe', 'show_recipe_prompt'] as const
+export const HOME_VISUAL_ACTIONS = ['show_recipe_prompt'] as const
 
 export const VisualRequest = z.object({
   action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo', ...HOME_VISUAL_ACTIONS]),
@@ -398,7 +398,7 @@ export const requests = {
         z.object({
           /**
            * recipe:同款,一个能换内容复刻的手法,有「做同款」。
-           * example:案例,一整份完整的稿子,只给人看,首页只放封面,没有样片和「做同款」。
+           * example:案例,一整份完整的稿子,只给人看,没有「做同款」。
            */
           kind: z.enum(['recipe', 'example']),
           id: z.string(),
@@ -407,12 +407,11 @@ export const requests = {
           mode: z.string(),
           /** 一句话:什么场合用。 */
           summary: z.string().optional(),
-          /** 样片缓存(webm)的绝对路径。还没录好就没有,录好后推 recipes.changed。 */
-          preview: z.string().optional(),
-          /** 样片封面的绝对路径。 */
+          /**
+           * 首页卡片封面的绝对路径:frontmatter 的 `poster` 指的那张图,跟着同款放在 skill 里。
+           * 没写或文件不在就没有,卡片显示占位。
+           */
           poster: z.string().optional(),
-          /** 样片重试几次都没录成。没有 preview 也没有这个,就是还在录。 */
-          previewFailed: z.boolean().optional(),
           /** 「做同款」的 agent 提示词,用户复制后贴进自己的 agent。案例没有。 */
           prompt: z.string().optional(),
         }),
@@ -432,8 +431,8 @@ export const requests = {
     result: z.object({ deckId: z.string() }),
   },
   /**
-   * 首页上指着某个同款给人看:播它的样片(和鼠标悬停一样),或者打开它的「做同款」提示词
-   * (和点那个按钮一样)。`none` 收起。开着稿子的话先关掉回首页 —— 这两样只在首页上有。
+   * 首页上指着某个同款给人看:打开它的「做同款」提示词(和点那个按钮一样)。`none` 收起。
+   * 开着稿子的话先关掉回首页 —— 这只在首页上有。
    */
   'recipe.focus': {
     params: z.object({ id: z.string(), show: RecipeFocusShow }),
@@ -781,11 +780,6 @@ export const requests = {
     }),
     result: z.object({}),
   },
-  /** 壳把同款样片录好了(或者录失败了)。只有壳会调。 */
-  'preview.result': {
-    params: z.object({ requestId: z.string(), error: z.string().optional() }),
-    result: z.object({}),
-  },
   /** 壳把截好的图交回来。只有壳会调。 */
   /** 首页上的动作(HOME_VISUAL_ACTIONS)不带 deckId,其余都要带。 */
   'visual.prepare': {
@@ -960,7 +954,7 @@ export const pushes = {
   }),
   /** 关掉放映窗口。 */
   'present.stop': z.object({ deckId: z.string() }),
-  /** 首页上指着某个同款:播样片 / 打开「做同款」提示词 / 收起。见 `recipe.focus` 方法。 */
+  /** 首页上指着某个同款:打开「做同款」提示词 / 收起。见 `recipe.focus` 方法。 */
   'recipe.focus': z.object({ id: z.string(), show: RecipeFocusShow }),
   /**
    * agent 通过 MCP 动了一下。**agent 代替人执行,那它做的事就该和人做的一样看得见** ——
@@ -1002,28 +996,6 @@ export const pushes = {
     /** 写到哪个目录(缩略图缓存里的一格)。不给就由壳自己找个临时目录。 */
     outDir: z.string().optional(),
   }),
-  /**
-   * 请壳录一段同款样片。样片是**按内容寻址的缓存**:`outPath` 里带着样稿和它引用的
-   * 运行时文件的摘要,内容不变就不会再录。壳逐帧 seek 录成 webm,顺手在 `coverAt` 秒
-   * 截一张封面写到 `posterPath`。
-   */
-  'preview.request': z.object({
-    deckId: z.string(),
-    requestId: z.string(),
-    previewUrl: z.string(),
-    outPath: z.string(),
-    posterPath: z.string(),
-    /** 封面取样片第几秒。不给就取 75% 处。 */
-    coverAt: z.number().nonnegative().optional(),
-    /**
-     * 只录这几页(下标,从 0 数,含两头)。样片要的是这个同款的看点,不是整份稿子 ——
-     * 回顾片尾的看点只在最后一页。从 `from` 页的静止画面起,不录进入它的转场。
-     * 不给就录整份。
-     */
-    range: z
-      .object({ from: z.number().int().nonnegative(), to: z.number().int().nonnegative() })
-      .optional(),
-  }),
   /** 请壳把一份稿子导成 PPTX,写到 `outPath`(应用数据目录里的临时文件)。 */
   'pptx.request': z.object({
     deckId: z.string(),
@@ -1031,8 +1003,6 @@ export const pushes = {
     previewUrl: z.string(),
     outPath: z.string(),
   }),
-  /** 同款列表变了(样片录好了)。首页重新拉一次 catalog.recipes。 */
-  'recipes.changed': z.object({}),
   /** 有人要求跳页 —— 可能是 agent。画布跟着走。 */
   'deck.slide': z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),
 } as const

@@ -6,6 +6,7 @@ order: 19
 summary: 城市照片铺满整页，标题从一块色块里挖空、照片从字里透出来；封面收成角标，镜头在照片里推拉横移，一站一站讲
 preview: 1-3
 cover: 5.5
+poster: poster.jpg
 ---
 
 # 城市漫游

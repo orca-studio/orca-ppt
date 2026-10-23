@@ -6,6 +6,7 @@ order: 20
 summary: 竞选、自我介绍：黑屋子里一盏吊灯，基础信息、个人技能、兴趣爱好一章一件物件，灯每页换一种动作去照亮下一件
 preview: 1-3
 cover: 1.6
+poster: poster.jpg
 ---
 
 # 竞选自我介绍

@@ -6,6 +6,7 @@ order: 15
 summary: 团队介绍从一个人讲到一整面照片墙：人数每变一次，同一批人整组换队形，新来的人等大家站好再入场
 preview: 7-10
 cover: 13.5
+poster: poster.jpg
 ---
 
 # 团队介绍

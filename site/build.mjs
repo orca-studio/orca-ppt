@@ -1,6 +1,6 @@
-// 官网 ppt.orca-studio.ai 的构建:产品介绍页 + 同款样稿(能在线翻页)+ 同款样片。
-//   node site/build.mjs            只拷页面和样稿,样片用 site/.cache 里已有的(没有就不放)
-//   node site/build.mjs --media    缺的样片现录(要本机装 Chrome 和 ffmpeg,部署时在 CI 里跑)
+// 官网 ppt.orca-studio.ai 的构建:产品介绍页 + 同款样稿(能在线翻页、点卡片弹窗放映)。
+//   node site/build.mjs            要 ffmpeg(大 PNG 转 JPEG)
+// 卡片封面是同款自带的图(frontmatter 的 poster),不在这里录样片。
 //
 // 规范内容只在 skills/orca-ppt/ 里:同款列表读 recipes/*/RECIPE.md 的 frontmatter,
 // 样稿就是 skill 里那份,这里不复制一份、不手写一份。
@@ -20,15 +20,12 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SKILL = resolve(HERE, '../skills/orca-ppt')
 const OUT = join(HERE, 'dist')
-const CACHE = join(HERE, '.cache')
-const RECORD = process.argv.includes('--media')
 
 const VENDOR = [
   ['node_modules/reveal.js/dist/reset.css', 'reset.css'],
@@ -72,10 +69,13 @@ function readRecipes() {
     const dir = meta.sample ? resolve(root, id, meta.sample) : join(root, id)
     if (relative(SKILL, dir).startsWith('..')) throw new Error(`${id} 的 sample 出了 skill 目录`)
     if (!existsSync(join(dir, 'index.html'))) throw new Error(`${id} 没有样稿 ${dir}/index.html`)
-    const range = /^(\d+)-(\d+)$/.exec(meta.preview ?? '')
-    // 自带的封面图(poster,相对配方目录):卡片封面用它,不从样片里取帧。和 app 首页一样
-    const poster = meta.poster ? resolve(root, id, meta.poster) : null
-    if (poster && (relative(SKILL, poster).startsWith('..') || !existsSync(poster)))
+    // 封面图(poster,相对配方目录),和 app 首页用的是同一张
+    if (!meta.poster)
+      throw new Error(
+        `${id} 没有 poster:node skills/orca-ppt/scripts/render-poster.mjs recipes/${id}`,
+      )
+    const poster = resolve(root, id, meta.poster)
+    if (relative(SKILL, poster).startsWith('..') || !existsSync(poster))
       throw new Error(`${id} 的 poster 不在 skill 里或文件不存在：${meta.poster}`)
     list.push({
       id,
@@ -86,8 +86,6 @@ function readRecipes() {
       dir,
       // 线上地址:examples/ 里的样稿沿用老地址,配方目录里的放 /recipes/<id>/
       path: relative(SKILL, dir).split('/').join('/') + '/',
-      range: range ? { from: +range[1], to: +range[2] } : null,
-      cover: Number.isFinite(+meta.cover) && meta.cover !== undefined ? +meta.cover : null,
       poster,
       pages: (readFileSync(join(dir, 'index.html'), 'utf8').match(/<section[\s>]/g) || []).length,
     })
@@ -99,7 +97,7 @@ function readRecipes() {
 /** 把一份样稿目录拷到线上,改掉 node_modules 路径,大 PNG 转 JPEG,带上它引的 _assets。 */
 function publishDeck(from, rel) {
   const to = join(OUT, rel)
-  // 录好的 mp4 和给 agent 读的 md 不上线
+  // 给 agent 读的 md 不上线(mp4 是以前录的样片,一样不要)
   cpSync(from, to, { recursive: true, filter: (p) => !/\.(mp4|md)$/.test(p) })
   let html = readFileSync(join(to, 'index.html'), 'utf8')
     .replace(/\.\.\/\.\.\/node_modules\/reveal\.js\/dist\//g, '../../vendor/')
@@ -122,140 +120,23 @@ function publishDeck(from, rel) {
   }
 }
 
-/** 样片的缓存键:样稿目录 + 运行时 + 录制参数。和 app 的样片缓存一个思路,内容变了才重录。 */
-function mediaKey(recipe) {
-  const hash = createHash('sha256')
-  for (const base of [recipe.dir, join(SKILL, 'runtime')]) {
-    for (const f of walk(base).sort()) {
-      // 录好的视频和给 agent 读的说明不影响画面,不算进键
-      if (/\.(mp4|md)$/.test(f)) continue
-      hash.update(relative(SKILL, f)).update(readFileSync(f))
-    }
-  }
-  hash.update(JSON.stringify({ range: recipe.range, cover: recipe.cover, v: 1 }))
-  return hash.digest('hex').slice(0, 16)
-}
-
-/**
- * 录一份样片:整份稿子逐帧录,再按 preview 截出那几页。
- * 截法和应用里的录制器一致(apps/desktop/src/preview-recorder.ts):
- * 从中间页起时,起始页只停 0.6 秒,接着是后面几页的转场和停留;cover 是片段内的秒数。
- */
-function recordMedia(recipe, key) {
-  const work = join(tmpdir(), `orca-site-${recipe.id}-${process.pid}`)
-  mkdirSync(work, { recursive: true })
-  const full = join(work, 'full.mp4')
-  const report = join(work, 'report.json')
-  execFileSync(
-    'node',
-    [
-      join(SKILL, 'scripts/capture.mjs'),
-      join(recipe.dir, 'index.html'),
-      '-o',
-      full,
-      '--json',
-      report,
-    ],
-    { stdio: ['ignore', 'ignore', 'inherit'] },
-  )
-  const { fps, frames, slides } = JSON.parse(readFileSync(report, 'utf8'))
-  // 每页在整段里从第几帧开始(转场 + 停留)
-  const starts = []
-  let at = 0
-  for (const s of slides) {
-    starts.push(at)
-    at +=
-      Math.round((s.transitionMs / 1000) * fps) + Math.max(1, Math.round((s.holdMs / 1000) * fps))
-  }
-  let from = 0
-  let to = frames
-  if (recipe.range) {
-    const a = recipe.range.from - 1
-    const b = Math.min(recipe.range.to, slides.length) - 1
-    from = a > 0 ? Math.max(starts[a], (starts[a + 1] ?? frames) - Math.round(0.6 * fps)) : 0
-    to = starts[b + 1] ?? frames
-  }
-  const start = from / fps
-  const length = (to - from) / fps
-  const coverAt = Math.min(recipe.cover ?? length * 0.75, length - 0.05)
-  const video = join(CACHE, `${recipe.id}-${key}.mp4`)
-  const poster = join(CACHE, `${recipe.id}-${key}.jpg`)
-  // H.264 + faststart:Safari 也能放,下载一部分就能开始播
-  execFileSync('ffmpeg', [
-    '-v',
-    'error',
-    '-y',
-    '-ss',
-    String(start),
-    '-t',
-    String(length),
-    '-i',
-    full,
-    '-vf',
-    'scale=1280:-2',
-    '-c:v',
-    'libx264',
-    '-preset',
-    'slow',
-    '-crf',
-    '28',
-    '-pix_fmt',
-    'yuv420p',
-    '-movflags',
-    '+faststart',
-    '-an',
-    video,
-  ])
-  execFileSync('ffmpeg', [
-    '-v',
-    'error',
-    '-y',
-    '-ss',
-    String(start + coverAt),
-    '-i',
-    full,
-    '-frames:v',
-    '1',
-    '-vf',
-    'scale=1280:-2',
-    '-q:v',
-    '4',
-    poster,
-  ])
-  rmSync(work, { recursive: true, force: true })
-}
-
-function media(recipe) {
-  const key = mediaKey(recipe)
-  const video = join(CACHE, `${recipe.id}-${key}.mp4`)
-  if (!existsSync(video) && RECORD) {
-    console.log(`录样片 ${recipe.id}…`)
-    recordMedia(recipe, key)
-  }
-  if (!existsSync(video)) return null
-  // 同一个同款只留最新一份,CI 的缓存不越攒越大
-  for (const name of readdirSync(CACHE)) {
-    if (name.startsWith(`${recipe.id}-`) && !name.startsWith(`${recipe.id}-${key}.`))
-      rmSync(join(CACHE, name))
-  }
+/** 封面拷到 media/<id>.jpg;老示例站的缩略图地址(skill 的 README 引着 examples/<name>/thumb.jpg)也用它顶上。 */
+function poster(recipe) {
   mkdirSync(join(OUT, 'media'), { recursive: true })
-  cpSync(video, join(OUT, 'media', `${recipe.id}.mp4`))
-  const cover = recipe.poster ?? video.replace(/\.mp4$/, '.jpg')
-  cpSync(cover, join(OUT, 'media', `${recipe.id}.jpg`))
-  // 老示例站的缩略图地址(skill 的 README 引着 examples/<name>/thumb.jpg),用封面顶上
-  cpSync(cover, join(OUT, recipe.path, 'thumb.jpg'))
-  return { video: `media/${recipe.id}.mp4?v=${key}`, poster: `media/${recipe.id}.jpg?v=${key}` }
+  cpSync(recipe.poster, join(OUT, 'media', `${recipe.id}.jpg`))
+  cpSync(recipe.poster, join(OUT, recipe.path, 'thumb.jpg'))
+  // 封面换了浏览器要重新取:文件内容的指纹带在地址上
+  const v = createHash('sha256').update(readFileSync(recipe.poster)).digest('hex').slice(0, 8)
+  return `media/${recipe.id}.jpg?v=${v}`
 }
 
-function card(recipe, files) {
-  const thumb = files
-    ? `<video muted loop playsinline preload="none" poster="${files.poster}" data-src="${files.video}"></video>`
-    : `<span class="card-empty">${esc(recipe.title)}</span>`
+/** 点卡片弹出放映窗口(main.js 接管);不跑脚本、或者按着 ⌘ 点,就是新标签页打开样稿。 */
+function card(recipe, cover) {
   return `
         <li class="card">
-          <a class="card-media" href="${recipe.path}" target="_blank" rel="noopener" aria-label="打开「${esc(recipe.title)}」的样稿">
-            ${thumb}
-            <span class="card-open">翻页看样稿 ↗</span>
+          <a class="card-media" href="${recipe.path}" target="_blank" rel="noopener" data-play data-title="${esc(recipe.title)}" aria-label="放映「${esc(recipe.title)}」的样稿">
+            <img src="${cover}" alt="" loading="lazy" />
+            <span class="card-open">放映 ▶</span>
           </a>
           <div class="card-body">
             <h3>${esc(recipe.title)}</h3>
@@ -268,7 +149,6 @@ function card(recipe, files) {
 // ---------------------------------------------------------------------------
 
 rmSync(OUT, { recursive: true, force: true })
-mkdirSync(CACHE, { recursive: true })
 cpSync(join(HERE, 'src'), OUT, { recursive: true })
 
 mkdirSync(join(OUT, 'vendor'), { recursive: true })
@@ -288,11 +168,9 @@ for (const name of readdirSync(join(SKILL, 'examples'))) {
 const recipes = readRecipes()
 for (const r of recipes) if (!r.path.startsWith('examples/')) publishDeck(r.dir, r.path)
 
-const cards = recipes.map((r) => card(r, media(r))).join('')
+const covers = new Map(recipes.map((r) => [r.id, poster(r)]))
+const cards = recipes.map((r) => card(r, covers.get(r.id))).join('')
 const hero = recipes.find((r) => r.id === 'story-circle') ?? recipes[0]
-const heroFiles = existsSync(join(OUT, 'media', `${hero.id}.mp4`))
-  ? { video: `media/${hero.id}.mp4`, poster: `media/${hero.id}.jpg` }
-  : null
 
 const ga = GA_ID
   ? `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
@@ -304,18 +182,10 @@ let html = readFileSync(join(OUT, 'index.html'), 'utf8')
   .replace('<!--RECIPE_COUNT-->', String(recipes.length))
   .replace(
     '<!--HERO-->',
-    heroFiles
-      ? `<video autoplay muted loop playsinline poster="${heroFiles.poster}" src="${heroFiles.video}"></video>`
-      : '',
+    `<a class="hero-play" href="${hero.path}" target="_blank" rel="noopener" data-play data-title="${esc(hero.title)}" aria-label="放映「${esc(hero.title)}」的样稿"><img src="${covers.get(hero.id)}" alt="" /><span class="hero-play-btn">放映这一份 ▶</span></a>`,
   )
   .replace('<!--HERO_TITLE-->', esc(hero.title))
   .replace('<!--HERO_PATH-->', hero.path)
 writeFileSync(join(OUT, 'index.html'), html)
 
-const missing = recipes
-  .filter((r) => !existsSync(join(OUT, 'media', `${r.id}.mp4`)))
-  .map((r) => r.id)
-console.log(
-  `官网 → ${relative(process.cwd(), OUT)}:${recipes.length} 个同款` +
-    (missing.length ? `,没有样片:${missing.join(' ')}(加 --media 现录)` : ''),
-)
+console.log(`官网 → ${relative(process.cwd(), OUT)}:${recipes.length} 个同款`)

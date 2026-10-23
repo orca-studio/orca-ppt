@@ -131,7 +131,7 @@
             <p class="eyebrow">做同款</p>
             <h2 id="recipes-title">看到喜欢的效果，<br />就做一份同款。</h2>
             <p>
-              鼠标停在卡片上看它动起来，点开可以一页页翻。在 Orca PPT
+              点卡片放映样稿，方向键一页页翻，看每次翻页怎么衔接。在 Orca PPT
               首页点「做同款」，把那段话交给你的 AI
               助手，再补上你自己的内容，它就照着这个效果做出你的版本。
             </p>
@@ -365,6 +365,17 @@
         <span class="footer-note">MIT 许可 · Orca Studio</span>
       </div>
     </footer>
+
+    <!-- 点同款卡片弹出的放映窗口。样稿和官网同源,直接放进 iframe -->
+    <dialog class="player" aria-label="放映样稿">
+      <div class="player-bar">
+        <span class="player-title"></span>
+        <span class="player-hint">← → 翻页</span>
+        <a class="player-new" target="_blank" rel="noopener">新窗口打开 ↗</a>
+        <button type="button" class="player-close" aria-label="关闭">×</button>
+      </div>
+      <div class="player-stage"><iframe title="样稿" allow="fullscreen"></iframe></div>
+    </dialog>
 
     <script src="main.js" defer></script>
   </body>

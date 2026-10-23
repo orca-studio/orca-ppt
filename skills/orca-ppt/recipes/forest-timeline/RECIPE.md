@@ -7,6 +7,7 @@ summary: 封面标题下那条粉色细线长成时间轴，再长成条形图�
 sample: ../../examples/forest-timeline
 preview: 2-4
 cover: 2.5
+poster: poster.jpg
 ---
 
 # 年度回顾与规划

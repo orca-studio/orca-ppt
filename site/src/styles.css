@@ -252,10 +252,36 @@ code {
   aspect-ratio: 16 / 9;
   background: #000;
 }
-.window-stage video {
+.hero-play {
+  position: relative;
+  display: block;
+  height: 100%;
+}
+.hero-play img,
+.card-media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.hero-play-btn {
+  position: absolute;
+  right: 24px;
+  bottom: 24px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: rgba(21, 25, 24, 0.8);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  transition: scale 160ms var(--ease-out);
+}
+.hero-play:active .hero-play-btn {
+  scale: 0.97;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero-play:hover .hero-play-btn {
+    background: var(--ink);
+  }
 }
 .hero-shot figcaption {
   margin-top: 16px;
@@ -346,18 +372,6 @@ code {
   transition:
     box-shadow 200ms ease,
     transform 200ms var(--ease-out);
-}
-.card-media video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.card-empty {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  color: var(--dim);
-  font-size: 14px;
 }
 .card-open {
   position: absolute;
@@ -708,5 +722,83 @@ code {
 @media (max-width: 640px) {
   .contact-options {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 放映窗口 ---------- */
+.player {
+  width: min(1280px, 94vw, (88vh - 44px) * 16 / 9);
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: #000;
+  overflow: hidden;
+  box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.6);
+}
+.player::backdrop {
+  background: rgba(10, 12, 11, 0.72);
+}
+.player[open] {
+  animation: player-in 220ms var(--ease-out);
+}
+@keyframes player-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+  padding: 0 8px 0 16px;
+  background: #1b1f1e;
+  color: #c9d0cd;
+  font-size: 14px;
+}
+.player-title {
+  margin-right: auto;
+  color: #fff;
+  font-weight: 600;
+}
+.player-hint {
+  color: #8a938f;
+}
+.player-new {
+  color: #c9d0cd;
+}
+.player-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #c9d0cd;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.player-close:hover {
+  background: #2c3230;
+}
+.player-stage {
+  aspect-ratio: 16 / 9;
+}
+.player-stage iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+@media (max-width: 640px) {
+  .player-hint {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player[open] {
+    animation: none;
   }
 }

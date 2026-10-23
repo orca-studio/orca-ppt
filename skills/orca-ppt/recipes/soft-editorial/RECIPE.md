@@ -7,6 +7,7 @@ summary: 粉、黄绿、桃三张洞察卡换位，黄绿那张撑大成放主�
 sample: ../../examples/soft-editorial
 preview: 2-4
 cover: 3.5
+poster: poster.jpg
 ---
 
 # 用户调研洞察

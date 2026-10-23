@@ -7,6 +7,7 @@ summary: 腮红粉底上刊名缩成页眉、八张酒红奶油黄卡片弹出�
 sample: ../../examples/editorial-tri-tone
 preview: 1-3
 cover: 6
+poster: poster.jpg
 ---
 
 # 价值观宣讲

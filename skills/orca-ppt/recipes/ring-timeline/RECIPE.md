@@ -6,6 +6,7 @@ order: 12
 summary: 年份排在半个圆环上，一块高亮扇形绕圆心转，翻一页走一格；说明文字跟着往上换
 preview: 1-4
 cover: 8.5
+poster: poster.jpg
 ---
 
 # 发展历程

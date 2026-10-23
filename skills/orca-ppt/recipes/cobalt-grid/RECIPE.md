@@ -6,6 +6,7 @@ order: 3
 summary: 米色纸面加一种钴蓝，封面右下角的扫描线阶梯直接长成数据页的柱状图
 preview: 1-3
 cover: 4.6
+poster: poster.jpg
 ---
 
 # 季度数据报告

@@ -126,7 +126,7 @@ orca-ppt/
 
 2. **skill 仓的 `site/` 展示页**:跟着搬进来、还是不要了?它和产品首页(同款画廊)的作用
    越来越重叠。
-3. ~~同款样片进不进仓~~ **已定:不进仓,改成按内容寻址的缓存**(`apps/server/src/recipe-preview.ts`、`apps/desktop/src/preview-recorder.ts`)。迁移时 `skill/recipes/` 不需要带样片;打包时预先录一份放进安装包还没做。
+3. ~~同款样片进不进仓~~ **已定:不录样片**。0.1.12 以前首页悬停播样片,应用第一次打开时现录一份缓存;之后改成同款自带封面图(`poster.jpg`,`scripts/render-poster.mjs` 截),跟着 skill 进仓,应用和官网都不再录。
 
 ## 8. 不做的
 

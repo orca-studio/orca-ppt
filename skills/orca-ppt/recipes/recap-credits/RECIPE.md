@@ -6,6 +6,7 @@ order: 1
 summary: 结尾页不写「谢谢观看」：一块倾斜的屏幕把整份稿子按真转场快放一遍，旁边滚动幕后名单
 preview: 6-8
 cover: 15.5
+poster: poster.jpg
 ---
 
 # 项目收尾致谢

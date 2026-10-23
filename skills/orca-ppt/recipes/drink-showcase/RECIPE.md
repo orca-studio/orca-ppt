@@ -7,6 +7,7 @@ summary: 四个产品并排成四栏，色块一栏栏向右换主角，旧产�
 sample: ../../examples/drink-showcase
 preview: 2-5
 cover: 4.5
+poster: poster.jpg
 ---
 
 # 新品发布

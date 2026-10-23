@@ -6,6 +6,7 @@ order: 13
 summary: 年份做成一排 0–9 的竖条，翻一页每一位滚到新数字，没变的位不动；标题和说明原地换
 preview: 2-5
 cover: 8.5
+poster: poster.jpg
 ---
 
 # 大事记年表

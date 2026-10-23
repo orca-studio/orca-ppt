@@ -6,6 +6,7 @@ order: 18
 summary: 标题字母 O 里嵌一盏射灯，光柱从 O 里擦出来落到台上；讲者剪影站成一排，翻一页灯转向一个人，光扫过的字变成红字
 preview: 1-3
 cover: 9.6
+poster: poster.jpg
 ---
 
 # 嘉宾介绍

@@ -1,8 +1,9 @@
 import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { contentSlots, frontmatter, listRecipes, pageRange, recipeEntry } from './recipes.js'
+import { contentSlots, frontmatter, listRecipes, recipeEntry } from './recipes.js'
 
 const recipe = (id: string, extra = '') => `---
 id: ${id}
@@ -15,7 +16,7 @@ ${extra}---
 `
 
 describe('listRecipes', () => {
-  it('读 frontmatter,带上提示词;样片由缓存负责,这里不给', async () => {
+  it('读 frontmatter,带上提示词', async () => {
     const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
     await mkdir(join(skill, 'recipes/recap-credits'), { recursive: true })
     await writeFile(join(skill, 'recipes/recap-credits/RECIPE.md'), recipe('recap-credits'))
@@ -23,7 +24,6 @@ describe('listRecipes', () => {
     expect(rest).toHaveLength(0)
     expect(item).toMatchObject({ id: 'recap-credits', title: '电影级回顾片尾', mode: '汇报稿' })
     expect(item?.summary).toBe('回顾整份稿子: 再滚名单')
-    expect(item?.preview).toBeUndefined()
     expect(item?.poster).toBeUndefined()
     expect(item?.prompt).toContain('recipes/recap-credits/RECIPE.md')
   })
@@ -37,7 +37,7 @@ describe('listRecipes', () => {
     expect(await listRecipes(skill)).toEqual([])
   })
 
-  it('frontmatter 的 poster 指向配方目录里的封面图:文件在才给,不在就退回样片的封面', async () => {
+  it('frontmatter 的 poster 指向配方目录里的封面图:文件在才给', async () => {
     const skill = await realpath(await mkdtemp(join(tmpdir(), 'recipes-')))
     await mkdir(join(skill, 'recipes/a'), { recursive: true })
     await mkdir(join(skill, 'recipes/b'), { recursive: true })
@@ -47,6 +47,13 @@ describe('listRecipes', () => {
     const byId = Object.fromEntries((await listRecipes(skill)).map((r) => [r.id, r]))
     expect(byId.a?.poster).toBe(join(skill, 'recipes/a/cover.jpg'))
     expect(byId.b?.poster).toBeUndefined()
+  })
+
+  it('内置的每个同款和案例都带封面图:首页不现录样片,没有封面卡片就是空的', async () => {
+    const skill = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
+    const missing = (await listRecipes(skill)).filter((item) => !item.poster).map((item) => item.id)
+    // 补法:node skills/orca-ppt/scripts/render-poster.mjs recipes/<id>
+    expect(missing).toEqual([])
   })
 
   it('没有 skill 或没有 recipes 目录时是空的', async () => {
@@ -98,7 +105,7 @@ describe('案例', () => {
     expect((await listRecipes(skill)).map((item) => item.id)).toEqual(['b', 'a'])
   })
 
-  it('入口是 examples/<id>/index.html,默认只录第一页取封面', async () => {
+  it('入口是 examples/<id>/index.html', async () => {
     const skill = await mkdtemp(join(tmpdir(), 'recipes-'))
     await mkdir(join(skill, 'examples/solo'), { recursive: true })
     await writeFile(join(skill, 'examples/solo/EXAMPLE.md'), example('solo'))
@@ -106,7 +113,6 @@ describe('案例', () => {
     expect(await recipeEntry(skill, 'solo')).toMatchObject({
       kind: 'example',
       entry: join(skill, 'examples/solo/index.html'),
-      range: { from: 0, to: 0 },
     })
   })
 })
@@ -167,20 +173,6 @@ describe('recipeEntry 的 sample', () => {
       `---\nid: x\ntitle: X\nsample: ${outside}\n---\n`,
     )
     expect(await recipeEntry(skill, 'x')).toBeUndefined()
-  })
-})
-
-describe('pageRange', () => {
-  it('页号从 1 数、含两头,转成下标', () => {
-    expect(pageRange('4-5')).toEqual({ from: 3, to: 4 })
-    expect(pageRange('2 - 2')).toEqual({ from: 1, to: 1 })
-  })
-
-  it('写错了就录整份,不猜', () => {
-    expect(pageRange(undefined)).toBeUndefined()
-    expect(pageRange('5-4')).toBeUndefined()
-    expect(pageRange('0-3')).toBeUndefined()
-    expect(pageRange('last')).toBeUndefined()
   })
 })
 

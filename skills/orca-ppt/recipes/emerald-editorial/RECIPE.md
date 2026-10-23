@@ -7,6 +7,7 @@ summary: 封面的深蓝横条裂成议程的四个序号块，镜头钻进 01 �
 sample: ../../examples/emerald-editorial
 preview: 2-5
 cover: 0.3
+poster: poster.jpg
 ---
 
 # 分章节工作汇报

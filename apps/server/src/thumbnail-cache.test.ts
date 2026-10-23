@@ -2,7 +2,13 @@ import { mkdir, mkdtemp, readdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { partialDir, readThumbnails, storeThumbnails, thumbnailSlot } from './thumbnail-cache.js'
+import {
+  localRefs,
+  partialDir,
+  readThumbnails,
+  storeThumbnails,
+  thumbnailSlot,
+} from './thumbnail-cache.js'
 
 /** 一份引了主题文件和一张图的稿子 */
 async function deck() {
@@ -95,5 +101,15 @@ describe('缩略图缓存', () => {
     const c = await partialDir(other)
     const stored = await storeThumbnails(other, c, await render(c, 1), 1)
     expect(await readThumbnails(other, 1)).toEqual(stored)
+  })
+})
+
+describe('localRefs', () => {
+  it('只收本地相对路径', () => {
+    expect(
+      localRefs(
+        '<link href="a.css"><script src="https://x/y.js"></script><img src="data:x"><a href="#top"><script src="b.js?v=1">',
+      ),
+    ).toEqual(['a.css', 'b.js'])
   })
 })

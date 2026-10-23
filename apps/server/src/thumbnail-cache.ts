@@ -4,7 +4,6 @@ import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileDigest } from './asset-digest.js'
 import { deckRevision } from './decks.js'
-import { localRefs } from './recipe-preview.js'
 
 /**
  * 页胶片缩略图的缓存。
@@ -132,4 +131,15 @@ async function prune(slot: ThumbnailSlot): Promise<void> {
     }
     await rm(path, { recursive: true, force: true })
   }
+}
+
+/** 稿子里引用的本地相对路径(href / src)。远程地址、data:、锚点不算。 */
+export function localRefs(html: string): string[] {
+  const refs = new Set<string>()
+  for (const match of html.matchAll(/\b(?:href|src)\s*=\s*["']([^"'#?]+)/g)) {
+    const ref = match[1]!.trim()
+    if (!ref || /^[a-z][a-z0-9+.-]*:/i.test(ref) || ref.startsWith('//')) continue
+    refs.add(ref)
+  }
+  return [...refs].sort()
 }

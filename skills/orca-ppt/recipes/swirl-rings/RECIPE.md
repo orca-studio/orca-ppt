@@ -5,6 +5,7 @@ mode: 汇报稿
 order: 22
 summary: 年度规划、培训方案、项目分期：两个阶段各三件事，两组圆环扇形各绕自己的圆心回旋长出来，拼成一个 S
 preview: 1-2
+poster: poster.jpg
 ---
 
 # 两阶段规划

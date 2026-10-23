@@ -6,6 +6,7 @@ order: 16
 summary: 比稿、改版提案：同一个网页一页换一种风格，浏览器框不动，标题、按钮、数据在框里变字体、变颜色、换位置
 preview: 1-4
 cover: 5.5
+poster: poster.jpg
 ---
 
 # 网页改版提案
