@@ -25,7 +25,9 @@ jobs:
   deploy:
     if: github.repository == 'orca-studio/orca-ppt'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 样稿一变，二十多个同款的样片要全部重录，要三十多分钟。超时被取消的话缓存存不下来，
+    # 下次又得从头录，所以留足时间
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
