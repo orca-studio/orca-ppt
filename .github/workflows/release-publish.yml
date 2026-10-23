@@ -89,7 +89,7 @@ jobs:
             "$SETUP" OrcaPPT-win-x64-Setup.exe RELEASES "$NUPKG" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Orca PPT $VERSION" \
-            --notes "Orca PPT $VERSION。macOS(Apple Silicon)下载 \`$DMG\`,Windows(x64)下载 \`$SETUP\`;已安装的版本会自动更新。"
+            --notes "Orca PPT ${VERSION}。macOS(Apple Silicon)下载 \`$DMG\`,Windows(x64)下载 \`$SETUP\`;已安装的版本会自动更新。"
           # 匿名下载回来对一遍摘要:确认发出去的就是公证过的那一份
           mkdir -p ../verify && cd ../verify
           curl -fsSL -o "$DMG" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$DMG"
