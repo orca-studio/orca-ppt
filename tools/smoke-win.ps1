@@ -36,6 +36,14 @@ function Save-Screenshot([string]$name) {
   Write-Host "截图:$shots\$name"
 }
 
+function Write-Diagnostics {
+  Write-Host '--- 进程 ---'
+  Get-CimInstance Win32_Process -Filter "Name = 'OrcaPPT.exe' OR Name = 'Update.exe'" |
+    Format-Table ProcessId, ParentProcessId, CommandLine -Wrap | Out-String -Width 300 | Write-Host
+  Write-Host '--- 端口 6722 ---'
+  Get-NetTCPConnection -LocalPort 6722 -ErrorAction SilentlyContinue | Out-String | Write-Host
+}
+
 function Wait-Until([scriptblock]$check, [int]$seconds, [string]$what) {
   $deadline = (Get-Date).AddSeconds($seconds)
   while ((Get-Date) -lt $deadline) {
@@ -71,14 +79,26 @@ try {
   Save-Screenshot 'workbench.png'
 } catch {
   Save-Screenshot 'failure.png'
-  Write-Host '--- 进程 ---'
-  Get-Process OrcaPPT -ErrorAction SilentlyContinue | Format-Table Id, StartTime, MainWindowTitle | Out-String | Write-Host
-  Write-Host '--- 端口 6722 ---'
-  Get-NetTCPConnection -LocalPort 6722 -ErrorAction SilentlyContinue | Out-String | Write-Host
+  Write-Diagnostics
   foreach ($log in @($stdout, $stderr)) {
     Write-Host "--- $log ---"
     if (Test-Path $log) { Get-Content $log -Tail 80 | Write-Host }
   }
+  throw
+}
+
+# 再按用户的方式打开一次:开始菜单的快捷方式 → 根目录的转发器 → app-* 里的 exe
+Get-Process OrcaPPT -ErrorAction SilentlyContinue | Stop-Process -Force
+Wait-Until { -not (Test-Mcp) } 15 '关掉应用后 MCP 还在'
+$shortcut = Find-Shortcut | Where-Object { $_.FullName.StartsWith($programs) } | Select-Object -First 1
+Write-Host "从快捷方式打开:$($shortcut.FullName)"
+Start-Process $shortcut.FullName
+try {
+  Wait-Until { Test-Mcp } 60 "从快捷方式打开后 MCP($mcp)没起来"
+  Write-Host '从快捷方式打开,MCP 起来了'
+} catch {
+  Save-Screenshot 'shortcut-failure.png'
+  Write-Diagnostics
   throw
 }
 
