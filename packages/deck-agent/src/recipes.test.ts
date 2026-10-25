@@ -24,10 +24,24 @@ describe('recipePrompt', () => {
     expect(prompt).toContain('一条也别留')
   })
 
-  it('没连上 Orca PPT 时,先转告怎么装、怎么连', () => {
-    expect(prompt).toContain('https://github.com/orca-studio/orca-ppt')
-    expect(prompt).toContain('claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp')
+  it('没连上 Orca PPT 时,照 llms.txt 那一句装好连上,做不到就转告', () => {
+    expect(prompt).toContain(
+      '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。',
+    )
+    expect(prompt).toContain('原样转告我')
     expect(prompt).toContain('不要凭印象做')
+  })
+
+  it('建好马上打开,改页走 read_page / write_page,不用自己的文件工具改', () => {
+    expect(prompt.indexOf('open_deck 打开它')).toBeLessThan(prompt.indexOf('改字用 edit_text'))
+    expect(prompt).toContain('edit_pages 插一页')
+    expect(prompt).toContain('write_page')
+    expect(prompt).toContain('不要用你自己的文件工具改 deck.html')
+  })
+
+  it('交付:在 Orca PPT 里看,发给别人用 export_pptx', () => {
+    expect(prompt).toContain('在 Orca PPT 里看')
+    expect(prompt).toContain('export_pptx')
   })
 
   it('样稿指到 examples 时,路径跟着走', () => {

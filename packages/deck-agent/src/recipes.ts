@@ -17,9 +17,12 @@ export interface RecipeRef {
   slots?: string[] | undefined
 }
 
-/** 用户的 agent 没连上 Orca PPT 时,提示词里要转告的两步。地址和 README、install.md 一致。 */
-const PROJECT = 'https://github.com/orca-studio/orca-ppt'
-const MCP_URL = 'http://127.0.0.1:6722/mcp'
+/**
+ * 用户的 agent 没连上 Orca PPT 时照着做、做不到就转告的那一句。和 README、帮助菜单
+ * 「连接 AI 助手」同一句:各家加 MCP 的步骤写在 llms.txt 里,这里不按助手列命令。
+ */
+const CONNECT =
+  '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。'
 
 export function recipePrompt(recipe: RecipeRef): string {
   const dir = `recipes/${recipe.id}`
@@ -36,24 +39,25 @@ ${recipe.slots.map((slot) => `- ${slot}:`).join('\n')}
 `
   return `用 Orca PPT 帮我做一份同款:${what}
 
-0. 先看你的工具里有没有 orca-ppt(read_skill、open_deck)。没有就先别做,把这两步转告我:
-   - 装上并打开 Orca PPT 桌面应用:${PROJECT}
-   - 应用开着时,把 MCP 地址 ${MCP_URL} 加到你身上(名字填 orca-ppt),比如
-     Claude Code:claude mcp add --transport http orca-ppt ${MCP_URL}
-     Codex:codex mcp add orca-ppt --url ${MCP_URL}
-   连上之后再从第 1 步开始。不要凭印象做。
+0. 先看你的工具里有没有 orca-ppt(read_skill、open_deck)。没有就先别做,照这句话装好、连上:
+   ${CONNECT}
+   你自己做不到(读不了网页、改不了自己的配置)就把这句话原样转告我。连上之后再从第 1 步开始。不要凭印象做。
 1. 调 read_skill 读 \`${dir}/RECIPE.md\`,再读样稿 \`${sample}/index.html\`。
    样稿就是这个同款的答案,开头的转场计划注释写着每次翻页的手法。
    样稿比一次返回的长:结果里 next 不为空就带着它接着读,读到底再动手。
 2. 先对照配方的「适用 / 不适用」看我的内容。不适合就直接告诉我为什么,别硬套。
 3. 用 create_deck 新建,from 填 \`recipe:${recipe.id}\`:它复制一份样稿,主题、配色、素材都带上。
+   紧接着用 open_deck 打开它 —— 之后你的每一处改动,画布都会翻过去框给我看。
    在这份上换成我的内容:改字用 edit_text(一段一段换,能撤销,不会碰坏转场靠的属性),
-   转场计划注释里的字用 edit_plan,删页用 edit_pages。只有要多一页同样结构的页、或改转场锚的坐标时,才自己改 HTML ——
-   复制相邻那一页的 <section> 再改,按配方的「页面结构」算锚点。不要从空白重写,也不要写脚本整份替换。
+   转场计划注释里的字用 edit_plan,删页用 edit_pages。
+   要多一页同样结构的页:先用 edit_pages 插一页,再 read_page 读相邻那一页,改好用 write_page 写进新插的那一页。
+   要改转场锚的坐标:逐页 read_page,改好用 write_page 写回,按配方的「页面结构」算锚点。
+   不要用你自己的文件工具改 deck.html —— 那样画面上看不见,也撤销不了。不要从空白重写,也不要写脚本整份替换。
 4. 缺的细节你自己定,把假设写进转场计划注释里。不要编人名和数据,没有的留占位。
    样稿里的示例年份、公司名、标语和句子都是别人的,一条也别留:换成我的,或者删掉。
-5. 用 open_deck 打开,用 capture_slide 把每一页都截下来看(漏一页就不算看过),
-   按配方的「自检」过一遍再交给我。
+5. 用 capture_slide 把每一页都截下来看(漏一页就不算看过),按配方的「自检」过一遍再交给我。
+   交给我时说一声「在 Orca PPT 里看」;要发给别人,用 export_pptx 导出。
+   不要把 deck.html 当成品单独交出去 —— 离开 Orca PPT 它打不开。
 
 ${slots}`
 }
