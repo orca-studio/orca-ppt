@@ -96,7 +96,8 @@ async function build() {
   const identity = signingIdentity()
   // 只有 build 用得到签名库:finalize 在 CI 里不装依赖,只要 Node 就能跑
   const { sign } = await import('@electron/osx-sign')
-  run('pnpm', ['package'])
+  // 这里自己签(带时间戳),package 不用先签一遍
+  run('pnpm', ['package'], { env: { ...process.env, ORCA_PACKAGE_SIGN: '0' } })
   const app = join(root, `release/Orca PPT-darwin-${arch}/Orca PPT.app`)
   if (!existsSync(app)) fail(`没找到打包产物:${app}`)
 

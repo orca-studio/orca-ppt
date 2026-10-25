@@ -1,4 +1,4 @@
-import { editPages, replaceImage } from './page-edit.js'
+import { changedPages, editPages, readPage, replaceImage, writePage } from './page-edit.js'
 import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
 import { listSkill, readSkill } from './skill-content.js'
@@ -47,6 +47,7 @@ import { AgentError } from './agent-errors.js'
 import { RecordingLog, recordingFilePath } from './recording.js'
 import {
   deckRevision,
+  deckSnapshot,
   findEntryName,
   openDeck,
   readPageTypes as readSlidePageTypes,
@@ -116,6 +117,9 @@ export async function startServer(
   await recording.load()
   /** 每份稿子最近一次记下的版本号。文件监听看到的版本号和它不同,才是外面改的。 */
   const lastSeen = new Map<string, string>()
+  /** 每份稿子最后一次让画布到达的那一版(源码和素材摘要)。下一版只差几页时就让画布就地换页。 */
+  const shown = new Map<string, Awaited<ReturnType<typeof deckSnapshot>>>()
+  const shownTails = new Map<string, Promise<void>>()
   /** 我们自己正在写的稿子:这时文件监听报的变化不是「外面改的」。 */
   const selfWriting = new Set<string>()
   /** 最近打开的那份:取缩略图没说是哪份时就用它。 */
@@ -145,6 +149,7 @@ export async function startServer(
     if (bus.connectionCount === 0) return undefined
     try {
       return await follows.request(deckId, {
+        path: deckPathOf(deckId),
         revision,
         ...(show.slide !== undefined ? { slide: show.slide } : {}),
         ...(show.text ? { text: show.text } : {}),
@@ -255,6 +260,8 @@ export async function startServer(
       }
     }
     await writeChanges(deckId, changes)
+    // 撤销改字、撤销换图都只动了那一页:就地换掉,不等 watcher 推 deck.changed 整份重载
+    await patchCanvas(deckId, root)
     history.commit(direction)
     announceHistory(deckId)
     const { step } = result
@@ -322,7 +329,43 @@ export async function startServer(
     })
   })
 
+  /**
+   * 把画布带到磁盘上这一版,能不重载就不重载:推 `deck.patched` 让它只换一段字(`text`,
+   * 只在画布正停在改之前那一版时)、只换变了的几页、或者只认版本(变的在画面之外)。
+   * 结构变了(增删页、页外的东西、素材)就什么都不推,交给随后的 `deck.changed` 整份重载。
+   * 按稿子排队:两次读盘交错的话,先读到的旧版会盖掉后读到的新版。
+   */
+  function patchCanvas(
+    deckId: string,
+    root: string,
+    edit?: { before: string; text: NonNullable<PushData<'deck.patched'>['text']> },
+  ): Promise<void> {
+    const run = async () => {
+      const next = await deckSnapshot(root)
+      const prev = shown.get(deckId)
+      shown.set(deckId, next)
+      if (!prev || prev.revision === next.revision) return
+      if (!prev.entry || !next.entry || prev.entry.file !== next.entry.file) return
+      if (prev.assets !== next.assets) return
+      const base = { deckId, before: prev.revision, revision: next.revision }
+      if (edit && edit.before === prev.revision) {
+        bus.broadcast('deck.patched', { ...base, text: edit.text })
+        return
+      }
+      const sections = changedPages(prev.entry.html, next.entry.html)
+      if (sections)
+        bus.broadcast('deck.patched', { ...base, ...(sections.length ? { sections } : {}) })
+    }
+    const tail = (shownTails.get(deckId) ?? Promise.resolve()).then(run, run)
+    shownTails.set(
+      deckId,
+      tail.catch(() => {}),
+    )
+    return tail
+  }
+
   async function announceDeck(deckId: string, path: string): Promise<OpenedDeck> {
+    await patchCanvas(deckId, path)
     const opened = await openDeck(path)
     bus.broadcast('deck.changed', {
       deckId,
@@ -669,6 +712,8 @@ export async function startServer(
         if (readOnly) readOnlyDecks.add(opened.deck.id)
         else readOnlyDecks.delete(opened.deck.id)
         watcher.watch(opened.deck.id, opened.deck.path)
+        // 界面接着会加载这一版:之后的改动跟它比
+        shown.set(opened.deck.id, await deckSnapshot(opened.deck.path))
         if (lastOpened !== opened.deck.id) visibleSlides.delete(opened.deck.id)
         lastOpened = opened.deck.id
         // 打开时的版本号是基准:之后文件监听看到不一样的,才算外面改的
@@ -708,6 +753,7 @@ export async function startServer(
         openDecks.delete(params.deckId)
         readOnlyDecks.delete(params.deckId)
         watcher.unwatch(params.deckId)
+        shown.delete(params.deckId)
         if (lastOpened === params.deckId) lastOpened = undefined
         bus.broadcast('deck.closed', { deckId: params.deckId })
         return {}
@@ -878,6 +924,55 @@ export async function startServer(
           return { ok: false, reason: error instanceof Error ? error.message : String(error) }
         }
       }
+      case 'deck.readPage': {
+        const params = parseParams('deck.readPage', raw)
+        // 源码和版本号出自同一次读盘:拿这个版本号去 writePage 才对得上读到的这一页
+        const snapshot = await deckSnapshot(deckPathOf(params.deckId))
+        if (!snapshot.entry) throw new Error(AgentError.noBuild())
+        const page = readPage(snapshot.entry.html, params.slide)
+        return { revision: snapshot.revision, slideCount: page.count, html: page.html }
+      }
+      case 'deck.writePage': {
+        const params = parseParams('deck.writePage', raw)
+        const root = deckPathOf(params.deckId)
+        if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED: 当前稿子已经切换')
+        if ((await deckRevision(root)) !== params.expectedRevision)
+          return { ok: false, reason: 'STALE_REVISION: 内容已变化，请重新读取这一页' }
+        const name = await findEntryName(root)
+        if (!name) return { ok: false, reason: AgentError.noBuild() }
+        const before = await readEditFile(root, name)
+        if (before === null) return { ok: false, reason: AgentError.noBuild() }
+        try {
+          const after = writePage(before, params.slide, params.html)
+          if (after === before) return { ok: true, revision: params.expectedRevision }
+          if ((await deckRevision(root)) !== params.expectedRevision)
+            throw new Error('STALE_REVISION: 内容已变化，请重新读取这一页')
+          const label = `改写第 ${params.slide + 1} 页`
+          await writeChanges(params.deckId, { [name]: { before, after } })
+          historyOf(params.deckId).record({
+            slide: params.slide,
+            oldText: '',
+            newText: '',
+            before,
+            after,
+            label,
+          })
+          announceHistory(params.deckId)
+          // 只动了这一页:announceDeck 先让画布就地换掉它,再推 deck.changed(标题可能变了)
+          await announceDeck(params.deckId, root)
+          const uiTargets = await recordChange(params.deckId, {
+            summary: label,
+            slide: params.slide,
+          })
+          return {
+            ok: true,
+            revision: await deckRevision(root),
+            ...(uiTargets ? { uiTargets } : {}),
+          }
+        } catch (error) {
+          return { ok: false, reason: error instanceof Error ? error.message : String(error) }
+        }
+      }
       case 'deck.editText': {
         const params = parseParams('deck.editText', raw)
         const root = deckPathOf(params.deckId)
@@ -896,18 +991,21 @@ export async function startServer(
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
           await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
-          // 只换了一段字:让画布就地换,不整份重载。删掉元素(新文字为空)动了结构,照旧重载
-          if (params.newText.trim())
-            bus.broadcast('deck.patched', {
-              deckId: params.deckId,
-              before,
-              revision: await deckRevision(root),
-              text: {
-                slide: params.slide,
-                oldText: params.oldText.trim(),
-                newText: params.newText.trim(),
-              },
-            })
+          // 只换了一段字:让画布就地换,不整份重载。删掉元素(新文字为空)动了结构,换整页
+          await patchCanvas(
+            params.deckId,
+            root,
+            params.newText.trim()
+              ? {
+                  before,
+                  text: {
+                    slide: params.slide,
+                    oldText: params.oldText.trim(),
+                    newText: params.newText.trim(),
+                  },
+                }
+              : undefined,
+          )
           historyOf(params.deckId).record({
             slide: params.slide,
             oldText: params.oldText.trim(),
@@ -935,7 +1033,6 @@ export async function startServer(
         if (!name) return { ok: false, reason: AgentError.noBuild() }
 
         const file = join(root, name)
-        const before = await deckRevision(root)
         const html = await readFile(file, 'utf8')
         const result = applyPlanEdit(html, { oldText: params.oldText, newText: params.newText })
         if (!result.ok) return { ok: false, reason: result.reason }
@@ -943,11 +1040,7 @@ export async function startServer(
           const summary = `转场计划「${clip(params.oldText)}」→「${clip(params.newText)}」`
           await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
           // 注释在页面之外:画面上什么都没变,不用重载
-          bus.broadcast('deck.patched', {
-            deckId: params.deckId,
-            before,
-            revision: await deckRevision(root),
-          })
+          await patchCanvas(params.deckId, root)
           // 带 label:撤的时候要求整份还是改完的样子才还回去,不按页去找那段字
           historyOf(params.deckId).record({
             slide: 0,
@@ -1334,6 +1427,7 @@ const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.editPlan',
   'deck.editPages',
   'deck.replaceImage',
+  'deck.writePage',
   'deck.undo',
   'deck.redo',
 ])

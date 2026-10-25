@@ -233,11 +233,18 @@
     return locate(query)
   }
   /**
-   * 不重载,就地换掉一段字(见协议 `deck.patched`)。只换叶子元素里的文字,结构一点不动;
-   * 版本对不上、那段字认不准、人正改着字,都不换,返回 false,等整份重载。
+   * 不重载,就地换掉一段字或者几页(见协议 `deck.patched`)。换字只换叶子元素里的文字,结构一点不动;
+   * 换页交给稿子的 engine(`__orcaReplaceSlide`),它重做那一页加载时的准备。
+   * 版本对不上、那段字认不准、engine 太旧或者换不了、人正改着字,都返回 false,等整份重载。
    */
-  const patch = ({ before, revision, text }) => {
+  const patch = ({ before, revision, text, sections }) => {
     if (renderedRevision() !== before || window.__orcaEdit?.editing()) return false
+    if (sections?.length) {
+      if (typeof window.__orcaReplaceSlide !== 'function') return false
+      // 换到一半失败也不要紧:版本没跟着走,随后的 deck.changed 会整份重载
+      for (const { index, html } of sections)
+        if (window.__orcaReplaceSlide(index, html) !== true) return false
+    }
     if (text) {
       const section = document.querySelectorAll('.reveal .slides > section')[text.slide]
       if (!section) return false

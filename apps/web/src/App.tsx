@@ -326,6 +326,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('edit.follow', (data) => {
       void (async () => {
         try {
+          // 停在首页:先把 agent 正在改的这份打开,不然改了几十处画面都不动。
+          // 正开着别的稿子就不抢 —— 人在看的东西不能被换掉
+          if (!deckRef.current) await openWith(next, data.path)
+          // 打开之后 Stage 要等下一次渲染才挂上
+          for (let waited = 0; !stage.current && waited < 5000; waited += 50)
+            await new Promise((resume) => setTimeout(resume, 50))
           if (data.deckId !== deckRef.current?.deck.id || !stage.current)
             throw new Error('DOCUMENT_CHANGED')
           const slide = data.slide

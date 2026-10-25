@@ -1,4 +1,4 @@
-import { parse, type DefaultTreeAdapterTypes as Tree } from 'parse5'
+import { parse, parseFragment, type DefaultTreeAdapterTypes as Tree } from 'parse5'
 
 export type PageChange =
   | { action: 'insert'; index: number; title: string }
@@ -38,6 +38,12 @@ export function sourcePages(
   if (strict && !container.sourceCodeLocation?.endTag) throw new Error('页面容器标签不完整')
   return { tree, container, pages }
 }
+
+const comments = (node: Tree.Node): Tree.CommentNode[] =>
+  ('childNodes' in node ? node.childNodes : []).flatMap((child) => [
+    ...(child.nodeName === '#comment' ? [child as Tree.CommentNode] : []),
+    ...comments(child),
+  ])
 
 const escape = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -93,11 +99,6 @@ export function editPages(html: string, change: PageChange) {
       nextTo = order.indexOf(to)
     return nextFrom >= 0 && nextTo === nextFrom + 1 ? [nextFrom, nextTo] : null
   }
-  const comments = (node: Tree.Node): Tree.CommentNode[] =>
-    ('childNodes' in node ? node.childNodes : []).flatMap((child) => [
-      ...(child.nodeName === '#comment' ? [child as Tree.CommentNode] : []),
-      ...comments(child),
-    ])
   for (const comment of comments(tree)) {
     const location = comment.sourceCodeLocation
     if (!location || !comment.data.includes('转场计划')) continue
@@ -169,4 +170,87 @@ export function replaceImage(
   return (
     html.slice(0, location.startOffset) + `src="${escape(source)}"` + html.slice(location.endOffset)
   )
+}
+
+const pageSource = (html: string, page: Tree.Element) =>
+  html.slice(page.sourceCodeLocation!.startOffset, page.sourceCodeLocation!.endOffset)
+
+/** 一页的源码:那一页 `<section>` 在成品里的原文。 */
+export function readPage(html: string, slide: number): { html: string; count: number } {
+  const { pages } = sourcePages(html)
+  const page = pages[slide]
+  if (!page) throw new Error('页号已不存在')
+  return { html: pageSource(html, page), count: pages.length }
+}
+
+/**
+ * 整页换掉一页的源码。新源码必须恰好是一个不嵌套的 `<section>`,页外一个字不动。
+ * 换完再整份解析一遍:没闭合的标签会把后面的页吞进来,那样页数或这一页的原文就对不上了。
+ */
+export function writePage(html: string, slide: number, source: string): string {
+  const { pages } = sourcePages(html)
+  const page = pages[slide]
+  if (!page) throw new Error('页号已不存在')
+  const value = source.trim()
+  const fragment = parseFragment(value, { sourceCodeLocationInfo: true })
+  const roots = fragment.childNodes.filter(
+    (node) => !(node.nodeName === '#text' && !(node as Tree.TextNode).value.trim()),
+  )
+  const section = roots[0]
+  if (roots.length !== 1 || !section || !('tagName' in section) || section.tagName !== 'section')
+    throw new Error('新源码必须恰好是一个 <section>')
+  if (elements(section).some((node) => node.tagName === 'section'))
+    throw new Error('暂不支持嵌套页面')
+  const location = page.sourceCodeLocation!
+  const result = html.slice(0, location.startOffset) + value + html.slice(location.endOffset)
+  const broken = new Error('新源码的标签没有闭合好,会影响别的页')
+  let check: ReturnType<typeof sourcePages>
+  try {
+    check = sourcePages(result)
+  } catch {
+    throw broken
+  }
+  if (check.pages.length !== pages.length || pageSource(result, check.pages[slide]!) !== value)
+    throw broken
+  return result
+}
+
+/**
+ * 两版成品只差在哪几页。页数一样、页外除了注释一个字没变时,给出源码变了的页(可能一页都没有:
+ * 只改了转场计划这类注释);否则 undefined,该整份重载。
+ */
+export function changedPages(
+  before: string,
+  after: string,
+): Array<{ index: number; html: string }> | undefined {
+  let a: ReturnType<typeof sourcePages>, b: ReturnType<typeof sourcePages>
+  try {
+    a = sourcePages(before)
+    b = sourcePages(after)
+  } catch {
+    return undefined
+  }
+  if (a.pages.length !== b.pages.length) return undefined
+  // 页外的部分:每页挖成一个占位,页外的注释整个挖掉
+  const outside = (html: string, parsed: ReturnType<typeof sourcePages>) => {
+    const ranges = [
+      ...parsed.pages.map((page) => ({ ...page.sourceCodeLocation!, mark: '\0' })),
+      ...comments(parsed.tree).flatMap((comment) =>
+        comment.sourceCodeLocation ? [{ ...comment.sourceCodeLocation, mark: '' }] : [],
+      ),
+    ].sort((x, y) => x.startOffset - y.startOffset)
+    let rest = ''
+    let at = 0
+    for (const range of ranges) {
+      if (range.startOffset < at) continue // 页里的注释跟着页走
+      rest += html.slice(at, range.startOffset) + range.mark
+      at = range.endOffset
+    }
+    return rest + html.slice(at)
+  }
+  if (outside(before, a) !== outside(after, b)) return undefined
+  return b.pages.flatMap((page, index) => {
+    const value = pageSource(after, page)
+    return value === pageSource(before, a.pages[index]!) ? [] : [{ index, html: value }]
+  })
 }

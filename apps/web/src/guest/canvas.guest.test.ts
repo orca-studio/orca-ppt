@@ -10,10 +10,12 @@ declare global {
         before: string | null
         revision: string
         text?: { slide: number; oldText: string; newText: string }
+        sections?: Array<{ index: number; html: string }>
       }): boolean
       revision(): string | null
       dispose(): void
     }
+    __orcaReplaceSlide?: (index: number, html: string) => boolean
   }
 }
 
@@ -30,6 +32,7 @@ function start(): void {
 
 beforeEach(() => {
   window.__orcaCanvas?.dispose()
+  delete window.__orcaReplaceSlide
   document.body.innerHTML = DECK
   // eslint-disable-next-line no-eval
   ;(0, eval)(source)
@@ -104,5 +107,31 @@ describe('就地换字,不重载', () => {
   it('页面之外的改动(转场计划)只认下版本', () => {
     expect(window.__orcaCanvas.patch({ before: 'r1', revision: 'r2' })).toBe(true)
     expect(window.__orcaCanvas.revision()).toBe('r2')
+  })
+})
+
+describe('就地换页,不重载', () => {
+  const page = { index: 1, html: '<section><h2>神舟五号</h2></section>' }
+
+  it('交给稿子的 engine 换,换成了版本跟着走', () => {
+    const calls: Array<[number, string]> = []
+    window.__orcaReplaceSlide = (index, html) => {
+      calls.push([index, html])
+      return true
+    }
+    expect(window.__orcaCanvas.patch({ before: 'r1', revision: 'r2', sections: [page] })).toBe(true)
+    expect(calls).toEqual([[1, page.html]])
+    expect(window.__orcaCanvas.revision()).toBe('r2')
+  })
+
+  it('稿子的 engine 太旧(没有换页接口)或者换不了:不认版本,等整份重载', () => {
+    expect(window.__orcaCanvas.patch({ before: 'r1', revision: 'r2', sections: [page] })).toBe(
+      false,
+    )
+    window.__orcaReplaceSlide = () => false
+    expect(window.__orcaCanvas.patch({ before: 'r1', revision: 'r2', sections: [page] })).toBe(
+      false,
+    )
+    expect(window.__orcaCanvas.revision()).toBe('r1')
   })
 })

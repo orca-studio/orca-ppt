@@ -121,37 +121,51 @@
     return d;
   };
 
+  // 加载时的准备对整份稿子做一遍；宿主换掉一页时（__orcaReplaceSlide）只对那一页再做一遍
+  const allSlides = () => [...document.querySelectorAll(".reveal .slides > section")];
+  const within = (slides, sel) => slides.flatMap((s) => [...s.querySelectorAll(sel)]);
+
   // data-st 页：把原内容包进 .st-enter，方便整体移动
-  function prepare() {
-    // data-st 页自动补上 data-auto-animate + restart：reveal 不会从上一页自动动画进来（由 GSAP 接管），
-    // 但下一页仍然可以从这一页做共享元素。
-    for (const section of document.querySelectorAll(".reveal .slides > section[data-st]")) {
-      section.setAttribute("data-auto-animate", "");
-      section.setAttribute("data-auto-animate-restart", "");
+  function prepare(slides = allSlides()) {
+    for (const section of slides) {
+      // data-st 页自动补上 data-auto-animate + restart：reveal 不会从上一页自动动画进来（由 GSAP 接管），
+      // 但下一页仍然可以从这一页做共享元素。
+      if (section.dataset.st) {
+        section.setAttribute("data-auto-animate", "");
+        section.setAttribute("data-auto-animate-restart", "");
+      }
+      if (section.hasAttribute("data-auto-animate")) section.setAttribute("data-auto-animate-unmatched", "false");
     }
-    for (const section of document.querySelectorAll(".reveal .slides > section[data-auto-animate]")) {
-      section.setAttribute("data-auto-animate-unmatched", "false");
-    }
-    // 绕圆心转：rotate 绕 transform-origin 转，而 auto-animate 不管位置变没变都把它设成
-    // top left !important，扇形就绕盒子左上角甩出去（录制时这条样式一直留着，扇形停在画面外）。
-    // 标上 data-st-turn，由 tokens.css 里更具体的 !important 规则压回来：默认绕盒子中心，
-    // 作者自己写了 transform-origin（比如指针绕底端）就用作者的
-    // 只标真的转了的：整份稿子里这个元素（按 data-id 认）至少有一页角度不是 0。
-    // 全程 0° 的元素照 reveal 默认绕左上角变形 —— 改成绕中心后，又平移又缩放的元素中途会冲出原来的范围
-    const turned = new Set();
-    for (const el of document.querySelectorAll(".reveal .slides > section [style*='rotate']")) {
-      if (el.dataset.id && parseFloat(el.style.rotate)) turned.add(el.dataset.id);
-    }
-    for (const el of document.querySelectorAll(".reveal .slides > section [style*='rotate']")) {
-      if (!el.style.rotate) continue;
-      if (!parseFloat(el.style.rotate) && !turned.has(el.dataset.id)) continue;
-      el.dataset.stTurn = "";
-      el.style.setProperty("--st-origin", el.style.transformOrigin || "50% 50%");
-    }
-    for (const section of document.querySelectorAll(".reveal .slides > section[data-st]")) {
+    markTurns();
+    for (const section of slides.filter((s) => s.dataset.st)) {
       const enter = layer("st-enter");
       enter.append(...section.childNodes);
       section.append(enter);
+    }
+  }
+
+  // 绕圆心转：rotate 绕 transform-origin 转，而 auto-animate 不管位置变没变都把它设成
+  // top left !important，扇形就绕盒子左上角甩出去（录制时这条样式一直留着，扇形停在画面外）。
+  // 标上 data-st-turn，由 tokens.css 里更具体的 !important 规则压回来：默认绕盒子中心，
+  // 作者自己写了 transform-origin（比如指针绕底端）就用作者的
+  // 只标真的转了的：整份稿子里这个元素（按 data-id 认）至少有一页角度不是 0。
+  // 全程 0° 的元素照 reveal 默认绕左上角变形 —— 改成绕中心后，又平移又缩放的元素中途会冲出原来的范围。
+  // 这是跨页的：换掉一页可能让别的页上同 data-id 的元素开始转、或者不再转，所以每次都整份重标
+  function markTurns() {
+    const els = document.querySelectorAll(".reveal .slides > section [style*='rotate']");
+    const turned = new Set();
+    for (const el of els) {
+      if (el.dataset.id && parseFloat(el.style.rotate)) turned.add(el.dataset.id);
+    }
+    for (const el of els) {
+      if (!el.style.rotate || (!parseFloat(el.style.rotate) && !turned.has(el.dataset.id))) {
+        delete el.dataset.stTurn;
+        continue;
+      }
+      el.dataset.stTurn = "";
+      // 只在第一次标的时候记：auto-animate 放过之后元素上留着它写的 transform-origin，那不是作者的
+      if (!el.style.getPropertyValue("--st-origin"))
+        el.style.setProperty("--st-origin", el.style.transformOrigin || "50% 50%");
     }
   }
 
@@ -953,8 +967,8 @@
   const FLIP_TEXT_OUT = 0.45;  // fade：前 45% 淡出，后 45% 淡入，中间空一小段
   const px = (n) => `${f1(n)}px`;
   const fillsOf = (el) => [...el.querySelectorAll(":scope > .s-fill")];
-  function prepareFills() {
-    for (const img of document.querySelectorAll(".reveal .slides > section img[data-fill]")) {
+  function prepareFills(slides = allSlides()) {
+    for (const img of within(slides, "img[data-fill]")) {
       const host = img.parentElement;
       const section = img.closest("section");
       if (img.dataset.fill !== "slide") {
@@ -1385,8 +1399,8 @@
       el.style.maskImage = mask;
     }
   }
-  function prepareLamps() {
-    for (const host of document.querySelectorAll(".reveal .slides > section .s-lamp")) {
+  function prepareLamps(slides = allSlides()) {
+    for (const host of within(slides, ".s-lamp")) {
       const section = host.closest("section");
       if (host.parentElement !== contentOf(section)) console.warn("[orca-transition-skill] .s-lamp 要写在页面的直接子元素上，灯按画布坐标画");
       if (section.querySelectorAll(".s-lamp").length > 1) console.warn("[orca-transition-skill] 一页只放一盏 .s-lamp：被照亮的那一层（.s-lit）只认一盏灯");
@@ -1395,7 +1409,7 @@
       host._pose = pose;
       drawLamp(host, pose);
     }
-    for (const lit of document.querySelectorAll(".reveal .slides > section .s-lit")) {
+    for (const lit of within(slides, ".s-lit")) {
       if (!lit.closest("section").querySelector(".s-lamp")) console.warn("[orca-transition-skill] .s-lit 所在的页没有 .s-lamp，这一层会一直是黑的");
     }
   }
@@ -1653,8 +1667,8 @@
     path.style.fill = accentRGBA(fill);
   }
 
-  function prepareStory() {
-    for (const section of document.querySelectorAll(".reveal .slides > section")) {
+  function prepareStory(slides = allSlides()) {
+    for (const section of slides) {
       const img = section.querySelector(".st-photo");
       if (!img) continue;
       if (!img.getAttribute("width") || !img.getAttribute("height")) err(`照片 ${img.getAttribute("src")} 没写原图的 width / height`);
@@ -1827,31 +1841,35 @@
     if (!m) return null;
     return { from: +m[1] - 1, to: +m[2] - 1 }; // 写的是页号（从 1 数），内部用下标
   }
-  function prepareRecaps() {
-    for (const frame of document.querySelectorAll(".reveal .slides .s-recap")) {
+  function prepareRecaps(slides = allSlides()) {
+    for (const frame of within(slides, ".s-recap")) {
       gsap.set(frame, recapTransform(frame));
-      if (EMBED) continue;
-      const range = recapRange(frame);
-      if (!range) {
-        console.error(`[orca-transition-skill] .s-recap 需要 data-recap="起页-止页"（页号从 1 数），比如 data-recap="2-6"`);
-        continue;
-      }
-      const iframe = document.createElement("iframe");
-      iframe.src = `${location.pathname}?embed&capture#/${range.from}`;
-      iframe.setAttribute("tabindex", "-1");
-      iframe.setAttribute("aria-hidden", "true");
-      frame.append(iframe);
-      // 内层可能在这一页被翻到之前很久就就绪了，所以现在就开始等它的 ready
-      const ready = new Promise((resolve) => recapReady.set(iframe.contentWindow, resolve));
-      frame.__recap = { iframe, range, ready, hold: +(frame.dataset.recapHold ?? 0.7) * 1000 };
+      if (!EMBED) embedRecap(frame);
     }
     // 名单：把条目包进一层，滚动只动这一层，外框负责裁切和上下渐隐
-    for (const list of document.querySelectorAll(".reveal .slides .t-credits")) {
+    for (const list of within(slides, ".t-credits")) {
       const roll = document.createElement("div");
       roll.className = "st-roll";
       roll.append(...list.childNodes);
       list.append(roll);
     }
+  }
+
+  // 回顾屏里嵌一份自己，翻到 data-recap 那一段。稿子换了某一页时，嵌着的那份也要重新载（见 __orcaReplaceSlide）
+  function embedRecap(frame) {
+    const range = recapRange(frame);
+    if (!range) {
+      console.error(`[orca-transition-skill] .s-recap 需要 data-recap="起页-止页"（页号从 1 数），比如 data-recap="2-6"`);
+      return;
+    }
+    const iframe = document.createElement("iframe");
+    iframe.src = `${location.pathname}?embed&capture#/${range.from}`;
+    iframe.setAttribute("tabindex", "-1");
+    iframe.setAttribute("aria-hidden", "true");
+    frame.append(iframe);
+    // 内层可能在这一页被翻到之前很久就就绪了，所以现在就开始等它的 ready
+    const ready = new Promise((resolve) => recapReady.set(iframe.contentWindow, resolve));
+    frame.__recap = { iframe, range, ready, hold: +(frame.dataset.recapHold ?? 0.7) * 1000 };
   }
 
   // 外层 → 内层的一问一答。内层就绪前发的消息会丢，所以先等它报 ready
@@ -2355,8 +2373,8 @@
   // 录制模式：全部暂停，由 __capture.seek 按毫秒设 currentTime —— 和动画一样不靠真实时间。
   // 上一页视频的淡出克隆体不算这一页的视频：不跟着播，不算进停留时长
   const videosOf = (slide) => [...slide.querySelectorAll("video")].filter((v) => !v.closest(".st-ghost, .st-ghost-el"));
-  function prepareVideos() {
-    for (const v of document.querySelectorAll(".reveal .slides video")) {
+  function prepareVideos(slides = allSlides()) {
+    for (const v of within(slides, "video")) {
       v.muted = true;
       v.playsInline = true;
       v.preload = "auto";
@@ -2608,6 +2626,65 @@
     });
   }
   window.__orcaAdvance = advance;
+
+  // ───────── 宿主换掉一页，不重载整份稿子 ─────────
+  // OrcaPPT 里 agent 或人只改了某一页时调 window.__orcaReplaceSlide(index, html)，html 是那一页 <section> 的源码。
+  // 换掉这一页的 DOM，只对它重做加载时的准备，再让 reveal 认新的这一页（Reveal.sync / syncSlide）。
+  // 做不了就返回 false，宿主整份重载：页号不对、源码不是一个 section、有纵向页、页里有脚本（换进来不会执行）。
+  window.__orcaReplaceSlide = (index, html) => {
+    if (CAPTURE || EMBED) return false;
+    const old = allSlides()[index];
+    const tpl = document.createElement("template");
+    tpl.innerHTML = String(html).trim();
+    const fresh = tpl.content.firstElementChild;
+    if (!old || !fresh || tpl.content.childElementCount !== 1 || fresh.tagName !== "SECTION") return false;
+    if (fresh.querySelector("section, script") || old.querySelector("section")) return false;
+    const showing = old === Reveal.getCurrentSlide();
+    // 转场放到一半就换：先拨到终点，收掉 ghost
+    cleanup();
+    if (showing) {
+      stopScene();
+      stopRecap();
+    }
+    for (const v of within([old], "video")) v.pause();
+    old.replaceWith(fresh);
+    const slides = [fresh];
+    prepare(slides);
+    prepareFills(slides);
+    prepareLamps(slides);
+    prepareStory(slides);
+    prepareVideos(slides);
+    prepareRecaps(slides);
+    // 别的页上的回顾屏正好回顾到这一页：嵌着的那份重新载
+    const reloaded = [];
+    for (const frame of document.querySelectorAll(".reveal .slides .s-recap")) {
+      const r = frame.__recap;
+      if (!r || fresh.contains(frame) || index < r.range.from || index > r.range.to) continue;
+      recapReady.delete(r.iframe.contentWindow);
+      r.iframe.remove();
+      delete frame.__recap;
+      delete frame.__ctl;
+      embedRecap(frame);
+      reloaded.push(frame);
+    }
+    Reveal.sync();
+    // reveal 记着的当前页还是旧的那个 DOM：原地再 slide 一次换成新的（页号没变，不发 slidechanged）
+    if (showing) Reveal.slide(index);
+    Reveal.syncSlide(fresh);
+    const now = Reveal.getCurrentSlide();
+    if (showing) {
+      // 停在页内动画放完的样子：和缩略图一致，宿主框出改动处时元素也不会再动
+      scene = sceneFor(fresh);
+      if (scene) {
+        scene.progress(1).pause();
+        if (scene.data?.stops) stepAt = scene.data.stops.length - 1;
+      }
+      reportStep();
+      playVideos(fresh, 0);
+    }
+    if (showing || reloaded.some((frame) => now.contains(frame))) startRecap(now, 0);
+    return true;
+  };
 
   prepare();
   prepareFills();

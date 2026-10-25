@@ -613,6 +613,67 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'read_page',
+      activity: (args) => {
+        const slides = slideArg(args)
+        return { kind: 'read', label: `读${nth(slides)}的源码`, slides }
+      },
+      config: {
+        title: '读一页的源码',
+        annotations: looking,
+        description:
+          '读某一页 <section> 在成品文件里的原文(不是浏览器纠正过的 DOM),连同版本号。只改一页时用它和 write_page,不用读写整份 HTML。',
+        inputSchema: {
+          slide: z.number().int().nonnegative().describe('页号,从 0 数起(第 1 页传 0)'),
+        },
+      },
+      run: async (args) =>
+        json(
+          await call('deck.readPage', {
+            deckId: await active.get(call),
+            slide: Number(args.slide),
+          }),
+        ),
+    },
+    {
+      name: 'write_page',
+      activity: (args) => ({
+        kind: 'write',
+        label: `改写${nth(slideArg(args))}`,
+        slides: slideArg(args),
+      }),
+      config: {
+        title: '整页改写一页',
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: false,
+        },
+        description:
+          '用新源码整页换掉某一页。html 必须恰好是一个 <section>(read_page 读到的那种),页外一个字不动;标签没闭合好、会影响别的页时拒绝。expected_revision 来自 read_page 或 deck_status。画布只换这一页,不重载整份稿子;可 undo。只改一句话用 edit_text;增删、移动页用 edit_pages。改完检查和前后页的转场是否还成立(data-id 配对、data-st)。',
+        inputSchema: {
+          slide: z.number().int().nonnegative().describe('页号,从 0 数起(第 1 页传 0)'),
+          html: z.string().min(1).max(1_000_000),
+          expected_revision: z.string(),
+        },
+      },
+      run: async (args) => {
+        const slide = Number(args.slide)
+        const result = await call('deck.writePage', {
+          deckId: await active.get(call),
+          slide,
+          html: String(args.html),
+          expectedRevision: String(args.expected_revision),
+        })
+        if (!result.ok) return refuse(tag('没改:', result.reason))
+        return receipt(
+          `已改写第 ${slide + 1} 页${result.revision ? `,版本 ${result.revision}` : ''}`,
+          result.uiTargets,
+        )
+      },
+    },
+    {
       name: 'replace_image',
       activity: (args) => ({
         kind: 'write',

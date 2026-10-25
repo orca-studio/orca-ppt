@@ -120,9 +120,48 @@ try {
       [FuseV1Options.EnableCookieEncryption]: true,
     })
   }
+  if (process.platform === 'darwin' && process.env.ORCA_PACKAGE_SIGN !== '0')
+    for (const dir of output) await signLocally(join(dir, 'Orca PPT.app'))
   console.log('Packaged:', output.join('\n'))
 } finally {
   await rm(stage, { recursive: true, force: true })
+}
+
+/**
+ * 本机打的包也用团队的 Developer ID 签名(不公证、不打时间戳)。临时签名的身份是这个包的哈希,
+ * 每打一次就换一个,钥匙串认不出是同一个应用,每装一次都要输密码放行「Orca PPT Safe Storage」;
+ * 团队签名按「团队 + 包名」认,和正式版是同一个应用。钥匙串里没有证书(比如 CI)就保持临时签名。
+ * 发版脚本自己签(要时间戳),调这里时传 ORCA_PACKAGE_SIGN=0。
+ */
+async function signLocally(appPath) {
+  const team = process.env.APPLE_TEAM_ID
+  const identities = [
+    ...new Set(
+      execFileSync('security', ['find-identity', '-v', '-p', 'codesigning'], { encoding: 'utf8' })
+        .split('\n')
+        .map((line) => line.match(/"(Developer ID Application: .+ \(([A-Z0-9]{10})\))"/))
+        .filter((m) => m && (!team || m[2] === team))
+        .map((m) => m[1]),
+    ),
+  ]
+  if (identities.length !== 1) {
+    console.log(
+      identities.length
+        ? `找到 ${identities.length} 个 Developer ID 证书,设 APPLE_TEAM_ID 指定用哪个;这次保持临时签名`
+        : '钥匙串里没有 Developer ID 证书,保持临时签名',
+    )
+    return
+  }
+  const { sign } = await import('@electron/osx-sign')
+  const entitlements = join(root, 'apps/desktop/build/entitlements.mac.plist')
+  await sign({
+    app: appPath,
+    identity: identities[0],
+    platform: 'darwin',
+    optionsForFile: () => ({ hardenedRuntime: true, entitlements, timestamp: 'none' }),
+  })
+  run('codesign', ['--verify', '--deep', '--strict', appPath])
+  console.log('Signed:', identities[0])
 }
 
 /** Finder / Dock 里的应用图标:从壳的 1024 图标(已按 macOS 规范留边、加投影)生成 .icns */

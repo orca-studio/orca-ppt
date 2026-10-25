@@ -513,6 +513,37 @@ export const requests = {
    * 找不到或者有好几处一样的就拒绝,`reason` 给人话。不猜着改:静默毁掉一个
    * `data-carry` 会让转场哑掉,而且要等到放映才发现。
    */
+  /**
+   * 读一页的源码:那一页 `<section>` 在成品里的原文,不是浏览器纠正过的 DOM。
+   * 和 `deck.writePage` 配对,agent 改一页不用读写整份 HTML。
+   */
+  'deck.readPage': {
+    params: z.object({ deckId: z.string(), slide: z.number().int().nonnegative() }),
+    result: z.object({
+      revision: z.string(),
+      slideCount: z.number().int().nonnegative(),
+      html: z.string(),
+    }),
+  },
+  /**
+   * 整页换掉一页的源码。`html` 必须恰好是一个 `<section>`,页外的东西一个字不动;
+   * 和 `deck.editPages` 一样要带 `expectedRevision`,和界面共用撤销。
+   * 画布就地换这一页,不重载整份(稿子的 engine 太旧时才重载)。
+   */
+  'deck.writePage': {
+    params: z.object({
+      deckId: z.string(),
+      expectedRevision: z.string(),
+      slide: z.number().int().nonnegative(),
+      html: z.string().min(1).max(1_000_000),
+    }),
+    result: z.object({
+      ok: z.boolean(),
+      reason: z.string().optional(),
+      revision: z.string().optional(),
+      uiTargets: UiTargetList.optional(),
+    }),
+  },
   'deck.editPages': {
     params: z.object({
       deckId: z.string(),
@@ -1007,8 +1038,10 @@ export const pushes = {
   }),
   /**
    * 稿子刚被改了一小处,画布可以不重载、就地换掉:画布停在 `before` 那一版时,把 `text`
-   * 那段字换掉,当作已经是 `revision`。没有 `text` 的是页面之外的改动(转场计划注释),
-   * 画面上什么都不用动。换不了(版本对不上、那段字认不准)就什么也不做,等 `deck.changed` 重载。
+   * 那段字换掉,或者把 `sections` 里的那几页整页换掉(源码是那一页的 `<section>`),当作已经是
+   * `revision`。两样都没有的是画面之外的改动(转场计划注释、`.deck/` 里的元数据),
+   * 画面上什么都不用动。换不了(版本对不上、那段字认不准、稿子的 engine 太旧不会换页)
+   * 就什么也不做,等 `deck.changed` 重载。
    *
    * 为什么要它:改一个字就整份重载,画面白一下、左栏跟着重渲,录屏里一闪一闪的。
    */
@@ -1022,6 +1055,9 @@ export const pushes = {
         oldText: z.string(),
         newText: z.string(),
       })
+      .optional(),
+    sections: z
+      .array(z.object({ index: z.number().int().nonnegative(), html: z.string() }))
       .optional(),
   }),
   'transition.changed': z.object({
@@ -1047,10 +1083,14 @@ export const pushes = {
    * agent 刚改了一处:画布翻到那一页,等新版本加载好,把那一处点亮,量出位置后调
    * `edit.followed`。`slide` 没有时(比如转场计划注释)不翻页;`text`、`selector` 都没有时
    * 指整张画布。`holdMs` 是点亮留多久 —— 演示模式下和停顿一样长。
+   *
+   * 界面停在首页(没开任何稿子)时先按 `path` 把这份稿子打开;正开着别的稿子时不抢,答
+   * `DOCUMENT_CHANGED`。agent 照「做同款」的路子先建稿、改完才 open_deck 时,改动也看得见。
    */
   'edit.follow': z.object({
     requestId: z.string(),
     deckId: z.string(),
+    path: z.string(),
     revision: z.string(),
     slide: z.number().int().nonnegative().optional(),
     text: z.string().optional(),

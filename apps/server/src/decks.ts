@@ -164,7 +164,18 @@ function unescapeHtml(text: string): string {
  * (「可录制应用」约定靠这个认出内容相同)。
  */
 export async function deckRevision(root: string): Promise<string> {
+  return (await deckSnapshot(root)).revision
+}
+
+/**
+ * 版本号连同算它用的成品源码,外加单算的素材摘要。server 比两版差在哪(只差几页就让画布
+ * 就地换页)时用:素材变了得整份重载,`.deck/` 里的元数据变了画面上什么都没变。
+ */
+export async function deckSnapshot(
+  root: string,
+): Promise<{ revision: string; entry?: { file: string; html: string }; assets: string }> {
   const hash = createHash('sha256')
+  const assets = createHash('sha256')
   const entry = await findEntry(root)
   if (entry) hash.update(entry.file).update('\0').update(entry.html)
   let names: string[] = []
@@ -182,10 +193,17 @@ export async function deckRevision(root: string): Promise<string> {
     }
   }
   for (const file of await listFiles(join(root, 'assets'))) {
-    hash.update('\0assets/').update(file.relative).update('\0')
-    hash.update(await fileDigest(file.path))
+    const digest = await fileDigest(file.path)
+    for (const target of [hash, assets]) {
+      target.update('\0assets/').update(file.relative).update('\0')
+      target.update(digest)
+    }
   }
-  return hash.digest('hex').slice(0, 16)
+  return {
+    revision: hash.digest('hex').slice(0, 16),
+    ...(entry ? { entry } : {}),
+    assets: assets.digest('hex').slice(0, 16),
+  }
 }
 
 /** 目录下所有文件,按相对路径排好。目录不在就是空的。 */

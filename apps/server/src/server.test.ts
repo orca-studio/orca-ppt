@@ -3,7 +3,7 @@ import { connect } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import { toUrlPath } from './preview.js'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
 import { startServer, type OrcaServer } from './server.js'
 
@@ -512,12 +512,90 @@ it('改字推 deck.patched 让画布就地换;文件监听随后推的 deck.chan
   expect(changed.revision).toBe(patched.revision)
 })
 
-it('删掉一个元素动了结构,不推 deck.patched,照旧重载', async () => {
+it('删掉一个元素动了这一页的结构:整页换掉,不重载整份', async () => {
   const deck = await builtDeck('<div class="slides"><section><p>1970</p><p>留</p></section></div>')
   pushes.length = 0
   await call('deck.editText', { deckId: deck.id, slide: 0, oldText: '1970', newText: '' })
   await new Promise((resolve) => setTimeout(resolve, 60))
-  expect(pushes.some((p) => p.channel === 'deck.patched')).toBe(false)
+  const patched = pushes.find((p) => p.channel === 'deck.patched')!.data
+  expect(patched.text).toBeUndefined()
+  expect(patched.sections).toEqual([{ index: 0, html: expect.stringContaining('<p>留</p>') }])
+  expect(patched.sections[0].html).not.toContain('1970')
+})
+
+describe('按页读写,画布只换那一页', () => {
+  const two =
+    '<div class="slides"><section><h2>一</h2></section><section><h2>二</h2></section></div>'
+
+  it('readPage 给原文和同一次读盘的版本号;writePage 推只含那一页的 deck.patched', async () => {
+    const deck = await builtDeck(two)
+    const read = (await call('deck.readPage', { deckId: deck.id, slide: 1 })).data
+    expect(read).toMatchObject({ slideCount: 2, html: '<section><h2>二</h2></section>' })
+    pushes.length = 0
+    const page = '<section data-auto-animate><h2>贰</h2></section>'
+    const written = await call('deck.writePage', {
+      deckId: deck.id,
+      slide: 1,
+      html: page,
+      expectedRevision: read.revision,
+    })
+    expect(written.data.ok).toBe(true)
+    expect(await readFile(join(deck.dir, 'deck.html'), 'utf8')).toBe(two.replace(read.html, page))
+    await new Promise((resolve) => setTimeout(resolve, 600))
+    const patched = pushes.find((p) => p.channel === 'deck.patched')!.data
+    expect(patched).toMatchObject({ before: read.revision, sections: [{ index: 1, html: page }] })
+    expect(pushes.filter((p) => p.channel === 'deck.changed').at(-1)!.data.revision).toBe(
+      patched.revision,
+    )
+    // 撤销也只换回那一页
+    pushes.length = 0
+    expect((await call('deck.undo', { deckId: deck.id })).data.ok).toBe(true)
+    expect(pushes.find((p) => p.channel === 'deck.patched')!.data.sections).toEqual([
+      { index: 1, html: read.html },
+    ])
+  })
+
+  it('版本号过期、源码不是一页,都不写', async () => {
+    const deck = await builtDeck(two)
+    const { revision } = (await call('deck.readPage', { deckId: deck.id, slide: 0 })).data
+    const stale = await call('deck.writePage', {
+      deckId: deck.id,
+      slide: 0,
+      html: '<section>x</section>',
+      expectedRevision: 'old',
+    })
+    expect(stale.data.reason).toContain('STALE_REVISION')
+    const bad = await call('deck.writePage', {
+      deckId: deck.id,
+      slide: 0,
+      html: '<div>x</div>',
+      expectedRevision: revision,
+    })
+    expect(bad.data).toMatchObject({ ok: false, reason: expect.stringContaining('<section>') })
+    expect(await readFile(join(deck.dir, 'deck.html'), 'utf8')).toBe(two)
+  })
+
+  it('外面直接改了文件里的一页:文件监听推只含那一页的 deck.patched', async () => {
+    const deck = await builtDeck(two)
+    pushes.length = 0
+    await writeFile(join(deck.dir, 'deck.html'), two.replace('<h2>一</h2>', '<h2>壹</h2>'))
+    await vi.waitFor(() => expect(pushes.some((p) => p.channel === 'deck.changed')).toBe(true), {
+      timeout: 3000,
+    })
+    expect(pushes.find((p) => p.channel === 'deck.patched')!.data.sections).toEqual([
+      { index: 0, html: '<section><h2>壹</h2></section>' },
+    ])
+  })
+
+  it('增删了页:不推 deck.patched,整份重载', async () => {
+    const deck = await builtDeck(two)
+    pushes.length = 0
+    await writeFile(join(deck.dir, 'deck.html'), two.replace('<section><h2>二</h2></section>', ''))
+    await vi.waitFor(() => expect(pushes.some((p) => p.channel === 'deck.changed')).toBe(true), {
+      timeout: 3000,
+    })
+    expect(pushes.some((p) => p.channel === 'deck.patched')).toBe(false)
+  })
 })
 
 it('演示模式:开关广播 demo.changed,间隔有上下限', async () => {

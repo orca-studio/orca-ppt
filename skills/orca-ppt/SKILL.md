@@ -77,7 +77,9 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 浏览器直接打开 HTML，方向键翻页。只有往后翻会播转场，往回翻是直接切。
 转场没放完就按下一页，会先把剩下的快进放完再翻，不会跳帧；嵌进别的应用放映时，往前翻调
-`window.__orcaAdvance()`，别直接调 `Reveal.next()`。
+`window.__orcaAdvance()`，别直接调 `Reveal.next()`。只改了某一页时调
+`window.__orcaReplaceSlide(页号, 那一页 <section> 的源码)`，只换这一页、不重载整份；返回 false
+（页里有 `<script>`、有纵向页）就整份重载。
 
 **配套的 OrcaPPT 应用**（桌面端，可选）连不上、或者工具返回 `NO_DECK_OPEN`、`UI_DISCONNECTED`
 这类大写前缀的错误时，读 `references/install.md`：先告诉用户该做什么，别反复重试。

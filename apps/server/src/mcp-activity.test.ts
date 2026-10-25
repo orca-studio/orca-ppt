@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, realpath, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -33,7 +33,10 @@ const FOLLOWED = (query: unknown) => ({
 })
 
 beforeEach(async () => {
-  server = await startServer()
+  // 这里断言的是操作记录里多了哪几条:别和并行跑的别的测试文件共用一份记录
+  server = await startServer({
+    recordingFile: join(await mkdtemp(join(tmpdir(), 'recording-')), 'recording.jsonl'),
+  })
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
   activity = []
@@ -440,7 +443,7 @@ describe('可录制应用约定:操作记录', () => {
   })
 
   it('agent 改字:画布跟到那一页、点亮新文字;回执和事件都带上位置', async () => {
-    await openDeckAt('走过的四站。')
+    const { dir } = await openDeckAt('走过的四站。')
     const cursor = await cursorNow()
     const receipt = await tool('edit_text', {
       slide: 1,
@@ -448,7 +451,13 @@ describe('可录制应用约定:操作记录', () => {
       new_text: '四站',
     })
     expect(follows).toHaveLength(1)
-    expect(follows[0]!.data).toMatchObject({ slide: 1, text: '四站', holdMs: 0 })
+    // 带上路径:界面停在首页时据此先把稿子打开
+    expect(follows[0]!.data).toMatchObject({
+      path: await realpath(dir),
+      slide: 1,
+      text: '四站',
+      holdMs: 0,
+    })
     const [event] = await eventsAfter(cursor)
     const expected = FOLLOWED({ controlId: 'canvas' }).targets.map((t) => ({ ...t, measuredAt: 1 }))
     expect(event.uiTargets).toEqual(expected)
