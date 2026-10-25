@@ -3,6 +3,7 @@ import {
   CanvasEvidence,
   type InspectAnchor,
   type CanvasError,
+  type PushData,
   type RequestParams,
 } from '@orca-ppt/contracts'
 import autoplayScript from './guest/autoplay.guest.js?raw'
@@ -37,12 +38,6 @@ export interface StageHandle {
   ): Promise<CanvasEvidence>
   selectCanvas(input: RequestParams<'canvas.select'>): Promise<CanvasEvidence>
   /** 进入取锚状态。用户点下给出锚,Esc 取消给出 null。 */
-  targetText(
-    slide: number,
-    text: string,
-    targetId?: string,
-    replacement?: string,
-  ): Promise<{ x: number; y: number; width: number; height: number; targetId: string } | null>
   pick(): Promise<PickedAnchor | null>
   cancelPick(): void
   /** 自动播放:按每页的 data-hold 依次往后翻。 */
@@ -67,6 +62,31 @@ export interface StageHandle {
   whenReady(timeoutMs?: number): Promise<boolean>
   /** 这一页的情况:停留时长、参与转场的元素。只有画布答得出来。 */
   slideInfo(): Promise<SlideInfo | null>
+  /** 就地换掉一段字,不重载(见协议 `deck.patched`)。换不了返回 false,调用方照旧重载。 */
+  patch(input: PushData<'deck.patched'>): Promise<boolean>
+  /** 画布现在是哪一版。没加载好时是 null。 */
+  revision(): Promise<string | null>
+  /** 页上几处东西在宿主页面里的位置(CSS 像素,已裁到画布可见的部分)。只读。 */
+  locate(queries: StageQuery[]): Promise<StageTarget[]>
+  /**
+   * 跟上 agent 的一处改动:等画布加载出 revision,翻到那一页,把那一处框出来,
+   * 确认画到屏幕上之后交回它的位置。没有 query 时只翻页。
+   */
+  follow(input: {
+    revision: string
+    slide?: number
+    query?: StageQuery
+    holdMs: number
+  }): Promise<StageTarget | undefined>
+}
+
+export type StageQuery = { slide: number; text: string } | { slide: number; selector: string }
+export interface StageTarget {
+  status: 'visible' | 'not_visible' | 'not_found' | 'ambiguous' | 'unavailable'
+  rect?: { x: number; y: number; width: number; height: number }
+  /** 页内选择器。拼成 targetId 之后能原样再查。 */
+  selector?: string
+  reason?: string
 }
 
 /** 攒着的点亮过期时间。隔太久再闪一下,人根本对不上是哪次改动。 */
@@ -448,6 +468,35 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     }
   }
 
+  /** guest 视口坐标 → 宿主页面坐标,并裁到画布框里露出来的那部分。 */
+  const toHost = (target: StageTarget): StageTarget => {
+    const view = ref.current
+    if (!view || !target.rect) return target
+    const host = view.getBoundingClientRect()
+    const left = Math.max(host.x + target.rect.x, host.left, 0)
+    const top = Math.max(host.y + target.rect.y, host.top, 0)
+    const right = Math.min(host.x + target.rect.x + target.rect.width, host.right, innerWidth)
+    const bottom = Math.min(host.y + target.rect.y + target.rect.height, host.bottom, innerHeight)
+    if (right <= left || bottom <= top) {
+      const { rect: _rect, ...rest } = target
+      return { ...rest, status: 'not_visible', reason: 'outside_viewport' }
+    }
+    return { ...target, rect: { x: left, y: top, width: right - left, height: bottom - top } }
+  }
+
+  const locate = async (queries: StageQuery[]): Promise<StageTarget[]> => {
+    const view = ref.current
+    if (!view || loading.current || !injected.current)
+      return queries.map(() => ({ status: 'unavailable', reason: 'canvas_not_ready' }))
+    const found = (await view
+      .executeJavaScript(
+        `${JSON.stringify(queries)}.map(q => window.__orcaCanvas?.locate(q) ?? { status: 'unavailable', reason: 'canvas_not_ready' })`,
+      )
+      .catch(() => undefined)) as StageTarget[] | undefined
+    if (!found) return queries.map(() => ({ status: 'unavailable', reason: 'canvas_not_ready' }))
+    return found.map(toHost)
+  }
+
   useImperativeHandle(
     handle,
     (): StageHandle => ({
@@ -456,25 +505,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         await inspectCanvas('context', input.expectedRevision)
         await ref.current?.executeJavaScript(`window.__orcaCanvas.select(${JSON.stringify(input)})`)
         return inspectCanvas('context', input.expectedRevision)
-      },
-      targetText: async (slide, text, targetId, replacement) => {
-        const view = ref.current
-        if (!view) return null
-        const result = (await view.executeJavaScript(`(() => {
-          const section = document.querySelectorAll('.reveal .slides > section')[${JSON.stringify(slide)}];
-          if (!section || !section.classList.contains('present')) return null;
-          const elements = [...section.querySelectorAll('*')];
-          const identity = e => e.id || e.getAttribute('data-id') || 'slide.' + ${JSON.stringify(slide)} + '.element.' + elements.indexOf(e);
-          const texts = ${JSON.stringify([text, replacement].filter((v) => v !== undefined))};
-          const matches = elements.filter(e => texts.includes(e.textContent) && ![...e.children].some(c => texts.includes(c.textContent)) && (${JSON.stringify(targetId ?? null)} === null || identity(e) === ${JSON.stringify(targetId ?? null)}));
-          if (matches.length !== 1) return null;
-          const e = matches[0], r = e.getBoundingClientRect();
-          if (r.width <= 0 || r.height <= 0 || r.left < 0 || r.top < 0 || r.right > innerWidth || r.bottom > innerHeight) return null;
-          return {x:r.x,y:r.y,width:r.width,height:r.height,targetId:e.id || e.getAttribute('data-id') || 'slide.' + ${JSON.stringify(slide)} + '.element.' + [...section.querySelectorAll('*')].indexOf(e)};
-        })()`)) as { x: number; y: number; width: number; height: number; targetId: string } | null
-        if (!result) return null
-        const host = view.getBoundingClientRect()
-        return { ...result, x: host.x + result.x, y: host.y + result.y }
       },
       pick: async () => {
         const result = await ref.current?.executeJavaScript('window.__orcaInspect?.arm()')
@@ -533,6 +563,52 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           // guest 还没附着
           return undefined
         }
+      },
+      locate,
+      patch: async (input) => {
+        const view = ref.current
+        if (!view || loading.current || reloadWaiting.current || !injected.current) return false
+        const done = await guest(
+          view,
+          `window.__orcaCanvas.patch(${JSON.stringify(input)})`,
+          'patch',
+        ).catch(() => false)
+        return done === true
+      },
+      revision: async () => {
+        const view = ref.current
+        if (!view || loading.current || !injected.current) return null
+        const value = await guest(view, 'window.__orcaCanvas.revision()', 'revision').catch(
+          () => null,
+        )
+        return typeof value === 'string' ? value : null
+      },
+      follow: async ({ revision, slide, query, holdMs }) => {
+        const view = ref.current
+        if (!view) throw new Error('UI_DISCONNECTED: 没有可见画布。')
+        // 写盘触发的重载可能还没开始:先把要停的页记下,重载完就停在那儿
+        if (slide !== undefined) restoreTo.current = slide
+        await inspectCanvas('context', revision)
+        if (slide !== undefined) {
+          // 直接跳,不放转场:要看的是改动,不是翻页动画
+          await guest(
+            view,
+            `Reveal.getIndices().h === ${slide} || void Reveal.slide(${slide})`,
+            'slide',
+          )
+          await guest(
+            view,
+            'new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))',
+            'frame',
+          )
+        }
+        if (!query) return undefined
+        const found = (await guest(
+          view,
+          `window.__orcaCanvas.mark(${JSON.stringify(query)}, ${JSON.stringify(holdMs)})`,
+          'mark',
+        )) as StageTarget
+        return toHost(found)
       },
       slideInfo: async () => {
         const result = await ref.current
@@ -605,7 +681,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   return (
     <div className="stage">
       <div className="stage-canvas">
-        <div className="stage-frame stage-frame--live">
+        <div className="stage-frame stage-frame--live" data-ui-target="canvas">
           <webview
             ref={ref as unknown as React.Ref<HTMLWebViewElement>}
             src={previewUrl}
@@ -623,6 +699,15 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     </div>
   )
 })
+
+/** 在 guest 里跑一段,出错时带回真正的原因 —— executeJavaScript 自己只会说「脚本执行失败」。 */
+async function guest(view: WebviewElement, expression: string, step: string): Promise<unknown> {
+  const result = (await view.executeJavaScript(
+    `(async () => { try { return { value: await (${expression}) } } catch (e) { return { error: String((e && e.stack) || e) } } })()`,
+  )) as { value?: unknown; error?: string }
+  if (result.error) throw new Error(`${step}: ${result.error}`)
+  return result.value
+}
 
 function mergeErrors(...lists: CanvasError[][]): CanvasError[] {
   const errors = new Map<string, CanvasError>()

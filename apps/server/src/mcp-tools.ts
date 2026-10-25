@@ -5,7 +5,7 @@ import type {
   RequestParams,
   RequestResult,
 } from '@orca-ppt/contracts'
-import { HOME_VISUAL_ACTIONS, phaseOrder } from '@orca-ppt/contracts'
+import { phaseOrder, UI_TARGETS_CAPABILITY, UiTargetQuery } from '@orca-ppt/contracts'
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { AgentError, hasAgentCode } from './agent-errors.js'
@@ -82,6 +82,19 @@ const refuse = (value: string): Text => ({
   isError: true,
 })
 const json = (value: unknown): Text => text(JSON.stringify(value, null, 2))
+/**
+ * 改动的回执:第一段是给 agent 的人话,有位置时第二段带上 `uiTargets`(被改的那一处显示到画布上
+ * 那一刻的屏幕位置)。人话放第一段:宿主和界面都只摆第一段。
+ */
+const receipt = (message: string, uiTargets: unknown): Text =>
+  uiTargets
+    ? {
+        content: [
+          { type: 'text', text: message },
+          { type: 'text', text: JSON.stringify({ uiTargets }) },
+        ],
+      }
+    : text(message)
 /** 拒绝理由前面加「没改:」之类;已经带错误码前缀的原样给 —— 前缀得在开头,宿主才认得出。 */
 const tag = (prefix: string, reason: string | undefined): string =>
   reason && hasAgentCode(reason) ? reason : `${prefix}${reason ?? ''}`
@@ -304,8 +317,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       config: {
         title: '打开做同款提示词',
         annotations: looking,
-        // 光标指那张卡上的「做同款」按钮
-        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
           '在首页打开某个同款的「做同款」弹窗，用户能看到并复制那段提示词，和点卡片上的「做同款」一样。开着稿子的话应用会先关掉它回首页。open=false 收起。提示词正文 list_recipes 里也有。案例（kind=example）没有这个弹窗。',
         inputSchema: {
@@ -338,8 +349,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'navigate',
       config: {
         title: '翻页、重放转场或页内动画',
-        // 翻页时宿主也画光标:visual_target 算出要翻到哪页,指向左栏那页的缩略图
-        _meta: { 'dev.jevbot/ui': { version: 1, visual: true } },
         description:
           '与键盘翻页和 UI 重放共用操作。next 在有点击分步的页上先放下一步，放完才翻页。replay 重放从 from 页翻到下一页的转场；replayPage 把 from 页的页内动画从头放一遍。两者都必须带 from，页号从 0 数起。',
         annotations: looking,
@@ -476,61 +485,48 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
-      name: 'visual_target',
+      name: 'resolve_ui_targets',
       config: {
-        title: '定位操作目标',
-        description: '宿主操作反馈接口：定位可见目标或报告操作结束，不改文档内容。',
+        title: '定位界面目标',
+        description:
+          '给录屏、教学宿主用,agent 不需要调。批量查几处东西此刻在屏幕上的位置,只读:不翻页、不选中、不滚动。每条查询三选一:{slide, text} 某页上整段文字是它的元素;{slide, selector} 某页上的页内选择器;{controlId} 界面控件 —— canvas、filmstrip.slide.<n>(左栏第 n 页缩略图,从 0 数)、history.undo、history.redo、control.capsule,或者改动回执 / 操作记录里给出的 targetId。画布上的元素只在那一页正显示着时才 visible。返回 measuredAt(Unix 毫秒)、coordinateSpace=screen_points_top_left,以及按查询顺序的 targets:status、window {id,bounds}、targetId,visible 时才有 rect。矩形是全局屏幕点,不是录屏像素;窗口一动、翻了页就要重查。',
         annotations: looking,
-        _meta: { 'dev.jevbot/ui': { version: 1, resolves: true, tracks: true } },
+        _meta: { [UI_TARGETS_CAPABILITY]: { version: 1 } },
         inputSchema: {
-          action: z.enum([
-            'show_slide',
-            'navigate',
-            'edit_text',
-            'undo',
-            'redo',
-            ...HOME_VISUAL_ACTIONS,
-          ]),
-          arguments: z.record(z.string(), z.unknown()),
-          phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
-          targetId: z.string().optional(),
+          targets: z.array(UiTargetQuery).min(1).max(32),
         },
       },
-      run: async (args) => {
-        const arguments_ = args.arguments as Record<string, unknown>
-        type Action = RequestParams<'visual.prepare'>['action']
-        const phase = (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed' | 'track'
-        // 首页上的同款卡片不属于哪份稿子:不要求开着稿子。准备阶段 server 会先回首页,
-        // 之前认下的那份稿子也就关了
-        if ((HOME_VISUAL_ACTIONS as readonly string[]).includes(String(args.action))) {
-          const target = await call('visual.prepare', {
-            action: args.action as Action,
-            arguments: arguments_,
-            phase,
-            ...(typeof args.targetId === 'string' ? { targetId: args.targetId } : {}),
-          })
-          if (phase === 'prepare') active.clear()
-          return json(target)
-        }
-        const deckId = await active.get(call)
-        if (
-          (args.phase ?? 'prepare') === 'prepare' &&
-          args.action === 'edit_text' &&
-          Number.isInteger(arguments_.slide) &&
-          Number(arguments_.slide) >= 0
-        ) {
-          await call('deck.showSlide', { deckId, index: Number(arguments_.slide) })
-        }
-        return json(
-          await call('visual.prepare', {
-            deckId,
-            action: args.action as 'show_slide' | 'navigate' | 'edit_text' | 'undo' | 'redo',
-            arguments: arguments_,
-            phase: (args.phase ?? 'prepare') as 'prepare' | 'completed' | 'failed' | 'track',
-            targetId: args.targetId as string | undefined,
+      run: async (args) =>
+        json(
+          await call('ui.resolveTargets', {
+            queries: UiTargetQuery.array().parse(args.targets),
           }),
-        )
+        ),
+    },
+    {
+      name: 'set_demo_mode',
+      activity: (args) => ({
+        kind: 'read',
+        label: args.on === false ? '关掉演示模式' : '打开演示模式',
+        slides: [],
+      }),
+      config: {
+        title: '开关演示模式',
+        description:
+          '和菜单「放映 › 演示模式」一样。打开后,经 MCP 发来的改动排成队,一条一条显示到画布上,每条显示出来之后停 interval_ms 毫秒(默认 1200)再做下一条 —— 录教学视频时用,人眼才跟得上。不开时改动照样跟着翻页、点亮,只是不等。返回现在的状态。',
+        annotations: looking,
+        inputSchema: {
+          on: z.boolean(),
+          interval_ms: z.number().int().min(300).max(5000).optional(),
+        },
       },
+      run: async (args) =>
+        json(
+          await call('demo.set', {
+            on: Boolean(args.on),
+            ...(typeof args.interval_ms === 'number' ? { intervalMs: args.interval_ms } : {}),
+          }),
+        ),
     },
     {
       name: 'control_state',
@@ -538,7 +534,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         title: '读取控制权',
         description: '宿主读取控制权状态，用于结束操作反馈；不取得或续期控制权。',
         annotations: looking,
-        _meta: { 'dev.jevbot/ui': { version: 1, controlState: true } },
         inputSchema: {},
       },
       run: async () => json(await call('control.state', {})),
@@ -551,9 +546,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '让画布跳到第几页',
-        _meta: {
-          'dev.jevbot/ui': { version: 1, label: '第 {index+1} 页', role: 'AXButton', visual: true },
-        },
         annotations: looking,
         description:
           '界面上的放映画布跳到指定页(从 0 数起)。跟用户讨论某一页时先调它 —— 他看到的和你说的才是同一页。',
@@ -670,7 +662,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
       config: {
         title: '换掉一句话',
-        _meta: { 'dev.jevbot/ui': { version: 1, label: '{old_text}', role: 'AXStaticText' } },
         annotations: {
           readOnlyHint: false,
           destructiveHint: false,
@@ -700,7 +691,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           newText: String(args.new_text),
         })
         if (!result.ok) return refuse(tag('没改:', result.reason))
-        return text(`第 ${Number(args.slide) + 1} 页改好了。`)
+        return receipt(`第 ${Number(args.slide) + 1} 页改好了。`, result.uiTargets)
       },
     },
     {
@@ -733,7 +724,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           newText: String(args.new_text),
         })
         if (!result.ok) return refuse(tag('没改:', result.reason))
-        return text('转场计划改好了。')
+        return receipt('转场计划改好了。', result.uiTargets)
       },
     },
     {
@@ -874,7 +865,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'undo',
       activity: () => ({ kind: 'write', label: '撤销上一处改动', slides: [] }),
       config: {
-        _meta: { 'dev.jevbot/ui': { version: 1, label: '撤销', role: 'AXButton' } },
         title: '撤销上一处改动',
         // 会改稿子,但不丢东西:撤掉的那一步 redo 能拿回来。
         annotations: {
@@ -890,8 +880,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         const result = await call('deck.undo', { deckId: await active.get(call) })
         if (!result.ok) return refuse(tag('没撤:', result.reason))
         if (result.text === undefined) return json(result)
-        return text(
+        return receipt(
           `撤销了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
+          result.uiTargets,
         )
       },
     },
@@ -899,7 +890,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       name: 'redo',
       activity: () => ({ kind: 'write', label: '重做刚撤掉的改动', slides: [] }),
       config: {
-        _meta: { 'dev.jevbot/ui': { version: 1, label: '重做', role: 'AXButton' } },
         title: '重做刚撤掉的改动',
         annotations: {
           readOnlyHint: false,
@@ -914,8 +904,9 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         const result = await call('deck.redo', { deckId: await active.get(call) })
         if (!result.ok) return refuse(tag('没重做:', result.reason))
         if (result.text === undefined) return json(result)
-        return text(
+        return receipt(
           `重做了第 ${(result.slide ?? 0) + 1} 页的改字,那里现在是「${result.text ?? ''}」。`,
+          result.uiTargets,
         )
       },
     },

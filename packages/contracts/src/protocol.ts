@@ -44,29 +44,83 @@ export const PptxExportReport = z.object({
 export const RecipeFocusShow = z.enum(['prompt', 'none'])
 
 /**
- * 首页上的动作:指的是同款卡片,不是哪份稿子里的东西。`visual.prepare` 对它们不带 deckId,
- * 推给界面的 `visual.request` 里 deckId 是空串。
+ * 界面上一处东西在屏幕上的位置(`studio.orca/ui-targets` v1,和 ocut pro 同一份约定)。
+ * 录屏宿主拿它推近画面、画目标框 —— 它只看得到像素,不知道哪个像素是「刚改的那段字」。
+ *
+ * 只读:查询不翻页、不选中、不滚动。画布上的元素只在那一页正显示着时才 visible。
  */
-export const HOME_VISUAL_ACTIONS = ['show_recipe_prompt'] as const
-
-export const VisualRequest = z.object({
-  action: z.enum(['show_slide', 'navigate', 'edit_text', 'undo', 'redo', ...HOME_VISUAL_ACTIONS]),
-  arguments: z.record(z.string(), z.unknown()),
-  phase: z.enum(['prepare', 'completed', 'failed', 'track']).default('prepare'),
-  targetId: z.string().optional(),
+export const UiRect = z.object({
+  x: z.number().finite(),
+  y: z.number().finite(),
+  width: z.number().nonnegative(),
+  height: z.number().nonnegative(),
 })
-export const VisualTarget = z.object({
-  rect: z
-    .object({
-      x: z.number().finite(),
-      y: z.number().finite(),
-      width: z.number().positive(),
-      height: z.number().positive(),
-    })
-    .optional(),
+export type UiRect = z.infer<typeof UiRect>
+export const UiTargetQuery = z.union([
+  /** 某页上整段文字是它的那个元素(叶子元素,和改字一样按源文字认,不按屏幕上的大小写)。 */
+  z.strictObject({ slide: z.number().int().nonnegative(), text: z.string().min(1).max(2000) }),
+  /** 某页上的页内选择器(get_canvas_elements 给的那种)。 */
+  z.strictObject({
+    slide: z.number().int().nonnegative(),
+    selector: z.string().min(1).max(2000),
+  }),
+  /** 界面控件:canvas、filmstrip.slide.<n>、history.undo、history.redo、control.capsule,
+   * 以及回执里给出的 targetId。 */
+  z.strictObject({ controlId: z.string().min(1).max(2100) }),
+])
+export type UiTargetQuery = z.infer<typeof UiTargetQuery>
+export const UiTargetStatus = z.enum([
+  'visible',
+  'not_visible',
+  'not_found',
+  'unsupported',
+  'ambiguous',
+  'unavailable',
+])
+export const UiTarget = z.object({
+  query: UiTargetQuery,
+  status: UiTargetStatus,
+  /** 所在窗口:id 和此刻的内容区边界(屏幕点)。 */
+  window: z.object({ id: z.string(), bounds: UiRect }).optional(),
+  /** 稳定的目标标识。原样当 controlId 再查,就是同一处。 */
   targetId: z.string().optional(),
+  /** 屏幕点,左上角为原点。只在 visible 时给;露出一部分就给露出的那部分。 */
+  rect: UiRect.optional(),
+  /** 没定位到时给机器看的原因。 */
+  reason: z.string().optional(),
+})
+export type UiTarget = z.infer<typeof UiTarget>
+/** 一批定位结果(resolve_ui_targets 的返回)。测完就会过时:窗口一动、画布一翻页就得重查。 */
+export const UiTargets = z.object({
+  /** Unix 毫秒。 */
   measuredAt: z.number(),
+  coordinateSpace: z.literal('screen_points_top_left'),
+  targets: z.array(UiTarget),
 })
+export type UiTargets = z.infer<typeof UiTargets>
+/**
+ * 写操作回执和操作记录里的 `uiTargets`:有序数组,由细到粗 —— 先是被改的那一处,再是整张画布。
+ * 每一项自带量的时刻。数组不另带 coordinateSpace:rect 一律是全局屏幕点、左上角为原点
+ * (screen_points_top_left)。录屏宿主直接拿它当这一步的目标框。
+ */
+export const UiTargetList = z.array(UiTarget.extend({ measuredAt: z.number() }))
+export type UiTargetList = z.infer<typeof UiTargetList>
+export const UI_TARGETS_MAX_BATCH = 32
+/** 工具 `_meta` 里声明这项能力用的键。用提供方的名义,不用某个宿主的。 */
+export const UI_TARGETS_CAPABILITY = 'studio.orca/ui-targets'
+
+/**
+ * 演示模式:agent 经 MCP 并发发来的改动排成队,一条一条落到画布上,每条之间留出人眼看得清的
+ * 时间。MCP 越快越好,人眼却需要时间 —— 录教学视频时由应用兜底,不指望提示词约束 agent。
+ * 不开时改动照样跟着翻页、点亮,只是不等。
+ */
+export const Demo = z.object({
+  on: z.boolean(),
+  /** 每条改动显示出来之后停多久(毫秒)。 */
+  intervalMs: z.number().int().min(300).max(5000),
+})
+export type Demo = z.infer<typeof Demo>
+export const DEMO_DEFAULT_INTERVAL_MS = 1200
 
 export const PhaseStatus = z.enum(['idle', 'running', 'done', 'failed'])
 export type PhaseStatus = z.infer<typeof PhaseStatus>
@@ -167,6 +221,8 @@ export const RecordingEvent = z.object({
   tool: z.string().optional(),
   undoable: z.boolean().optional(),
   detail: z.record(z.string(), z.unknown()).optional(),
+  /** 被改的那一处在屏幕上的位置,改动显示到画布上那一刻量的。界面没开着、没量到就没有。 */
+  uiTargets: UiTargetList.optional(),
 })
 export type RecordingEvent = z.infer<typeof RecordingEvent>
 
@@ -176,6 +232,7 @@ const HistoryStep = z.object({
   reason: z.string().optional(),
   slide: z.number().int().nonnegative().optional(),
   text: z.string().optional(),
+  uiTargets: UiTargetList.optional(),
 })
 
 /** Live canvas evidence; selectors are scoped to the reported slide and revision. */
@@ -479,6 +536,7 @@ export const requests = {
       reason: z.string().optional(),
       revision: z.string().optional(),
       slide: z.number().int().nonnegative().optional(),
+      uiTargets: UiTargetList.optional(),
     }),
   },
   'deck.replaceImage': {
@@ -494,6 +552,7 @@ export const requests = {
       ok: z.boolean(),
       reason: z.string().optional(),
       revision: z.string().optional(),
+      uiTargets: UiTargetList.optional(),
     }),
   },
   'deck.editText': {
@@ -503,7 +562,11 @@ export const requests = {
       oldText: z.string(),
       newText: z.string(),
     }),
-    result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
+    result: z.object({
+      ok: z.boolean(),
+      reason: z.string().optional(),
+      uiTargets: UiTargetList.optional(),
+    }),
   },
   /**
    * 改转场计划注释里的一段字(注释在页面之外,editText 够不着)。和 editText 一样拿旧文字
@@ -511,7 +574,11 @@ export const requests = {
    */
   'deck.editPlan': {
     params: z.object({ deckId: z.string(), oldText: z.string(), newText: z.string() }),
-    result: z.object({ ok: z.boolean(), reason: z.string().optional() }),
+    result: z.object({
+      ok: z.boolean(),
+      reason: z.string().optional(),
+      uiTargets: UiTargetList.optional(),
+    }),
   },
   /**
    * 撤掉最近一次共享编辑(改字、页面编辑或换图,不管是 UI 还是 MCP)。
@@ -781,18 +848,38 @@ export const requests = {
     result: z.object({}),
   },
   /** 壳把截好的图交回来。只有壳会调。 */
-  /** 首页上的动作(HOME_VISUAL_ACTIONS)不带 deckId,其余都要带。 */
-  'visual.prepare': {
-    params: VisualRequest.extend({ deckId: z.string().optional() }),
-    result: VisualTarget,
+  /** 界面上几处东西此刻在屏幕上的哪儿(`studio.orca/ui-targets` v1)。只读。 */
+  'ui.resolveTargets': {
+    params: z.object({ queries: z.array(UiTargetQuery).min(1).max(UI_TARGETS_MAX_BATCH) }),
+    result: UiTargets,
   },
-  'visual.result': {
+  /** 界面把定位结果交回来。只有界面会调。 */
+  'ui.targetsResult': {
     params: z.object({
       requestId: z.string(),
-      target: VisualTarget.optional(),
+      targets: UiTargets.optional(),
       error: z.string().optional(),
     }),
     result: z.object({}),
+  },
+  /** 画布跟上了 agent 的一处改动(翻过去、点亮了),交回那一处的位置。只有界面会调。 */
+  'edit.followed': {
+    params: z.object({
+      requestId: z.string(),
+      targets: UiTargets.optional(),
+      error: z.string().optional(),
+    }),
+    result: z.object({}),
+  },
+  /** 演示模式开没开。连上时问一次,之后跟着 `demo.changed` 走。 */
+  'demo.state': { params: z.object({}), result: Demo },
+  /** 开关演示模式。菜单「放映 › 演示模式」和 MCP 的 set_demo_mode 都走它。 */
+  'demo.set': {
+    params: z.object({
+      on: z.boolean(),
+      intervalMs: Demo.shape.intervalMs.optional(),
+    }),
+    result: Demo,
   },
   'capture.result': {
     params: z.object({
@@ -915,6 +1002,27 @@ export const pushes = {
     slideTitles: z.array(z.string().nullable()),
     pageTypes: z.array(z.string().nullable()),
     previewUrl: z.string(),
+    /** 磁盘上现在的版本号。画布已经就地换成这一版(见 `deck.patched`)就不用重载。 */
+    revision: z.string().optional(),
+  }),
+  /**
+   * 稿子刚被改了一小处,画布可以不重载、就地换掉:画布停在 `before` 那一版时,把 `text`
+   * 那段字换掉,当作已经是 `revision`。没有 `text` 的是页面之外的改动(转场计划注释),
+   * 画面上什么都不用动。换不了(版本对不上、那段字认不准)就什么也不做,等 `deck.changed` 重载。
+   *
+   * 为什么要它:改一个字就整份重载,画面白一下、左栏跟着重渲,录屏里一闪一闪的。
+   */
+  'deck.patched': z.object({
+    deckId: z.string(),
+    before: z.string(),
+    revision: z.string(),
+    text: z
+      .object({
+        slide: z.number().int().nonnegative(),
+        oldText: z.string(),
+        newText: z.string(),
+      })
+      .optional(),
   }),
   'transition.changed': z.object({
     deckId: z.string(),
@@ -930,8 +1038,28 @@ export const pushes = {
   }),
   /** 待办队列变了。界面据此显示「已取 N 处,去跟 agent 说一声」。 */
   'requests.changed': z.object({ deckId: z.string(), requests: z.array(PendingRequest) }),
+  /** 请界面量几处东西的屏幕位置。量完调 `ui.targetsResult` 交回来。 */
+  'ui.targets.request': z.object({
+    requestId: z.string(),
+    queries: z.array(UiTargetQuery),
+  }),
+  /**
+   * agent 刚改了一处:画布翻到那一页,等新版本加载好,把那一处点亮,量出位置后调
+   * `edit.followed`。`slide` 没有时(比如转场计划注释)不翻页;`text`、`selector` 都没有时
+   * 指整张画布。`holdMs` 是点亮留多久 —— 演示模式下和停顿一样长。
+   */
+  'edit.follow': z.object({
+    requestId: z.string(),
+    deckId: z.string(),
+    revision: z.string(),
+    slide: z.number().int().nonnegative().optional(),
+    text: z.string().optional(),
+    selector: z.string().optional(),
+    holdMs: z.number().int().nonnegative(),
+  }),
+  /** 演示模式开关变了。 */
+  'demo.changed': Demo,
   /** 请壳截一张画布的图。壳截完调 `capture.result` 交回来。 */
-  'visual.request': VisualRequest.extend({ deckId: z.string(), requestId: z.string() }),
   'capture.request': z.object({
     deckId: z.string(),
     requestId: z.string(),

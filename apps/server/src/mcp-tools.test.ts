@@ -350,21 +350,39 @@ it('MCP 在首页打开做同款走 recipe.focus;播样片的工具已经没有�
   ])
 })
 
-it('首页上的光标定位不要求开着稿子,也不带 deckId', async () => {
-  const { client, calls } = fakeClient({ 'deck.list': { decks: [] } })
+it('resolve_ui_targets 声明 studio.orca/ui-targets v1,不要求开着稿子', async () => {
+  const targets = { measuredAt: 1, coordinateSpace: 'screen_points_top_left', targets: [] }
+  const { client, calls } = fakeClient({ 'deck.list': { decks: [] }, 'ui.resolveTargets': targets })
   const { map } = toolsOf(client)
-  await map.get('visual_target')!.run({
-    action: 'show_recipe_prompt',
-    arguments: { id: 'ring-timeline' },
-    phase: 'prepare',
+  const tool = map.get('resolve_ui_targets')!
+  expect(tool.config._meta).toEqual({ 'studio.orca/ui-targets': { version: 1 } })
+  expect(tool.config.annotations.readOnlyHint).toBe(true)
+  const queries = [{ slide: 0, text: '1970' }, { controlId: 'canvas' }]
+  expect(JSON.parse(textOf(await tool.run({ targets: queries })))).toEqual(targets)
+  expect(calls).toContainEqual(['ui.resolveTargets', { queries }])
+  // 宿主相关的旧标注和旧定位工具都没了
+  expect(map.has('visual_target')).toBe(false)
+  for (const spec of map.values())
+    expect(Object.keys(spec.config._meta ?? {})).not.toContain('dev.jevbot/ui')
+})
+
+it('改字回执的第二段带上 uiTargets', async () => {
+  const uiTargets = [{ query: { controlId: 'canvas' }, status: 'visible', measuredAt: 1 }]
+  const { client } = fakeClient({
+    'deck.current': { deckId: '/d' },
+    'deck.editText': { ok: true, uiTargets },
   })
-  expect(calls).toContainEqual([
-    'visual.prepare',
-    { action: 'show_recipe_prompt', arguments: { id: 'ring-timeline' }, phase: 'prepare' },
-  ])
-  const meta = (name: string) =>
-    (map.get(name)!.config as { _meta?: Record<string, unknown> })._meta?.['dev.jevbot/ui']
-  expect(meta('show_recipe_prompt')).toEqual({ version: 1, visual: true })
+  const { map } = toolsOf(client)
+  const result = await map.get('edit_text')!.run({ slide: 1, old_text: 'a', new_text: 'b' })
+  expect(result.content[0]).toEqual({ type: 'text', text: '第 2 页改好了。' })
+  expect(JSON.parse((result.content[1] as { text: string }).text)).toEqual({ uiTargets })
+})
+
+it('set_demo_mode 走 demo.set', async () => {
+  const { client, calls } = fakeClient({ 'demo.set': { on: true, intervalMs: 800 } })
+  const { map } = toolsOf(client)
+  await map.get('set_demo_mode')!.run({ on: true, interval_ms: 800 })
+  expect(calls).toContainEqual(['demo.set', { on: true, intervalMs: 800 }])
 })
 
 it('MCP 改转场计划走 deck.editPlan,对不上就拒绝', async () => {

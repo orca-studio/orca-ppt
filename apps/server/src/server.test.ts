@@ -479,67 +479,61 @@ it('导航走共享推送，停止自动播放，拒绝旧稿子和不完整重�
   expect(pushes.some((p) => p.channel === 'autoplay.changed' && p.data.on === false)).toBe(true)
 })
 
-it('操作定位拒绝旧文档和人工接管状态', async () => {
-  const request = {
-    deckId: 'stale',
-    action: 'edit_text',
-    arguments: { slide: 0, old_text: 'Title' },
-  }
-  const stale = await call('visual.prepare', request)
-  expect(JSON.stringify(stale)).toContain('DOCUMENT_CHANGED')
-  const deck = await builtDeck()
-  await call('control.takeOver', {})
-  const taken = await call('visual.prepare', { ...request, deckId: deck.id })
-  expect(JSON.stringify(taken)).toContain('USER_IN_CONTROL')
-})
-
-it('操作定位通过 renderer 往返返回目标坐标', async () => {
-  const deck = await builtDeck()
-  const target = {
-    rect: { x: 20, y: 30, width: 80, height: 20 },
-    targetId: 'title',
-    measuredAt: Date.now(),
-  }
+it('ui.resolveTargets 交给界面量,按查询的顺序答', async () => {
   const respond = (raw: Buffer) => {
     const message = JSON.parse(raw.toString())
-    if (message.channel !== 'visual.request') return
-    void call('visual.result', { requestId: message.data.requestId, target })
-  }
-  socket.on('message', respond)
-  const result = await call('visual.prepare', {
-    deckId: deck.id,
-    action: 'edit_text',
-    arguments: {},
-  })
-  socket.off('message', respond)
-  expect(result.data).toEqual(target)
-})
-
-it('跟踪保留目标标识且不导航或取得控制权', async () => {
-  const deck = await builtDeck()
-  const respond = (raw: Buffer) => {
-    const message = JSON.parse(raw.toString())
-    if (message.channel !== 'visual.request') return
-    expect(message.data.phase).toBe('track')
-    expect(message.data.targetId).toBe('same-target')
-    void call('visual.result', {
+    if (message.channel !== 'ui.targets.request') return
+    void call('ui.targetsResult', {
       requestId: message.data.requestId,
-      target: { measuredAt: Date.now() },
+      targets: {
+        measuredAt: 5,
+        coordinateSpace: 'screen_points_top_left',
+        targets: message.data.queries.map((query: unknown) => ({ query, status: 'not_visible' })),
+      },
     })
   }
   socket.on('message', respond)
-  const before = await call('deck.current', {})
-  const result = await call('visual.prepare', {
-    deckId: deck.id,
-    action: 'edit_text',
-    arguments: { slide: 100, old_text: 'missing' },
-    phase: 'track',
-    targetId: 'same-target',
-  })
+  const queries = [{ controlId: 'canvas' }, { slide: 2, text: '1970' }]
+  const result = await call('ui.resolveTargets', { queries })
   socket.off('message', respond)
-  expect(result.data).toHaveProperty('measuredAt')
-  expect((await call('deck.current', {})).data).toEqual(before.data)
-  expect((await call('control.state', {})).data).toHaveProperty('holder', 'none')
+  expect(result.data.targets.map((t: { query: unknown }) => t.query)).toEqual(queries)
+  expect(result.data.targets.every((t: { rect?: unknown }) => !t.rect)).toBe(true)
+})
+
+it('改字推 deck.patched 让画布就地换;文件监听随后推的 deck.changed 带着同一个版本号', async () => {
+  const deck = await builtDeck('<div class="slides"><section><p>1970</p></section></div>')
+  pushes.length = 0
+  await call('deck.editText', { deckId: deck.id, slide: 0, oldText: '1970', newText: '1971' })
+  await new Promise((resolve) => setTimeout(resolve, 600))
+  const patched = pushes.find((p) => p.channel === 'deck.patched')!.data
+  expect(patched).toMatchObject({ text: { slide: 0, oldText: '1970', newText: '1971' } })
+  expect(patched.before).not.toBe(patched.revision)
+  const changed = pushes.filter((p) => p.channel === 'deck.changed').at(-1)!.data
+  expect(changed.revision).toBe(patched.revision)
+})
+
+it('删掉一个元素动了结构,不推 deck.patched,照旧重载', async () => {
+  const deck = await builtDeck('<div class="slides"><section><p>1970</p><p>留</p></section></div>')
+  pushes.length = 0
+  await call('deck.editText', { deckId: deck.id, slide: 0, oldText: '1970', newText: '' })
+  await new Promise((resolve) => setTimeout(resolve, 60))
+  expect(pushes.some((p) => p.channel === 'deck.patched')).toBe(false)
+})
+
+it('演示模式:开关广播 demo.changed,间隔有上下限', async () => {
+  expect((await call('demo.state', {})).data).toEqual({ on: false, intervalMs: 1200 })
+  expect((await call('demo.set', { on: true, intervalMs: 800 })).data).toEqual({
+    on: true,
+    intervalMs: 800,
+  })
+  // 不带间隔就沿用上次的
+  expect((await call('demo.set', { on: false })).data).toEqual({ on: false, intervalMs: 800 })
+  expect((await call('demo.set', { on: true, intervalMs: 50 })).ok).toBe(false)
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  expect(pushes.filter((p) => p.channel === 'demo.changed').map((p) => p.data.on)).toEqual([
+    true,
+    false,
+  ])
 })
 
 const canvasEvidence = (revision: string, overrides: Record<string, unknown> = {}) => ({

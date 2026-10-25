@@ -43,6 +43,7 @@ MCP server 自己**不拥有任何状态**,全部转给本地 server —— 也�
 | `show_slide`                | 点页胶片                 |
 | `edit_text`                 | 双击一处文字改掉         |
 | `edit_plan`                 | 改转场计划注释里的一句   |
+| `set_demo_mode`             | 放映 › 演示模式          |
 | `show_recipe_prompt`        | 点同款卡片上的「做同款」 |
 | `artifact_path`             | 「看产物」               |
 | `check_phase`               | 阶段栏上的红字           |
@@ -176,11 +177,47 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 
 先调用 `read_skill`（默认 `SKILL.md`）；引用资料通过 `list_skill` 浏览，再按相对路径 `read_skill`。目录每页 100 项，文本每页 6000 个 Unicode 字符；返回 `next` 非空时继续传入 `offset`。单文件上限 2 MB，仅支持文档、JSON、HTML/CSS/脚本等文本。不能读任意本机文件，不能通过软链逃出 Skill 根目录；图片和视频不由此接口提供。无需打开稿子。`doctor` 可确认当前 Skill 来源是否 bundled。
 
-## 宿主虚拟鼠标反馈
+## agent 的改动要在界面上看得见
 
-show_slide、edit_text、undo、redo、show_recipe_prompt 声明 dev.jevbot/ui 操作目标(最后一个指首页同款卡片上的「做同款」,不要求开着稿子,准备阶段会先回首页)。visual_target 是宿主定位接口，走共享 visual.prepare 协议往返到 renderer，返回 macOS 屏幕点坐标及测量时间。prepare 阶段可先定位目标页，不修改文档；completed / failed 阶段呈现结果。缺失或歧义目标返回无 rect，宿主跳过鼠标提示。
+### 修复:agent 的改动在界面上看不到
 
-control_state 返回控制权且不续期、不取得控制权，供宿主决定何时收起光标。实际鼠标由 Jevbot 绘制，应用不模拟系统输入。
+agent 经 MCP 改了稿子,界面上却看不出改了什么、改在哪。它并发发调用,几十条改动几十毫秒就做完,
+被改的页又多半不在画面上 —— 旁边看着的人只觉得「它说改好了,可什么都没变」,录不录屏都一样。
+光靠提示词让它「改哪页先翻到哪页」约束不住,由应用兜底:
+
+- **跟随,常开,不在任何开关后面。** 经 MCP 的每一次写(`edit_text`、`edit_plan`、`edit_pages`、
+  `replace_image`、`undo`、`redo`)落盘后,server 推 `edit.follow`:画布等新版本就绪,翻到那一页,
+  把被改的那一处框出来,等两帧确认画上去了再答 `edit.followed`。server 在改稿子的串行队列里等它,
+  所以并发来的改动一条一条上屏。人在界面上改的不跟 —— 画布本来就在他眼前。
+- **改字不重载。** 只换了一段字时 server 推 `deck.patched`,画布就地换掉,不整份重载、不白一下;
+  对不上(版本接不上、那段字认不准、元素里还有子元素)就照旧重载。
+
+### 新功能:`studio.orca/ui-targets` v1
+
+MCP 调用本身不带位置。录屏、教学类宿主要加光标、推近、目标框,得知道改动在屏幕上的哪儿 ——
+这套约定补的就是这一块,和 ocut pro 共用。工具 `_meta` 里声明 `{"studio.orca/ui-targets": {"version": 1}}`。
+
+- `resolve_ui_targets` 只读,`{targets: [...]}` 1–32 条,每条三选一:`{slide, text}`、
+  `{slide, selector}`、`{controlId}`。控件有 `canvas`、`filmstrip.slide.<n>`、`history.undo`、
+  `history.redo`、`control.capsule`、`gallery.recipe.<id>`,界面上靠 `data-ui-target` 认。
+  画布元素只在那一页正显示时 visible;滚出页胶片的缩略图是 not_visible,露一半给露出的那一半。
+  返回 `measuredAt`、`coordinateSpace: screen_points_top_left`、按顺序的
+  `targets: [{query, status, window, targetId, rect?, reason?}]`。
+- **写操作回执**:第一段人话不变,量到位置时第二段固定是 `{"uiTargets":[…]}`。数组由细到粗 ——
+  先是被改的元素(`targetId` 形如 `canvas.slide.<n>.element:<选择器>`,原样当 controlId 能再查),
+  再是整张画布;每一项带 `measuredAt`(Unix 毫秒)。数组里不另带 `coordinateSpace`:
+  回执和操作记录里的 `rect` 一律是全局屏幕点、左上角为原点,等同 `screen_points_top_left`。
+- **`recording_events`**:agent 的事件带同一份 `uiTargets`,事件时间就是上屏那一刻。
+- 它和录制工具一样不经过控制权:不报活动、不锁画布,人接管着也能查。
+
+旧的 `visual_target` 和各工具上的 `dev.jevbot/ui` 标注已删掉 —— 约定用提供方自己的名义,
+不跟某一个宿主走。`control_state` 照旧,宿主读控制权用。
+
+### 可选:演示模式
+
+菜单「放映 › 演示模式」或 `set_demo_mode`,对应 `demo.set`,默认关,不存盘。开着时每条改动上屏之后
+再停 `intervalMs`(默认 1200,300–5000),框也留这么久。给没有后期的现场演示用;录制不依赖它,
+节奏由录屏应用后期补。
 
 ## 基础编辑
 

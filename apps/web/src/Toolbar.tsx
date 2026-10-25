@@ -108,6 +108,7 @@ export function CanvasControls({
                     : '没有可以撤销的改动'
               }
               aria-label="撤销"
+              data-ui-target="history.undo"
             >
               <UndoIcon />
             </Button>
@@ -124,6 +125,7 @@ export function CanvasControls({
                     : '没有可以重做的改动'
               }
               aria-label="重做"
+              data-ui-target="history.redo"
             >
               <UndoIcon flipped />
             </Button>

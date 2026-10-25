@@ -10,7 +10,10 @@
     document.querySelector('.slides > section.present') ||
     document.querySelector('.slides > section')
   const slide = () => window.Reveal?.getIndices?.().h ?? (root() ? 0 : null)
+  /** 就地换过字之后,画布当作哪一版。重载会重新注入这份脚本,它也就跟着清掉。 */
+  let patchedRevision = null
   const renderedRevision = () => {
+    if (patchedRevision) return patchedRevision
     const navigation = performance.getEntriesByType?.('navigation')?.[0]
     return (
       navigation?.serverTiming?.find((metric) => metric.name === 'orca-revision')?.description ||
@@ -159,11 +162,121 @@
       errors: [...errors],
     }
   }
+  /**
+   * 定位某页上的一处(studio.orca/ui-targets)。只读:不翻页、不选中。
+   * 文字按源文字认整段(和改字一样);认不出整段再找唯一一个包着这段字的最深元素。
+   * rect 是 guest 视口坐标,只给露在视口里的那部分。
+   */
+  const find = (query) => {
+    const section = document.querySelectorAll('.reveal .slides > section')[query.slide]
+    if (!section) return { status: 'not_found', reason: 'no_such_slide' }
+    let matches
+    if (typeof query.selector === 'string') {
+      try {
+        matches = [...section.querySelectorAll(query.selector)]
+      } catch {
+        return { status: 'not_found', reason: 'invalid_selector' }
+      }
+    } else {
+      const wanted = String(query.text).trim()
+      const all = [...section.querySelectorAll('*')].filter(
+        (element) => !element.id.startsWith('__orca-'),
+      )
+      const own = (element) => (element.textContent || '').trim()
+      matches = all.filter((element) => element.children.length === 0 && own(element) === wanted)
+      if (matches.length === 0)
+        matches = all.filter(
+          (element) =>
+            own(element).includes(wanted) &&
+            ![...element.children].some((child) => own(child).includes(wanted)),
+        )
+    }
+    if (matches.length === 0) return { status: 'not_found', reason: 'no_match' }
+    if (matches.length > 1) return { status: 'ambiguous', reason: 'multiple_matches' }
+    return { section, element: matches[0] }
+  }
+  const locate = (query) => {
+    const found = find(query)
+    if (!found.element) return found
+    const { section, element } = found
+    const selector = window.__orcaInspect.anchorFor(element).selector
+    if (!section.classList.contains('present'))
+      return { status: 'not_visible', reason: 'slide_not_shown', selector }
+    if (!describe(element).visible) return { status: 'not_visible', reason: 'hidden', selector }
+    const r = element.getBoundingClientRect()
+    const left = Math.max(r.left, 0)
+    const top = Math.max(r.top, 0)
+    const right = Math.min(r.right, innerWidth)
+    const bottom = Math.min(r.bottom, innerHeight)
+    if (right <= left || bottom <= top)
+      return { status: 'not_visible', reason: 'outside_viewport', selector }
+    return {
+      status: 'visible',
+      selector,
+      rect: { x: left, y: top, width: right - left, height: bottom - top },
+    }
+  }
+  /** 把那一处框出来,留 holdMs(至少 1.2 秒)。等两帧再交回位置:框得先真的画到屏幕上。 */
+  const mark = async (query, holdMs) => {
+    const found = find(query)
+    if (found.element) {
+      const element = found.element
+      const ms = Math.max(1200, holdMs || 0)
+      element.style.animation = 'none'
+      void element.offsetWidth
+      element.style.animation = `__orca-spotlight ${ms}ms ease`
+      setTimeout(() => {
+        element.style.animation = ''
+      }, ms + 100)
+    }
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+    return locate(query)
+  }
+  /**
+   * 不重载,就地换掉一段字(见协议 `deck.patched`)。只换叶子元素里的文字,结构一点不动;
+   * 版本对不上、那段字认不准、人正改着字,都不换,返回 false,等整份重载。
+   */
+  const patch = ({ before, revision, text }) => {
+    if (renderedRevision() !== before || window.__orcaEdit?.editing()) return false
+    if (text) {
+      const section = document.querySelectorAll('.reveal .slides > section')[text.slide]
+      if (!section) return false
+      const own = (element) => (element.textContent || '').trim()
+      const leaves = [...section.querySelectorAll('*')].filter(
+        (element) => element.children.length === 0 && !element.id.startsWith('__orca-'),
+      )
+      const swap = (element) => {
+        element.textContent = element.textContent.replace(text.oldText, () => text.newText)
+      }
+      const whole = leaves.filter((element) => own(element) === text.oldText)
+      const part = leaves.filter((element) => own(element).includes(text.oldText))
+      if (whole.length === 1) swap(whole[0])
+      else if (
+        whole.length === 0 &&
+        part.length === 1 &&
+        own(part[0]).split(text.oldText).length === 2
+      )
+        swap(part[0])
+      // 人在画布上双击改的:DOM 里已经是新字了
+      else if (
+        part.length === 0 &&
+        leaves.filter((element) => own(element) === text.newText).length === 1
+      ) {
+        // 什么都不用换
+      } else return false
+    }
+    patchedRevision = revision
+    return true
+  }
   window.addEventListener('resize', refresh)
   window.Reveal?.on?.('slidechanged', clear)
   window.__orcaCanvas = {
     inspect,
     select,
+    locate,
+    mark,
+    patch,
+    revision: renderedRevision,
     dispose: () => {
       clear()
       window.removeEventListener('error', onError, true)

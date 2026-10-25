@@ -26,6 +26,7 @@ declare global {
         canPresent: boolean
         exporting?: boolean
         theme: string
+        demo?: boolean
       }) => Promise<void>
       /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
       setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>

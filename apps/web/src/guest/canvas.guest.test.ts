@@ -1,114 +1,108 @@
 // @vitest-environment jsdom
-import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import inspectSource from './inspect.guest.js?raw'
+import { beforeEach, describe, expect, it } from 'vitest'
 import source from './canvas.guest.js?raw'
-import { CanvasEvidence } from '@orca-ppt/contracts'
 
-const canvas = () => (window as any).__orcaCanvas
-let index: number
+/** 直接 eval 真正要注入的那份脚本,不写平行实现。 */
+declare global {
+  interface Window {
+    __orcaCanvas: {
+      patch(input: {
+        before: string | null
+        revision: string
+        text?: { slide: number; oldText: string; newText: string }
+      }): boolean
+      revision(): string | null
+      dispose(): void
+    }
+  }
+}
+
+const DECK =
+  '<div class="reveal"><div class="slides">' +
+  '<section><p>封面</p></section>' +
+  '<section><span>1970</span><h2>东方红一号</h2><p>东方红一号发射成功。</p><p>重复</p><p>重复</p></section>' +
+  '</div></div>'
+
+/** jsdom 里没有导航条目,脚本一开始报不出版本:先认下一版当起点。 */
+function start(): void {
+  expect(window.__orcaCanvas.patch({ before: null, revision: 'r1' })).toBe(true)
+}
+
 beforeEach(() => {
-  canvas()?.dispose()
-  index = 0
-  document.body.innerHTML =
-    '<div class="slides"><section><h2 id="title">Title</h2><img src="chart.png" /><p style="display:none">Hidden</p></section><section><h2>Other</h2></section></div>'
-  window.Reveal = {
-    getIndices: () => ({ h: index }),
-    getCurrentSlide: () => document.querySelectorAll('section')[index],
-    getScale: () => 0.5,
-    getConfig: () => ({ width: 1920, height: 1080 }),
-    isReady: () => true,
-  }
-  vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
-    { serverTiming: [{ name: 'orca-revision', description: 'r1' }] },
-  ] as any)
-  for (const element of document.querySelectorAll('*')) {
-    element.getBoundingClientRect = () => ({ x: 100, y: 50, width: 100, height: 20 }) as DOMRect
-  }
-  // eslint-disable-next-line no-eval
-  ;(0, eval)(inspectSource)
+  window.__orcaCanvas?.dispose()
+  document.body.innerHTML = DECK
   // eslint-disable-next-line no-eval
   ;(0, eval)(source)
-})
-afterEach(() => {
-  canvas()?.dispose()
-  vi.restoreAllMocks()
+  start()
 })
 
-describe('live canvas', () => {
-  it('returns design coordinates relative to the slide, visibility and resources', () => {
-    const evidence = CanvasEvidence.parse(canvas().inspect('elements'))
-    expect(evidence.renderedRevision).toBe('r1')
-    expect(evidence.elements.find((e) => e.selector === '#title')?.box).toEqual({
-      x: 0,
-      y: 0,
-      w: 200,
-      h: 40,
+const text = (selector: string, index = 0) =>
+  document.querySelectorAll('.slides > section')[1]!.querySelectorAll(selector)[index]!.textContent
+
+describe('就地换字,不重载', () => {
+  it('整段对得上就换掉,版本跟着走', () => {
+    const done = window.__orcaCanvas.patch({
+      before: 'r1',
+      revision: 'r2',
+      text: { slide: 1, oldText: '1970', newText: '1970 年' },
     })
-    expect(evidence.elements.find((e) => e.tag === 'img')?.source).toBe('chart.png')
-    expect(evidence.elements.find((e) => e.tag === 'p')?.visible).toBe(false)
-    expect(evidence.elements.some((e) => e.text === 'Other')).toBe(false)
+    expect(done).toBe(true)
+    expect(text('span')).toBe('1970 年')
+    expect(window.__orcaCanvas.revision()).toBe('r2')
   })
-  it('persists a selection across reads and excludes the overlay from HTML', () => {
-    canvas().select({ selector: '#title', slide: 0, expectedRevision: 'r1' })
-    expect(canvas().inspect().selection.selector).toBe('#title')
-    expect(canvas().inspect().selection.selector).toBe('#title')
-    expect(document.querySelector('#__orca-selection')).not.toBeNull()
-    expect(canvas().inspect('html').html).not.toContain('__orca-selection')
-    expect(canvas().inspect('html').html).not.toContain('Other')
-    canvas().select({ selector: null, slide: 0, expectedRevision: 'r1' })
-    expect(canvas().inspect().selection).toBeNull()
+
+  it('只是一段字里的一部分,也只换那一部分', () => {
+    window.__orcaCanvas.patch({
+      before: 'r1',
+      revision: 'r2',
+      text: { slide: 1, oldText: '发射成功', newText: '成功入轨' },
+    })
+    expect(text('p')).toBe('东方红一号成功入轨。')
   })
-  it('rejects stale versions, changed slides, ambiguous or hidden targets', () => {
-    expect(() =>
-      canvas().select({ selector: '#title', slide: 0, expectedRevision: 'old' }),
-    ).toThrow('STALE_REVISION')
-    expect(() => canvas().select({ selector: '#title', slide: 1, expectedRevision: 'r1' })).toThrow(
-      'SLIDE_CHANGED',
-    )
-    document.querySelector('section')!.insertAdjacentHTML('beforeend', '<h2>Second</h2>')
-    expect(() => canvas().select({ selector: 'h2', slide: 0, expectedRevision: 'r1' })).toThrow(
-      'ELEMENT_NOT_UNIQUE',
-    )
-    expect(() => canvas().select({ selector: 'p', slide: 0, expectedRevision: 'r1' })).toThrow(
-      'ELEMENT_NOT_VISIBLE',
-    )
+
+  it('版本对不上不换 —— 中间还有别的改动没到画布上', () => {
+    const done = window.__orcaCanvas.patch({
+      before: 'r0',
+      revision: 'r2',
+      text: { slide: 1, oldText: '1970', newText: '1971' },
+    })
+    expect(done).toBe(false)
+    expect(text('span')).toBe('1970')
+    expect(window.__orcaCanvas.revision()).toBe('r1')
   })
-  it('invalidates selected nodes when the visible slide changes or node is removed', () => {
-    canvas().select({ selector: '#title', slide: 0, expectedRevision: 'r1' })
-    index = 1
-    expect(canvas().inspect().selection).toBeNull()
-    index = 0
-    canvas().select({ selector: '#title', slide: 0, expectedRevision: 'r1' })
-    document.querySelector('#title')!.remove()
-    expect(canvas().inspect().selection).toBeNull()
+
+  it('一页里有好几处一样的,认不准就不换', () => {
+    const done = window.__orcaCanvas.patch({
+      before: 'r1',
+      revision: 'r2',
+      text: { slide: 1, oldText: '重复', newText: '唯一' },
+    })
+    expect(done).toBe(false)
+    expect(window.__orcaCanvas.revision()).toBe('r1')
   })
-  it('caps HTML and element payloads and indicates truncation', () => {
-    document.querySelector('section')!.innerHTML =
-      '<p>' + 'x'.repeat(110000) + '</p>' + '<img src="a.png" />'.repeat(501)
-    expect(canvas().inspect('html')).toMatchObject({ htmlTruncated: true })
-    expect(canvas().inspect('html').html).toHaveLength(100000)
-    expect(canvas().inspect('elements').elements).toHaveLength(500)
-    expect(canvas().inspect('elements').elementsTruncated).toBe(true)
+
+  it('人在画布上双击改的:DOM 里已经是新字,只认下版本', () => {
+    document.querySelector('h2')!.textContent = '神舟五号'
+    const done = window.__orcaCanvas.patch({
+      before: 'r1',
+      revision: 'r2',
+      text: { slide: 1, oldText: '东方红一号', newText: '神舟五号' },
+    })
+    expect(done).toBe(true)
+    expect(text('h2')).toBe('神舟五号')
   })
-  it('records script and resource errors without accumulating duplicate listeners', () => {
-    // eslint-disable-next-line no-eval
-    ;(0, eval)(source)
-    window.dispatchEvent(new ErrorEvent('error', { message: 'broken', filename: 'deck.js' }))
-    document.querySelector('img')!.dispatchEvent(new Event('error'))
-    const errors = canvas().inspect('errors').errors
-    expect(errors).toHaveLength(2)
-    expect(errors[0]).toMatchObject({ kind: 'script', message: 'broken', source: 'deck.js' })
-    expect(errors[1]).toMatchObject({ kind: 'resource', source: 'chart.png' })
+
+  it('新文字里的 $ 原样写进去', () => {
+    window.__orcaCanvas.patch({
+      before: 'r1',
+      revision: 'r2',
+      text: { slide: 1, oldText: '1970', newText: '$& 元' },
+    })
+    expect(text('span')).toBe('$& 元')
   })
-  it('escapes unusual IDs and anchor values so selectors identify exactly one node', () => {
-    const title = document.querySelector('h2')!
-    title.id = '2:title.with spaces'
-    const selector = window.__orcaInspect.selectorFor(title)
-    expect(document.querySelector('section')!.querySelector(selector)).toBe(title)
-    title.removeAttribute('id')
-    title.setAttribute('data-anchor', 'a"b\\c')
-    expect(
-      document.querySelector('section')!.querySelector(window.__orcaInspect.selectorFor(title)),
-    ).toBe(title)
+
+  it('页面之外的改动(转场计划)只认下版本', () => {
+    expect(window.__orcaCanvas.patch({ before: 'r1', revision: 'r2' })).toBe(true)
+    expect(window.__orcaCanvas.revision()).toBe('r2')
   })
 })

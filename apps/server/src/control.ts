@@ -37,6 +37,9 @@ export const RECORDING_TOOLS = new Set([
   'recording_events',
   'recording_snapshot',
   'recording_restore',
+  // 录屏宿主量位置、开演示模式也一样:它们不碰稿子,人接管着也得能用
+  'resolve_ui_targets',
+  'set_demo_mode',
 ])
 
 /**
@@ -80,7 +83,7 @@ export class DeckControl {
 
   /** agent 的一次工具调用开始或结束了。 */
   observe(call: ToolCall): void {
-    if (CONTROL_TOOLS.has(call.tool) || call.tool === 'visual_target') return
+    if (CONTROL_TOOLS.has(call.tool)) return
     // 人接管着的时候工具根本跑不起来(见 gate),这里不会有调用。
     if (this.#state.holder === 'user') return
 

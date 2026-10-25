@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import type {
   CanvasElement,
   Control,
+  Demo,
   HistoryState,
   PendingRequest,
   PushData,
   RequestResult,
   RequestParams,
 } from '@orca-ppt/contracts'
-import { HOME_VISUAL_ACTIONS } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
 import { Gallery, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
@@ -21,6 +21,7 @@ import { CanvasControls, Toolbar } from './Toolbar.js'
 import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
+import { fromStage, place, resolveControl, resolveTargets, type Screen } from './ui-targets.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
 
@@ -28,6 +29,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const transport = useRef<Transport>(undefined)
   const stage = useRef<StageHandle>(null)
   const slideRef = useRef(0)
+  /** 就地换字排着的队。deck.changed 要等它们做完,才知道画布是不是已经是新版。 */
+  const patching = useRef<Promise<void>>(Promise.resolve())
   const deckRef = useRef<OpenedDeck | undefined>(undefined)
   // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
   const presentRef = useRef<() => void>(() => {})
@@ -52,6 +55,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
+  const [demo, setDemo] = useState<Demo>({ on: false, intervalMs: 1200 })
+  const demoRef = useRef(demo)
+  demoRef.current = demo
   // undefined = 还在加载：别先闪一下空状态
   const [recipes, setRecipes] = useState<Recipe[] | undefined>(undefined)
   const [themes, setThemes] = useState<Theme[]>([])
@@ -110,6 +116,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
           .request('control.state', {})
           .then(setControl)
           .catch(() => {})
+        void next
+          .request('demo.state', {})
+          .then(setDemo)
+          .catch(() => {})
       }
     }
     next.connect()
@@ -163,7 +173,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
         const nextSlide = Math.min(slideRef.current, Math.max(0, data.slideCount - 1))
         slideRef.current = nextSlide
         setSlide(nextSlide)
-        if (previousUrl && data.previewUrl === previousUrl) stage.current?.reload(nextSlide)
+        // 画布已经就地换成这一版(deck.patched)就不重载 —— 改一个字整份重载,画面会白一下
+        if (previousUrl && data.previewUrl === previousUrl)
+          void patching.current.then(async () => {
+            if (data.revision && (await stage.current?.revision()) === data.revision) return
+            stage.current?.reload(slideRef.current)
+          })
         // 旧缩略图留到新图出来:改一个字就整列清空再重画,左栏每次都闪一下
         thumbsVersion.current += 1
         clearTimeout(thumbTimer.current)
@@ -186,12 +201,18 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
 
     next.subscribe('mcp.activity', (data) => {
+      // 画布上那一处的点亮不在这里:server 改完会推 edit.follow,翻页、点亮、量位置一并做
       setAgent((prev) => reduce(prev, data))
-      // agent 改完一处,画布上那一处要自己闪一下 —— 页胶片只说得出「哪一页」,
-      // 一页上有十几个元素。Stage 会攒到重载完成后再点,那时 DOM 才是新的。
-      if (data.phase === 'done' && data.kind === 'write' && data.hint && !data.error) {
-        stage.current?.spotlight(data.hint)
-      }
+    })
+
+    next.subscribe('demo.changed', setDemo)
+
+    // 改了一小处:画布就地换掉,不重载。按到达顺序一个一个换,deck.changed 等它们换完再判断
+    next.subscribe('deck.patched', (data) => {
+      if (data.deckId !== deckRef.current?.deck.id) return
+      patching.current = patching.current.then(async () => {
+        await stage.current?.patch(data)
+      })
     })
 
     // 改字、撤销、重做,不管是人还是 agent 做的,按钮都跟着。
@@ -279,98 +300,66 @@ export function App({ serverUrl }: { serverUrl: string }) {
       })()
     })
 
-    // agent 要自己看一眼做出来的东西 —— 只有壳截得了图。
-    next.subscribe('visual.request', (data) => {
+    // 录屏宿主问几处东西在屏幕上的哪儿(studio.orca/ui-targets)。只量,不动界面。
+    next.subscribe('ui.targets.request', (data) => {
       void (async () => {
         try {
-          if ((HOME_VISUAL_ACTIONS as readonly string[]).includes(data.action)) {
-            await next.request('visual.result', {
-              requestId: data.requestId,
-              target: await homeTarget(data, setPointedRecipe),
-            })
-            return
-          }
-          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
-          const args = data.arguments
-          const tracking = data.phase === 'track'
-          const tracked =
-            tracking && data.targetId ? (JSON.parse(data.targetId) as string[]) : undefined
-          if (tracking && (!tracked || tracked[0] !== data.deckId))
+          const targets = await resolveTargets(
+            data.queries,
+            async (queries) =>
+              stage.current
+                ? stage.current.locate(queries)
+                : queries.map(() => ({ status: 'unavailable', reason: 'no_deck_open' })),
+            await screen(),
+          )
+          await next.request('ui.targetsResult', { requestId: data.requestId, targets })
+        } catch (cause) {
+          await next
+            .request('ui.targetsResult', { requestId: data.requestId, error: String(cause) })
+            .catch(() => {})
+        }
+      })()
+    })
+
+    // agent 刚改了一处:画布跟过去 —— 翻到那一页,把那一处框出来,再交回它在屏幕上的位置。
+    // server 等到这里答了才做下一条,所以并发来的改动会一条一条出现在画面上。
+    next.subscribe('edit.follow', (data) => {
+      void (async () => {
+        try {
+          if (data.deckId !== deckRef.current?.deck.id || !stage.current)
             throw new Error('DOCUMENT_CHANGED')
-          let rect: { x: number; y: number; width: number; height: number } | undefined
-          let targetId: string | undefined
-          if (data.phase !== 'prepare' && !tracking) {
-            if (
-              data.phase === 'completed' &&
-              data.action === 'edit_text' &&
-              typeof args.new_text === 'string'
-            )
-              stage.current?.spotlight(args.new_text)
-            if (data.phase === 'failed') stage.current?.notify('操作未完成')
-          } else if (
-            data.action === 'edit_text' &&
-            Number.isInteger(args.slide) &&
-            typeof args.old_text === 'string'
-          ) {
-            await stage.current?.whenReady(1000)
-            const target = await stage.current?.targetText(
-              Number(args.slide),
-              args.old_text,
-              tracking ? tracked?.[1] : undefined,
-              tracking && typeof args.new_text === 'string' ? args.new_text : undefined,
-            )
-            if (target) {
-              rect = target
-              targetId = JSON.stringify([data.deckId, target.targetId])
-            }
-          } else {
-            const label =
-              data.action === 'show_slide'
-                ? `第 ${Number(args.index) + 1} 页`
-                : data.action === 'navigate'
-                  ? `第 ${navigateTarget(args, slideRef.current, deckRef.current?.slideCount ?? 0) + 1} 页`
-                  : data.action === 'undo'
-                    ? '撤销'
-                    : '重做'
-            const element = [...document.querySelectorAll<HTMLElement>('[aria-label]')].find(
-              (e) => e.getAttribute('aria-label') === label,
-            )
-            if (element) {
-              rect = element.getBoundingClientRect()
-              targetId = JSON.stringify([data.deckId, label])
-            }
-          }
-          if (tracking && targetId !== data.targetId) rect = undefined
-          if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
-          const bounds = await window.orca?.contentBounds?.()
-          const valid =
-            rect &&
-            bounds &&
-            rect.width > 0 &&
-            rect.height > 0 &&
-            rect.x >= 0 &&
-            rect.y >= 0 &&
-            rect.x + rect.width <= innerWidth &&
-            rect.y + rect.height <= innerHeight
-          await next.request('visual.result', {
+          const slide = data.slide
+          const query =
+            slide === undefined
+              ? undefined
+              : data.selector
+                ? { slide, selector: data.selector }
+                : data.text
+                  ? { slide, text: data.text }
+                  : undefined
+          const found = await stage.current.follow({
+            revision: data.revision,
+            ...(slide !== undefined ? { slide } : {}),
+            ...(query ? { query } : {}),
+            holdMs: data.holdMs,
+          })
+          const at = await screen()
+          // 由细到粗:先是被改的那一处,再是整张画布。转场计划这种不在页上的,没有可指的
+          const targets =
+            slide === undefined
+              ? []
+              : [
+                  ...(query && found ? [place(fromStage(query, slide, found), at)] : []),
+                  place(resolveControl({ controlId: 'canvas' }), at),
+                ]
+          await next.request('edit.followed', {
             requestId: data.requestId,
-            target: {
-              measuredAt: Date.now(),
-              ...(valid && rect && bounds
-                ? {
-                    rect: {
-                      x: bounds.x + rect.x * bounds.zoom,
-                      y: bounds.y + rect.y * bounds.zoom,
-                      width: rect.width * bounds.zoom,
-                      height: rect.height * bounds.zoom,
-                    },
-                    ...(targetId ? { targetId } : {}),
-                  }
-                : {}),
-            },
+            targets: { measuredAt: Date.now(), coordinateSpace: 'screen_points_top_left', targets },
           })
         } catch (cause) {
-          await next.request('visual.result', { requestId: data.requestId, error: String(cause) })
+          await next
+            .request('edit.followed', { requestId: data.requestId, error: String(cause) })
+            .catch(() => {})
         }
       })()
     })
@@ -460,6 +449,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-inspector') toggleInspectorRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
+      else if (action === 'toggle-demo')
+        void next.request('demo.set', { on: !demoRef.current.on }).then(setDemo)
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
       else if (action.startsWith('theme:')) {
         const next = action.slice('theme:'.length) as ThemeSource
@@ -722,8 +713,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
-    void window.orca?.setMenuState?.({ canPresent: Boolean(deck?.previewUrl), exporting, theme })
-  }, [deck?.previewUrl, exporting, theme])
+    void window.orca?.setMenuState?.({
+      canPresent: Boolean(deck?.previewUrl),
+      exporting,
+      theme,
+      demo: demo.on,
+    })
+  }, [deck?.previewUrl, exporting, theme, demo.on])
 
   /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
   const setHolder = useCallback(
@@ -1052,9 +1048,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
                       </div>
                       <button
                         type="button"
-                        // 名字只写「第 N 页」:show_slide 让 Jevbot 按这个名字找按钮画光标,
-                        // 多一个后缀就对不上。转场说明放进 aria-description
                         aria-label={`第 ${index + 1} 页`}
+                        data-ui-target={`filmstrip.slide.${index}`}
                         aria-description={animated ? `转场:${entry.technique}` : undefined}
                         data-current={index === slide}
                         // agent 碰过的页要亮一下。读和写分开:读是「它在看这儿」,
@@ -1190,58 +1185,6 @@ function PaneResizer({
   )
 }
 
-/**
- * 首页同款卡片上的光标目标:show_recipe_prompt 指「做同款」按钮。
- * 准备阶段 server 可能刚关掉稿子,首页还没画出来,所以等它一会儿。
- */
-async function homeTarget(
-  data: PushData<'visual.request'>,
-  point: (id: string) => void,
-): Promise<RequestResult<'visual.prepare'>> {
-  const id = String(data.arguments.id ?? '')
-  const targetId = JSON.stringify(['home', data.action, id])
-  const measuredAt = () => ({ measuredAt: Date.now() })
-  if (data.phase === 'completed' || data.phase === 'failed') return measuredAt()
-  if (data.phase === 'track' && data.targetId !== targetId) return measuredAt()
-  // 先把卡片摆成悬停的样子,「做同款」才画得出来 —— 光标到的时候那儿得有个按钮
-  point(id)
-  const selector = '.gallery-copy'
-  let element: HTMLElement | null = null
-  for (let waited = 0; waited <= 1500; waited += 50) {
-    element =
-      [...document.querySelectorAll<HTMLElement>('[data-recipe]')]
-        .find((card) => card.dataset.recipe === id)
-        ?.querySelector<HTMLElement>(selector) ?? null
-    if (element) break
-    await new Promise((resolve) => setTimeout(resolve, 50))
-  }
-  if (!element) return measuredAt()
-  // 等按钮淡入(150ms)走完再交出位置,光标不会先到一步
-  if (data.phase === 'prepare') await new Promise((resolve) => setTimeout(resolve, 180))
-  // 卡片可能在首页下面没滚到的地方:先滚进来再量
-  element.scrollIntoView({ block: 'nearest' })
-  const rect = element.getBoundingClientRect()
-  const bounds = await window.orca?.contentBounds?.()
-  const visible =
-    rect.width > 0 &&
-    rect.height > 0 &&
-    rect.x >= 0 &&
-    rect.y >= 0 &&
-    rect.x + rect.width <= innerWidth &&
-    rect.y + rect.height <= innerHeight
-  if (!bounds || !visible) return measuredAt()
-  return {
-    ...measuredAt(),
-    rect: {
-      x: bounds.x + rect.x * bounds.zoom,
-      y: bounds.y + rect.y * bounds.zoom,
-      width: rect.width * bounds.zoom,
-      height: rect.height * bounds.zoom,
-    },
-    targetId,
-  }
-}
-
 const TRANSPORT_LABEL: Record<TransportState, string> = {
   connecting: '正在连本地服务…',
   open: '本地服务已连上',
@@ -1276,21 +1219,8 @@ function TransitionMark() {
   )
 }
 
-/**
- * navigate 会翻到哪一页,给光标指缩略图用。next / previous 按画布当前页加减一
- * (点击分步还没放完时 next 其实不翻页,光标指的是下一页,差一点不要紧);
- * replay 放的是 from → from+1 那次转场,指 from+1;replayPage 指 from。
- */
-function navigateTarget(args: Record<string, unknown>, current: number, count: number): number {
-  const last = Math.max(0, count - 1)
-  const from = Number.isInteger(args.from) ? Number(args.from) : current
-  const target =
-    args.action === 'next'
-      ? current + 1
-      : args.action === 'previous'
-        ? current - 1
-        : args.action === 'replay'
-          ? from + 1
-          : from
-  return Math.min(Math.max(target, 0), last)
+/** 窗口内容区在屏幕上的位置。窗口最小化、藏起来时量不到。 */
+async function screen(): Promise<Screen | undefined> {
+  const bounds = await window.orca?.contentBounds?.()
+  return bounds ? { bounds } : undefined
 }

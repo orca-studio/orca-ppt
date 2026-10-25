@@ -104,8 +104,8 @@ function RecipeCard({
   return (
     <article
       ref={card}
-      // 光标定位(visual_target)按 id 找这张卡
-      data-recipe={recipe.id}
+      // 录屏宿主按这个名字定位这张卡(resolve_ui_targets)
+      data-ui-target={`gallery.recipe.${recipe.id}`}
       data-pointed={pointed || undefined}
       className="gallery-recipe"
       onMouseLeave={() => {

@@ -48,7 +48,7 @@ export function AgentStatus({
   const tone = server ? 'off' : active ? 'active' : connected ? 'on' : 'idle'
 
   return (
-    <div className="agent-control" title={status}>
+    <div className="agent-control" title={status} data-ui-target="control.capsule">
       <span className="agent-control-dot" data-tone={tone} aria-hidden="true" />
       <span className="visually-hidden" role="status" aria-live="polite">
         {status}

@@ -20,7 +20,11 @@ import {
   type RequestMethod,
   type ResponseEnvelope,
   parseParams,
-  HOME_VISUAL_ACTIONS,
+  DEMO_DEFAULT_INTERVAL_MS,
+  type Demo,
+  type UiTargetQuery,
+  type UiTargetList,
+  type UiTargets,
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
@@ -120,14 +124,65 @@ export async function startServer(
 
   const documentOf = (deckId: string) => ({ id: deckId, label: basename(deckPathOf(deckId)) })
 
-  /** 稿子被我们改了一次,记一条。是不是经 MCP 来的决定记成人还是 agent。 */
+  /**
+   * 演示模式。不存盘:录一段视频时开,录完就关,下次启动回到不等的默认。
+   * 跟随(翻页、点亮)不管开没开都做 —— 这里只管等不等。
+   */
+  let demo: Demo = { on: false, intervalMs: DEMO_DEFAULT_INTERVAL_MS }
+
+  /**
+   * agent 刚改了一处:让画布跟过去,量出那一处的屏幕位置。
+   *
+   * 在改稿子的串行队列里等它(见 dispatch 的 editTails),所以并发发来的几十条改动会一条一条
+   * 显示出来 —— 不等的话几十毫秒就改完了,画布还停在第 1 页,录屏里什么也看不出。
+   * 界面没开、没跟上都不算这次改动失败:字已经写进去了,只是回执和操作记录里少了位置。
+   */
+  const follow = async (
+    deckId: string,
+    revision: string,
+    show: { slide?: number; text?: string; selector?: string },
+  ): Promise<UiTargets | undefined> => {
+    if (bus.connectionCount === 0) return undefined
+    try {
+      return await follows.request(deckId, {
+        revision,
+        ...(show.slide !== undefined ? { slide: show.slide } : {}),
+        ...(show.text ? { text: show.text } : {}),
+        ...(show.selector ? { selector: show.selector } : {}),
+        holdMs: demo.on ? demo.intervalMs : 0,
+      })
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * 稿子被我们改了一次,记一条。是不是经 MCP 来的决定记成人还是 agent。
+   * agent 的改动还要让画布跟过去(见 follow),演示模式下再停一会儿;返回量到的位置。
+   */
   const recordChange = async (
     deckId: string,
-    change: { summary: string; slide?: number; detail?: Record<string, unknown> },
-  ) => {
+    change: {
+      summary: string
+      slide?: number
+      detail?: Record<string, unknown>
+      /** 画布上点亮哪一处:改完之后的文字,或者页内选择器。都没有就指整页。 */
+      show?: { text?: string; selector?: string }
+    },
+  ): Promise<UiTargetList | undefined> => {
     const revision = await deckRevision(deckPathOf(deckId))
     lastSeen.set(deckId, revision)
     const call = mcpCall.getStore()
+    const measured = call
+      ? await follow(deckId, revision, {
+          ...(change.slide !== undefined ? { slide: change.slide } : {}),
+          ...change.show,
+        })
+      : undefined
+    // 回执和记录里每一项自带量的时刻;一项都没有(比如转场计划不在页上)就不带
+    const uiTargets = measured?.targets.length
+      ? measured.targets.map((target) => ({ ...target, measuredAt: measured.measuredAt }))
+      : undefined
     recording.append({
       actor: call ? 'agent' : 'user',
       summary: change.summary,
@@ -139,7 +194,11 @@ export async function startServer(
       ...(call ? { tool: call.tool } : {}),
       undoable: true,
       ...(change.detail ? { detail: change.detail } : {}),
+      ...(uiTargets ? { uiTargets } : {}),
     })
+    // 停顿放在记下之后:事件的时间点就是它出现在画面上的那一刻
+    if (call && demo.on) await new Promise((resume) => setTimeout(resume, demo.intervalMs))
+    return uiTargets
   }
 
   /**
@@ -200,24 +259,34 @@ export async function startServer(
     announceHistory(deckId)
     const { step } = result
     const text = direction === 'undo' ? step.oldText : step.newText
-    await recordChange(deckId, {
+    const slide = direction === 'undo' ? (step.undoSlide ?? step.slide) : step.slide
+    // 先让界面拿到新的页数和转场,画布跟过去时才对得上
+    if (step.label) await announceDeck(deckId, root)
+    const uiTargets = await recordChange(deckId, {
       summary: step.label
         ? `${direction === 'undo' ? '撤销' : '重做'}${step.label}`
         : `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
-      slide: step.slide,
+      slide,
+      ...(step.label ? {} : { show: { text: text.trim() } }),
     })
-    if (step.label) await announceDeck(deckId, root)
     return {
       ok: true,
-      slide: direction === 'undo' ? (step.undoSlide ?? step.slide) : step.slide,
+      slide,
       ...(step.label ? {} : { text }),
+      ...(uiTargets ? { uiTargets } : {}),
     }
   }
 
-  const visualTargets = new Roundtrip<
-    RequestResult<'visual.prepare'>,
-    Omit<RequestParams<'visual.prepare'>, 'deckId'>
-  >((payload) => bus.broadcast('visual.request', payload), 2000)
+  // 只量位置,界面答得很快;慢了说明它卡住了,宿主宁可这次不画框
+  const uiTargetRequests = new Roundtrip<UiTargets, { queries: UiTargetQuery[] }>(
+    ({ deckId: _deckId, ...payload }) => bus.broadcast('ui.targets.request', payload),
+    2000,
+  )
+  // 要等画布重载出新版本再翻页、点亮:比量位置慢得多
+  const follows = new Roundtrip<UiTargets, Omit<PushData<'edit.follow'>, 'deckId' | 'requestId'>>(
+    (payload) => bus.broadcast('edit.follow', payload),
+    8000,
+  )
   type CanvasPush = PushData<'canvas.request'>
   const canvases = new Roundtrip<
     CanvasEvidence,
@@ -257,6 +326,7 @@ export async function startServer(
     const opened = await openDeck(path)
     bus.broadcast('deck.changed', {
       deckId,
+      revision: await deckRevision(path),
       slides: opened.slides,
       slideCount: opened.slideCount,
       slideTitles: opened.slideTitles,
@@ -336,7 +406,8 @@ export async function startServer(
       bus.detach(connectionId)
       // 界面走了就没人能截图了,挂着的别让 agent 干等。
       if (bus.connectionCount === 0) {
-        visualTargets.failAll(AgentError.uiDisconnected())
+        uiTargetRequests.failAll(AgentError.uiDisconnected())
+        follows.failAll(AgentError.uiDisconnected())
         captures.failAll(AgentError.uiDisconnected())
         canvases.failAll(AgentError.uiDisconnected())
         thumbnails.failAll(AgentError.uiDisconnected())
@@ -790,9 +861,19 @@ export async function startServer(
               : {}),
           })
           announceHistory(params.deckId)
-          await recordChange(params.deckId, { summary: label, slide })
           await announceDeck(params.deckId, root)
-          return { ok: true, revision: await deckRevision(root), slide }
+          // 换图点亮那张图;页面增删移动指整页(删除时是删完之后停在的那一页)
+          const uiTargets = await recordChange(params.deckId, {
+            summary: label,
+            slide,
+            ...('selector' in params ? { show: { selector: params.selector } } : {}),
+          })
+          return {
+            ok: true,
+            revision: await deckRevision(root),
+            slide,
+            ...(uiTargets ? { uiTargets } : {}),
+          }
         } catch (error) {
           return { ok: false, reason: error instanceof Error ? error.message : String(error) }
         }
@@ -805,6 +886,7 @@ export async function startServer(
 
         const file = join(root, name)
         // 每次都重读磁盘:agent 可能刚写过。旧文字对不上时下面会拒绝,这正是我们要的。
+        const before = await deckRevision(root)
         const html = await readFile(file, 'utf8')
         const result = applyTextEdit(html, {
           slide: params.slide,
@@ -814,6 +896,18 @@ export async function startServer(
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
           await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
+          // 只换了一段字:让画布就地换,不整份重载。删掉元素(新文字为空)动了结构,照旧重载
+          if (params.newText.trim())
+            bus.broadcast('deck.patched', {
+              deckId: params.deckId,
+              before,
+              revision: await deckRevision(root),
+              text: {
+                slide: params.slide,
+                oldText: params.oldText.trim(),
+                newText: params.newText.trim(),
+              },
+            })
           historyOf(params.deckId).record({
             slide: params.slide,
             oldText: params.oldText.trim(),
@@ -822,11 +916,14 @@ export async function startServer(
             after: result.html,
           })
           announceHistory(params.deckId)
-          await recordChange(params.deckId, {
+          const uiTargets = await recordChange(params.deckId, {
             summary: `把第 ${params.slide + 1} 页的「${clip(params.oldText)}」改成「${clip(params.newText)}」`,
             slide: params.slide,
             detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
+            // 新文字留空是删掉那个元素:没有可点亮的,指整页
+            ...(params.newText.trim() ? { show: { text: params.newText.trim() } } : {}),
           })
+          if (uiTargets) return { ok: true, uiTargets }
         }
         // 不用在这儿广播:文件一变,看稿子的 watcher 自己会推 deck.changed。
         return { ok: true }
@@ -838,12 +935,19 @@ export async function startServer(
         if (!name) return { ok: false, reason: AgentError.noBuild() }
 
         const file = join(root, name)
+        const before = await deckRevision(root)
         const html = await readFile(file, 'utf8')
         const result = applyPlanEdit(html, { oldText: params.oldText, newText: params.newText })
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
           const summary = `转场计划「${clip(params.oldText)}」→「${clip(params.newText)}」`
           await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
+          // 注释在页面之外:画面上什么都没变,不用重载
+          bus.broadcast('deck.patched', {
+            deckId: params.deckId,
+            before,
+            revision: await deckRevision(root),
+          })
           // 带 label:撤的时候要求整份还是改完的样子才还回去,不按页去找那段字
           historyOf(params.deckId).record({
             slide: 0,
@@ -854,10 +958,11 @@ export async function startServer(
             label: summary,
           })
           announceHistory(params.deckId)
-          await recordChange(params.deckId, {
+          const uiTargets = await recordChange(params.deckId, {
             summary: `把${summary}`,
             detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
           })
+          if (uiTargets) return { ok: true, uiTargets }
         }
         return { ok: true }
       }
@@ -941,28 +1046,40 @@ export async function startServer(
           })),
         }
       }
-      case 'visual.prepare': {
-        const params = parseParams('visual.prepare', raw)
-        const home = (HOME_VISUAL_ACTIONS as readonly string[]).includes(params.action)
-        if (!home && (!params.deckId || params.deckId !== lastOpened))
-          throw new Error('DOCUMENT_CHANGED')
-        if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
-        if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
-        // 卡片只在首页上:开着稿子就先回首页,光标才有地方指(工具本身也会这么做)
-        if (home && params.phase === 'prepare') {
-          for (const deckId of [...openDecks.keys()])
-            await dispatchUnlocked('deck.close', { deckId })
+      case 'ui.resolveTargets': {
+        const params = parseParams('ui.resolveTargets', raw)
+        // 界面没开:每一处都量不了,照样按请求的顺序一条一条答,不编矩形
+        const unavailable = (reason: string): UiTargets => ({
+          measuredAt: Date.now(),
+          coordinateSpace: 'screen_points_top_left',
+          targets: params.queries.map((query) => ({ query, status: 'unavailable', reason })),
+        })
+        if (bus.connectionCount === 0) return unavailable('ui_disconnected')
+        try {
+          return await uiTargetRequests.request('', { queries: params.queries })
+        } catch {
+          return unavailable('ui_timeout')
         }
-        const { deckId = '', ...request } = params
-        const target = await visualTargets.request(home ? '' : deckId, request)
-        if (!home && deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
-        if (control.state().holder === 'user') throw new Error('USER_IN_CONTROL')
-        return target
       }
-      case 'visual.result': {
-        const params = parseParams('visual.result', raw)
-        visualTargets.settle(params.requestId, { value: params.target, error: params.error })
+      case 'ui.targetsResult': {
+        const params = parseParams('ui.targetsResult', raw)
+        uiTargetRequests.settle(params.requestId, { value: params.targets, error: params.error })
         return {}
+      }
+      case 'edit.followed': {
+        const params = parseParams('edit.followed', raw)
+        follows.settle(params.requestId, { value: params.targets, error: params.error })
+        return {}
+      }
+      case 'demo.state': {
+        parseParams('demo.state', raw)
+        return demo
+      }
+      case 'demo.set': {
+        const params = parseParams('demo.set', raw)
+        demo = { on: params.on, intervalMs: params.intervalMs ?? demo.intervalMs }
+        bus.broadcast('demo.changed', demo)
+        return demo
       }
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)
@@ -1214,6 +1331,7 @@ export function expandHome(path: string): string {
 
 const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.editText',
+  'deck.editPlan',
   'deck.editPages',
   'deck.replaceImage',
   'deck.undo',

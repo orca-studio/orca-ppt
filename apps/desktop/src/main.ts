@@ -88,7 +88,12 @@ app.on('second-instance', () => {
 })
 
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
-type MenuState = { canPresent: boolean; exporting?: boolean; theme: 'system' | 'light' | 'dark' }
+type MenuState = {
+  canPresent: boolean
+  exporting?: boolean
+  theme: 'system' | 'light' | 'dark'
+  demo?: boolean
+}
 
 function applyMenu(state: MenuState): void {
   const send = (action: MenuAction) => {

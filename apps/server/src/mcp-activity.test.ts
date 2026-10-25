@@ -16,15 +16,45 @@ import type { McpActivity } from './mcp-http.js'
 let server: OrcaServer
 let socket: WebSocket
 let activity: McpActivity[]
+/** 界面收到的「跟上这一处改动」,带收到的时刻。 */
+let follows: Array<{ at: number; data: any }>
+/** 假界面跟上改动后交回的位置:画布可见。 */
+const FOLLOWED = (query: unknown) => ({
+  measuredAt: 1,
+  coordinateSpace: 'screen_points_top_left',
+  targets: [
+    {
+      query,
+      status: 'visible',
+      targetId: 'canvas',
+      rect: { x: 10, y: 20, width: 300, height: 200 },
+    },
+  ],
+})
 
 beforeEach(async () => {
   server = await startServer()
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
   activity = []
+  follows = []
   socket.on('message', (raw: Buffer) => {
     const message = JSON.parse(raw.toString())
     if (message.channel === 'mcp.activity') activity.push(message.data)
+    // 像真的界面一样跟上 agent 的改动,不然 server 要等到超时
+    if (message.channel === 'edit.follow') {
+      follows.push({ at: Date.now(), data: message.data })
+      socket.send(
+        JSON.stringify({
+          id: `follow-${message.data.requestId}`,
+          method: 'edit.followed',
+          params: {
+            requestId: message.data.requestId,
+            targets: FOLLOWED({ controlId: 'canvas' }),
+          },
+        }),
+      )
+    }
   })
 })
 
@@ -407,6 +437,58 @@ describe('可录制应用约定:操作记录', () => {
     await tool('edit_text', { slide: 1, old_text: '走过的四站。', new_text: '四站' })
     const [event] = await eventsAfter(cursor)
     expect(event).toMatchObject({ actor: 'agent', tool: 'edit_text', target: { index: 1 } })
+  })
+
+  it('agent 改字:画布跟到那一页、点亮新文字;回执和事件都带上位置', async () => {
+    await openDeckAt('走过的四站。')
+    const cursor = await cursorNow()
+    const receipt = await tool('edit_text', {
+      slide: 1,
+      old_text: '走过的四站。',
+      new_text: '四站',
+    })
+    expect(follows).toHaveLength(1)
+    expect(follows[0]!.data).toMatchObject({ slide: 1, text: '四站', holdMs: 0 })
+    const [event] = await eventsAfter(cursor)
+    const expected = FOLLOWED({ controlId: 'canvas' }).targets.map((t) => ({ ...t, measuredAt: 1 }))
+    expect(event.uiTargets).toEqual(expected)
+    // 回执第二段固定是 {"uiTargets":[…]}:录屏宿主拿它当这一步的目标框
+    const body = receipt
+      .split('\n')
+      .find((line) => line.startsWith('data: '))!
+      .slice(6)
+    expect(JSON.parse(JSON.parse(body).result.content[1].text)).toEqual({ uiTargets: expected })
+  })
+
+  it('人在界面上改的不用跟:画布本来就在他眼前', async () => {
+    const { deckId } = await openDeckAt('一')
+    const cursor = await cursorNow()
+    await call('deck.editText', { deckId, slide: 1, oldText: '一', newText: '二' })
+    expect(follows).toHaveLength(0)
+    const [event] = await eventsAfter(cursor)
+    expect(event.uiTargets).toBeUndefined()
+  })
+
+  it('演示模式:并发来的改动排成队,每条显示出来之后停一会儿再做下一条', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(
+      join(dir, 'deck.html'),
+      '<div class="slides"><section><p>甲</p></section><section><p>乙</p></section></div>',
+    )
+    await call('deck.open', { path: dir })
+    await mcp('initialize', {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test', version: '1' },
+    })
+    await call('demo.set', { on: true, intervalMs: 300 })
+    await Promise.all([
+      tool('edit_text', { slide: 0, old_text: '甲', new_text: '一' }),
+      tool('edit_text', { slide: 1, old_text: '乙', new_text: '二' }),
+    ])
+    await call('demo.set', { on: false })
+    expect(follows.map((f) => f.data.holdMs)).toEqual([300, 300])
+    expect(follows[1]!.at - follows[0]!.at).toBeGreaterThanOrEqual(290)
   })
 
   it('录制工具不算 agent 的操作:不锁画布、不报活动,也不记成事件', async () => {

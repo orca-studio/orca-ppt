@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Control } from '@orca-ppt/contracts'
-import { DeckControl, USER_IN_CONTROL, USER_STOPPED } from './control.js'
+import { DeckControl, RECORDING_TOOLS, USER_IN_CONTROL, USER_STOPPED } from './control.js'
 
 let changes: Control[]
 let control: DeckControl
@@ -191,18 +191,9 @@ it('控制权查询不取得或续期控制权，接管后也可读取', () => {
   expect(control.blocksAgent('control_state')).toBeUndefined()
 })
 
-it('目标定位不取得或续期控制权，且服从人工接管', () => {
-  call('track', 'start', '定位', 'visual_target')
-  expect(control.state().holder).toBe('none')
-  call('edit', 'start')
-  call('edit', 'done')
-  vi.advanceTimersByTime(900)
-  call('track', 'start', '定位', 'visual_target')
-  call('track', 'done', '定位', 'visual_target')
-  vi.advanceTimersByTime(100)
-  expect(control.state().holder).toBe('none')
-  control.takeOver()
-  expect(control.blocksAgent('visual_target')).toBeDefined()
+it('录屏宿主量位置、开演示模式不经过控制权', () => {
+  expect(RECORDING_TOOLS.has('resolve_ui_targets')).toBe(true)
+  expect(RECORDING_TOOLS.has('set_demo_mode')).toBe(true)
 })
 
 it('批准等待的续期不能覆盖人工接管或停止', () => {
