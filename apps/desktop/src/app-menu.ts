@@ -15,7 +15,6 @@ export type MenuAction =
   | 'toggle-nav'
   | 'toggle-inspector'
   | 'toggle-autoplay'
-  | 'toggle-demo'
   | 'theme:system'
   | 'theme:light'
   | 'theme:dark'
@@ -32,13 +31,11 @@ export interface MenuOptions {
   exporting?: boolean
   /** 当前主题,用来打勾。 */
   theme: 'system' | 'light' | 'dark'
-  /** 演示模式开着没有,用来打勾。 */
-  demo?: boolean
   send: (action: MenuAction) => void
 }
 
 export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOptions[] {
-  const { appName, isMac, canPresent, exporting = false, theme, demo = false, send } = options
+  const { appName, isMac, canPresent, exporting = false, theme, send } = options
 
   const appMenu: MenuItemConstructorOptions[] = isMac
     ? [
@@ -104,14 +101,6 @@ export function buildMenuTemplate(options: MenuOptions): MenuItemConstructorOpti
           accelerator: 'CmdOrCtrl+Alt+A',
           enabled: canPresent,
           click: () => send('toggle-autoplay'),
-        },
-        { type: 'separator' },
-        {
-          // 录教学视频用:agent 的改动一条一条放到画布上,每条停一会儿。不管有没有稿子都能开
-          label: '演示模式',
-          type: 'checkbox',
-          checked: demo,
-          click: () => send('toggle-demo'),
         },
       ],
     },

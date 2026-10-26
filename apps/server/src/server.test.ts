@@ -618,22 +618,6 @@ describe('按页读写,画布只换那一页', () => {
   })
 })
 
-it('演示模式:开关广播 demo.changed,间隔有上下限', async () => {
-  expect((await call('demo.state', {})).data).toEqual({ on: false, intervalMs: 1200 })
-  expect((await call('demo.set', { on: true, intervalMs: 800 })).data).toEqual({
-    on: true,
-    intervalMs: 800,
-  })
-  // 不带间隔就沿用上次的
-  expect((await call('demo.set', { on: false })).data).toEqual({ on: false, intervalMs: 800 })
-  expect((await call('demo.set', { on: true, intervalMs: 50 })).ok).toBe(false)
-  await new Promise((resolve) => setTimeout(resolve, 30))
-  expect(pushes.filter((p) => p.channel === 'demo.changed').map((p) => p.data.on)).toEqual([
-    true,
-    false,
-  ])
-})
-
 const canvasEvidence = (revision: string, overrides: Record<string, unknown> = {}) => ({
   renderedRevision: revision,
   slide: 0,

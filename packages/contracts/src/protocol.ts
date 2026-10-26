@@ -109,19 +109,6 @@ export const UI_TARGETS_MAX_BATCH = 32
 /** 工具 `_meta` 里声明这项能力用的键。用提供方的名义,不用某个宿主的。 */
 export const UI_TARGETS_CAPABILITY = 'studio.orca/ui-targets'
 
-/**
- * 演示模式:agent 经 MCP 并发发来的改动排成队,一条一条落到画布上,每条之间留出人眼看得清的
- * 时间。MCP 越快越好,人眼却需要时间 —— 录教学视频时由应用兜底,不指望提示词约束 agent。
- * 不开时改动照样跟着翻页、点亮,只是不等。
- */
-export const Demo = z.object({
-  on: z.boolean(),
-  /** 每条改动显示出来之后停多久(毫秒)。 */
-  intervalMs: z.number().int().min(300).max(5000),
-})
-export type Demo = z.infer<typeof Demo>
-export const DEMO_DEFAULT_INTERVAL_MS = 1200
-
 export const PhaseStatus = z.enum(['idle', 'running', 'done', 'failed'])
 export type PhaseStatus = z.infer<typeof PhaseStatus>
 
@@ -902,16 +889,6 @@ export const requests = {
     }),
     result: z.object({}),
   },
-  /** 演示模式开没开。连上时问一次,之后跟着 `demo.changed` 走。 */
-  'demo.state': { params: z.object({}), result: Demo },
-  /** 开关演示模式。菜单「放映 › 演示模式」和 MCP 的 set_demo_mode 都走它。 */
-  'demo.set': {
-    params: z.object({
-      on: z.boolean(),
-      intervalMs: Demo.shape.intervalMs.optional(),
-    }),
-    result: Demo,
-  },
   'capture.result': {
     params: z.object({
       requestId: z.string(),
@@ -1083,7 +1060,6 @@ export const pushes = {
    * agent 刚改了一处(或者撤销重做了一处):画布翻到那一页,等新版本加载好,把那一处点亮,量出位置后调
    * `edit.followed`。`slide` 没有时(比如转场计划注释)不翻页;`text`、`selector` 都没有时
    * 框整页。`label` 是框上的小标签,说在做什么(改文字、换图片、重写这一页、撤销…)。
-   * `holdMs` 是点亮至少留多久 —— 演示模式下和停顿一样长。
    *
    * 撤销、重做不管谁发起的都会推这一条:人得看见撤掉的是哪儿,和 agent 改的那一处是一回事。
    *
@@ -1099,10 +1075,7 @@ export const pushes = {
     text: z.string().optional(),
     selector: z.string().optional(),
     label: z.string().optional(),
-    holdMs: z.number().int().nonnegative(),
   }),
-  /** 演示模式开关变了。 */
-  'demo.changed': Demo,
   /** 请壳截一张画布的图。壳截完调 `capture.result` 交回来。 */
   'capture.request': z.object({
     deckId: z.string(),

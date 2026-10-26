@@ -73,7 +73,6 @@ export interface StageHandle {
     slide?: number
     query?: StageQuery
     label?: string
-    holdMs: number
   }): Promise<StageTarget | undefined>
 }
 
@@ -86,8 +85,8 @@ export interface StageTarget {
   reason?: string
 }
 
-/** 改动框至少留多久:人的眼睛得来得及从别处挪过来、读完标签。 */
-const FLAG_MIN_MS = 1_600
+/** 改动框留多久:人的眼睛得来得及从别处挪过来、读完标签。 */
+const FLAG_MS = 1_600
 /** 框比元素外扩一点,不压着字。 */
 const FLAG_PAD = 4
 
@@ -488,7 +487,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
    * 把改动框画到画布上一层(宿主页面里,不进稿子 DOM —— 截图给 agent 自检时不该带着它)。
    * 连着来的改动只有一个框,从上一处移过去;最后一处留够时间再淡出。
    */
-  const showFlag = (target: StageTarget, label: string | undefined, holdMs: number) => {
+  const showFlag = (target: StageTarget, label: string | undefined) => {
     const frame = ref.current?.parentElement
     if (!frame || !target.rect) return
     const origin = frame.getBoundingClientRect()
@@ -508,7 +507,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     clearTimeout(flagTimer.current)
     flagTimer.current = setTimeout(
       () => setFlag((previous) => previous && { ...previous, shown: false }),
-      Math.max(FLAG_MIN_MS, holdMs),
+      FLAG_MS,
     )
   }
 
@@ -621,7 +620,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         )
         return typeof value === 'string' ? value : null
       },
-      follow: async ({ revision, slide, query, label, holdMs }) => {
+      follow: async ({ revision, slide, query, label }) => {
         const view = ref.current
         if (!view) throw new Error('UI_DISCONNECTED: 没有可见画布。')
         // 写盘触发的重载可能还没开始:先把要停的页记下,重载完就停在那儿
@@ -653,7 +652,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
             )
           : undefined
         // 那一处认不准(重名、被藏起来)也框整页:至少让人知道动的是这一页
-        showFlag(found?.rect ? found : toHost(await area()), label, holdMs)
+        showFlag(found?.rect ? found : toHost(await area()), label)
         // 等两帧再交回位置:框得先真的画到屏幕上
         await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
         return found

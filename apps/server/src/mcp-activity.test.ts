@@ -458,7 +458,6 @@ describe('可录制应用约定:操作记录', () => {
       text: '四站',
       // 框上的小标签:人一眼看出 agent 在干什么
       label: '改文字',
-      holdMs: 0,
     })
     const [event] = await eventsAfter(cursor)
     // 录屏宿主拿 summary 当字幕:人话,只引改成的字
@@ -480,28 +479,6 @@ describe('可录制应用约定:操作记录', () => {
     expect(follows).toHaveLength(0)
     const [event] = await eventsAfter(cursor)
     expect(event.uiTargets).toBeUndefined()
-  })
-
-  it('演示模式:并发来的改动排成队,每条显示出来之后停一会儿再做下一条', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
-    await writeFile(
-      join(dir, 'deck.html'),
-      '<div class="slides"><section><p>甲</p></section><section><p>乙</p></section></div>',
-    )
-    await call('deck.open', { path: dir })
-    await mcp('initialize', {
-      protocolVersion: '2024-11-05',
-      capabilities: {},
-      clientInfo: { name: 'test', version: '1' },
-    })
-    await call('demo.set', { on: true, intervalMs: 300 })
-    await Promise.all([
-      tool('edit_text', { slide: 0, old_text: '甲', new_text: '一' }),
-      tool('edit_text', { slide: 1, old_text: '乙', new_text: '二' }),
-    ])
-    await call('demo.set', { on: false })
-    expect(follows.map((f) => f.data.holdMs)).toEqual([300, 300])
-    expect(follows[1]!.at - follows[0]!.at).toBeGreaterThanOrEqual(290)
   })
 
   it('录制工具不算 agent 的操作:不锁画布、不报活动,也不记成事件', async () => {

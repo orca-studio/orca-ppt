@@ -43,7 +43,6 @@ MCP server 自己**不拥有任何状态**,全部转给本地 server —— 也�
 | `show_slide`                | 点页胶片                 |
 | `edit_text`                 | 双击一处文字改掉         |
 | `edit_plan`                 | 改转场计划注释里的一句   |
-| `set_demo_mode`             | 放映 › 演示模式          |
 | `show_recipe_prompt`        | 点同款卡片上的「做同款」 |
 | `artifact_path`             | 「看产物」               |
 | `check_phase`               | 阶段栏上的红字           |
@@ -212,12 +211,6 @@ MCP 调用本身不带位置。录屏、教学类宿主要加光标、推近、�
 
 旧的 `visual_target` 和各工具上的 `dev.jevbot/ui` 标注已删掉 —— 约定用提供方自己的名义,
 不跟某一个宿主走。`control_state` 照旧,宿主读控制权用。
-
-### 可选:演示模式
-
-菜单「放映 › 演示模式」或 `set_demo_mode`,对应 `demo.set`,默认关,不存盘。开着时每条改动上屏之后
-再停 `intervalMs`(默认 1200,300–5000),框也留这么久。给没有后期的现场演示用;录制不依赖它,
-节奏由录屏应用后期补。
 
 ## 基础编辑
 

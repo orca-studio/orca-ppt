@@ -75,7 +75,7 @@ describe('应用菜单', () => {
     expect(item({ exporting: true })).toMatchObject({ label: '正在导出 PPTX…', enabled: false })
   })
 
-  it('没有稿子时放映和自动播放都是灰的;演示模式不灰,勾选跟着状态', () => {
+  it('没有稿子时放映和自动播放都是灰的', () => {
     const present = (state: Record<string, unknown>) =>
       build(state).find((item) => item.label === '放映')!.submenu as Array<{
         label?: string
@@ -83,9 +83,7 @@ describe('应用菜单', () => {
         checked?: boolean
       }>
     const off = present({ canPresent: false }).filter((item) => item.label)
-    expect(off.map((item) => item.enabled)).toEqual([false, false, undefined])
-    expect(off.at(-1)).toMatchObject({ label: '演示模式', checked: false })
-    expect(present({ demo: true }).at(-1)).toMatchObject({ label: '演示模式', checked: true })
+    expect(off.map((item) => item.enabled)).toEqual([false, false])
   })
 
   it('主题在菜单里,当前那一项打勾 —— 偏好不该占工具栏', () => {

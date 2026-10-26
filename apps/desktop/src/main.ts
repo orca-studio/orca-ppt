@@ -92,7 +92,6 @@ type MenuState = {
   canPresent: boolean
   exporting?: boolean
   theme: 'system' | 'light' | 'dark'
-  demo?: boolean
 }
 
 function applyMenu(state: MenuState): void {

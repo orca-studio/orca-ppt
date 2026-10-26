@@ -191,9 +191,8 @@ it('控制权查询不取得或续期控制权，接管后也可读取', () => {
   expect(control.blocksAgent('control_state')).toBeUndefined()
 })
 
-it('录屏宿主量位置、开演示模式不经过控制权', () => {
+it('录屏宿主量位置不经过控制权', () => {
   expect(RECORDING_TOOLS.has('resolve_ui_targets')).toBe(true)
-  expect(RECORDING_TOOLS.has('set_demo_mode')).toBe(true)
 })
 
 it('批准等待的续期不能覆盖人工接管或停止', () => {

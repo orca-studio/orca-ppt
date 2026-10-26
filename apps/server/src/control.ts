@@ -37,9 +37,8 @@ export const RECORDING_TOOLS = new Set([
   'recording_events',
   'recording_snapshot',
   'recording_restore',
-  // 录屏宿主量位置、开演示模式也一样:它们不碰稿子,人接管着也得能用
+  // 录屏宿主量位置也一样:不碰稿子,人接管着也得能用
   'resolve_ui_targets',
-  'set_demo_mode',
 ])
 
 /**

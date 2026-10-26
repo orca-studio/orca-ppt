@@ -378,13 +378,6 @@ it('改字回执的第二段带上 uiTargets', async () => {
   expect(JSON.parse((result.content[1] as { text: string }).text)).toEqual({ uiTargets })
 })
 
-it('set_demo_mode 走 demo.set', async () => {
-  const { client, calls } = fakeClient({ 'demo.set': { on: true, intervalMs: 800 } })
-  const { map } = toolsOf(client)
-  await map.get('set_demo_mode')!.run({ on: true, interval_ms: 800 })
-  expect(calls).toContainEqual(['demo.set', { on: true, intervalMs: 800 }])
-})
-
 it('MCP 改转场计划走 deck.editPlan,对不上就拒绝', async () => {
   const responses: Record<string, unknown> = {
     'deck.current': { deckId: '/d' },

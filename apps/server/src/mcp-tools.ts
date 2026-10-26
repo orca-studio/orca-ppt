@@ -504,31 +504,6 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         ),
     },
     {
-      name: 'set_demo_mode',
-      activity: (args) => ({
-        kind: 'read',
-        label: args.on === false ? '关掉演示模式' : '打开演示模式',
-        slides: [],
-      }),
-      config: {
-        title: '开关演示模式',
-        description:
-          '和菜单「放映 › 演示模式」一样。打开后,经 MCP 发来的改动排成队,一条一条显示到画布上,每条显示出来之后停 interval_ms 毫秒(默认 1200)再做下一条 —— 录教学视频时用,人眼才跟得上。不开时改动照样跟着翻页、点亮,只是不等。返回现在的状态。',
-        annotations: looking,
-        inputSchema: {
-          on: z.boolean(),
-          interval_ms: z.number().int().min(300).max(5000).optional(),
-        },
-      },
-      run: async (args) =>
-        json(
-          await call('demo.set', {
-            on: Boolean(args.on),
-            ...(typeof args.interval_ms === 'number' ? { intervalMs: args.interval_ms } : {}),
-          }),
-        ),
-    },
-    {
       name: 'control_state',
       config: {
         title: '读取控制权',

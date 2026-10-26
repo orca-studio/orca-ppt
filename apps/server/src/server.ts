@@ -20,8 +20,6 @@ import {
   type RequestMethod,
   type ResponseEnvelope,
   parseParams,
-  DEMO_DEFAULT_INTERVAL_MS,
-  type Demo,
   type UiTargetQuery,
   type UiTargetList,
   type UiTargets,
@@ -130,12 +128,6 @@ export async function startServer(
   const documentOf = (deckId: string) => ({ id: deckId, label: basename(deckPathOf(deckId)) })
 
   /**
-   * 演示模式。不存盘:录一段视频时开,录完就关,下次启动回到不等的默认。
-   * 跟随(翻页、点亮)不管开没开都做 —— 这里只管等不等。
-   */
-  let demo: Demo = { on: false, intervalMs: DEMO_DEFAULT_INTERVAL_MS }
-
-  /**
    * agent 刚改了一处:让画布跟过去,量出那一处的屏幕位置。
    *
    * 在改稿子的串行队列里等它(见 dispatch 的 editTails),所以并发发来的几十条改动会一条一条
@@ -156,7 +148,6 @@ export async function startServer(
         ...(show.text ? { text: show.text } : {}),
         ...(show.selector ? { selector: show.selector } : {}),
         ...(show.label ? { label: show.label } : {}),
-        holdMs: demo.on ? demo.intervalMs : 0,
       })
     } catch {
       return undefined
@@ -165,7 +156,7 @@ export async function startServer(
 
   /**
    * 稿子被我们改了一次,记一条。是不是经 MCP 来的决定记成人还是 agent。
-   * agent 的改动还要让画布跟过去(见 follow),演示模式下再停一会儿;返回量到的位置。
+   * agent 的改动还要让画布跟过去(见 follow);返回量到的位置。
    * 撤销、重做谁发起的都跟过去(`follow`):撤掉的可能不是眼前这页,人得看见动的是哪儿。
    */
   const recordChange = async (
@@ -210,8 +201,6 @@ export async function startServer(
       ...(change.detail ? { detail: change.detail } : {}),
       ...(uiTargets ? { uiTargets } : {}),
     })
-    // 停顿放在记下之后:事件的时间点就是它出现在画面上的那一刻
-    if (call && demo.on) await new Promise((resume) => setTimeout(resume, demo.intervalMs))
     return uiTargets
   }
 
@@ -1189,16 +1178,6 @@ export async function startServer(
         const params = parseParams('edit.followed', raw)
         follows.settle(params.requestId, { value: params.targets, error: params.error })
         return {}
-      }
-      case 'demo.state': {
-        parseParams('demo.state', raw)
-        return demo
-      }
-      case 'demo.set': {
-        const params = parseParams('demo.set', raw)
-        demo = { on: params.on, intervalMs: params.intervalMs ?? demo.intervalMs }
-        bus.broadcast('demo.changed', demo)
-        return demo
       }
       case 'deck.capture': {
         const params = parseParams('deck.capture', raw)

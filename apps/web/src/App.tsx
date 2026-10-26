@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import type {
   CanvasElement,
   Control,
-  Demo,
   HistoryState,
   PendingRequest,
   PushData,
@@ -56,9 +55,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
-  const [demo, setDemo] = useState<Demo>({ on: false, intervalMs: 1200 })
-  const demoRef = useRef(demo)
-  demoRef.current = demo
   // undefined = 还在加载：别先闪一下空状态
   const [recipes, setRecipes] = useState<Recipe[] | undefined>(undefined)
   const [themes, setThemes] = useState<Theme[]>([])
@@ -116,10 +112,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
         void next
           .request('control.state', {})
           .then(setControl)
-          .catch(() => {})
-        void next
-          .request('demo.state', {})
-          .then(setDemo)
           .catch(() => {})
       }
     }
@@ -205,8 +197,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       // 画布上那一处的点亮不在这里:server 改完会推 edit.follow,翻页、点亮、量位置一并做
       setAgent((prev) => reduce(prev, data))
     })
-
-    next.subscribe('demo.changed', setDemo)
 
     // 改了一小处:画布就地换掉,不重载。按到达顺序一个一个换,deck.changed 等它们换完再判断
     next.subscribe('deck.patched', (data) => {
@@ -357,7 +347,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
             ...(slide !== undefined ? { slide } : {}),
             ...(query ? { query } : {}),
             ...(data.label ? { label: data.label } : {}),
-            holdMs: data.holdMs,
           })
           const at = await screen()
           // 由细到粗:先是被改的那一处,再是整张画布。转场计划这种不在页上的,没有可指的
@@ -465,8 +454,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-inspector') toggleInspectorRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
-      else if (action === 'toggle-demo')
-        void next.request('demo.set', { on: !demoRef.current.on }).then(setDemo)
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
       else if (action.startsWith('theme:')) {
         const next = action.slice('theme:'.length) as ThemeSource
@@ -733,9 +720,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
       canPresent: Boolean(deck?.previewUrl),
       exporting,
       theme,
-      demo: demo.on,
     })
-  }, [deck?.previewUrl, exporting, theme, demo.on])
+  }, [deck?.previewUrl, exporting, theme])
 
   /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
   const setHolder = useCallback(
