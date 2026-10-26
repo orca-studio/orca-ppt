@@ -31,9 +31,13 @@ declare global {
       /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
       setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
       /** 全屏放映。稿子好不好只有放映能回答。 */
-      present?: (input: { previewUrl: string; slide: number }) => Promise<boolean>
+      present?: (input: { previewUrl: string; slide: number; script?: string }) => Promise<boolean>
       /** 关掉放映窗口。 */
       stopPresent?: () => Promise<boolean>
+      /** 放映中开关自动播放。没在放映返回 false。 */
+      presentAutoplay?: (on: boolean) => Promise<boolean>
+      /** 放映窗口还在不在自动播放。没在放映返回 null。 */
+      presentAutoplayRunning?: () => Promise<boolean | null>
       /** 离屏渲每一页的缩略图。不碰可见画布。 */
       /** 导出 PPTX(写到 server 给的临时文件),返回导出器的报告。 */
       exportPptx?: (input: { previewUrl: string; outPath: string }) => Promise<unknown>

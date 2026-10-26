@@ -37,6 +37,10 @@ electron.contextBridge.exposeInMainWorld('orca', {
     electron.ipcRenderer.invoke('deck:pptx-failed', reason),
   present: (input: unknown): Promise<boolean> => electron.ipcRenderer.invoke('deck:present', input),
   stopPresent: (): Promise<boolean> => electron.ipcRenderer.invoke('deck:stop-present'),
+  presentAutoplay: (on: boolean): Promise<boolean> =>
+    electron.ipcRenderer.invoke('deck:present-autoplay', on),
+  presentAutoplayRunning: (): Promise<boolean | null> =>
+    electron.ipcRenderer.invoke('deck:present-autoplay-running'),
   setTheme: (source: 'system' | 'light' | 'dark'): Promise<boolean> =>
     electron.ipcRenderer.invoke('app:theme', source),
   onMenuAction: (handler: (action: string) => void): void => {

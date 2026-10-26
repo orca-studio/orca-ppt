@@ -22,6 +22,7 @@ import { Transport, type TransportState } from './transport.js'
 import { AgentStatus } from './AgentStatus.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 import { fromStage, place, resolveControl, resolveTargets, type Screen } from './ui-targets.js'
+import autoplayScript from './guest/autoplay.guest.js?raw'
 
 type OpenedDeck = RequestResult<'deck.open'>
 
@@ -225,7 +226,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
     next.subscribe('autoplay.changed', (data) => {
       if (data.deckId !== deckRef.current?.deck.id) return
       setAutoplay(data.on)
-      stage.current?.autoplay(data.on)
+      // 放映中就翻放映窗口;没在放映才让画布自己播
+      void (async () => {
+        const presenting = await window.orca?.presentAutoplay?.(data.on).catch(() => false)
+        stage.current?.autoplay(presenting ? false : data.on)
+      })()
     })
 
     // 稿子关了就回首页 —— 人点了工具栏的「首页」,或者 agent 调了 close_deck。
@@ -242,7 +247,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
     // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
-      void window.orca?.present?.({ previewUrl: data.previewUrl, slide: data.slide })
+      void window.orca?.present?.({
+        previewUrl: data.previewUrl,
+        slide: data.slide,
+        script: autoplayScript,
+      })
     })
     next.subscribe('recipe.focus', (data) => {
       setRecipeFocus((current) => ({ ...data, seq: (current?.seq ?? 0) + 1 }))
@@ -927,7 +936,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
   useEffect(() => {
     if (!autoplay) return
     const timer = setInterval(() => {
-      void stage.current?.autoplayRunning().then((running) => {
+      void (async () => {
+        // 放映窗口开着就问它,关了(或没开)才问画布
+        const presenting = await window.orca?.presentAutoplayRunning?.().catch(() => null)
+        return presenting ?? (await stage.current?.autoplayRunning()) ?? false
+      })().then((running) => {
         if (!running) {
           setAutoplay(false)
           const current = deckRef.current

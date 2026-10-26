@@ -295,40 +295,76 @@ let presenter: BrowserWindow | undefined
  *
  * 开一个独立的无边框窗口,而不是把主窗口切全屏:放映时三栏工作台不该还在旁边,
  * 而且放完要能原样退回来。Esc 关掉,方向键归 reveal 自己(guest 有焦点)。
+ *
+ * macOS 上用 simple fullscreen,不用原生全屏:原生全屏在「全屏时显示菜单栏」开着时
+ * 会把菜单栏和窗口标题栏一起露在幻灯片上面,录屏录进去一条白条。simple fullscreen
+ * 盖住菜单栏和 Dock,也不另开一个桌面空间。
+ *
+ * script 是自动播放的 guest 脚本(渲染层给的,和画布注入的同一份):放映中开自动播放,
+ * 翻的是这个窗口。
  */
-ipcMain.handle('deck:present', async (_event, input: { previewUrl: string; slide: number }) => {
-  presenter?.destroy()
+ipcMain.handle(
+  'deck:present',
+  async (_event, input: { previewUrl: string; slide: number; script?: string }) => {
+    presenter?.destroy()
 
-  const window = new BrowserWindow({
-    fullscreen: true,
-    backgroundColor: '#000000',
-    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
-  })
-  presenter = window
-  window.on('closed', () => {
-    if (presenter === window) presenter = undefined
-  })
+    const window = new BrowserWindow({
+      frame: false,
+      fullscreen: true,
+      // 只改全屏的方式(macOS 才有),单独设不会全屏
+      simpleFullscreen: isMac,
+      backgroundColor: '#000000',
+      webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+    })
+    presenter = window
+    window.on('closed', () => {
+      if (presenter === window) presenter = undefined
+    })
 
-  // Esc 退出放映,和 Keynote 一致。这一道管真实键盘。
-  window.webContents.on('before-input-event', (event, key) => {
-    if (key.type !== 'keyDown' || key.key !== 'Escape') return
-    event.preventDefault()
-    window.close()
-  })
+    // Esc 退出放映,和 Keynote 一致。这一道管真实键盘。
+    window.webContents.on('before-input-event', (event, key) => {
+      if (key.type !== 'keyDown' || key.key !== 'Escape') return
+      event.preventDefault()
+      window.close()
+    })
 
-  await window.loadURL(`${input.previewUrl}#/${input.slide}`)
-  // 第二道:reveal 自己也绑了 Esc(总览模式),而且程序注入的按键不走
-  // before-input-event。捕获阶段先截下来。
-  await window.webContents.executeJavaScript(
-    `addEventListener('keydown', (e) => {
+    await window.loadURL(`${input.previewUrl}#/${input.slide}`)
+    // 第二道:reveal 自己也绑了 Esc(总览模式),而且程序注入的按键不走
+    // before-input-event。捕获阶段先截下来。
+    await window.webContents.executeJavaScript(
+      `addEventListener('keydown', (e) => {
        if (e.key !== 'Escape') return
        e.preventDefault()
        e.stopImmediatePropagation()
        window.close()
      }, true)`,
-  )
-  window.focus()
+    )
+    if (input.script) await window.webContents.executeJavaScript(input.script).catch(() => {})
+    window.focus()
+    return true
+  },
+)
+
+/**
+ * 放映中开关自动播放:翻放映窗口,不翻工作台的画布。没在放映返回 false,
+ * 渲染层就照旧让画布自己播。
+ */
+ipcMain.handle('deck:present-autoplay', async (_event, on: boolean) => {
+  if (!presenter || presenter.isDestroyed()) return false
+  await presenter.webContents
+    .executeJavaScript(`window.__orcaAutoplay?.${on ? 'start' : 'stop'}()`)
+    .catch(() => {})
   return true
+})
+
+/** 放映窗口里还在不在自动播放(放完最后一页、人按了键都会自己停)。没在放映返回 null。 */
+ipcMain.handle('deck:present-autoplay-running', async () => {
+  if (!presenter || presenter.isDestroyed()) return null
+  return Boolean(
+    await presenter.webContents
+      .executeJavaScript('!!window.__orcaAutoplay?.running()')
+      .catch(() => false),
+  )
 })
 
 /**
