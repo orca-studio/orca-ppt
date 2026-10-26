@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PushData, RequestResult } from '@orca-ppt/contracts'
 import { Button } from './ui/Button.js'
 import { assetUrl } from './assets.js'
@@ -155,11 +155,20 @@ function RecipeCard({
   )
 }
 
+const MENU_MAX = 800
+/** 再矮就只剩一两行提示词,不如把菜单滚进来 */
+const MENU_MIN = 240
+const MENU_MARGIN = 16
+
 /**
  * 「做同款」下面挂的菜单:先看清要复制的是什么,再复制。提示词可能比菜单长,
  * 预览区自己滚动,复制按钮钉在底下不跟着滚走。
  *
  * 从按钮所在的右上角长出来(origin-aware),Esc 和点外面关掉。
+ *
+ * 高度按菜单在窗口里的实际位置算,不按视口算:卡片在窗口偏下时(比如录屏把窗口压窄、
+ * 首页变两列),按视口给的高度会把底下的复制按钮挤出窗口。剩的地方实在太少,就把菜单
+ * 滚进窗口里,不让它缩成一条。
  */
 function PromptMenu({ prompt, onClose }: { prompt: string; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -167,6 +176,27 @@ function PromptMenu({ prompt, onClose }: { prompt: string; onClose: () => void }
   const [copied, setCopied] = useState(false)
   const close = useRef(onClose)
   close.current = onClose
+
+  useLayoutEffect(() => {
+    const menu = ref.current
+    if (!menu) return
+    // 滚进来时底下也留出同样的边,不贴着窗口底
+    menu.style.scrollMarginBottom = `${MENU_MARGIN}px`
+    const fit = (reveal: boolean) => {
+      const room = window.innerHeight - menu.getBoundingClientRect().top - MENU_MARGIN
+      menu.style.maxHeight = `${Math.min(MENU_MAX, Math.max(MENU_MIN, room))}px`
+      if (reveal && room < MENU_MIN) menu.scrollIntoView({ block: 'nearest' })
+    }
+    fit(true)
+    const refit = () => fit(false)
+    window.addEventListener('resize', refit)
+    // 首页滚动时菜单跟着卡片走,剩的高度也跟着变
+    window.addEventListener('scroll', refit, true)
+    return () => {
+      window.removeEventListener('resize', refit)
+      window.removeEventListener('scroll', refit, true)
+    }
+  }, [])
 
   useEffect(() => {
     copyButton.current?.focus()
