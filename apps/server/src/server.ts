@@ -144,7 +144,7 @@ export async function startServer(
   const follow = async (
     deckId: string,
     revision: string,
-    show: { slide?: number; text?: string; selector?: string },
+    show: { slide?: number; text?: string; selector?: string; label?: string },
   ): Promise<UiTargets | undefined> => {
     if (bus.connectionCount === 0) return undefined
     try {
@@ -154,6 +154,7 @@ export async function startServer(
         ...(show.slide !== undefined ? { slide: show.slide } : {}),
         ...(show.text ? { text: show.text } : {}),
         ...(show.selector ? { selector: show.selector } : {}),
+        ...(show.label ? { label: show.label } : {}),
         holdMs: demo.on ? demo.intervalMs : 0,
       })
     } catch {
@@ -164,6 +165,7 @@ export async function startServer(
   /**
    * 稿子被我们改了一次,记一条。是不是经 MCP 来的决定记成人还是 agent。
    * agent 的改动还要让画布跟过去(见 follow),演示模式下再停一会儿;返回量到的位置。
+   * 撤销、重做谁发起的都跟过去(`follow`):撤掉的可能不是眼前这页,人得看见动的是哪儿。
    */
   const recordChange = async (
     deckId: string,
@@ -171,19 +173,25 @@ export async function startServer(
       summary: string
       slide?: number
       detail?: Record<string, unknown>
-      /** 画布上点亮哪一处:改完之后的文字,或者页内选择器。都没有就指整页。 */
-      show?: { text?: string; selector?: string }
+      /**
+       * 画布上框哪一处:改完之后的文字,或者页内选择器。都没有就框整页。
+       * `label` 是框上的小标签,说在做什么。
+       */
+      show?: { text?: string; selector?: string; label?: string }
+      /** 不是 agent 改的也让画布跟过去 */
+      follow?: boolean
     },
   ): Promise<UiTargetList | undefined> => {
     const revision = await deckRevision(deckPathOf(deckId))
     lastSeen.set(deckId, revision)
     const call = mcpCall.getStore()
-    const measured = call
-      ? await follow(deckId, revision, {
-          ...(change.slide !== undefined ? { slide: change.slide } : {}),
-          ...change.show,
-        })
-      : undefined
+    const measured =
+      call || change.follow
+        ? await follow(deckId, revision, {
+            ...(change.slide !== undefined ? { slide: change.slide } : {}),
+            ...change.show,
+          })
+        : undefined
     // 回执和记录里每一项自带量的时刻;一项都没有(比如转场计划不在页上)就不带
     const uiTargets = measured?.targets.length
       ? measured.targets.map((target) => ({ ...target, measuredAt: measured.measuredAt }))
@@ -274,7 +282,11 @@ export async function startServer(
         ? `${direction === 'undo' ? '撤销' : '重做'}${step.label}`
         : `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
       slide,
-      ...(step.label ? {} : { show: { text: text.trim() } }),
+      show: {
+        label: direction === 'undo' ? '撤销' : '重做',
+        ...(step.label ? {} : { text: text.trim() }),
+      },
+      follow: true,
     })
     return {
       ok: true,
@@ -912,7 +924,17 @@ export async function startServer(
           const uiTargets = await recordChange(params.deckId, {
             summary: label,
             slide,
-            ...('selector' in params ? { show: { selector: params.selector } } : {}),
+            show:
+              'selector' in params
+                ? { selector: params.selector, label: '换图片' }
+                : {
+                    label:
+                      params.change.action === 'insert'
+                        ? '新增这一页'
+                        : params.change.action === 'delete'
+                          ? '删掉了一页'
+                          : '移动这一页',
+                  },
           })
           return {
             ok: true,
@@ -963,6 +985,7 @@ export async function startServer(
           const uiTargets = await recordChange(params.deckId, {
             summary: label,
             slide: params.slide,
+            show: { label: '重写这一页' },
           })
           return {
             ok: true,
@@ -1018,8 +1041,10 @@ export async function startServer(
             summary: `把第 ${params.slide + 1} 页的「${clip(params.oldText)}」改成「${clip(params.newText)}」`,
             slide: params.slide,
             detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
-            // 新文字留空是删掉那个元素:没有可点亮的,指整页
-            ...(params.newText.trim() ? { show: { text: params.newText.trim() } } : {}),
+            // 新文字留空是删掉那个元素:没有可框的,框整页
+            show: params.newText.trim()
+              ? { text: params.newText.trim(), label: '改文字' }
+              : { label: '删掉文字' },
           })
           if (uiTargets) return { ok: true, uiTargets }
         }

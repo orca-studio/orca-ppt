@@ -442,7 +442,7 @@ describe('可录制应用约定:操作记录', () => {
     expect(event).toMatchObject({ actor: 'agent', tool: 'edit_text', target: { index: 1 } })
   })
 
-  it('agent 改字:画布跟到那一页、点亮新文字;回执和事件都带上位置', async () => {
+  it('agent 改字:画布跟到那一页、框出新文字;回执和事件都带上位置', async () => {
     const { dir } = await openDeckAt('走过的四站。')
     const cursor = await cursorNow()
     const receipt = await tool('edit_text', {
@@ -456,6 +456,8 @@ describe('可录制应用约定:操作记录', () => {
       path: await realpath(dir),
       slide: 1,
       text: '四站',
+      // 框上的小标签:人一眼看出 agent 在干什么
+      label: '改文字',
       holdMs: 0,
     })
     const [event] = await eventsAfter(cursor)

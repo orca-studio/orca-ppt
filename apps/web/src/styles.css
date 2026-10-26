@@ -522,6 +522,61 @@ select:focus-visible {
   cursor: not-allowed;
 }
 
+/*
+ * 改动框:agent 改的、撤销重做的那一处,带一个说在做什么的小标签。
+ * 只有一个框 —— 连着改几处时从上一处移过去,眼睛跟着走;新出现时淡入,留够时间再淡出。
+ * 不接点击:它只是告诉人动的是哪儿,不能挡住画布。
+ */
+.stage-flag {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  border: 2px solid var(--agent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--agent) 18%, transparent);
+  opacity: 0;
+  transition:
+    opacity 400ms var(--ease-out),
+    left 240ms var(--ease-out),
+    top 240ms var(--ease-out),
+    width 240ms var(--ease-out),
+    height 240ms var(--ease-out);
+}
+
+.stage-flag[data-shown] {
+  opacity: 1;
+  transition-duration: 150ms, 240ms, 240ms, 240ms, 240ms;
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.stage-flag-label {
+  position: absolute;
+  left: -2px;
+  bottom: calc(100% + 2px);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--agent);
+  color: #fff;
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  white-space: nowrap;
+}
+
+.stage-flag-label[data-inside] {
+  top: var(--space-1);
+  bottom: auto;
+  left: var(--space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-flag {
+    transition: opacity 150ms var(--ease-out);
+  }
+}
+
 /* Agent 状态与控制在窗口右上角，任务文字可截断，按钮始终可见。 */
 .toolbar-agent {
   margin-left: auto;

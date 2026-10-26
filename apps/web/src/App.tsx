@@ -347,6 +347,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
             revision: data.revision,
             ...(slide !== undefined ? { slide } : {}),
             ...(query ? { query } : {}),
+            ...(data.label ? { label: data.label } : {}),
             holdMs: data.holdMs,
           })
           const at = await screen()
@@ -780,8 +781,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [])
 
   /**
-   * 撤销 / 重做一处改字。成了就翻到那一页、把那一处点亮 —— 撤的可能不是眼前这页,
-   * 人得看见动的是哪儿;不成就在画布上把理由说出来。
+   * 撤销 / 重做一处改动。翻页和框出那一处不在这里:server 撤完会推 edit.follow,和 agent
+   * 改的那一处走同一条路。不成就在画布上把理由说出来。
    */
   const stepHistory = useCallback(async (direction: 'undo' | 'redo') => {
     const active = transport.current
@@ -790,15 +791,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     try {
       const method = direction === 'undo' ? 'deck.undo' : 'deck.redo'
       const result = await active.request(method, { deckId: current.deck.id })
-      if (!result.ok) {
-        stage.current?.notify(result.reason ?? '没做成')
-        return
-      }
-      if (result.slide !== undefined && result.slide !== slideRef.current) {
-        // 走协议方法,不直接动画布:和 agent 让画布翻页是同一条路。
-        await active.request('deck.showSlide', { deckId: current.deck.id, index: result.slide })
-      }
-      if (result.text) stage.current?.spotlight(result.text)
+      if (!result.ok) stage.current?.notify(result.reason ?? '没做成')
     } catch (cause) {
       stage.current?.notify(cause instanceof Error ? cause.message : '没做成')
     }

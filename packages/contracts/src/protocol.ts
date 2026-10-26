@@ -893,7 +893,7 @@ export const requests = {
     }),
     result: z.object({}),
   },
-  /** 画布跟上了 agent 的一处改动(翻过去、点亮了),交回那一处的位置。只有界面会调。 */
+  /** 画布跟上了一处改动(翻过去、点亮了),交回那一处的位置。只有界面会调。 */
   'edit.followed': {
     params: z.object({
       requestId: z.string(),
@@ -1080,9 +1080,12 @@ export const pushes = {
     queries: z.array(UiTargetQuery),
   }),
   /**
-   * agent 刚改了一处:画布翻到那一页,等新版本加载好,把那一处点亮,量出位置后调
+   * agent 刚改了一处(或者撤销重做了一处):画布翻到那一页,等新版本加载好,把那一处点亮,量出位置后调
    * `edit.followed`。`slide` 没有时(比如转场计划注释)不翻页;`text`、`selector` 都没有时
-   * 指整张画布。`holdMs` 是点亮留多久 —— 演示模式下和停顿一样长。
+   * 框整页。`label` 是框上的小标签,说在做什么(改文字、换图片、重写这一页、撤销…)。
+   * `holdMs` 是点亮至少留多久 —— 演示模式下和停顿一样长。
+   *
+   * 撤销、重做不管谁发起的都会推这一条:人得看见撤掉的是哪儿,和 agent 改的那一处是一回事。
    *
    * 界面停在首页(没开任何稿子)时先按 `path` 把这份稿子打开;正开着别的稿子时不抢,答
    * `DOCUMENT_CHANGED`。agent 照「做同款」的路子先建稿、改完才 open_deck 时,改动也看得见。
@@ -1095,6 +1098,7 @@ export const pushes = {
     slide: z.number().int().nonnegative().optional(),
     text: z.string().optional(),
     selector: z.string().optional(),
+    label: z.string().optional(),
     holdMs: z.number().int().nonnegative(),
   }),
   /** 演示模式开关变了。 */

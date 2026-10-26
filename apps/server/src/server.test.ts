@@ -18,12 +18,29 @@ beforeEach(async () => {
   server = await startServer()
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
+  listen()
+})
+
+/**
+ * 记下所有推送。撤销、重做会让画布跟过去(edit.follow),这里像没有画布的界面一样答一声,
+ * 不然 server 要等到超时。
+ */
+function listen() {
   pushes = []
   socket.on('message', (raw: Buffer) => {
     const message = JSON.parse(raw.toString())
-    if (message.channel) pushes.push(message)
+    if (!message.channel) return
+    pushes.push(message)
+    if (message.channel === 'edit.follow')
+      socket.send(
+        JSON.stringify({
+          id: `follow-${message.data.requestId}`,
+          method: 'edit.followed',
+          params: { requestId: message.data.requestId, error: 'UI_DISCONNECTED' },
+        }),
+      )
   })
-})
+}
 
 afterEach(async () => {
   socket.close()
@@ -217,6 +234,13 @@ describe('撤销 / 重做', () => {
     const redone = await call('deck.redo', { deckId: id })
     expect(redone.data).toEqual({ ok: true, slide: 0, text: '四站' })
     expect(await readFile(file, 'utf8')).toBe(edited)
+
+    // 人撤的也让画布跟过去、框出那一处,和 agent 改的是同一个框
+    const follows = pushes.filter((p) => p.channel === 'edit.follow').map((p) => p.data)
+    expect(follows).toMatchObject([
+      { slide: 0, text: '走过的四站。', label: '撤销' },
+      { slide: 0, text: '四站', label: '重做' },
+    ])
   })
 
   it('状态推给界面,按钮跟着亮灭', async () => {
@@ -444,11 +468,7 @@ async function restartWithSkill(skillRoot: string): Promise<void> {
   server = await startServer({ allowRoots })
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
-  pushes = []
-  socket.on('message', (raw: Buffer) => {
-    const message = JSON.parse(raw.toString())
-    if (message.channel) pushes.push(message)
-  })
+  listen()
 }
 
 it('当前稿子跟随 UI 打开，旧画布报告不能覆盖新稿子的可见页', async () => {

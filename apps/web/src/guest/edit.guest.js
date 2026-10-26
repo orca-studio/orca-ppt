@@ -213,60 +213,16 @@
     if (resolve) resolve(null)
   }
 
-  /**
-   * 把某段文字所在的那个元素点亮一下。agent 改完一处,人得当场看见改的是哪儿 ——
-   * 页胶片上圈出"哪一页"还不够,一页上有十几个元素。
-   *
-   * 按文字找,不按选择器:稿子刚被重载过,DOM 是新的,但文字就是 agent 刚写进去的那段。
-   * 找不到就安静地什么都不做 —— 这只是个提示,不值得打扰人。
-   */
-  function spotlight(value) {
-    const wanted = String(value == null ? '' : value).trim()
-    if (!wanted) return false
-    const slide =
-      (window.Reveal && window.Reveal.getCurrentSlide && window.Reveal.getCurrentSlide()) ||
-      document.body
-    const hit = Array.prototype.find.call(slide.querySelectorAll('*'), (element) => {
-      return element.children.length === 0 && (element.textContent || '').trim() === wanted
-    })
-    if (!hit) return false
-
-    hit.style.animation = 'none'
-    // 读一下强制重排,否则连着点两次同一处不会重放动画。
-    void hit.offsetWidth
-    hit.style.animation = '__orca-spotlight 1.2s ease'
-    setTimeout(() => {
-      hit.style.animation = ''
-    }, 1300)
-    return true
-  }
-
-  /** 动画的 keyframes 得在稿子自己的文档里,注入一次就够。 */
-  function ensureKeyframes() {
-    if (document.getElementById('__orca-edit-style')) return
-    const style = document.createElement('style')
-    style.id = '__orca-edit-style'
-    style.textContent =
-      '@keyframes __orca-spotlight{' +
-      '0%{outline:3px solid rgba(129,140,248,.95);outline-offset:6px}' +
-      '70%{outline:3px solid rgba(129,140,248,.55);outline-offset:3px}' +
-      '100%{outline:3px solid rgba(129,140,248,0);outline-offset:2px}}'
-    document.head.appendChild(style)
-  }
-
   /** 服务端把这次改动拒了,把理由摆回人刚才双击的那处。 */
   function notify(message) {
     const element = lastTouched && lastTouched.isConnected ? lastTouched : document.body
     flash(message, element)
   }
 
-  ensureKeyframes()
-
   window.__orcaEdit = {
     arm,
     disarm,
     notify,
-    spotlight,
     editabilityOf,
     editing: () => editing !== null,
     armed: () => on,

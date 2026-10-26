@@ -216,21 +216,20 @@
       rect: { x: left, y: top, width: right - left, height: bottom - top },
     }
   }
-  /** 把那一处框出来,留 holdMs(至少 1.2 秒)。等两帧再交回位置:框得先真的画到屏幕上。 */
-  const mark = async (query, holdMs) => {
-    const found = find(query)
-    if (found.element) {
-      const element = found.element
-      const ms = Math.max(1200, holdMs || 0)
-      element.style.animation = 'none'
-      void element.offsetWidth
-      element.style.animation = `__orca-spotlight ${ms}ms ease`
-      setTimeout(() => {
-        element.style.animation = ''
-      }, ms + 100)
+  /** 当前这一页在视口里占的地方。整页的改动(重写、插页)框它。只读。 */
+  const slideArea = () => {
+    const slides = document.querySelector('.reveal .slides')
+    if (!slides) return { status: 'not_found', reason: 'no_slides' }
+    const r = slides.getBoundingClientRect()
+    const left = Math.max(r.left, 0)
+    const top = Math.max(r.top, 0)
+    const right = Math.min(r.right, innerWidth)
+    const bottom = Math.min(r.bottom, innerHeight)
+    if (right <= left || bottom <= top) return { status: 'not_visible', reason: 'outside_viewport' }
+    return {
+      status: 'visible',
+      rect: { x: left, y: top, width: right - left, height: bottom - top },
     }
-    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
-    return locate(query)
   }
   /**
    * 不重载,就地换掉一段字或者几页(见协议 `deck.patched`)。换字只换叶子元素里的文字,结构一点不动;
@@ -281,7 +280,7 @@
     inspect,
     select,
     locate,
-    mark,
+    slideArea,
     patch,
     revision: renderedRevision,
     dispose: () => {

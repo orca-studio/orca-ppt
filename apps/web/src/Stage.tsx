@@ -51,11 +51,6 @@ export interface StageHandle {
   navigate(action: 'next' | 'previous' | 'replay' | 'replayPage', from?: number): void
   /** guest 的 webContents id —— 主进程按它找到 guest 去截图。 */
   guestId(): number | undefined
-  /**
-   * 把某段文字所在的元素点亮一下。改完的**下一次加载完成后**才点 ——
-   * 写盘会触发重载,这会儿点亮的是马上就要被换掉的那个 DOM。
-   */
-  spotlight(text: string): void
   /** 在画布上说一句话(比如撤销为什么没做成),贴着最近改过的那一处。 */
   notify(message: string): void
   /** 等画布加载完。重载途中截图会截到空白,得等它。 */
@@ -69,13 +64,15 @@ export interface StageHandle {
   /** 页上几处东西在宿主页面里的位置(CSS 像素,已裁到画布可见的部分)。只读。 */
   locate(queries: StageQuery[]): Promise<StageTarget[]>
   /**
-   * 跟上 agent 的一处改动:等画布加载出 revision,翻到那一页,把那一处框出来,
-   * 确认画到屏幕上之后交回它的位置。没有 query 时只翻页。
+   * 跟上一处改动(agent 改的,或者撤销重做):等画布加载出 revision,翻到那一页,把那一处
+   * 连同 label 框出来,确认画到屏幕上之后交回它的位置。没有 query 时框整页;没有 slide 时
+   * 不翻页也不框。
    */
   follow(input: {
     revision: string
     slide?: number
     query?: StageQuery
+    label?: string
     holdMs: number
   }): Promise<StageTarget | undefined>
 }
@@ -89,8 +86,21 @@ export interface StageTarget {
   reason?: string
 }
 
-/** 攒着的点亮过期时间。隔太久再闪一下,人根本对不上是哪次改动。 */
-const SPOTLIGHT_TTL_MS = 8_000
+/** 改动框至少留多久:人的眼睛得来得及从别处挪过来、读完标签。 */
+const FLAG_MIN_MS = 1_600
+/** 框比元素外扩一点,不压着字。 */
+const FLAG_PAD = 4
+
+/** 画布上的改动框,坐标相对画布框。`seq` 变了是新出现(淡入),不变是从上一处移过来。 */
+interface ChangeFlag {
+  x: number
+  y: number
+  width: number
+  height: number
+  label?: string
+  shown: boolean
+  seq: number
+}
 
 /**
  * 往前翻一页。走 skill 引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧
@@ -193,8 +203,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const [error, setError] = useState<string | undefined>()
   const restoreTo = useRef(initialSlide)
   const loadEpoch = useRef(0)
-  /** 等着点亮的那段文字 —— 攒到下一次加载完成。 */
-  const pendingSpotlight = useRef<{ text: string; at: number } | undefined>(undefined)
+  const [flag, setFlag] = useState<ChangeFlag | undefined>()
+  const flagTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   /**
    * 画布加载好了没有。**初值是「没好」** —— 初次挂载时 dom-ready 还没来过,
    * 给 false 的话刚打开稿子时问什么都答不上来(右栏会一直显示「画布还没加载」)。
@@ -289,16 +299,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
             break
           }
           watchEdits()
-
-          // 攒着的那处点亮,现在才有意义 —— DOM 是新的了。太旧的就算了,
-          // 隔了半天再闪一下,人根本对不上是哪次改动。
-          const wanted = pendingSpotlight.current
-          pendingSpotlight.current = undefined
-          if (wanted && Date.now() - wanted.at < SPOTLIGHT_TTL_MS) {
-            void view
-              .executeJavaScript(`window.__orcaEdit.spotlight(${JSON.stringify(wanted.text)})`)
-              .catch(() => {})
-          }
         })
       setReady(true)
       setError(undefined)
@@ -484,6 +484,44 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     return { ...target, rect: { x: left, y: top, width: right - left, height: bottom - top } }
   }
 
+  /**
+   * 把改动框画到画布上一层(宿主页面里,不进稿子 DOM —— 截图给 agent 自检时不该带着它)。
+   * 连着来的改动只有一个框,从上一处移过去;最后一处留够时间再淡出。
+   */
+  const showFlag = (target: StageTarget, label: string | undefined, holdMs: number) => {
+    const frame = ref.current?.parentElement
+    if (!frame || !target.rect) return
+    const origin = frame.getBoundingClientRect()
+    const left = Math.max(target.rect.x - origin.x - FLAG_PAD, 0)
+    const top = Math.max(target.rect.y - origin.y - FLAG_PAD, 0)
+    const right = Math.min(target.rect.x - origin.x + target.rect.width + FLAG_PAD, origin.width)
+    const bottom = Math.min(target.rect.y - origin.y + target.rect.height + FLAG_PAD, origin.height)
+    setFlag((previous) => ({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
+      ...(label ? { label } : {}),
+      shown: true,
+      seq: previous?.shown ? previous.seq : (previous?.seq ?? 0) + 1,
+    }))
+    clearTimeout(flagTimer.current)
+    flagTimer.current = setTimeout(
+      () => setFlag((previous) => previous && { ...previous, shown: false }),
+      Math.max(FLAG_MIN_MS, holdMs),
+    )
+  }
+
+  // 窗口一变,框就对不上了:直接收起,不跟着挪
+  useEffect(() => {
+    const hide = () => setFlag((previous) => previous && { ...previous, shown: false })
+    window.addEventListener('resize', hide)
+    return () => {
+      window.removeEventListener('resize', hide)
+      clearTimeout(flagTimer.current)
+    }
+  }, [])
+
   const locate = async (queries: StageQuery[]): Promise<StageTarget[]> => {
     const view = ref.current
     if (!view || loading.current || !injected.current)
@@ -583,7 +621,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         )
         return typeof value === 'string' ? value : null
       },
-      follow: async ({ revision, slide, query, holdMs }) => {
+      follow: async ({ revision, slide, query, label, holdMs }) => {
         const view = ref.current
         if (!view) throw new Error('UI_DISCONNECTED: 没有可见画布。')
         // 写盘触发的重载可能还没开始:先把要停的页记下,重载完就停在那儿
@@ -602,13 +640,23 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
             'frame',
           )
         }
-        if (!query) return undefined
-        const found = (await guest(
-          view,
-          `window.__orcaCanvas.mark(${JSON.stringify(query)}, ${JSON.stringify(holdMs)})`,
-          'mark',
-        )) as StageTarget
-        return toHost(found)
+        if (slide === undefined) return undefined
+        const area = () =>
+          guest(view, 'window.__orcaCanvas.slideArea()', 'area') as Promise<StageTarget>
+        const found = query
+          ? toHost(
+              (await guest(
+                view,
+                `window.__orcaCanvas.locate(${JSON.stringify(query)})`,
+                'locate',
+              )) as StageTarget,
+            )
+          : undefined
+        // 那一处认不准(重名、被藏起来)也框整页:至少让人知道动的是这一页
+        showFlag(found?.rect ? found : toHost(await area()), label, holdMs)
+        // 等两帧再交回位置:框得先真的画到屏幕上
+        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+        return found
       },
       slideInfo: async () => {
         const result = await ref.current
@@ -620,10 +668,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         void ref.current
           ?.executeJavaScript(`window.__orcaEdit?.notify(${JSON.stringify(message)})`)
           .catch(() => {})
-      },
-      spotlight: (text: string) => {
-        // 一律攒到下一次加载完成:改文字必然引发重载,现在点亮的是马上要被换掉的 DOM。
-        pendingSpotlight.current = { text, at: Date.now() }
       },
       whenReady: (timeoutMs = 4_000) =>
         new Promise<boolean>((resolve) => {
@@ -690,6 +734,22 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           />
           {error && <div className="stage-error">{error}</div>}
           {overlay}
+          {flag && (
+            <div
+              key={flag.seq}
+              className="stage-flag"
+              data-shown={flag.shown || undefined}
+              style={{ left: flag.x, top: flag.y, width: flag.width, height: flag.height }}
+              aria-hidden
+            >
+              {flag.label && (
+                // 贴着框的上沿;框顶着画布上沿时放进框里,不然被画布裁掉
+                <span className="stage-flag-label" data-inside={flag.y < 24 || undefined}>
+                  {flag.label}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {/*
           贴在稿子正下方,不沉到画布底:离稿子两百像素的一行字读起来不属于任何东西。

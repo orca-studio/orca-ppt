@@ -11,7 +11,6 @@ declare global {
       arm(): Promise<any>
       disarm(): void
       notify(message: string): void
-      spotlight(text: string): boolean
       editabilityOf(element: Element | null): { ok: boolean; reason?: string }
       editing(): boolean
       armed(): boolean
@@ -74,45 +73,6 @@ describe('editabilityOf', () => {
   it('整页不给改 —— 让人双击具体那行字', () => {
     const root = mount('<section><p>文字</p></section>')
     expect(window.__orcaEdit.editabilityOf(root.querySelector('section')).ok).toBe(false)
-  })
-})
-
-describe('spotlight', () => {
-  it('按文字找到那个元素并点亮 —— 页胶片只说了哪一页,一页上有十几个元素', () => {
-    window.Reveal = { getCurrentSlide: () => document.querySelector('section') }
-    const root = mount('<section><p id="a">旧的</p><p id="b">刚改成的文字</p></section>')
-    expect(window.__orcaEdit.spotlight('刚改成的文字')).toBe(true)
-    expect(root.querySelector<HTMLElement>('#b')!.style.animation).toContain('__orca-spotlight')
-    expect(root.querySelector<HTMLElement>('#a')!.style.animation).toBe('')
-  })
-
-  it('只认当前这一页 —— 别去点亮人看不见的那页', () => {
-    const root = mount('<section><p>第一页</p></section><section><p>第二页</p></section>')
-    window.Reveal = { getCurrentSlide: () => root.querySelectorAll('section')[0] }
-    expect(window.__orcaEdit.spotlight('第二页')).toBe(false)
-  })
-
-  it('找不到就安静地什么都不做 —— 这只是个提示,不值得打扰人', () => {
-    window.Reveal = { getCurrentSlide: () => document.querySelector('section') }
-    mount('<section><p>在的</p></section>')
-    expect(window.__orcaEdit.spotlight('不在的')).toBe(false)
-    expect(window.__orcaEdit.spotlight('')).toBe(false)
-  })
-
-  it('套着别的元素的不点亮 —— 认的是那个真正装文字的元素', () => {
-    window.Reveal = { getCurrentSlide: () => document.querySelector('section') }
-    mount('<section><div><span>文字</span></div></section>')
-    // div 的 textContent 也是「文字」,但装文字的是 span
-    expect(window.__orcaEdit.spotlight('文字')).toBe(true)
-    expect(document.querySelector<HTMLElement>('span')!.style.animation).toContain('spotlight')
-    expect(document.querySelector<HTMLElement>('div')!.style.animation).toBe('')
-  })
-
-  it('keyframes 只注入一次', () => {
-    mount('<section><p>x</p></section>')
-    // eslint-disable-next-line no-eval
-    ;(0, eval)(source)
-    expect(document.querySelectorAll('#__orca-edit-style')).toHaveLength(1)
   })
 })
 
