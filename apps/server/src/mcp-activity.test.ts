@@ -461,6 +461,8 @@ describe('可录制应用约定:操作记录', () => {
       holdMs: 0,
     })
     const [event] = await eventsAfter(cursor)
+    // 录屏宿主拿 summary 当字幕:人话,只引改成的字
+    expect(event.summary).toBe('第 2 页改成「四站」')
     const expected = FOLLOWED({ controlId: 'canvas' }).targets.map((t) => ({ ...t, measuredAt: 1 }))
     expect(event.uiTargets).toEqual(expected)
     // 回执第二段固定是 {"uiTargets":[…]}:录屏宿主拿它当这一步的目标框

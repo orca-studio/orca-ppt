@@ -67,6 +67,7 @@ import { instantiate, instantiateSample, listTemplates } from './templates.js'
 import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
 import { dropOldPreviews } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
+import { planEditSummary, textEditSummary, textStepSummary } from './change-summary.js'
 
 /**
  * 本地 server 拥有全部状态。界面和 MCP server 都是它的薄客户端 —— 界面不 spawn 进程、
@@ -280,7 +281,7 @@ export async function startServer(
     const uiTargets = await recordChange(deckId, {
       summary: step.label
         ? `${direction === 'undo' ? '撤销' : '重做'}${step.label}`
-        : `${direction === 'undo' ? '撤销' : '重做'}第 ${step.slide + 1} 页的改字,现在是「${clip(text)}」`,
+        : textStepSummary(direction, step.slide),
       slide,
       show: {
         label: direction === 'undo' ? '撤销' : '重做',
@@ -1038,7 +1039,7 @@ export async function startServer(
           })
           announceHistory(params.deckId)
           const uiTargets = await recordChange(params.deckId, {
-            summary: `把第 ${params.slide + 1} 页的「${clip(params.oldText)}」改成「${clip(params.newText)}」`,
+            summary: textEditSummary(params.slide, params.newText),
             slide: params.slide,
             detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
             // 新文字留空是删掉那个元素:没有可框的,框整页
@@ -1062,7 +1063,7 @@ export async function startServer(
         const result = applyPlanEdit(html, { oldText: params.oldText, newText: params.newText })
         if (!result.ok) return { ok: false, reason: result.reason }
         if (result.html !== html) {
-          const summary = `转场计划「${clip(params.oldText)}」→「${clip(params.newText)}」`
+          const summary = planEditSummary(params.oldText, params.newText)
           await writeChanges(params.deckId, { [name]: { before: html, after: result.html } })
           // 注释在页面之外:画面上什么都没变,不用重载
           await patchCanvas(params.deckId, root)
@@ -1077,7 +1078,7 @@ export async function startServer(
           })
           announceHistory(params.deckId)
           const uiTargets = await recordChange(params.deckId, {
-            summary: `把${summary}`,
+            summary,
             detail: { oldText: params.oldText.trim(), newText: params.newText.trim() },
           })
           if (uiTargets) return { ok: true, uiTargets }
@@ -1421,12 +1422,6 @@ async function ownVersion(): Promise<string> {
 function pngSize(bytes: Buffer): { width: number; height: number } | undefined {
   if (bytes.length < 24 || bytes.readUInt32BE(0) !== 0x89504e47) return undefined
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) }
-}
-
-/** 事件摘要里引用原文时截短:一句人话,不是全文。 */
-function clip(text: string, max = 24): string {
-  const flat = text.trim().replace(/\s+/g, ' ')
-  return flat.length > max ? `${flat.slice(0, max)}…` : flat
 }
 
 /**
