@@ -298,7 +298,12 @@ let presenter: BrowserWindow | undefined
  *
  * macOS 上用 simple fullscreen,不用原生全屏:原生全屏在「全屏时显示菜单栏」开着时
  * 会把菜单栏和窗口标题栏一起露在幻灯片上面,录屏录进去一条白条。simple fullscreen
- * 盖住菜单栏和 Dock,也不另开一个桌面空间。
+ * 盖住菜单栏和 Dock,也不另开一个桌面空间,标题栏它自己会去掉。
+ *
+ * 只能建好窗口再 setSimpleFullScreen,不能在构造参数里写 fullscreen: true +
+ * simpleFullscreen:那样 Electron 一直以为窗口在「进入全屏」的过渡里,把 close()
+ * 推迟到过渡结束 —— 而 simple fullscreen 永远不结束这个过渡,Esc、stop_present
+ * 都关不掉窗口。
  *
  * script 是自动播放的 guest 脚本(渲染层给的,和画布注入的同一份):放映中开自动播放,
  * 翻的是这个窗口。
@@ -309,13 +314,11 @@ ipcMain.handle(
     presenter?.destroy()
 
     const window = new BrowserWindow({
-      frame: false,
-      fullscreen: true,
-      // 只改全屏的方式(macOS 才有),单独设不会全屏
-      simpleFullscreen: isMac,
+      fullscreen: !isMac,
       backgroundColor: '#000000',
       webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
     })
+    if (isMac) window.setSimpleFullScreen(true)
     presenter = window
     window.on('closed', () => {
       if (presenter === window) presenter = undefined
