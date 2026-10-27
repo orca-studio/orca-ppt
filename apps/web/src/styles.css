@@ -924,6 +924,20 @@ body[data-resizing] iframe {
   margin-left: auto;
 }
 
+/* 首页的 tab 在窗口里水平居中。不用 justify-content:macOS 上左边给红绿灯多留了 66px,
+   按内边距居中会偏右 */
+.gallery > header .segmented {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* 首页的 tab 按字宽排:分段控件默认撑满容器,这里没有容器宽度可分 */
+.gallery > header .segmented button {
+  min-width: 72px;
+  padding: 0 var(--space-4);
+}
+
 /* 大字要收紧字距:字号上去之后,默认字距读起来是散的。 */
 .gallery h1 {
   margin: 0;
@@ -1100,6 +1114,17 @@ body[data-resizing] iframe {
       transform: none;
     }
   }
+}
+
+/* 自己的稿子比同款多、封面也只是第一页:卡片小一号,一屏多放几份。 */
+.gallery-grid--decks {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.gallery-meta {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 同款卡最大:样片要看得清转场,小了只剩色块在闪。 */

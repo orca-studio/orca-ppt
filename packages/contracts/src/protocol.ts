@@ -1,5 +1,13 @@
 import { z } from 'zod'
-import { Anchor, DeckPhase, DeckSummary, Slide, Transition, TransitionNote } from './domain.js'
+import {
+  Anchor,
+  DeckPhase,
+  DeckSummary,
+  RecentDeck,
+  Slide,
+  Transition,
+  TransitionNote,
+} from './domain.js'
 
 /**
  * 线上协议。两个方向、每个载荷都在边界上校验 —— 这个包是唯一真相,改协议就是改这里,
@@ -341,6 +349,11 @@ export const requests = {
     result: z.object({}),
   },
   'deck.list': { params: z.object({}), result: z.object({ decks: z.array(DeckSummary) }) },
+  /**
+   * 首页「我的」:用户自己的稿子,最近动过的在前。默认目录(~/Documents/Orca PPT)下的都算,
+   * 别处的新建或打开过一次也算 —— 稿子可以建在任何地方,只扫默认目录会漏。
+   */
+  'deck.recent': { params: z.object({}), result: z.object({ decks: z.array(RecentDeck) }) },
   'deck.open': {
     params: z.object({ path: z.string() }),
     result: z.object({

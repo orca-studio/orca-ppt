@@ -75,6 +75,35 @@ export async function readThumbnails(
   }
 }
 
+/**
+ * 首页「我的」卡片的封面:这份稿子缓存里最近渲好的第一页。
+ *
+ * 不按内容的键找 —— 稿子在应用外改过的话键就变了,只因为改过一个字就没有封面,不如用上一版的。
+ * 每份稿子只留一版(见 `prune`),所以有就是最近的那版。没在应用里打开过就没有。
+ */
+export async function latestCover(
+  deckDir: string,
+  root = thumbnailRoot(),
+): Promise<string | undefined> {
+  const deck = createHash('sha256').update(resolve(deckDir)).digest('hex').slice(0, 16)
+  const dir = join(root, deck)
+  for (const name of await readdir(dir).catch(() => [] as string[])) {
+    if (name.endsWith(PARTIAL)) continue
+    try {
+      const index = JSON.parse(await readFile(join(dir, name, 'index.json'), 'utf8')) as {
+        files?: unknown
+      }
+      const first = Array.isArray(index.files) ? index.files[0] : undefined
+      if (typeof first !== 'string') continue
+      const path = join(dir, name, basename(first))
+      if ((await stat(path)).isFile()) return path
+    } catch {
+      // 渲坏了的那版:看下一个
+    }
+  }
+  return undefined
+}
+
 /** 给壳渲图的目录。渲完交给 `storeThumbnails` 改名。 */
 export async function partialDir(slot: ThumbnailSlot): Promise<string> {
   const dir = join(slot.dir, `${slot.key}.${randomUUID().slice(0, 8)}${PARTIAL}`)

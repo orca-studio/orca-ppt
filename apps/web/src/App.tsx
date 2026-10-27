@@ -10,7 +10,7 @@ import type {
 } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
-import { Gallery, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
+import { Gallery, type MyDeck, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
 import { Inspector } from './Inspector.js'
 import { clampInspectorWidth, readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
@@ -58,6 +58,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
   // undefined = 还在加载：别先闪一下空状态
   const [recipes, setRecipes] = useState<Recipe[] | undefined>(undefined)
+  const [myDecks, setMyDecks] = useState<MyDeck[] | undefined>(undefined)
   const [themes, setThemes] = useState<Theme[]>([])
   /** 页面类型 id → 显示名。和标签一样:文件里写 id,界面显示 label。 */
   const [pageLabels, setPageLabels] = useState<Record<string, string>>({})
@@ -852,15 +853,20 @@ export function App({ serverUrl }: { serverUrl: string }) {
   useEffect(() => setSteps(undefined), [deckId])
   // 回到首页时重拉同款列表:样稿或引擎改过的话缓存键变了,server 借这一下排重录。
   // 只在连上时拉一次的话,不重启应用首页就一直放旧样片
+  // 「我的」也一样:刚改完、刚建的稿子回到首页就在最前面
   useEffect(() => {
-    if (deckId !== undefined) return
+    if (deckId !== undefined || state !== 'open') return
     const active = transport.current
     if (!active) return
     void active
       .request('catalog.recipes', {})
       .then((result) => setRecipes(result.recipes))
       .catch(() => {})
-  }, [deckId])
+    void active
+      .request('deck.recent', {})
+      .then((result) => setMyDecks(result.decks))
+      .catch(() => setMyDecks([]))
+  }, [deckId, state])
 
   const onSlideChange = useCallback((index: number) => {
     if (index !== slideRef.current) setSelection(null)
@@ -913,6 +919,11 @@ export function App({ serverUrl }: { serverUrl: string }) {
           pointed={pointedRecipe}
           onUnpoint={() => setPointedRecipe(undefined)}
           error={error}
+          decks={myDecks}
+          onOpenDeck={(path) => {
+            const active = transport.current
+            if (active) void openWith(active, path)
+          }}
           onPresent={(id) => {
             void transport.current
               ?.request('recipe.present', { id })

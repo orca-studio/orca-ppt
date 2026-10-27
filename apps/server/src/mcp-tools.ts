@@ -379,6 +379,16 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
       },
     },
     {
+      name: 'list_my_decks',
+      config: {
+        title: '列出用户的稿子',
+        description:
+          '列出首页「我的」里的稿子:默认目录(~/Documents/Orca PPT)下的,加上在别处新建、打开过的,最近动过的在前。用户问「我之前做的那份在哪」「接着改上次那份」时先调它,path 传给 open_deck。',
+        annotations: looking,
+      },
+      run: async () => json(await call('deck.recent', {})),
+    },
+    {
       name: 'open_deck',
       activity: () => ({ kind: 'read', label: '打开稿子', slides: [] }),
       config: {

@@ -1,15 +1,22 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PushData, RequestResult } from '@orca-ppt/contracts'
 import { Button } from './ui/Button.js'
+import { Segmented } from './ui/Segmented.js'
 import { assetUrl } from './assets.js'
 
 export type Theme = RequestResult<'catalog.list'>['themes'][number]
 export type Recipe = RequestResult<'catalog.recipes'>['recipes'][number]
+export type MyDeck = RequestResult<'deck.recent'>['decks'][number]
 /** agent 在首页指着的同款:打开还是收起「做同款」。seq 每来一次请求加一。 */
 export type RecipeFocus = PushData<'recipe.focus'> & { seq: number }
 
 /**
- * 没有打开稿子时的首屏:**同款画廊**。看封面,点开样稿看它动起来,在卡片右上角复制
+ * 没有打开稿子时的首屏,两个 tab:**同款**和**我的**。
+ *
+ * 同款是 skill 自带的,我的是用户自己做的稿子 —— 混在一起的话,自己的稿子淹在二十几个
+ * 样稿里,而且分不清哪些能改。
+ *
+ * 同款画廊:看封面,点开样稿看它动起来,在卡片右上角复制
  * 「做同款」的提示词,贴进自己的 agent —— agent 读 skill 里的配方、照着做,做完在这里打开。
  * 案例(一整份完整的稿子)也排在这里,点开看,没有「做同款」。
  *
@@ -18,13 +25,18 @@ export type RecipeFocus = PushData<'recipe.focus'> & { seq: number }
  *
  * 界面不从同款建稿:同款是配方,不是起始文件。通用的设计原则和审美(主题、配色、内容
  * 组织、逐页动效)内化在 skill 里,在 agent 侧用,不在这儿做成选择。
- * 打开已有的稿子走应用菜单。
+ *
+ * 我的:默认目录下的稿子,加上在别处新建、打开过的(server 的 deck.recent)。点开就进工作台。
  */
 export interface GalleryProps {
   /** undefined:还在加载,什么都不画(否则 Cmd+R 会先闪一下空状态)。 */
   recipes: Recipe[] | undefined
   /** 点卡片:在工作台里打开这个同款的样稿(只读)。 */
   onPresent: (id: string) => void
+  /** 用户自己的稿子。undefined:还在加载。 */
+  decks: MyDeck[] | undefined
+  /** 点「我的」里的一份:打开它。 */
+  onOpenDeck: (path: string) => void
   /** agent 指着的同款(show_recipe_prompt),和人点「做同款」效果一样。 */
   focus?: RecipeFocus | undefined
   /**
@@ -37,14 +49,59 @@ export interface GalleryProps {
   error: string | undefined
 }
 
-export function Gallery({ recipes, onPresent, focus, pointed, onUnpoint, error }: GalleryProps) {
+type Tab = 'recipes' | 'mine'
+
+const TABS: ReadonlyArray<{ key: Tab; label: string }> = [
+  { key: 'recipes', label: '同款' },
+  { key: 'mine', label: '我的' },
+]
+
+const TAB_KEY = 'orca-ppt.gallery-tab'
+
+function readTab(): Tab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'mine' ? 'mine' : 'recipes'
+  } catch {
+    return 'recipes'
+  }
+}
+
+export function Gallery({
+  recipes,
+  onPresent,
+  decks,
+  onOpenDeck,
+  focus,
+  pointed,
+  onUnpoint,
+  error,
+}: GalleryProps) {
+  const [tab, setTabState] = useState<Tab>(readTab)
+  const setTab = (next: Tab) => {
+    setTabState(next)
+    try {
+      localStorage.setItem(TAB_KEY, next)
+    } catch {
+      // 记不住就算了:下次回到同款
+    }
+  }
+
+  // agent 指着某个同款:先切到同款,不然它指的那张卡不在屏幕上
+  useEffect(() => {
+    if (focus || pointed) setTabState('recipes')
+  }, [focus?.seq, pointed])
+
   return (
     <div className="gallery">
-      {/* 不放标题:首页只有同款卡片,「做同款」卡片上已经写着。这一条只当窗口拖动区 */}
-      <header aria-hidden="true" />
+      {/* 这一条也是窗口拖动区 */}
+      <header>
+        <Segmented items={TABS} value={tab} onChange={setTab} label="首页" />
+      </header>
 
       <div className="gallery-body">
-        {recipes === undefined ? null : recipes.length === 0 ? (
+        {tab === 'mine' ? (
+          <MyDecks decks={decks} onOpen={onOpenDeck} />
+        ) : recipes === undefined ? null : recipes.length === 0 ? (
           <p className="gallery-empty">
             skill 里还没有同款。同款在 skill 的 <code>recipes/</code>{' '}
             目录下，写好之后重开首页就会出现。
@@ -71,6 +128,60 @@ export function Gallery({ recipes, onPresent, focus, pointed, onUnpoint, error }
       {error && <p className="gallery-error">{error}</p>}
     </div>
   )
+}
+
+/** 「我的」:用户自己的稿子,最近动过的在前。 */
+function MyDecks({
+  decks,
+  onOpen,
+}: {
+  decks: MyDeck[] | undefined
+  onOpen: (path: string) => void
+}) {
+  if (decks === undefined) return null
+  if (decks.length === 0)
+    return (
+      <p className="gallery-empty">
+        还没有稿子。在「同款」里挑一个，点「做同款」把提示词发给 AI 助手，做好的稿子会出现在这里。
+      </p>
+    )
+  return (
+    <div className="gallery-grid gallery-grid--decks">
+      {decks.map((deck) => (
+        <article key={deck.path} className="gallery-recipe" data-ui-target="gallery.deck">
+          <button
+            type="button"
+            className="gallery-play"
+            onClick={() => onOpen(deck.path)}
+            aria-label={`打开「${deck.title}」`}
+            // 同名的稿子(「中国航天大事记 2」)靠位置分得清
+            title={deck.path}
+          >
+            {deck.cover ? (
+              <img src={assetUrl(deck.cover)} alt="" />
+            ) : (
+              // 没在应用里打开过就还没有页胶片,封面写标题
+              <span className="gallery-placeholder">{deck.title}</span>
+            )}
+          </button>
+          <span className="gallery-title">{deck.title}</span>
+          <span className="gallery-meta">
+            {deck.slideCount > 0 ? `${deck.slideCount} 页 · ` : '还没有成品 · '}
+            {when(deck.updatedAt)}
+          </span>
+        </article>
+      ))}
+    </div>
+  )
+}
+
+/** 今天的写几点几分,今年的写几月几日,更早的带上年。 */
+export function when(time: number, now = new Date()): string {
+  const date = new Date(time)
+  const hm = `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`
+  if (date.toDateString() === now.toDateString()) return `今天 ${hm}`
+  const md = `${date.getMonth() + 1} 月 ${date.getDate()} 日`
+  return date.getFullYear() === now.getFullYear() ? md : `${date.getFullYear()} 年 ${md}`
 }
 
 /** 一张同款卡。案例也用它:少了「做同款」。 */

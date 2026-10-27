@@ -153,6 +153,22 @@ export const DeckSummary = z.object({
 })
 export type DeckSummary = z.infer<typeof DeckSummary>
 
+/**
+ * 首页「我的」里的一份稿子:默认目录下的,加上在别处新建、打开过的。
+ * 只列在磁盘上还在的;同款样稿和案例(只读)不算。
+ */
+export const RecentDeck = z.object({
+  /** deck 目录的绝对路径,传给 deck.open。 */
+  path: z.string(),
+  title: z.string(),
+  /** 稿子文件最后一次改动的时间(毫秒)。还没出成品时是目录的时间。 */
+  updatedAt: z.number(),
+  slideCount: z.number().int().nonnegative(),
+  /** 封面:这份稿子最近一次渲的页胶片里的第一张。没在应用里打开过就没有。 */
+  cover: z.string().optional(),
+})
+export type RecentDeck = z.infer<typeof RecentDeck>
+
 /** Thread → Turn → Item。Item 类型借自 Codex,见 docs/PROVIDERS.md。 */
 export const ItemKind = z.enum([
   'message',

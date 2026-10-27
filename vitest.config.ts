@@ -15,6 +15,8 @@ export default defineConfig({
       ORCA_PPT_PREVIEW_DIR: join(tmpdir(), `orca-ppt-test-previews-${process.pid}`),
       // skill 的固定位置:别把真的 ~/.local/share/orca-ppt/skill 改指到测试用的 skill
       ORCA_PPT_STABLE_SKILL: join(tmpdir(), `orca-ppt-test-stable-${process.pid}`, 'skill'),
+      // 首页「我的」的记录:别把测试建的临时稿子记进真的 ~/.orca-ppt
+      ORCA_PPT_RECENT_DECKS_FILE: join(tmpdir(), `orca-ppt-test-recent-decks-${process.pid}.json`),
     },
   },
 })

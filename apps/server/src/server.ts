@@ -58,6 +58,7 @@ import { Roundtrip } from './roundtrip.js'
 import { pptxExportDir, pptxTargetProblem, summarizePptx } from '@orca-ppt/deck-core'
 import {
   dropPartial,
+  latestCover,
   partialDir,
   readThumbnails,
   storeThumbnails,
@@ -66,7 +67,13 @@ import {
 import { DeckWatcher } from './deck-watch.js'
 import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
-import { noteThemeUsed, readRecentThemes, themeOf } from '@orca-ppt/deck-core'
+import {
+  listMyDecks,
+  noteDeckUsed,
+  noteThemeUsed,
+  readRecentThemes,
+  themeOf,
+} from '@orca-ppt/deck-core'
 import { McpEndpoint } from './mcp-http.js'
 import { mcpCall } from './mcp-origin.js'
 import { AgentError } from './agent-errors.js'
@@ -765,6 +772,18 @@ export async function startServer(
         )
         return { decks }
       }
+      case 'deck.recent': {
+        parseParams('deck.recent', raw)
+        const decks = await Promise.all(
+          (await listMyDecks()).map(async (deck) => {
+            const cover = await latestCover(deck.path)
+            // 封面在缩略图缓存里,不在稿子目录下:界面经 /asset 取,要先放行
+            previews.allowFile(cover)
+            return cover ? { ...deck, cover } : deck
+          }),
+        )
+        return { decks }
+      }
       case 'deck.open': {
         const params = parseParams('deck.open', raw)
         const opened = await openDeck(expandHome(params.path))
@@ -790,6 +809,8 @@ export async function startServer(
         // 记一笔「最近用过这个主题」—— 选择器上最有用的那个标签(派生的,见 recent.ts)。
         // 写不进去也不管:少一个标签,不值得让打开稿子这件事失败。
         if (theme) void noteThemeUsed(theme)
+        // 首页「我的」:同款样稿和案例不算用户的稿子
+        if (!readOnly) void noteDeckUsed(opened.deck.path)
         // 界面要跟着开。agent 开了稿子而人的窗口还停在原地的话,画布没加载,
         // 它接着调 capture_slide 就只会等到超时。
         bus.broadcast('deck.opened', { deckId: opened.deck.id, path: opened.deck.path })
@@ -824,7 +845,7 @@ export async function startServer(
         const params = parseParams('deck.create', raw)
         if (params.from && !params.from.startsWith('recipe:') && !catalog.skillPath)
           throw new Error(AgentError.skillNotFound())
-        return createDeck({
+        const created = await createDeck({
           skillPath: catalog.skillPath,
           themes: catalog.themes,
           title: params.title,
@@ -833,6 +854,9 @@ export async function startServer(
           theme: params.theme,
           skillLink,
         })
+        // 建在默认目录之外的也要出现在首页「我的」里
+        await noteDeckUsed(created.path)
+        return created
       }
       case 'catalog.templates': {
         parseParams('catalog.templates', raw)

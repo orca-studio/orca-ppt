@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  latestCover,
   localRefs,
   partialDir,
   readThumbnails,
@@ -101,6 +102,24 @@ describe('缩略图缓存', () => {
     const c = await partialDir(other)
     const stored = await storeThumbnails(other, c, await render(c, 1), 1)
     expect(await readThumbnails(other, 1)).toEqual(stored)
+  })
+})
+
+describe('latestCover', () => {
+  it('首页封面是缓存里那版的第一页;稿子改过、键变了也照样用', async () => {
+    const { dir, entry, root } = await deck()
+    expect(await latestCover(dir, root)).toBeUndefined()
+    const slot = await thumbnailSlot(dir, entry, 320, root)
+    const partial = await partialDir(slot)
+    const [first] = await storeThumbnails(slot, partial, await render(partial, 2), 2)
+    await writeFile(join(dir, 'theme.css'), 'body { color: blue }')
+    expect(await latestCover(dir, root)).toBe(first)
+  })
+
+  it('只有渲到一半的目录就没有封面', async () => {
+    const { dir, entry, root } = await deck()
+    await render(await partialDir(await thumbnailSlot(dir, entry, 320, root)), 1)
+    expect(await latestCover(dir, root)).toBeUndefined()
   })
 })
 
