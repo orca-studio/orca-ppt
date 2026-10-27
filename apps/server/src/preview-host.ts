@@ -3,7 +3,7 @@ import { createReadStream } from 'node:fs'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { basename, dirname, join, resolve, sep } from 'node:path'
-import { deckRevision } from './decks.js'
+import { deckRevision } from '@orca-ppt/deck-core'
 import { contentTypeFor, resolveWithinRoots, type PreviewPlan } from './preview.js'
 
 /**

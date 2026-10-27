@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyTextEdit } from './edit.js'
+import { applyTextEdit } from '@orca-ppt/deck-core'
 import { EditHistory } from './history.js'
 
 const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`

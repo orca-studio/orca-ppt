@@ -77,12 +77,12 @@ importers:
       '@orca-ppt/deck-agent':
         specifier: workspace:*
         version: link:../../packages/deck-agent
+      '@orca-ppt/deck-core':
+        specifier: workspace:*
+        version: link:../../packages/deck-core
       '@orca-ppt/proc':
         specifier: workspace:*
         version: link:../../packages/proc
-      parse5:
-        specifier: 8.0.1
-        version: 8.0.1
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -115,6 +115,21 @@ importers:
         version: link:../contracts
       zod:
         specifier: ^4.6.5
+        version: 4.6.5
+
+  packages/deck-core:
+    dependencies:
+      '@orca-ppt/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@orca-ppt/deck-agent':
+        specifier: workspace:*
+        version: link:../deck-agent
+      parse5:
+        specifier: 8.0.1
+        version: 8.0.1
+      zod:
+        specifier: ^4.1.5
         version: 4.6.5
 
   packages/proc: {}

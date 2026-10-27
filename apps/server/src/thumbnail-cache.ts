@@ -2,8 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
-import { fileDigest } from './asset-digest.js'
-import { deckRevision } from './decks.js'
+import { deckRevision, fileDigest } from '@orca-ppt/deck-core'
 
 /**
  * 页胶片缩略图的缓存。

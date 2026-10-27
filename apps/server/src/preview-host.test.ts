@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { realpath } from 'node:fs/promises'
-import { deckRevision } from './decks.js'
+import { deckRevision } from '@orca-ppt/deck-core'
 import { planPreview } from './preview.js'
 import { PreviewHost, parseRange, assetFilePath } from './preview-host.js'
 

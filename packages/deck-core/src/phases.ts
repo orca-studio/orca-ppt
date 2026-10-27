@@ -1,13 +1,19 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { DeckPhase, PhaseReport } from '@orca-ppt/contracts'
-import { artifactPath, phaseOrder, phasePrompt, validateArtifact } from '@orca-ppt/deck-agent'
-import { findEntryName, readPageTypes } from './decks.js'
-import { checkDeck, type Spec } from './spec-check.js'
+import {
+  artifactPath,
+  checkDeck,
+  phaseOrder,
+  phasePrompt,
+  validateArtifact,
+  type Spec,
+} from '@orca-ppt/deck-agent'
+import { findEntryName, readPageTypes, sliceSections } from './decks.js'
 
 /**
- * 阶段状态与闸门。server 拥有状态、持久化、恢复;**品味在 deck-agent** —— 提示词和
- * 确定性检查都在那边,这里不许复制一份(见 docs/ARCHITECTURE.md 的责任边界表)。
+ * 阶段状态与闸门,全从磁盘上的产物推出来,server 和 CLI 共用。**品味在 deck-agent** ——
+ * 提示词和确定性检查都在那边,这里不许复制一份(见 docs/ARCHITECTURE.md 的责任边界表)。
  */
 
 /**
@@ -62,7 +68,7 @@ async function checkArtifact(
        */
       const issues =
         phase === 'build'
-          ? checkDeck(html, readPageTypes(html), options.spec).map(
+          ? checkDeck(html, sliceSections(html), readPageTypes(html), options.spec).map(
               (issue) => `第 ${issue.slide + 1} 页:${issue.message}`,
             )
           : []

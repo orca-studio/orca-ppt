@@ -1,6 +1,5 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { sliceSections } from './decks.js'
 
 /**
  * 按 `references/visual-spec.md` 核稿子的坐标。
@@ -53,14 +52,18 @@ export async function readSpec(skillPath: string | undefined): Promise<Spec | un
   }
 }
 
+/**
+ * `sections` 是每一页在 HTML 里的那一段,由调用方切好传进来(deck-core 的 `sliceSections`)。
+ * 切页要解析 HTML,那是机械活,不归这里。
+ */
 export function checkDeck(
   html: string,
+  sections: string[],
   pageTypes: Array<string | null>,
   spec: Spec | undefined,
 ): SpecIssue[] {
   if (!spec) return []
   const issues: SpecIssue[] = []
-  const sections = sliceSections(html)
   // 四栏产品切换是全出血的参考案例,有自己的安全区(product-showcase.md),和 check-deck 一样认 data-demo
   const showcase = /<html[^>]*data-demo="product-showcase"/.test(html)
   // 每页的 data-id,判断「画外待命」要看别的页有没有配对

@@ -11,6 +11,9 @@
       "path": "packages/deck-agent"
     },
     {
+      "path": "packages/deck-core"
+    },
+    {
       "path": "apps/server"
     },
     {

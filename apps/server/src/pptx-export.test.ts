@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { listRecipes, recipeEntry } from './recipes.js'
+import { listRecipes, recipeEntry } from '@orca-ppt/deck-core'
 
 /**
  * PPTX 导出（skill 的 scripts/export-pptx.mjs）。三层：

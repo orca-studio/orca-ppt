@@ -1,4 +1,29 @@
-import { changedPages, editPages, readPage, replaceImage, writePage } from './page-edit.js'
+import {
+  applyPlanEdit,
+  applyTextEdit,
+  changedPages,
+  deckRevision,
+  deckSnapshot,
+  editPages,
+  findEntryName,
+  instantiate,
+  instantiateSample,
+  listRecipes,
+  listTemplates,
+  openDeck,
+  type OpenedDeck,
+  phaseGate,
+  readPage,
+  readPageTypes as readSlidePageTypes,
+  readPhaseStatus,
+  readSlideTexts,
+  readSlideTitles,
+  recipeEntry,
+  type RecipeSource,
+  replaceImage,
+  writePage,
+} from '@orca-ppt/deck-core'
+import { readSpec } from '@orca-ppt/deck-agent'
 import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
 import { listSkill, readSkill } from './skill-content.js'
@@ -35,7 +60,6 @@ import {
   thumbnailSlot,
 } from './thumbnail-cache.js'
 import { DeckWatcher } from './deck-watch.js'
-import { applyPlanEdit, applyTextEdit } from './edit.js'
 import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
 import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
@@ -43,26 +67,12 @@ import { McpEndpoint } from './mcp-http.js'
 import { mcpCall } from './mcp-origin.js'
 import { AgentError } from './agent-errors.js'
 import { RecordingLog, recordingFilePath } from './recording.js'
-import {
-  deckRevision,
-  deckSnapshot,
-  findEntryName,
-  openDeck,
-  readPageTypes as readSlidePageTypes,
-  readSlideTexts,
-  readSlideTitles,
-  type OpenedDeck,
-} from './decks.js'
-import { phaseGate, readPhaseStatus } from './phases.js'
-import { readSpec } from './spec-check.js'
 import { planPreview } from './preview.js'
 import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
 import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
-import { instantiate, instantiateSample, listTemplates } from './templates.js'
-import { listRecipes, recipeEntry, type RecipeSource } from './recipes.js'
 import { dropOldPreviews } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 import { planEditSummary, textEditSummary, textStepSummary } from './change-summary.js'

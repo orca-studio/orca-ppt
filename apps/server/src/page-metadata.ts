@@ -1,7 +1,7 @@
 import { Brief, Slide, Transition } from '@orca-ppt/contracts'
 import { z } from 'zod'
 import { readEditFile, type FileChanges } from './edit-files.js'
-import { editPages, type PageChange } from './page-edit.js'
+import { editPages, type PageChange } from '@orca-ppt/deck-core'
 
 export async function pageMetadata(
   root: string,

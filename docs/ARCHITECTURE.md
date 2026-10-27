@@ -287,9 +287,11 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 
 ### 四个接缝
 
-**`deck-core`。** 现在 `apps/server/src` 里只吃路径的纯函数搬出来:`templates.ts`、
-`recipes.ts`、`phases.ts`、`decks.ts`、`page-edit.ts`、`edit.ts`;`spec-check.ts` 是确定性
-检查,按「Deck Mode」那张表归 `deck-agent`。内核包不 import `electron` / `ws`,不持有进程级
+**`deck-core`(`packages/deck-core`,已落地)。** 原来 `apps/server/src` 里只吃路径的纯函数:
+`templates.ts`、`recipes.ts`、`phases.ts`、`decks.ts`、`page-edit.ts`、`edit.ts`、
+`asset-digest.ts`。`spec-check.ts` 是确定性检查,按「Deck Mode」那张表进了 `deck-agent`;
+依赖方向是 deck-core → deck-agent,所以 `checkDeck` 不自己切页,由调用方用 deck-core 的
+`sliceSections` 切好传进去 —— 切页要解析 HTML,是机械活。内核包不 import `electron` / `ws`,不持有进程级
 状态 —— 撤销历史、控制权、操作记录是「有人在场协作」才有的东西,留在 server。
 
 **`Renderer`。** 所有「开一个浏览器把稿子渲出来」的活走一个接口。样板已经在 skill 里:
@@ -348,7 +350,7 @@ server 启动时注入其一。现在 `pptxExports` / `thumbnails` 那两个 Rou
 
 ### 顺序
 
-1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。
+1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。**已完成。**
 2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。
 3. web 里抽 `Host` 和 `CanvasDriver`。
 4. `serve`:托管界面,Origin 校验 + token。

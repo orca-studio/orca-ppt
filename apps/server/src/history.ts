@@ -1,5 +1,5 @@
 import type { HistoryState } from '@orca-ppt/contracts'
-import { applyTextEdit } from './edit.js'
+import { applyTextEdit } from '@orca-ppt/deck-core'
 
 /**
  * 一份稿子的共享编辑记录,撤销 / 重做靠它。

@@ -11,14 +11,22 @@ const spec = JSON.parse(
   ),
 ) as Spec
 
-const deck = (...sections: string[]) => `<div class="slides">${sections.join('')}</div>`
-const msgs = (html: string, types: Array<string | null>) =>
-  checkDeck(html, types, spec).map((issue) => issue.message)
+// 切页是 deck-core 的事,这里直接拿拼稿子用的那几段当每一页
+interface TestDeck {
+  html: string
+  sections: string[]
+}
+const deck = (...sections: string[]): TestDeck => ({
+  html: `<div class="slides">${sections.join('')}</div>`,
+  sections,
+})
+const msgs = (d: TestDeck, types: Array<string | null>) =>
+  checkDeck(d.html, d.sections, types, spec).map((issue) => issue.message)
 
 describe('读不到规范', () => {
   it('没有 spec.json 时不做坐标检查,不自己编一份', () => {
     const html = deck('<section><p class="t-h1" style="left:80px; top:200px;">x</p></section>')
-    expect(checkDeck(html, [null], undefined)).toEqual([])
+    expect(checkDeck(html.html, html.sections, [null], undefined)).toEqual([])
   })
 })
 
@@ -64,7 +72,7 @@ describe('安全区', () => {
       '<section><p style="left:200px; top:200px;">ok</p></section>',
       '<section><p style="left:40px; top:200px;">bad</p></section>',
     )
-    expect(checkDeck(html, [null, null], spec)[0]?.slide).toBe(1)
+    expect(checkDeck(html.html, html.sections, [null, null], spec)[0]?.slide).toBe(1)
   })
 })
 
