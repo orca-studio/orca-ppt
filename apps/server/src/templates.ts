@@ -1,5 +1,5 @@
 import { copyFile, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import nodePath, { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 /**
  * 新建稿子从哪儿起头。**只有 skill 的空白起始文件** —— 汇报稿和故事稿两份。
@@ -71,6 +71,8 @@ export async function instantiate(options: {
   const { skillPath, templateId, targetDir, theme, palette, title } = options
   const [kind, name] = splitId(templateId)
   if (kind !== 'template') throw new Error(`只能从空白起始文件新建,不认识:${templateId}`)
+  // 建目录之前先查跨盘:拒绝了就别留下一个空目录
+  relativeUrl(resolve(targetDir), await realpath(skillPath))
   await mkdir(join(targetDir, '.deck'), { recursive: true })
 
   /*
@@ -82,7 +84,7 @@ export async function instantiate(options: {
    */
   const realTarget = await realpath(targetDir)
   const realSkill = await realpath(skillPath)
-  const toSkill = relative(realTarget, realSkill).split(sep).join('/')
+  const toSkill = relativeUrl(realTarget, realSkill)
   const entry = join(targetDir, 'deck.html')
 
   const source = await readFile(join(skillPath, 'templates', name), 'utf8')
@@ -112,9 +114,10 @@ export async function instantiateSample(options: {
   title?: string
 }): Promise<string> {
   const { sampleDir, entry, targetDir, title } = options
+  const realSample = await realpath(sampleDir)
+  relativeUrl(resolve(targetDir), realSample)
   await mkdir(join(targetDir, '.deck'), { recursive: true })
   const realTarget = await realpath(targetDir)
-  const realSample = await realpath(sampleDir)
   const copies = new Set<string>()
 
   const rewrite = (url: string): string => {
@@ -126,7 +129,7 @@ export async function instantiateSample(options: {
       copies.add(inside)
       return url
     }
-    return relative(realTarget, absolute).split(sep).join('/') + rest
+    return relativeUrl(realTarget, absolute) + rest
   }
 
   let html = (await readFile(entry, 'utf8'))
@@ -155,6 +158,28 @@ export async function instantiateSample(options: {
   const out = join(targetDir, 'deck.html')
   await writeFile(out, html)
   return out
+}
+
+/**
+ * 从稿子目录到另一处的相对 URL,写进 href / src 用。
+ *
+ * Windows 上跨盘没有相对路径:`relative('D:\decks\a', 'C:\skill')` 直接返回 `C:\skill`,
+ * 写进 href 成了 `C:/skill`,浏览器把 `C:` 当成协议名 —— 资源全白,入口页照样 200。
+ * 所以跨盘直接拒绝。也不写成 `file:///C:/…`:画布是 http 页面,加载不了 file:// 子资源。
+ */
+export function relativeUrl(
+  from: string,
+  to: string,
+  path: typeof nodePath.win32 = nodePath,
+): string {
+  const rel = path.relative(from, to)
+  if (path.isAbsolute(rel)) {
+    const [here, there] = [path.parse(from).root, path.parse(to).root]
+    throw new Error(
+      `稿子和 skill 不在同一个盘上(${here} 和 ${there}),稿子里的相对路径指不过去。把稿子放到 ${there} 下`,
+    )
+  }
+  return rel.split(path.sep).join('/')
 }
 
 function escapeHtml(text: string): string {

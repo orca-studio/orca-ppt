@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, realpath, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, win32 } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { instantiate, instantiateSample, listTemplates } from './templates.js'
+import { instantiate, instantiateSample, listTemplates, relativeUrl } from './templates.js'
 
 /** 照 skill 的布局搭一份假的。**只搭产品用得到的那部分** —— examples/ 产品不读。 */
 async function fakeSkill() {
@@ -222,5 +222,25 @@ describe('instantiateSample(做同款从样稿起头)', () => {
     await expect(stat(join(out, 'RECIPE.md'))).rejects.toThrow()
     await expect(stat(join(out, 'index.mp4'))).rejects.toThrow()
     await expect(stat(join(out, '.deck'))).resolves.toBeDefined()
+  })
+})
+
+describe('relativeUrl', () => {
+  /**
+   * Windows 上 D 盘的稿子没有相对路径能指到 C 盘的 skill:`path.relative` 返回绝对路径,
+   * 写进 href 成了 `C:/…`,浏览器把 `C:` 当成协议名 —— 资源全白,入口页照样 200。
+   */
+  it('Windows 跨盘直接拒绝,说清两个盘符', () => {
+    expect(() => relativeUrl('D:\\decks\\a', 'C:\\skill', win32)).toThrow(
+      /不在同一个盘上\(D:\\ 和 C:\\\)/,
+    )
+  })
+
+  it('Windows 同盘照常算,分隔符写成 URL 的 /', () => {
+    expect(relativeUrl('C:\\Users\\me\\decks\\a', 'C:\\skill', win32)).toBe('../../../../skill')
+  })
+
+  it('盘符大小写不同不算跨盘', () => {
+    expect(relativeUrl('c:\\decks\\a', 'C:\\skill', win32)).toBe('../../skill')
   })
 })
