@@ -1,3 +1,5 @@
+import { host } from './host.js'
+
 export type ThemeSource = 'system' | 'light' | 'dark'
 
 const KEY = 'orca-ppt.theme'
@@ -30,7 +32,7 @@ export function applyTheme(source: ThemeSource): void {
     // 记不住就记不住,这一次仍然生效
   }
   // 壳那一层也要设,否则原生菜单、对话框、滚动条和界面对不上。
-  void window.orca?.setTheme?.(source)
+  void host.setTheme?.(source)
 }
 
 /** 轮换顺序:跟随系统 → 浅 → 深 → 跟随系统。 */

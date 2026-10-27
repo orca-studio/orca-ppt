@@ -311,7 +311,8 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 **例外是 `capture_slide`:** 它的语义是「人此刻在画布上看到的那一页」,有界面连着时照旧走界面;
 没有界面时退回 Renderer 无头截 —— 这条等 playwright 那一份一起做。
 
-**`Host`。** 取代 web 里直接调的 `window.orca`,只剩真正的壳能力:
+**`Host`(`apps/web/src/host.ts`,已落地)。** 取代 web 里直接调的 `window.orca`:界面只读 `host`,
+桌面版是 preload 的窄桥,浏览器里这些能力缺着,界面按「缺」处理。只剩真正的壳能力:
 
 | 能力                 | Electron                  | 浏览器                                              |
 | -------------------- | ------------------------- | --------------------------------------------------- |
@@ -320,13 +321,21 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 | 菜单、红绿灯、主题   | 有                        | 没有或页内替代                                      |
 | 裁切图、缩略图、导出 | 走协议,server 调 Renderer | 同左                                                |
 
-**`CanvasDriver`。** 取代 `Stage.tsx` 里直接用的 `<webview>`,只有 `eval`、`load`、
-`onNavigate`、注入 guest 脚本这几个动作,Stage 其余逻辑不动。
+**`CanvasDriver`(`apps/web/src/canvas.tsx` 的 `CanvasView`,已落地)。** 取代 `Stage.tsx` 里直接用的
+`<webview>`,只有跑一段代码、重载、失焦、量位置、要 guest id,外加几个加载事件(整页导航、
+开始/停止加载、DOM 好了、加载失败、console)。检视、改字、翻页的逻辑都在注入的 guest 脚本
+和 Stage 里,两种画布共用。
 
-- `WebviewDriver`:现在的写法。
-- `IframeDriver`:server 同时托管界面和 `/p`,两边**同源**,直接经 `contentWindow` 调
-  `__orcaCanvas` / `__orcaEdit`,guest 脚本用 `<script>` 塞进去。上面「放映画布」否掉 iframe
-  的理由是 CSP 和同源上打架,同源之后不成立;webview 照旧是桌面版的选择。
+- webview:桌面版,和原来一样。
+- iframe:浏览器里。要和界面**同源**才摸得到稿子页面,经 `contentWindow.eval` 跑代码,
+  结果按 JSON 拷回来;console 和报错在每次加载后进页面挂钩子转出来,所以**加载完成前的报错
+  听不到**(webview 能从外面听到)。server 托管界面时天然同源;开发时 Vite 把 `/p/`、`/asset/`
+  代理给 server,`sameOrigin` 把预览地址改成只取路径。上面「放映画布」否掉 iframe 的理由是
+  CSP 和同源上打架,同源之后不成立;webview 照旧是桌面版的选择。
+
+浏览器里还没有的(都要壳或渲染器):`capture_slide` 截画布(界面直说「浏览器版还不能截图」)、
+取锚时的裁切图、页胶片缩略图(server 没有渲染器时报 `NO_RENDERER`)、全屏放映窗口。等第 4 步
+和 playwright 渲染器一起补。
 
 ### 三种形态怎么拼
 
@@ -357,7 +366,7 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 
 1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。**已完成。**
 2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。**已完成(桌面版)。**
-3. web 里抽 `Host` 和 `CanvasDriver`。
+3. web 里抽 `Host` 和 `CanvasDriver`。**已完成。**
 4. `serve`:托管界面,Origin 校验 + token。
 5. CLI。
 

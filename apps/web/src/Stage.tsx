@@ -1,4 +1,12 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   CanvasEvidence,
   type InspectAnchor,
@@ -10,21 +18,13 @@ import autoplayScript from './guest/autoplay.guest.js?raw'
 import editScript from './guest/edit.guest.js?raw'
 import canvasScript from './guest/canvas.guest.js?raw'
 import inspectScript from './guest/inspect.guest.js?raw'
-import { Button } from './ui/Button.js'
+import { Canvas, type CanvasView } from './canvas.js'
 
 /**
- * 放映画布。deck 跑在一个 Electron `<webview>` guest 里,不是 iframe ——
- * guest 能被主进程当独立对象管理,所以能注入检视脚本、拿元素几何、做裁切截图。
- * 检视正是本产品的核心交互,这个选择是为它做的(见 docs/ARCHITECTURE.md)。
+ * 放映画布。桌面版里 deck 跑在 Electron `<webview>` guest 里 —— guest 能被主进程当独立对象
+ * 管理,所以能注入检视脚本、拿元素几何、做裁切截图;浏览器里是同源的 `<iframe>`。
+ * 两种都经 canvas.tsx 的 CanvasView 摸,这里不管是哪一种(见 docs/ARCHITECTURE.md)。
  */
-
-/** Electron 的 webview 标签。只列我们真正调的那几个。 */
-interface WebviewElement extends HTMLElement {
-  src: string
-  executeJavaScript(code: string): Promise<unknown>
-  reload(): void
-  getWebContentsId(): number
-}
 
 /** guest 里算出来的锚,比契约多一个视口坐标 —— 宿主按它截图。 */
 export interface PickedAnchor extends Omit<InspectAnchor, 'note'> {
@@ -197,7 +197,12 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   },
   handle,
 ) {
-  const ref = useRef<WebviewElement | null>(null)
+  const ref = useRef<CanvasView | null>(null)
+  const onView = useCallback((view: CanvasView | null) => {
+    ref.current = view
+  }, [])
+  /** 画布外面那个框:改动框按它定位。 */
+  const frameRef = useRef<HTMLDivElement | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const restoreTo = useRef(initialSlide)
@@ -246,15 +251,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       }
       watching.current = true
       void view
-        .executeJavaScript('window.__orcaEdit?.arm()')
+        .run('window.__orcaEdit?.arm()')
         .then(async (result) => {
           const edit = result as TextEdit | null
           if (!edit) return
           const reason = await onTextEditRef.current(edit)
           if (reason) {
-            void view
-              .executeJavaScript(`window.__orcaEdit.notify(${JSON.stringify(reason)})`)
-              .catch(() => {})
+            void view.run(`window.__orcaEdit.notify(${JSON.stringify(reason)})`).catch(() => {})
           }
         })
         .then(watchEdits)
@@ -265,21 +268,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     }
     watchRef.current = watchEdits
 
-    const onStartLoading = () => {
-      loading.current = true
-    }
-
-    const onStopLoading = () => {
-      // Reveal 的 hash 导航也触发 loading，但不会重新触发 dom-ready。
-      loading.current = false
-      for (const resume of waiters.current.splice(0)) resume()
-    }
-
+    // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
     const onLoad = () => {
       const epoch = loadEpoch.current
-      // 每次加载都要重新注入 —— 重载之后 guest 里什么都不剩。
       void view
-        .executeJavaScript(
+        .run(
           `window.Reveal?.configure({ controls: false });${inspectScript};${autoplayScript};${editScript};${canvasScript}`,
         )
         .then(async () => {
@@ -289,7 +282,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           for (;;) {
             const slide = restoreTo.current
             const index = await view
-              .executeJavaScript(`Reveal.slide(${slide}); Reveal.getIndices().h`)
+              .run(`Reveal.slide(${slide}); Reveal.getIndices().h`)
               .catch(() => undefined)
             if (epoch !== loadEpoch.current) return
             if (slide !== restoreTo.current) continue
@@ -304,65 +297,53 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     }
     // 画布尺寸变化不用我们管:guest 收得到 resize,reveal 自己重算缩放比。
     // 试过加 ResizeObserver 主动调 Reveal.layout(),量下来是多余的,已经去掉。
-    const onFail = (event: Event) => {
-      const detail = event as Event & { errorDescription?: string }
-      setError(detail.errorDescription || '加载失败')
-      runtimeErrors.current.push({
-        kind: 'load',
-        message: detail.errorDescription || '加载失败',
-        source: null,
-        stack: null,
-      })
-    }
-    // guest 里翻了页都从这里报回来 —— 人在画布里按键、自动播放、agent 让它跳页,一律一条路。
-    // 以前只有焦点在画布外的那一路会报,画布里翻的页状态栏不知道,页码就对不上。
-    const onConsole = (event: Event) => {
-      const message = (event as Event & { message?: string }).message ?? ''
-      const detail = event as Event & { level?: number; sourceId?: string }
-      if (detail.level === 3) {
+    return view.subscribe({
+      loadingStarted: () => {
+        loading.current = true
+      },
+      loadingStopped: () => {
+        // Reveal 的 hash 导航也触发 loading，但不会重新触发 dom-ready。
+        loading.current = false
+        for (const resume of waiters.current.splice(0)) resume()
+      },
+      domReady: onLoad,
+      failed: (message) => {
+        setError(message || '加载失败')
         runtimeErrors.current.push({
-          kind: 'script',
-          message: message.slice(0, 4000),
-          source: detail.sourceId ?? null,
+          kind: 'load',
+          message: message || '加载失败',
+          source: null,
           stack: null,
         })
-        runtimeErrors.current = runtimeErrors.current.slice(-50)
-      }
-      const step = /^__orca:step (\d+) (\d+)$/.exec(message)
-      if (step && injected.current) {
-        onStepChangeRef.current?.({ done: Number(step[1]), clicks: Number(step[2]) })
-      }
-      const match = /^__orca:slide (\d+)$/.exec(message)
-      if (match && injected.current && !reloadWaiting.current) {
-        restoreTo.current = Number(match[1])
-        onSlideChangeRef.current(restoreTo.current)
-      }
-    }
-    const onNavigation = (event: Event) => {
-      const nav = event as Event & { isInPlace?: boolean; isMainFrame?: boolean }
-      // 只认主框架的整页导航。稿子里的 iframe(比如回顾片尾的回顾屏)加载也会发这个事件,
-      // 把它当成整页重载的话 injected 会被清掉,而主框架不会再发 dom-ready 把它装回来 ——
-      // 之后所有跳页请求都在 goto 开头被丢掉。
-      if (nav.isMainFrame !== false && !nav.isInPlace) {
+      },
+      // guest 里翻了页都从这里报回来 —— 人在画布里按键、自动播放、agent 让它跳页,一律一条路。
+      // 以前只有焦点在画布外的那一路会报,画布里翻的页状态栏不知道,页码就对不上。
+      console: ({ message, error, source }) => {
+        if (error) {
+          runtimeErrors.current.push({
+            kind: 'script',
+            message: message.slice(0, 4000),
+            source: source ?? null,
+            stack: null,
+          })
+          runtimeErrors.current = runtimeErrors.current.slice(-50)
+        }
+        const step = /^__orca:step (\d+) (\d+)$/.exec(message)
+        if (step && injected.current) {
+          onStepChangeRef.current?.({ done: Number(step[1]), clicks: Number(step[2]) })
+        }
+        const match = /^__orca:slide (\d+)$/.exec(message)
+        if (match && injected.current && !reloadWaiting.current) {
+          restoreTo.current = Number(match[1])
+          onSlideChangeRef.current(restoreTo.current)
+        }
+      },
+      navigated: () => {
         loadEpoch.current += 1
         runtimeErrors.current = []
         injected.current = false
-      }
-    }
-    view.addEventListener('did-start-navigation', onNavigation)
-    view.addEventListener('console-message', onConsole)
-    view.addEventListener('did-stop-loading', onStopLoading)
-    view.addEventListener('did-start-loading', onStartLoading)
-    view.addEventListener('dom-ready', onLoad)
-    view.addEventListener('did-fail-load', onFail)
-    return () => {
-      view.removeEventListener('did-start-navigation', onNavigation)
-      view.removeEventListener('console-message', onConsole)
-      view.removeEventListener('did-stop-loading', onStopLoading)
-      view.removeEventListener('did-start-loading', onStartLoading)
-      view.removeEventListener('dom-ready', onLoad)
-      view.removeEventListener('did-fail-load', onFail)
-    }
+      },
+    })
     // initialSlide 只在挂载那次用得上,变了不该重装监听
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -378,9 +359,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       for (;;) {
         const view = ref.current
         if (!view) return
-        const editing = await view
-          .executeJavaScript('!!window.__orcaEdit?.editing()')
-          .catch(() => false)
+        const editing = await view.run('!!window.__orcaEdit?.editing()').catch(() => false)
         if (!editing) {
           view.reload()
           return
@@ -402,9 +381,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     // 焦点留在画布里的话,方向键会直接进 reveal,绕过下面的拦截。
     view.blur()
     // 收起双击改字。守候那一轮的 Promise 会解成 null,watchEdits 看到只读就不再接上。
-    void view
-      .executeJavaScript('window.__orcaEdit?.editing() || window.__orcaEdit?.disarm()')
-      .catch(() => {})
+    void view.run('window.__orcaEdit?.editing() || window.__orcaEdit?.disarm()').catch(() => {})
   }, [readOnly, ready])
 
   const inspectCanvas = async (
@@ -416,7 +393,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     const deadline = Date.now() + 10000
     for (;;) {
       const value = await view
-        .executeJavaScript(`window.__orcaCanvas?.inspect(${JSON.stringify(include)})`)
+        .run(`window.__orcaCanvas?.inspect(${JSON.stringify(include)})`)
         .catch(() => undefined)
       if (value) {
         const evidence = CanvasEvidence.parse(value)
@@ -428,13 +405,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           (evidence.ready && evidence.renderedRevision === expectedRevision)
         ) {
           if (evidence.ready) {
-            await view.executeJavaScript(
+            await view.run(
               `Promise.race([document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))), new Promise((_, reject) => setTimeout(() => reject(new Error('RENDER_NOT_READY: 字体尚未加载。')), 3000))])`,
             )
             const fresh = CanvasEvidence.parse(
-              await view.executeJavaScript(
-                `window.__orcaCanvas.inspect(${JSON.stringify(include)})`,
-              ),
+              await view.run(`window.__orcaCanvas.inspect(${JSON.stringify(include)})`),
             )
             fresh.ready =
               fresh.ready && injected.current && !loading.current && !reloadWaiting.current
@@ -471,7 +446,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const toHost = (target: StageTarget): StageTarget => {
     const view = ref.current
     if (!view || !target.rect) return target
-    const host = view.getBoundingClientRect()
+    const host = view.rect()
     const left = Math.max(host.x + target.rect.x, host.left, 0)
     const top = Math.max(host.y + target.rect.y, host.top, 0)
     const right = Math.min(host.x + target.rect.x + target.rect.width, host.right, innerWidth)
@@ -488,7 +463,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
    * 连着来的改动只有一个框,从上一处移过去;最后一处留够时间再淡出。
    */
   const showFlag = (target: StageTarget, label: string | undefined) => {
-    const frame = ref.current?.parentElement
+    const frame = frameRef.current
     if (!frame || !target.rect) return
     const origin = frame.getBoundingClientRect()
     const left = Math.max(target.rect.x - origin.x - FLAG_PAD, 0)
@@ -526,7 +501,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     if (!view || loading.current || !injected.current)
       return queries.map(() => ({ status: 'unavailable', reason: 'canvas_not_ready' }))
     const found = (await view
-      .executeJavaScript(
+      .run(
         `${JSON.stringify(queries)}.map(q => window.__orcaCanvas?.locate(q) ?? { status: 'unavailable', reason: 'canvas_not_ready' })`,
       )
       .catch(() => undefined)) as StageTarget[] | undefined
@@ -540,24 +515,22 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       inspectCanvas,
       selectCanvas: async (input) => {
         await inspectCanvas('context', input.expectedRevision)
-        await ref.current?.executeJavaScript(`window.__orcaCanvas.select(${JSON.stringify(input)})`)
+        await ref.current?.run(`window.__orcaCanvas.select(${JSON.stringify(input)})`)
         return inspectCanvas('context', input.expectedRevision)
       },
       pick: async () => {
-        const result = await ref.current?.executeJavaScript('window.__orcaInspect?.arm()')
+        const result = await ref.current?.run('window.__orcaInspect?.arm()')
         return (result as PickedAnchor | null) ?? null
       },
       cancelPick: () => {
-        void ref.current?.executeJavaScript('window.__orcaInspect?.disarm()').catch(() => {})
+        void ref.current?.run('window.__orcaInspect?.disarm()').catch(() => {})
       },
       autoplay: (on: boolean) => {
-        void ref.current
-          ?.executeJavaScript(`window.__orcaAutoplay?.${on ? 'start' : 'stop'}()`)
-          .catch(() => {})
+        void ref.current?.run(`window.__orcaAutoplay?.${on ? 'start' : 'stop'}()`).catch(() => {})
       },
       autoplayRunning: async () => {
         const running = await ref.current
-          ?.executeJavaScript('!!window.__orcaAutoplay?.running()')
+          ?.run('!!window.__orcaAutoplay?.running()')
           .catch(() => false)
         return Boolean(running)
       },
@@ -574,9 +547,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         // 而且翻过去照样有转场。别的页是跳页,跳页本来就没有转场,直接去。
         const index = Math.trunc(slide)
         void ref.current
-          ?.executeJavaScript(
-            `Reveal.getIndices().h + 1 === ${index} ? (${NEXT_PAGE}) : Reveal.slide(${index})`,
-          )
+          ?.run(`Reveal.getIndices().h + 1 === ${index} ? (${NEXT_PAGE}) : Reveal.slide(${index})`)
           .catch(() => {})
       },
       navigate: (action, from) => {
@@ -589,18 +560,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
                 ? // 已经在这一页时 Reveal.slide 不会触发翻页,页内动画要引擎自己从头放;老引擎没有就算了
                   `Reveal.slide(${Math.trunc(from ?? 0)}); window.__orcaReplayBuild?.()`
                 : ADVANCE
-        void ref.current
-          ?.executeJavaScript(`window.__orcaAutoplay?.stop(); ${command}`)
-          .catch(() => {})
+        void ref.current?.run(`window.__orcaAutoplay?.stop(); ${command}`).catch(() => {})
       },
-      guestId: () => {
-        try {
-          return ref.current?.getWebContentsId()
-        } catch {
-          // guest 还没附着
-          return undefined
-        }
-      },
+      guestId: () => ref.current?.guestId(),
       locate,
       patch: async (input) => {
         const view = ref.current
@@ -659,13 +621,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       },
       slideInfo: async () => {
         const result = await ref.current
-          ?.executeJavaScript('window.__orcaInspect?.slideInfo() ?? null')
+          ?.run('window.__orcaInspect?.slideInfo() ?? null')
           .catch(() => null)
         return (result as SlideInfo | null) ?? null
       },
       notify: (message: string) => {
         void ref.current
-          ?.executeJavaScript(`window.__orcaEdit?.notify(${JSON.stringify(message)})`)
+          ?.run(`window.__orcaEdit?.notify(${JSON.stringify(message)})`)
           .catch(() => {})
       },
       whenReady: (timeoutMs = 4_000) =>
@@ -724,13 +686,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   return (
     <div className="stage">
       <div className="stage-canvas">
-        <div className="stage-frame stage-frame--live" data-ui-target="canvas">
-          <webview
-            ref={ref as unknown as React.Ref<HTMLWebViewElement>}
-            src={previewUrl}
-            // 独立持久 partition:deck 的存储和应用本身完全隔开。
-            partition="persist:deck-preview"
-          />
+        <div className="stage-frame stage-frame--live" data-ui-target="canvas" ref={frameRef}>
+          <Canvas src={previewUrl} onView={onView} />
           {error && <div className="stage-error">{error}</div>}
           {overlay}
           {flag && (
@@ -759,9 +716,9 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   )
 })
 
-/** 在 guest 里跑一段,出错时带回真正的原因 —— executeJavaScript 自己只会说「脚本执行失败」。 */
-async function guest(view: WebviewElement, expression: string, step: string): Promise<unknown> {
-  const result = (await view.executeJavaScript(
+/** 在 guest 里跑一段,出错时带回真正的原因 —— webview 自己只会说「脚本执行失败」。 */
+async function guest(view: CanvasView, expression: string, step: string): Promise<unknown> {
+  const result = (await view.run(
     `(async () => { try { return { value: await (${expression}) } } catch (e) { return { error: String((e && e.stack) || e) } } })()`,
   )) as { value?: unknown; error?: string }
   if (result.error) throw new Error(`${step}: ${result.error}`)

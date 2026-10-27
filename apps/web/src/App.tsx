@@ -22,6 +22,7 @@ import { AgentStatus } from './AgentStatus.js'
 import { assetUrl, useAssetOrigin } from './assets.js'
 import { fromStage, place, resolveControl, resolveTargets, type Screen } from './ui-targets.js'
 import autoplayScript from './guest/autoplay.guest.js?raw'
+import { host } from './host.js'
 
 type OpenedDeck = RequestResult<'deck.open'>
 
@@ -218,7 +219,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setAutoplay(data.on)
       // 放映中就翻放映窗口;没在放映才让画布自己播
       void (async () => {
-        const presenting = await window.orca?.presentAutoplay?.(data.on).catch(() => false)
+        const presenting = await host.presentAutoplay?.(data.on).catch(() => false)
         stage.current?.autoplay(presenting ? false : data.on)
       })()
     })
@@ -232,12 +233,12 @@ export function App({ serverUrl }: { serverUrl: string }) {
       setRequests([])
       setThumbs([])
       // 放映中关掉稿子(agent 的 close_deck):放映窗口跟着关,不留一个全屏窗口挂着
-      void window.orca?.stopPresent?.()
+      void host.stopPresent?.()
     })
 
     // 放映只有壳开得了窗口。
     next.subscribe('present.request', (data) => {
-      void window.orca?.present?.({
+      void host.present?.({
         previewUrl: data.previewUrl,
         slide: data.slide,
         script: autoplayScript,
@@ -249,7 +250,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
     // agent 的 stop_present:关掉放映窗口
     next.subscribe('present.stop', (data) => {
-      if (data.deckId === deckRef.current?.deck.id) void window.orca?.stopPresent?.()
+      if (data.deckId === deckRef.current?.deck.id) void host.stopPresent?.()
     })
 
     // 录屏宿主问几处东西在屏幕上的哪儿(studio.orca/ui-targets)。只量,不动界面。
@@ -348,6 +349,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
       void (async () => {
         try {
           if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
+          // 截画布要壳(按 guest 截);浏览器里没有壳,说实话,别说成画布没加载
+          if (!host.captureCanvas) throw new Error('这个客户端截不了画布:浏览器版还不能截图')
           const canvas = stage.current
           if (!canvas || !(await canvas.whenReady())) throw new Error('RENDER_NOT_READY')
           const before = await canvas.inspectCanvas('context', data.expectedRevision)
@@ -357,7 +360,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
             (data.slide !== undefined && before.slide !== data.slide)
           )
             throw new Error('SLIDE_CHANGED: 画布尚未到达目标页。')
-          const path = await window.orca?.captureCanvas?.({ guestId: canvas.guestId() })
+          const path = await host.captureCanvas?.({ guestId: canvas.guestId() })
           const after = await canvas.inspectCanvas('context')
           if (
             data.deckId !== deckRef.current?.deck.id ||
@@ -400,7 +403,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
 
     // 菜单里的动作。它和顶栏按钮走同一条路 —— 菜单只是另一个触发器。
-    window.orca?.onMenuAction?.((action) => {
+    host.onMenuAction?.((action) => {
       if (action === 'open') void pickDeck(open)
       else if (action === 'present') presentRef.current()
       else if (action === 'export-pptx') exportPptxRef.current()
@@ -432,7 +435,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       })
       .catch(() => setThemes([]))
 
-    const initial = window.orca?.initialDeck
+    const initial = host.initialDeck
     if (initial) void openWith(next, initial)
 
     return () => {
@@ -488,7 +491,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (!picked) return
 
       // 界面不碰文件系统 —— 截图和落盘都在壳里,这儿只拿回一个路径。
-      const crop = await window.orca?.captureAnchor?.({
+      const crop = await host.captureAnchor?.({
         guestId: stage.current.guestId(),
         box: picked.viewportBox,
         viewport: { w: window.innerWidth, h: window.innerHeight },
@@ -645,8 +648,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const exportPptx = useCallback(async () => {
     const active = transport.current
     const current = deckRef.current
-    if (!active || !current || !window.orca?.pickPptxPath) return
-    const path = await window.orca.pickPptxPath({
+    if (!active || !current || !host.pickPptxPath) return
+    const path = await host.pickPptxPath({
       dir: current.deck.path,
       name: current.deck.title,
       ...(current.readOnly ? { readOnly: true } : {}),
@@ -656,7 +659,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     try {
       await active.request('deck.exportPptx', { deckId: current.deck.id, path })
     } catch (cause) {
-      await window.orca.pptxFailed?.(cause instanceof Error ? cause.message : String(cause))
+      await host.pptxFailed?.(cause instanceof Error ? cause.message : String(cause))
     } finally {
       setExporting(false)
     }
@@ -668,7 +671,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
-    void window.orca?.setMenuState?.({
+    void host.setMenuState?.({
       canPresent: Boolean(deck?.previewUrl),
       exporting,
       theme,
@@ -876,7 +879,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     const timer = setInterval(() => {
       void (async () => {
         // 放映窗口开着就问它,关了(或没开)才问画布
-        const presenting = await window.orca?.presentAutoplayRunning?.().catch(() => null)
+        const presenting = await host.presentAutoplayRunning?.().catch(() => null)
         return presenting ?? (await stage.current?.autoplayRunning()) ?? false
       })().then((running) => {
         if (!running) {
@@ -1144,7 +1147,7 @@ const TRANSPORT_LABEL: Record<TransportState, string> = {
 
 async function pickDeck(open: (path: string) => unknown): Promise<void> {
   // 界面不碰文件系统 —— 壳弹目录选择器,只把路径交回来。
-  const path = await window.orca?.pickDeck?.()
+  const path = await host.pickDeck?.()
   if (path) open(path)
 }
 
@@ -1171,6 +1174,6 @@ function TransitionMark() {
 
 /** 窗口内容区在屏幕上的位置。窗口最小化、藏起来时量不到。 */
 async function screen(): Promise<Screen | undefined> {
-  const bounds = await window.orca?.contentBounds?.()
+  const bounds = await host.contentBounds?.()
   return bounds ? { bounds } : undefined
 }

@@ -495,10 +495,12 @@ select:focus-visible {
   position: relative;
 }
 
-.stage-frame--live webview {
+.stage-frame--live webview,
+.stage-frame--live iframe {
   width: 100%;
   height: 100%;
   display: inline-flex;
+  border: 0;
 }
 
 .stage-error {
