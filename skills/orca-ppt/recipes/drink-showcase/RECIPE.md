@@ -107,5 +107,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs examples/drink-showcase/index.html
-node scripts/capture.mjs examples/drink-showcase/index.html -o examples/drink-showcase/index.mp4
+node scripts/capture.mjs examples/drink-showcase/index.html
 ```

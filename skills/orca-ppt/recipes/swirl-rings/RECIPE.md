@@ -119,5 +119,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/swirl-rings/index.html
-node scripts/capture.mjs recipes/swirl-rings/index.html -o recipes/swirl-rings/index.mp4
+node scripts/capture.mjs recipes/swirl-rings/index.html
 ```

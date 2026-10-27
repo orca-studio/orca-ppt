@@ -116,5 +116,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/neo-grid/index.html
-node scripts/capture.mjs recipes/neo-grid/index.html -o recipes/neo-grid/index.mp4
+node scripts/capture.mjs recipes/neo-grid/index.html
 ```

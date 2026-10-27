@@ -118,5 +118,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/window-card-flip/index.html
-node scripts/capture.mjs recipes/window-card-flip/index.html -o recipes/window-card-flip/index.mp4
+node scripts/capture.mjs recipes/window-card-flip/index.html
 ```

@@ -140,5 +140,5 @@ tokens.css → themes/soft-editorial.css → palettes/sage.css
 
 ```bash
 node scripts/check-deck.mjs examples/soft-editorial/index.html
-node scripts/capture.mjs examples/soft-editorial/index.html -o examples/soft-editorial/index.mp4
+node scripts/capture.mjs examples/soft-editorial/index.html
 ```

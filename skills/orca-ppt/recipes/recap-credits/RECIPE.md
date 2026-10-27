@@ -131,5 +131,5 @@ PPT 要绕「导出视频 → 再导回」这一圈，是因为它的一页没�
 
 ```bash
 node scripts/check-deck.mjs recipes/recap-credits/index.html
-node scripts/capture.mjs recipes/recap-credits/index.html -o recipes/recap-credits/index.mp4
+node scripts/capture.mjs recipes/recap-credits/index.html
 ```

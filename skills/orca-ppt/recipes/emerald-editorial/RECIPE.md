@@ -153,5 +153,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs examples/emerald-editorial/index.html
-node scripts/capture.mjs examples/emerald-editorial/index.html -o examples/emerald-editorial/index.mp4
+node scripts/capture.mjs examples/emerald-editorial/index.html
 ```

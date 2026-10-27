@@ -137,5 +137,5 @@ Ledger 主题的数字是 Inter 600，「34%」三个字符实测 355px，小格
 
 ```bash
 node scripts/check-deck.mjs recipes/data-report/index.html
-node scripts/capture.mjs recipes/data-report/index.html -o recipes/data-report/index.mp4
+node scripts/capture.mjs recipes/data-report/index.html
 ```

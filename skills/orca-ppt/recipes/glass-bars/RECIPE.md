@@ -118,5 +118,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/glass-bars/index.html
-node scripts/capture.mjs recipes/glass-bars/index.html -o recipes/glass-bars/index.mp4
+node scripts/capture.mjs recipes/glass-bars/index.html
 ```

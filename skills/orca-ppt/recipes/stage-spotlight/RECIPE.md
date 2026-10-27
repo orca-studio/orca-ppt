@@ -125,5 +125,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/stage-spotlight/index.html
-node scripts/capture.mjs recipes/stage-spotlight/index.html -o recipes/stage-spotlight/index.mp4
+node scripts/capture.mjs recipes/stage-spotlight/index.html
 ```

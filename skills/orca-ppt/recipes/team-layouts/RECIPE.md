@@ -140,5 +140,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/team-layouts/index.html
-node scripts/capture.mjs recipes/team-layouts/index.html -o recipes/team-layouts/index.mp4
+node scripts/capture.mjs recipes/team-layouts/index.html
 ```

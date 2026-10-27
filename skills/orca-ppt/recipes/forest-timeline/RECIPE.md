@@ -124,5 +124,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs examples/forest-timeline/index.html
-node scripts/capture.mjs examples/forest-timeline/index.html -o examples/forest-timeline/index.mp4
+node scripts/capture.mjs examples/forest-timeline/index.html
 ```

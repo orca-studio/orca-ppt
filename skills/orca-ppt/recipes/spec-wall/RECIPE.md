@@ -128,5 +128,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs examples/spec-wall/index.html
-node scripts/capture.mjs examples/spec-wall/index.html -o examples/spec-wall/index.mp4
+node scripts/capture.mjs examples/spec-wall/index.html
 ```

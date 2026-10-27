@@ -91,5 +91,5 @@ poster: poster.jpg
 论点是「圆一路传下来，最后变成越来越大的屏幕」。三次推近匹配、两次遮挡变形，交替排开。照片由 AI 生成。
 
 ```bash
-node scripts/capture.mjs examples/story-circle/index.html -o examples/story-circle/index.mp4
+node scripts/capture.mjs examples/story-circle/index.html
 ```

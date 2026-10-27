@@ -111,5 +111,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/style-swap/index.html
-node scripts/capture.mjs recipes/style-swap/index.html -o recipes/style-swap/index.mp4
+node scripts/capture.mjs recipes/style-swap/index.html
 ```

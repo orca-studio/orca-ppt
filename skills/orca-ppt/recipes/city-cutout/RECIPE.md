@@ -135,5 +135,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/city-cutout/index.html
-node scripts/capture.mjs recipes/city-cutout/index.html -o recipes/city-cutout/index.mp4
+node scripts/capture.mjs recipes/city-cutout/index.html
 ```

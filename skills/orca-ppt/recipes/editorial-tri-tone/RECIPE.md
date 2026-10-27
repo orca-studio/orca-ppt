@@ -121,5 +121,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs examples/editorial-tri-tone/index.html
-node scripts/capture.mjs examples/editorial-tri-tone/index.html -o examples/editorial-tri-tone/index.mp4
+node scripts/capture.mjs examples/editorial-tri-tone/index.html
 ```

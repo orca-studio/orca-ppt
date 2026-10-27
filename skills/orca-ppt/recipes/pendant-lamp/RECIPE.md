@@ -135,5 +135,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/pendant-lamp/index.html recipes/pendant-lamp/product.html
-node scripts/capture.mjs recipes/pendant-lamp/index.html -o recipes/pendant-lamp/index.mp4
+node scripts/capture.mjs recipes/pendant-lamp/index.html
 ```

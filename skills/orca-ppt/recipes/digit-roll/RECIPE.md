@@ -108,5 +108,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/digit-roll/index.html
-node scripts/capture.mjs recipes/digit-roll/index.html -o recipes/digit-roll/index.mp4
+node scripts/capture.mjs recipes/digit-roll/index.html
 ```

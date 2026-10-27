@@ -128,5 +128,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/cobalt-grid/index.html
-node scripts/capture.mjs recipes/cobalt-grid/index.html -o recipes/cobalt-grid/index.mp4
+node scripts/capture.mjs recipes/cobalt-grid/index.html
 ```

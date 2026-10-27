@@ -4,34 +4,33 @@
 //   版式   ← 转场计划注释里的「版式 xxx」
 //   手法   ← 转场计划注释里每行的「手法：…」
 //   页数   ← <section> 的个数
-//   时长   ← ffprobe 读 index.mp4
-//   缩略图 ← ffmpeg 从 index.mp4 抽一帧
+//   缩略图 ← 案例自己的 poster.jpg;没有就用拿它当样稿的同款的封面(recipes/<id>/poster.jpg)。
+//            封面由 scripts/render-poster.mjs 截,和应用首页、官网用的是同一张
 // 用法：node scripts/gallery.mjs   （或 npm run dev）
 // 环境变量 GA_ID 有值时，生成的页面会带上 Google Analytics 代码（本地预览不设就没有）。
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from "node:fs";
-import { execFileSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EXAMPLES = join(ROOT, "examples");
-// 页面生成在仓库根目录，这样 npx serve . 之后 localhost:3000 直接就是它。
-// 缩略图放进各自的示例目录（examples/<name>/thumb.jpg）—— 它本来就属于那份示例，
-// 不为它单开一个顶层目录。两者都是生成物，不进版本库。
+// 页面生成在仓库根目录，这样 npx serve . 之后 localhost:3000 直接就是它。它是生成物，不进版本库。
 const PAGE = join(ROOT, "index.html");
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-function run(cmd, args) {
-  try {
-    return execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch {
-    return null;
+// 案例目录 → 拿它当样稿的同款的封面(相对仓库根)
+const recipePosters = new Map();
+for (const id of readdirSync(join(ROOT, "recipes"))) {
+  const md = join(ROOT, "recipes", id, "RECIPE.md");
+  if (!existsSync(md)) continue;
+  const text = readFileSync(md, "utf8");
+  const sample = /^sample:\s*(.+)$/m.exec(text)?.[1]?.trim();
+  const poster = /^poster:\s*(.+)$/m.exec(text)?.[1]?.trim();
+  if (sample && poster && existsSync(join(ROOT, "recipes", id, poster))) {
+    recipePosters.set(resolve(ROOT, "recipes", id, sample), relative(ROOT, join(ROOT, "recipes", id, poster)));
   }
 }
-
-const hasFfmpeg = run("ffmpeg", ["-version"]) !== null;
-const hasFfprobe = run("ffprobe", ["-version"]) !== null;
 
 // 色板：挑三个能代表这套主题、而且在深色卡片上看得见的颜色。
 // 直接取 bg/surface/accent 的话，暗色主题的前两个会和卡片同色，只剩一圈描边。
@@ -89,31 +88,12 @@ function parseDeck(name) {
     }
   }
 
-  const mp4 = join(dir, "index.mp4");
-  // seconds 只用来给缩略图定位（跳到 35% 处），不显示在卡片上
-  let seconds = null, thumb = null;
-  if (existsSync(mp4)) {
-    if (hasFfprobe) {
-      const d = run("ffprobe", ["-v", "error", "-show_entries", "format=duration",
-        "-of", "default=nw=1:nk=1", mp4]);
-      if (d) seconds = Math.round(parseFloat(d) * 10) / 10;
-    }
-    if (hasFfmpeg) {
-      // 不取封面：同一套主题的几份稿子封面往往同源（页眉 + 大标题 + 装饰），
-      // 取第一帧会让它们在首页上撞脸。跳到 35% 处，用 ffmpeg 的 thumbnail 滤镜
-      // 从两秒里挑一帧最有代表性的 —— 它会避开转场中途那些糊帧。
-      const out = join(dir, "thumb.jpg");
-      const from = seconds ? Math.max(1, seconds * 0.35).toFixed(2) : "1";
-      const ok = run("ffmpeg", ["-v", "error", "-ss", from, "-i", mp4,
-        "-frames:v", "1", "-vf", "thumbnail=60,scale=848:-1", "-q:v", "4", "-y", out]);
-      if (ok !== null && existsSync(out)) thumb = `examples/${name}/thumb.jpg`;
-    }
-  }
+  const own = join(dir, "poster.jpg");
+  const thumb = existsSync(own) ? `examples/${name}/poster.jpg` : recipePosters.get(resolve(dir)) ?? null;
 
   return {
-    name, title, layout, pages, moves, seconds, thumb,
+    name, title, layout, pages, moves, thumb,
     mtime: statSync(htmlPath).mtimeMs,
-    hasVideo: existsSync(mp4),
     hasTutorial: existsSync(join(dir, "tutorial.html")),
   };
 }
@@ -144,7 +124,7 @@ function card(d) {
   const chips = d.moves.slice(0, 5).map((m) => `<span class="chip">${esc(m)}</span>`).join("");
   const thumb = d.thumb
     ? `<img class="shot" src="${esc(d.thumb)}" alt="${esc(d.name)} 首帧" loading="lazy">`
-    : `<div class="shot empty"><span>没有 index.mp4</span></div>`;
+    : `<div class="shot empty"><span>没有封面:node scripts/render-poster.mjs examples/${esc(d.name)}</span></div>`;
   return `<article class="card" data-layout="${esc(d.layout || "unknown")}">
   <a class="thumb play" data-name="${esc(d.name)}" href="examples/${esc(d.name)}/">${thumb}
     <span class="hover"><span class="btn solid">放映</span></span>
@@ -244,7 +224,6 @@ hr{border:0;height:1px;background:#1f1f27;margin:28px 0}
 <div class="tabs" role="tablist">
 ${layoutTabs.map((t, i) => `  <button class="tab" role="tab" data-filter="${esc(t.key)}" aria-selected="${i === 0}">${esc(t.label)}<span class="n">${t.count}</span></button>`).join("\n")}
 </div>
-${hasFfmpeg ? "" : '<p class="warn">未装 ffmpeg，缩略图和时长缺失</p>'}
 <div class="grid">
 ${decks.map(card).join("\n")}
 </div>
@@ -343,5 +322,3 @@ ${decks.map(card).join("\n")}
 
 writeFileSync(PAGE, page);
 console.log(`index.html  ${decks.length} 份示例，${decks.filter((d) => d.thumb).length} 张缩略图`);
-if (!hasFfmpeg) console.log("没找到 ffmpeg：缩略图跳过");
-if (!hasFfprobe) console.log("没找到 ffprobe：页数照常，时长跳过");

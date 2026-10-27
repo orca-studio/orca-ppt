@@ -119,5 +119,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/parallax-layers/index.html
-node scripts/capture.mjs recipes/parallax-layers/index.html -o recipes/parallax-layers/index.mp4
+node scripts/capture.mjs recipes/parallax-layers/index.html
 ```

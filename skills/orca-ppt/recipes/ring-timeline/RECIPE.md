@@ -114,5 +114,5 @@ poster: poster.jpg
 
 ```bash
 node scripts/check-deck.mjs recipes/ring-timeline/index.html
-node scripts/capture.mjs recipes/ring-timeline/index.html -o recipes/ring-timeline/index.mp4
+node scripts/capture.mjs recipes/ring-timeline/index.html
 ```
