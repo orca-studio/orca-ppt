@@ -39,6 +39,7 @@
 | `DECK_NOT_OPEN` | 指定的稿子没打开 | 先 `open_deck` |
 | `NO_BUILD` | 稿子还没有成品(deck.html) | 按 `phase_prompt` 走到「出稿」 |
 | `UI_DISCONNECTED` | 应用窗口没开 | 截图、放映要靠窗口,请用户打开窗口 |
+| `NO_BROWSER` | 不开桌面版时(浏览器版、CLI)系统里没有 Chrome 或 Edge | 装上 Google Chrome 再试,不用重启 |
 | `NO_RENDERER` | 运行环境里没有能渲稿子的浏览器 | 缩略图、导出 PPTX 做不了,请用户在 OrcaPPT 桌面版里打开稿子再试 |
 | `UI_TIMEOUT` | 窗口没有回应 | 请用户看看窗口是不是卡住了;可以先调 `doctor` |
 | `SKILL_NOT_FOUND` | 应用找不到随附的规范 | 发布版请用户重装 OrcaPPT;开发时确认仓内 `skills/orca-ppt/` 在,或设置 `ORCA_PPT_SKILL`;`doctor` 列出了它找过的位置 |

@@ -91,7 +91,11 @@ export function playwrightRenderer(
         try {
           return await playwright.chromium.launch({ channel: 'msedge' })
         } catch {
-          throw new Error('没找到系统里的 Chrome 或 Edge,渲不了缩略图、导不了 PPTX')
+          // 和 server 的环境类错误一个写法(apps/server/src/agent-errors.ts):前缀给宿主认,
+          // 「下一步」给助手照做 —— 依赖由用户的 AI 助手装,产品不自己下载浏览器
+          throw new Error(
+            'NO_BROWSER:没找到系统里的 Chrome 或 Edge,渲不了缩略图、截不了图、导不了 PPTX。下一步:装上 Google Chrome 再试。',
+          )
         }
       }
     })().catch((error: unknown) => {
