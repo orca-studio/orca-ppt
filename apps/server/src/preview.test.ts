@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { contentTypeFor, planPreview, resolveWithinRoots, toUrlPath } from './preview.js'
+import { win32 } from 'node:path'
+import {
+  contentTypeFor,
+  fromUrlPath,
+  planPreview,
+  resolveWithinRoots,
+  toUrlPath,
+} from './preview.js'
 
 describe('planPreview', () => {
   it('挂载路径就是入口文件的绝对路径', () => {
@@ -95,5 +102,29 @@ describe('contentTypeFor', () => {
 
   it('不认得的给二进制流,不瞎猜', () => {
     expect(contentTypeFor('/a/LICENSE')).toBe('application/octet-stream')
+  })
+})
+
+describe('fromUrlPath', () => {
+  it('Windows 上去掉盘符前面那个 /', () => {
+    expect(fromUrlPath('/C:/Users/me/a b.png', win32)).toBe('C:/Users/me/a b.png')
+  })
+  it('macOS 和 Windows 上的非盘符路径原样', () => {
+    expect(fromUrlPath('/Users/me/a.png')).toBe('/Users/me/a.png')
+    expect(fromUrlPath('/x.png', win32)).toBe('/x.png')
+  })
+})
+
+describe('resolveWithinRoots 在 Windows 上', () => {
+  it('挂载路径里的盘符认得出来,越界照样拒绝', () => {
+    const roots = ['C:\\Users\\me\\deck', 'C:\\skill']
+    expect(resolveWithinRoots(roots, '/C:/Users/me/deck/deck.html', win32)).toBe(
+      'C:\\Users\\me\\deck\\deck.html',
+    )
+    expect(resolveWithinRoots(roots, '/C:/skill/runtime/tokens.css', win32)).toBe(
+      'C:\\skill\\runtime\\tokens.css',
+    )
+    expect(resolveWithinRoots(roots, '/C:/Users/me/secret.txt', win32)).toBeUndefined()
+    expect(resolveWithinRoots(roots, '/D:/Users/me/deck/deck.html', win32)).toBeUndefined()
   })
 })

@@ -4,7 +4,7 @@ import { readFile, realpath, stat } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import { deckRevision } from '@orca-ppt/deck-core'
-import { contentTypeFor, resolveWithinRoots, type PreviewPlan } from './preview.js'
+import { contentTypeFor, fromUrlPath, resolveWithinRoots, type PreviewPlan } from './preview.js'
 
 /**
  * 每份打开的 deck 挂在一个不可猜的前缀下:`/p/<token>` + 入口文件的绝对路径。
@@ -207,7 +207,7 @@ export class PreviewHost {
     }
 
     // `..` 在这里就被 resolve 吃掉了,越界的会落到放行范围之外。
-    const target = resolve(assetFilePath(decoded))
+    const target = resolve(fromUrlPath(decoded))
     const real = await realpath(target).catch(() => undefined)
     // 文件不在时 realpath 会失败,那就解析它所在的目录 —— 否则「不存在」会被误判成
     // 「越界」,排查时分不清是路径写错了还是权限拦了。
@@ -361,15 +361,4 @@ export function withScript(html: Buffer, src: string): Buffer {
 
 function within(root: string, target: string): boolean {
   return target === root || target.startsWith(root + sep)
-}
-
-/**
- * `/asset` 后面那段路径对应的本地文件。界面把 Windows 的 `C:\a\b.png` 写成 `/C:/a/b.png`
- * (apps/web/src/assets.ts),这里去掉开头的 `/`;其他平台原样。
- */
-export function assetFilePath(
-  urlPath: string,
-  platform: NodeJS.Platform = process.platform,
-): string {
-  return platform === 'win32' && /^\/[A-Za-z]:\//.test(urlPath) ? urlPath.slice(1) : urlPath
 }

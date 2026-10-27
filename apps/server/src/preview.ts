@@ -1,4 +1,4 @@
-import { resolve, sep } from 'node:path'
+import nodePath from 'node:path'
 
 /**
  * 放映画布要在 loopback 上服务一份 deck。麻烦在于:skill 做出来的稿子引的是
@@ -28,16 +28,24 @@ export interface PreviewPlan {
 
 export function planPreview(deckDir: string, entryFile: string): PreviewPlan {
   return {
-    entryFile: resolve(entryFile),
-    root: resolve(deckDir),
-    urlPath: toUrlPath(resolve(entryFile)),
+    entryFile: nodePath.resolve(entryFile),
+    root: nodePath.resolve(deckDir),
+    urlPath: toUrlPath(nodePath.resolve(entryFile)),
   }
 }
 
 /** 绝对文件路径 → URL 路径。Windows 的盘符当作第一段。 */
 export function toUrlPath(absolute: string): string {
-  const normalized = absolute.split(sep).join('/')
+  const normalized = absolute.split(nodePath.sep).join('/')
   return normalized.startsWith('/') ? normalized : '/' + normalized
+}
+
+/**
+ * URL 路径 → 本地文件路径,`toUrlPath` 的反方向。Windows 的 `/C:/a/b.png` 去掉开头的 `/`
+ * (不去的话 resolve 出来是 `D:\C:\a\b.png` 这种,什么都对不上);其他平台原样。
+ */
+export function fromUrlPath(urlPath: string, path: typeof nodePath.win32 = nodePath): string {
+  return path.sep === '\\' && /^\/[A-Za-z]:\//.test(urlPath) ? urlPath.slice(1) : urlPath
 }
 
 /**
@@ -45,7 +53,11 @@ export function toUrlPath(absolute: string): string {
  *
  * 越界一律拒绝。允许的只有这份 deck 的目录和 skill 目录 —— 这不是一个通用文件服务。
  */
-export function resolveWithinRoots(roots: string[], urlPath: string): string | undefined {
+export function resolveWithinRoots(
+  roots: string[],
+  urlPath: string,
+  path: typeof nodePath.win32 = nodePath,
+): string | undefined {
   let decoded: string
   try {
     decoded = decodeURIComponent(urlPath.split('?')[0] ?? '')
@@ -54,10 +66,10 @@ export function resolveWithinRoots(roots: string[], urlPath: string): string | u
   }
   if (decoded.includes('\0') || !decoded.startsWith('/')) return undefined
 
-  const target = resolve(decoded)
+  const target = path.resolve(fromUrlPath(decoded, path))
   for (const root of roots) {
-    const resolvedRoot = resolve(root)
-    if (target === resolvedRoot || target.startsWith(resolvedRoot + sep)) return target
+    const resolvedRoot = path.resolve(root)
+    if (target === resolvedRoot || target.startsWith(resolvedRoot + path.sep)) return target
   }
   return undefined
 }
