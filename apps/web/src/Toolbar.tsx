@@ -18,11 +18,9 @@ export interface ToolbarProps {
 export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children }: ToolbarProps) {
   return (
     <header className="toolbar">
-      {/* 首页和页胶片是一组:同款圆钮挨着放,不和一段文字混排 */}
+      {/* 页胶片和首页是一组:同款圆钮挨着放,不和一段文字混排。页胶片开关在最左,和它管的左栏
+          同一边(右栏开关在最右,一样的道理) */}
       <div className="toolbar-nav">
-        <Button variant="ghost" icon onClick={onHome} title="首页" aria-label="首页">
-          <HomeIcon />
-        </Button>
         <Button
           variant="ghost"
           icon
@@ -33,6 +31,9 @@ export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children
           aria-pressed={layout.nav}
         >
           <SidebarIcon />
+        </Button>
+        <Button variant="ghost" icon onClick={onHome} title="首页" aria-label="首页">
+          <HomeIcon />
         </Button>
       </div>
       {tools}

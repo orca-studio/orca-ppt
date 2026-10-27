@@ -949,13 +949,18 @@ export function App({ serverUrl }: { serverUrl: string }) {
           deck && (
             <CanvasControls
               history={history}
-              // 只读样稿上撤销 / 重做根本用不上,不摆;agent 拿着时照摆,只是灰着
-              showHistory={!deck.readOnly}
+              // 撤销 / 重做暂时不摆按钮:现在稿子全程是 agent 在改,人不满意会直接说「改回去」,
+              // agent 调 undo 工具退回去。能力都在(协议、MCP 的 undo / redo、菜单的 ⌘Z / ⇧⌘Z),
+              // 等人工参与改稿的流程做好了再摆回来:改成 !deck.readOnly
+              showHistory={false}
               locked={readOnly}
               onUndo={() => void stepHistory('undo')}
               onRedo={() => void stepHistory('redo')}
               picking={picking}
-              showPick={!deck.readOnly}
+              // 「指给 agent 看」也一样暂时不摆:人点完 agent 并不知道,还得回聊天框提醒它,
+              // 没有完整的标注流程,只放一个按钮没有意义。能力都在(协议、MCP 的 user_selection),
+              // 流程做好了再摆回来:改成 !deck.readOnly
+              showPick={false}
               canPick={Boolean(deck?.previewUrl) && !readOnly}
               onPick={() => {
                 if (!picking) return void pick()
