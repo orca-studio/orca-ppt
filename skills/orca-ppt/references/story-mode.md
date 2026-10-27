@@ -19,7 +19,7 @@
 
 ```html
 <section data-guide="dial" data-hold="2">
-  <img class="st-photo" src="photos/photo-01.png" width="1536" height="1024"
+  <img class="st-photo" src="photos/photo-01.jpg" width="1536" height="1024"
        data-anchors="dial:642,522,122">
   <p class="t-body" style="left:120px; top:820px;">No.01</p>
   <p class="t-h1" style="left:120px; top:880px;">转盘电话</p>
