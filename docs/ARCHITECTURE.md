@@ -294,17 +294,22 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 `sliceSections` 切好传进去 —— 切页要解析 HTML,是机械活。内核包不 import `electron` / `ws`,不持有进程级
 状态 —— 撤销历史、控制权、操作记录是「有人在场协作」才有的东西,留在 server。
 
-**`Renderer`。** 所有「开一个浏览器把稿子渲出来」的活走一个接口。样板已经在 skill 里:
+**`Renderer`(接口在 `packages/deck-core/src/renderer.ts`,桌面版已落地)。** 所有「开一个浏览器
+把稿子渲出来」的活走一个接口:缩略图、导 PPTX。样板已经在 skill 里:
 `scripts/lib/pptx-export.mjs` 的 `exportDeck(page)` 只依赖 `evaluate` + `screenshot`。
 
 - playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(即 `capture.mjs` / `export-pptx.mjs`
-  现在的做法);
-- Electron 隐藏窗口一份,给桌面版用(即 `pptx-exporter.ts` / `thumbnail-queue.ts`)。server
-  跑在 `utilityProcess` 里,经 parentPort 直接找主进程要,不再绕界面。
+  现在的做法)。**还没做。**
+- Electron 隐藏窗口一份,给桌面版用(`pptx-exporter.ts` / 主进程的缩略图渲染)。server 跑在
+  `utilityProcess` 里,经 parentPort 发 `RenderRequest`、收 `RenderReply`
+  (`apps/server/src/renderer-port.ts`),不经过界面:窗口关了、界面断了照样渲得出来。
 
-server 启动时注入其一。现在 `pptxExports` / `thumbnails` 那两个 Roundtrip 广播给界面、界面
-再转给壳,界面不在就失败,改完就没有这个依赖了。**例外是 `capture_slide`:** 它的语义是
-「人此刻在画布上看到的那一页」,有界面连着时照旧走界面;没有时退回 Renderer 无头截。
+server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 `NO_RENDERER`,不假装成功。
+原来的 `thumbnails.request` / `pptx.request` 推送和 `thumbnails.result` / `pptx.result` 回传已经从
+契约里删掉。PPTX 报告的形状在 server 这边按契约校验,渲染方是另一个进程。
+
+**例外是 `capture_slide`:** 它的语义是「人此刻在画布上看到的那一页」,有界面连着时照旧走界面;
+没有界面时退回 Renderer 无头截 —— 这条等 playwright 那一份一起做。
 
 **`Host`。** 取代 web 里直接调的 `window.orca`,只剩真正的壳能力:
 
@@ -351,7 +356,7 @@ server 启动时注入其一。现在 `pptxExports` / `thumbnails` 那两个 Rou
 ### 顺序
 
 1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。**已完成。**
-2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。
+2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。**已完成(桌面版)。**
 3. web 里抽 `Host` 和 `CanvasDriver`。
 4. `serve`:托管界面,Origin 校验 + token。
 5. CLI。

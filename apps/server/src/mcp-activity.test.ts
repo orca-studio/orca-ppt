@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
+import type { Renderer } from '@orca-ppt/deck-core'
 import { startServer, type OrcaServer } from './server.js'
 import type { McpActivity } from './mcp-http.js'
 
@@ -13,6 +14,12 @@ import type { McpActivity } from './mcp-http.js'
  * 就曾经声明了却从来没被调用过,「agent 在线」因此一直是死的,而两边的单测都绿着。
  */
 
+/** 假的渲染器。用例按需填 `render`;不填就说渲不了。 */
+let render: Partial<Renderer> = {}
+const renderer: Renderer = {
+  thumbnails: (job) => render.thumbnails?.(job) ?? Promise.reject(new Error('没有假的缩略图')),
+  exportPptx: (job) => render.exportPptx?.(job) ?? Promise.reject(new Error('没有假的导出')),
+}
 let server: OrcaServer
 let socket: WebSocket
 let activity: McpActivity[]
@@ -34,7 +41,9 @@ const FOLLOWED = (query: unknown) => ({
 
 beforeEach(async () => {
   // 这里断言的是操作记录里多了哪几条:别和并行跑的别的测试文件共用一份记录
+  render = {}
   server = await startServer({
+    renderer,
     recordingFile: join(await mkdtemp(join(tmpdir(), 'recording-')), 'recording.jsonl'),
   })
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
@@ -523,22 +532,14 @@ describe('可录制应用约定:操作记录', () => {
     const { deckId } = await openDeckAt('一')
     await call('deck.editText', { deckId, slide: 1, oldText: '一', newText: '二' })
 
-    // 扮演界面:收到渲缩略图的请求,交回一张图
+    // 扮演渲染器:收到渲缩略图的请求,交回一张图
     const png = join(await mkdtemp(join(tmpdir(), 'thumb-')), '1.png')
     await writeFile(png, Buffer.from('89504e470d0a1a0a', 'hex'))
     const requests: any[] = []
-    socket.on('message', (raw: Buffer) => {
-      const message = JSON.parse(raw.toString())
-      if (message.channel !== 'thumbnails.request') return
-      requests.push(message.data)
-      socket.send(
-        JSON.stringify({
-          id: 'thumb',
-          method: 'thumbnails.result',
-          params: { requestId: message.data.requestId, paths: [png] },
-        }),
-      )
-    })
+    render.thumbnails = async (job) => {
+      requests.push(job)
+      return [png]
+    }
 
     const reply = await tool('recording_snapshot', { maxSize: 800 })
     expect(requests[0]).toMatchObject({ slides: [1], width: 800 })

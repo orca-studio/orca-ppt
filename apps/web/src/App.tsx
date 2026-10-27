@@ -252,53 +252,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (data.deckId === deckRef.current?.deck.id) void window.orca?.stopPresent?.()
     })
 
-    next.subscribe('pptx.request', (data) => {
-      void (async () => {
-        try {
-          if (!window.orca?.exportPptx) throw new Error('这个客户端导不了 PPTX')
-          const report = await window.orca.exportPptx({
-            previewUrl: data.previewUrl,
-            outPath: data.outPath,
-          })
-          // 报告的形状由 server 在边界上按契约校验
-          await next.request('pptx.result', {
-            requestId: data.requestId,
-            report: report as NonNullable<RequestParams<'pptx.result'>['report']>,
-          })
-        } catch (cause) {
-          await next
-            .request('pptx.result', {
-              requestId: data.requestId,
-              error: cause instanceof Error ? cause.message : String(cause),
-            })
-            .catch(() => {})
-        }
-      })()
-    })
-    // 缩略图也只有壳渲得了(隐藏窗口,不碰可见画布)。
-    next.subscribe('thumbnails.request', (data) => {
-      void (async () => {
-        try {
-          const paths = await window.orca?.renderThumbnails?.({
-            previewUrl: data.previewUrl,
-            slideCount: data.slideCount,
-            ...(data.slides ? { slides: data.slides } : {}),
-            ...(data.width ? { width: data.width } : {}),
-            ...(data.outDir ? { outDir: data.outDir } : {}),
-          })
-          await next.request('thumbnails.result', {
-            requestId: data.requestId,
-            ...(paths ? { paths } : { error: '这个客户端渲不了缩略图' }),
-          })
-        } catch (cause) {
-          await next.request('thumbnails.result', {
-            requestId: data.requestId,
-            error: cause instanceof Error ? cause.message : String(cause),
-          })
-        }
-      })()
-    })
-
     // 录屏宿主问几处东西在屏幕上的哪儿(studio.orca/ui-targets)。只量,不动界面。
     next.subscribe('ui.targets.request', (data) => {
       void (async () => {
@@ -494,7 +447,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       const version = ++thumbsVersion.current
       // 换了一份稿子才清空;同一份稿子改了内容,旧图先顶着
       if (!options.keep) setThumbs([])
-      if (!window.orca?.renderThumbnails) return
       try {
         const { paths } = await via.request('deck.thumbnails', { deckId })
         if (version === thumbsVersion.current && deckRef.current?.deck.id === deckId)

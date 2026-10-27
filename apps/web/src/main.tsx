@@ -37,9 +37,6 @@ declare global {
       presentAutoplay?: (on: boolean) => Promise<boolean>
       /** 放映窗口还在不在自动播放。没在放映返回 null。 */
       presentAutoplayRunning?: () => Promise<boolean | null>
-      /** 离屏渲每一页的缩略图。不碰可见画布。 */
-      /** 导出 PPTX(写到 server 给的临时文件),返回导出器的报告。 */
-      exportPptx?: (input: { previewUrl: string; outPath: string }) => Promise<unknown>
       /** 壳弹保存对话框,只把路径交回来。 */
       pickPptxPath?: (input: {
         dir: string
@@ -48,16 +45,6 @@ declare global {
       }) => Promise<string | undefined>
       /** 导出失败,壳弹一个对话框说原因。导成了不提示。 */
       pptxFailed?: (reason: string) => Promise<void>
-      renderThumbnails?: (input: {
-        previewUrl: string
-        slideCount: number
-        /** 只渲这几页。不给就是全部。 */
-        slides?: number[]
-        /** 输出宽度。不给就是 320。 */
-        width?: number
-        /** 写进缩略图缓存的这一格。不给就是壳自己的临时目录。 */
-        outDir?: string
-      }) => Promise<Array<string | null>>
       /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
       openFile?: (path: string) => Promise<string | undefined>
       /** 截整张画布 —— agent 靠它自己看一眼做出来的东西。 */

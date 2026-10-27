@@ -817,28 +817,19 @@ export const requests = {
   /**
    * 给每一页出一张缩略图。没有图的「胶片」不叫胶片。
    *
-   * 和 `deck.capture` 一样要绕到壳那边,但**不能驱动可见画布** —— 那样用户会看着它
-   * 把每一页翻一遍。壳用一个隐藏窗口离屏渲。
+   * **不能驱动可见画布** —— 那样用户会看着它把每一页翻一遍。server 交给渲染器离屏渲
+   * (桌面版是主进程的隐藏窗口),不经过界面。
    */
   'deck.thumbnails': {
     params: z.object({ deckId: z.string() }),
     result: z.object({ paths: z.array(z.string().nullable()) }),
   },
-  /** 壳把缩略图交回来。只有壳会调。 */
-  'thumbnails.result': {
-    params: z.object({
-      requestId: z.string(),
-      paths: z.array(z.string().nullable()).optional(),
-      error: z.string().optional(),
-    }),
-    result: z.object({}),
-  },
   /**
    * 导出 PPTX。网页稿是作品本身,PPTX 是功能不完整的导出选项:每次翻页按 skill 的
    * 「导出 PPTX」表回退,结果里说清哪几次翻页降级了、哪些效果导不出来、要装哪些字体。
    *
-   * 要逐页渲染,只有壳做得到:server 推 `pptx.request`,壳导好回 `pptx.result`,
-   * server 再把文件放到 `path`。
+   * 要逐页渲染:server 交给渲染器导到临时文件(桌面版是主进程的隐藏窗口,不经过界面),
+   * 再把文件放到 `path`。
    */
   'deck.exportPptx': {
     params: z.object({
@@ -855,15 +846,6 @@ export const requests = {
       rasters: z.number().int().nonnegative(),
       fonts: z.array(z.string()),
     }),
-  },
-  /** 壳把 PPTX 导好了(或者导失败了)。只有壳会调。 */
-  'pptx.result': {
-    params: z.object({
-      requestId: z.string(),
-      report: PptxExportReport.optional(),
-      error: z.string().optional(),
-    }),
-    result: z.object({}),
   },
   /** 壳把截好的图交回来。只有壳会调。 */
   /** 界面上几处东西此刻在屏幕上的哪儿(`studio.orca/ui-targets` v1)。只读。 */
@@ -1127,26 +1109,6 @@ export const pushes = {
     hint: z.string().optional(),
     /** 只在 `done` 上出现。工具自己拒绝(比如改不了那段文字)也算。 */
     error: z.string().optional(),
-  }),
-  /** 请壳离屏渲一份缩略图。壳渲完调 `thumbnails.result` 交回来。 */
-  'thumbnails.request': z.object({
-    deckId: z.string(),
-    requestId: z.string(),
-    previewUrl: z.string(),
-    slideCount: z.number().int().nonnegative(),
-    /** 只渲这几页(录制要的缩略图只要被改的那一页)。不给就是全部。 */
-    slides: z.array(z.number().int().nonnegative()).optional(),
-    /** 输出宽度。不给就是页胶片用的 320。 */
-    width: z.number().int().positive().optional(),
-    /** 写到哪个目录(缩略图缓存里的一格)。不给就由壳自己找个临时目录。 */
-    outDir: z.string().optional(),
-  }),
-  /** 请壳把一份稿子导成 PPTX,写到 `outPath`(应用数据目录里的临时文件)。 */
-  'pptx.request': z.object({
-    deckId: z.string(),
-    requestId: z.string(),
-    previewUrl: z.string(),
-    outPath: z.string(),
   }),
   /** 有人要求跳页 —— 可能是 agent。画布跟着走。 */
   'deck.slide': z.object({ deckId: z.string(), index: z.number().int().nonnegative() }),

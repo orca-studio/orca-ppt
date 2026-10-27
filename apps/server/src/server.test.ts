@@ -5,6 +5,7 @@ import { join, relative, sep } from 'node:path'
 import { toUrlPath } from './preview.js'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WebSocket } from 'ws'
+import type { Renderer } from '@orca-ppt/deck-core'
 import { startServer, type OrcaServer } from './server.js'
 
 let server: OrcaServer
@@ -13,9 +14,17 @@ let pushes: any[]
 /** 每个用例可以在 startServer 之前往里塞允许目录(假 skill)。 */
 let allowRoots: string[]
 
+/** 假的渲染器(缩略图、导出 PPTX)。用例按需填 `render`;不填就说渲不了。 */
+let render: Partial<Renderer> = {}
+const renderer: Renderer = {
+  thumbnails: (job) => render.thumbnails?.(job) ?? Promise.reject(new Error('没有假的缩略图')),
+  exportPptx: (job) => render.exportPptx?.(job) ?? Promise.reject(new Error('没有假的导出')),
+}
+
 beforeEach(async () => {
   allowRoots = []
-  server = await startServer()
+  render = {}
+  server = await startServer({ renderer })
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
   listen()
@@ -465,7 +474,7 @@ async function restartWithSkill(skillRoot: string): Promise<void> {
   socket.close()
   await server.close()
   allowRoots = [skillRoot]
-  server = await startServer({ allowRoots })
+  server = await startServer({ allowRoots, renderer })
   socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
   await new Promise((done) => socket.once('open', done))
   listen()
@@ -953,17 +962,14 @@ describe('导出 PPTX', () => {
     degraded: [{ from: 1, to: 2, technique: '整页推近', tier: '降级', kind: 'fade' }],
     fonts: ['Inter'],
   }
-  /** 扮演壳:收到导出请求就往 server 给的临时文件里写点东西,交回报告 */
+  /** 扮演渲染器:收到导出请求就往 server 给的临时文件里写点东西,交回报告 */
   function actAsShell(reply: (request: any) => Promise<unknown>) {
     const requests: any[] = []
-    const listener = (raw: Buffer) => {
-      const message = JSON.parse(raw.toString())
-      if (message.channel !== 'pptx.request') return
-      requests.push(message.data)
-      void reply(message.data)
+    render.exportPptx = (job) => {
+      requests.push(job)
+      return reply(job)
     }
-    socket.on('message', listener)
-    return { requests, stop: () => socket.off('message', listener) }
+    return { requests, stop: () => delete render.exportPptx }
   }
   beforeEach(async () => {
     process.env.ORCA_PPT_PPTX_DIR = await mkdtemp(join(tmpdir(), 'pptx-tmp-'))
@@ -976,7 +982,7 @@ describe('导出 PPTX', () => {
     const { id } = await builtDeck()
     const shell = actAsShell(async (request) => {
       await writeFile(request.outPath, 'pptx')
-      await call('pptx.result', { requestId: request.requestId, report })
+      return report
     })
     const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), '稿子.pptx')
     const result = await call('deck.exportPptx', { deckId: id, path: target })
@@ -1011,14 +1017,38 @@ describe('导出 PPTX', () => {
 
   it('壳导失败,原因带回来', async () => {
     const { id } = await builtDeck()
-    const shell = actAsShell((request) =>
-      call('pptx.result', { requestId: request.requestId, error: '稿子没有录制接口' }),
-    )
+    const shell = actAsShell(() => Promise.reject(new Error('稿子没有录制接口')))
     const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
     const result = await call('deck.exportPptx', { deckId: id, path: target })
     shell.stop()
     expect(result.error.message).toContain('稿子没有录制接口')
     await expect(readFile(target)).rejects.toThrow()
+  })
+
+  it('报告的形状在 server 这边校验:渲染方交回来的不对就报错,不往下传', async () => {
+    const { id } = await builtDeck()
+    const shell = actAsShell(async (request) => {
+      await writeFile(request.outPath, 'pptx')
+      return { slides: 'x' }
+    })
+    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
+    const result = await call('deck.exportPptx', { deckId: id, path: target })
+    shell.stop()
+    expect(result.error).toBeDefined()
+    await expect(readFile(target)).rejects.toThrow()
+  })
+
+  it('没有渲染器:说 NO_RENDERER,不假装导好了', async () => {
+    socket.close()
+    await server.close()
+    server = await startServer()
+    socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
+    await new Promise((done) => socket.once('open', done))
+    listen()
+    const { id } = await builtDeck()
+    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
+    const result = await call('deck.exportPptx', { deckId: id, path: target })
+    expect(result.error.message).toMatch(/^NO_RENDERER:/)
   })
 })
 
@@ -1028,17 +1058,12 @@ describe('页胶片缩略图缓存', () => {
       '<div class="slides"><section>1</section><section>2</section></div>',
     )
     const requests: any[] = []
-    const listener = (raw: Buffer) => {
-      const message = JSON.parse(raw.toString())
-      if (message.channel !== 'thumbnails.request') return
-      requests.push(message.data)
-      void (async () => {
-        const paths = [0, 1].map((i) => join(message.data.outDir, `${i}.png`))
-        for (const path of paths) await writeFile(path, 'png')
-        await call('thumbnails.result', { requestId: message.data.requestId, paths })
-      })()
+    render.thumbnails = async (job) => {
+      requests.push(job)
+      const paths = [0, 1].map((i) => join(job.outDir!, `${i}.png`))
+      for (const path of paths) await writeFile(path, 'png')
+      return paths
     }
-    socket.on('message', listener)
 
     const first = (await call('deck.thumbnails', { deckId: id })).data.paths
     expect(requests).toHaveLength(1)
@@ -1054,7 +1079,6 @@ describe('页胶片缩略图缓存', () => {
       '<div class="slides"><section>一</section><section>2</section></div>',
     )
     await call('deck.thumbnails', { deckId: id })
-    socket.off('message', listener)
     expect(requests).toHaveLength(2)
   })
 })

@@ -31,7 +31,7 @@ export const AgentError = {
   uiDisconnected: () =>
     say(
       'UI_DISCONNECTED',
-      'Orca PPT 的窗口没开 —— 截图、缩略图、放映都要靠它',
+      'Orca PPT 的窗口没开 —— 截图、放映都要靠它',
       '请用户打开 Orca PPT 的窗口,再试一次',
     ),
   uiTimeout: () =>
@@ -39,6 +39,12 @@ export const AgentError = {
       'UI_TIMEOUT',
       'Orca PPT 的界面没有回应',
       '请用户确认窗口开着、没有卡住;doctor 能看连接状态',
+    ),
+  noRenderer: () =>
+    say(
+      'NO_RENDERER',
+      '这个运行环境没有可用的浏览器 —— 缩略图、导出 PPTX 都要开一个把稿子渲出来',
+      '请用户在 Orca PPT 桌面版里打开这份稿子再试',
     ),
   skillNotFound: () =>
     say(

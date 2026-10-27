@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@orca-ppt/contracts": "workspace:*",
+    "@orca-ppt/deck-core": "workspace:*",
     "update-electron-app": "^3.3.0"
   },
   "productName": "Orca PPT"

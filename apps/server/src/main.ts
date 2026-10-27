@@ -1,3 +1,4 @@
+import { parentPortRenderer } from './renderer-port.js'
 import { startServer } from './server.js'
 
 /**
@@ -6,8 +7,12 @@ import { startServer } from './server.js'
  */
 const DEFAULT_PORT = 6722
 
+// 桌面版里由主进程的隐藏窗口渲;不在 utilityProcess 里就没有渲染器
+const renderer = parentPortRenderer()
+
 const server = await startServer({
   port: process.env.ORCA_PPT_PORT ? Number(process.env.ORCA_PPT_PORT) : DEFAULT_PORT,
+  ...(renderer ? { renderer } : {}),
 })
 
 // 桌面壳读这一行拿端口。格式别改。

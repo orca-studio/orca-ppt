@@ -10,6 +10,7 @@ describe('AgentError', () => {
       AgentError.noBuild(),
       AgentError.uiDisconnected(),
       AgentError.uiTimeout(),
+      AgentError.noRenderer(),
       AgentError.skillNotFound(),
     ]
     for (const message of all) {

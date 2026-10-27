@@ -14,13 +14,15 @@ import {
   shell,
   utilityProcess,
   webContents,
+  type UtilityProcess,
 } from 'electron'
 import { paddedRect, type Rect } from './anchor-crop.js'
 import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { handleSquirrelEvent, isSquirrelFirstRun } from './squirrel.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
-import { exportPptx, type PptxJob } from './pptx-exporter.js'
+import { exportPptx } from './pptx-exporter.js'
+import type { PptxJob, RenderReply, RenderRequest, ThumbnailJob } from '@orca-ppt/deck-core'
 import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
 
 /**
@@ -44,6 +46,7 @@ const supervisor = new ServerSupervisor((entry, env) => {
     env: { ...process.env, ...env },
     serviceName: 'Orca PPT Server',
   })
+  child.on('message', (request: RenderRequest) => void answerRender(child, request))
   child.stderr?.on('data', (chunk: Buffer) => {
     try {
       process.stderr.write(chunk)
@@ -396,53 +399,40 @@ function isThumbnailDir(path: string): boolean {
   return basename(dirname(dirname(path))) === 'thumbnails'
 }
 
-ipcMain.handle(
-  'deck:thumbnails',
-  async (
-    event,
-    input: {
-      previewUrl: string
-      slideCount: number
-      slides?: number[]
-      width?: number
-      outDir?: string
-    },
-  ) => {
-    if (input.slideCount === 0) return []
-    const key = `${event.sender.id}:${input.previewUrl}:${input.slides?.join(',') ?? 'all'}:${input.width ?? 320}`
-    return thumbnailQueue.run(key, async () => {
-      if (event.sender.isDestroyed()) return []
-      // 录制要的缩略图只要被改的那一页,而且更大;页胶片要全部、320 宽
-      const indices =
-        input.slides?.filter((index) => index < input.slideCount) ??
-        Array.from({ length: input.slideCount }, (_, index) => index)
-      const width = input.width ?? 320
+function renderThumbnails(input: ThumbnailJob): Promise<Array<string | null>> {
+  if (input.slideCount === 0) return Promise.resolve([])
+  const key = `${input.previewUrl}:${input.slides?.join(',') ?? 'all'}:${input.width ?? 320}`
+  return thumbnailQueue.run(key, async () => {
+    // 录制要的缩略图只要被改的那一页,而且更大;页胶片要全部、320 宽
+    const indices =
+      input.slides?.filter((index) => index < input.slideCount) ??
+      Array.from({ length: input.slideCount }, (_, index) => index)
+    const width = input.width ?? 320
 
-      const offscreen = new BrowserWindow({
-        show: false,
-        width: 960,
-        height: 540,
-        // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
-        useContentSize: true,
-        webPreferences: { sandbox: true, contextIsolation: true, backgroundThrottling: false },
-      })
+    const offscreen = new BrowserWindow({
+      show: false,
+      width: 960,
+      height: 540,
+      // 按内容区算 960×540:不然标题栏吃掉一截,截出来是 960×508,不是 16:9
+      useContentSize: true,
+      webPreferences: { sandbox: true, contextIsolation: true, backgroundThrottling: false },
+    })
 
-      const destroy = () => {
-        if (!offscreen.isDestroyed()) offscreen.destroy()
-      }
-      const timeout = setTimeout(destroy, 45_000)
-      event.sender.once('destroyed', destroy)
+    const destroy = () => {
+      if (!offscreen.isDestroyed()) offscreen.destroy()
+    }
+    const timeout = setTimeout(destroy, 45_000)
 
-      let rejectClosed!: (error: Error) => void
-      const closed = new Promise<never>((_resolve, reject) => {
-        rejectClosed = reject
-      })
-      const onClosed = () => rejectClosed(new Error('缩略图渲染已取消或超时'))
-      offscreen.once('closed', onClosed)
-      const render = async () => {
-        await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
-        const ready = await offscreen.webContents.executeJavaScript(
-          `new Promise(resolve => {
+    let rejectClosed!: (error: Error) => void
+    const closed = new Promise<never>((_resolve, reject) => {
+      rejectClosed = reject
+    })
+    const onClosed = () => rejectClosed(new Error('缩略图渲染已取消或超时'))
+    offscreen.once('closed', onClosed)
+    const render = async () => {
+      await offscreen.loadURL(`${input.previewUrl}?capture#/0`)
+      const ready = await offscreen.webContents.executeJavaScript(
+        `new Promise(resolve => {
             const check = () => {
               if (window.__capture?.go && window.__capture?.seek) return 'capture';
               if (window.Reveal?.isReady?.()) return 'reveal';
@@ -452,34 +442,34 @@ ipcMain.handle(
             const timer = setInterval(() => { const mode = check(); if (mode) finish(mode); }, 50);
             const timeout = setTimeout(() => finish(null), 8000);
           })`,
-        )
-        if (!ready) throw new Error('稿子未就绪，无法生成缩略图')
-        // Thumbnails contain slide content only; presentation controls belong to the viewer.
+      )
+      if (!ready) throw new Error('稿子未就绪，无法生成缩略图')
+      // Thumbnails contain slide content only; presentation controls belong to the viewer.
+      await offscreen.webContents.executeJavaScript(
+        `window.Reveal?.configure({ controls: false, progress: false, slideNumber: false });`,
+      )
+      // Plain Reveal decks have no Orca capture API. Disable transitions only in this hidden window.
+      if (ready === 'reveal') {
         await offscreen.webContents.executeJavaScript(
-          `window.Reveal?.configure({ controls: false, progress: false, slideNumber: false });`,
+          `Reveal.configure({ transition: 'none', backgroundTransition: 'none', autoAnimate: false, autoSlide: 0 });`,
         )
-        // Plain Reveal decks have no Orca capture API. Disable transitions only in this hidden window.
-        if (ready === 'reveal') {
+      }
+      await offscreen.webContents.executeJavaScript('document.fonts.ready')
+
+      // 页胶片的图写进 server 给的缓存目录;壳也守一道,只认缩略图缓存里的一格。
+      // 没给(录制要的单页大图)就写临时目录,用完即弃,下次启动清掉
+      const dir =
+        input.outDir && isThumbnailDir(input.outDir)
+          ? input.outDir
+          : join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
+      await mkdir(dir, { recursive: true })
+
+      const paths: Array<string | null> = []
+      for (const index of indices) {
+        if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
+        try {
           await offscreen.webContents.executeJavaScript(
-            `Reveal.configure({ transition: 'none', backgroundTransition: 'none', autoAnimate: false, autoSlide: 0 });`,
-          )
-        }
-        await offscreen.webContents.executeJavaScript('document.fonts.ready')
-
-        // 页胶片的图写进 server 给的缓存目录;壳也守一道,只认缩略图缓存里的一格。
-        // 没给(录制要的单页大图)就写临时目录,用完即弃,下次启动清掉
-        const dir =
-          input.outDir && isThumbnailDir(input.outDir)
-            ? input.outDir
-            : join(app.getPath('userData'), 'thumbs', randomUUID().slice(0, 8))
-        await mkdir(dir, { recursive: true })
-
-        const paths: Array<string | null> = []
-        for (const index of indices) {
-          if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
-          try {
-            await offscreen.webContents.executeJavaScript(
-              `(async () => {
+            `(async () => {
                 if (window.__capture?.go && window.__capture?.seek) {
                   // 页内动画（点击分步、入场）放完才是这一页完整的样子;老引擎没有 build,就停在转场结束
                   const { transition, build } = await window.__capture.go(${index});
@@ -496,51 +486,71 @@ ipcMain.handle(
                 ]);
                 await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
               })()`,
-            )
-            const image = await offscreen.webContents.capturePage()
-            if (image.isEmpty()) {
-              paths.push(null)
-              continue
-            }
-            const resized = image.resize({ width })
-            const png = resized.toPNG()
-            // 可录制应用约定:单张不超过 300KB。PNG 太大就换 JPEG
-            const [file, bytes] =
-              png.length > 300_000
-                ? [join(dir, `${index}.jpg`), resized.toJPEG(85)]
-                : [join(dir, `${index}.png`), png]
-            await writeFile(file, bytes)
-            paths.push(file)
-          } catch {
-            if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
-            // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了
+          )
+          const image = await offscreen.webContents.capturePage()
+          if (image.isEmpty()) {
             paths.push(null)
+            continue
           }
+          const resized = image.resize({ width })
+          const png = resized.toPNG()
+          // 可录制应用约定:单张不超过 300KB。PNG 太大就换 JPEG
+          const [file, bytes] =
+            png.length > 300_000
+              ? [join(dir, `${index}.jpg`), resized.toJPEG(85)]
+              : [join(dir, `${index}.png`), png]
+          await writeFile(file, bytes)
+          paths.push(file)
+        } catch {
+          if (offscreen.isDestroyed()) throw new Error('缩略图渲染已取消或超时')
+          // 某一页渲不出来不该毁掉整条 —— 那一格留空就是了
+          paths.push(null)
         }
-        return paths
       }
-      try {
-        return await Promise.race([render(), closed])
-      } finally {
-        clearTimeout(timeout)
-        event.sender.removeListener('destroyed', destroy)
-        offscreen.removeListener('closed', onClosed)
-        destroy()
-      }
-    })
-  },
-)
+      return paths
+    }
+    try {
+      return await Promise.race([render(), closed])
+    } finally {
+      clearTimeout(timeout)
+      offscreen.removeListener('closed', onClosed)
+      destroy()
+    }
+  })
+}
 
 /**
  * 导出 PPTX。一次只导一份:隐藏窗口里逐页 seek,并行只会互相拖慢。
  * 先写到 server 给的临时文件,挪到用户选的位置是 server 的事。
  */
 let pptxTail: Promise<unknown> = Promise.resolve()
-ipcMain.handle('deck:export-pptx', (_event, job: PptxJob) => {
+function queuedExportPptx(job: PptxJob): Promise<unknown> {
   const run = pptxTail.then(() => exportPptx(job))
   pptxTail = run.catch(() => {})
   return run
-})
+}
+
+/**
+ * server 经 parentPort 找主进程渲(apps/server/src/renderer-port.ts)。不经过界面:
+ * 窗口关了、界面断了,缩略图和 PPTX 照样渲得出来。
+ */
+async function answerRender(child: UtilityProcess, request: RenderRequest): Promise<void> {
+  let reply: RenderReply
+  try {
+    const value =
+      request.method === 'thumbnails'
+        ? await renderThumbnails(request.job)
+        : await queuedExportPptx(request.job)
+    reply = { id: request.id, value }
+  } catch (cause) {
+    reply = { id: request.id, error: cause instanceof Error ? cause.message : String(cause) }
+  }
+  try {
+    child.postMessage(reply)
+  } catch {
+    // server 已经退出,没人等这个结果了
+  }
+}
 
 /**
  * 主题。`system` 让 Electron 自己跟着系统走,`light`/`dark` 是用户在应用里显式选的。

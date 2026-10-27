@@ -20,9 +20,11 @@ import {
   readSlideTitles,
   recipeEntry,
   type RecipeSource,
+  type Renderer,
   replaceImage,
   writePage,
 } from '@orca-ppt/deck-core'
+import { noRenderer } from './renderer-port.js'
 import { readSpec } from '@orca-ppt/deck-agent'
 import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
@@ -35,6 +37,7 @@ import { homedir } from 'node:os'
 import { basename, dirname, join, relative, isAbsolute, extname } from 'node:path'
 import {
   CanvasEvidence,
+  PptxExportReport,
   requests,
   RequestEnvelope,
   type RequestParams,
@@ -100,9 +103,15 @@ export async function startServer(
     allowRoots?: string[]
     /** 操作记录落在哪。默认 ~/.orca-ppt/recording.jsonl;测试给一个临时文件。 */
     recordingFile?: string
+    /**
+     * 缩略图、导出 PPTX 找谁渲。桌面版是主进程的隐藏窗口(见 renderer-port.ts),
+     * 测试给一个假的;不给就一律报 NO_RENDERER。
+     */
+    renderer?: Renderer
   } = {},
 ): Promise<OrcaServer> {
   const bus = new PushBus()
+  const renderer = options.renderer ?? noRenderer
   const previews = new PreviewHost()
   for (const root of options.allowRoots ?? []) await previews.allow(root)
   const openDecks = new Map<string, string>()
@@ -316,16 +325,6 @@ export async function startServer(
     RequestResult<'deck.capture'>,
     { slide?: number; expectedRevision?: string }
   >((payload) => bus.broadcast('capture.request', payload))
-  // 一份稿子每页渲一张,比单张截图慢得多,给足时间。
-  const thumbnails = new Roundtrip<
-    Array<string | null>,
-    { previewUrl: string; slideCount: number; slides?: number[]; width?: number; outDir?: string }
-  >((payload) => bus.broadcast('thumbnails.request', payload), 90_000)
-  // 导出 PPTX 要逐页渲染、截图,给足时间
-  const pptxExports = new Roundtrip<
-    NonNullable<RequestParams<'pptx.result'>['report']>,
-    { previewUrl: string; outPath: string }
-  >((payload) => bus.broadcast('pptx.request', payload), 300_000)
 
   const queue = new RequestQueue((deckId, pending) =>
     bus.broadcast('requests.changed', { deckId, requests: pending }),
@@ -465,8 +464,6 @@ export async function startServer(
         follows.failAll(AgentError.uiDisconnected())
         captures.failAll(AgentError.uiDisconnected())
         canvases.failAll(AgentError.uiDisconnected())
-        thumbnails.failAll(AgentError.uiDisconnected())
-        pptxExports.failAll(AgentError.uiDisconnected())
       }
     })
   })
@@ -547,13 +544,12 @@ export async function startServer(
     const opened = await openDeck(root)
     const previewUrl = mountPreview(opened)
     if (!previewUrl || opened.slideCount === 0) return unavailable('这份稿子还没有出稿文件')
-    if (bus.connectionCount === 0) return unavailable('应用界面没开,渲不了缩略图')
 
     const slide = Math.min(recording.lastFor(deckId)?.target?.index ?? 0, opened.slideCount - 1)
     const width = Math.min(params.maxSize ?? 640, 1280)
     let path: string | null | undefined
     try {
-      ;[path] = await thumbnails.request(deckId, {
+      ;[path] = await renderer.thumbnails({
         previewUrl,
         slideCount: opened.slideCount,
         slides: [slide],
@@ -1254,18 +1250,14 @@ export async function startServer(
         await mkdir(dir, { recursive: true })
         const outPath = join(dir, `${randomUUID()}.pptx`)
         try {
-          const report = await pptxExports.request(params.deckId, { previewUrl, outPath })
+          // 报告的形状在这里按契约校验:渲染方是另一个进程(或以后的另一个浏览器)
+          const report = PptxExportReport.parse(await renderer.exportPptx({ previewUrl, outPath }))
           // 不用 rename:临时目录和目标可能不在同一个卷上
           await copyFile(outPath, target)
           return summarizePptx(target, report)
         } finally {
           await rm(outPath, { force: true })
         }
-      }
-      case 'pptx.result': {
-        const params = parseParams('pptx.result', raw)
-        pptxExports.settle(params.requestId, { value: params.report, error: params.error })
-        return {}
       }
       case 'deck.stopPresent': {
         const params = parseParams('deck.stopPresent', raw)
@@ -1317,7 +1309,7 @@ export async function startServer(
         }
         const outDir = await partialDir(slot)
         try {
-          const rendered = await thumbnails.request(params.deckId, {
+          const rendered = await renderer.thumbnails({
             previewUrl,
             slideCount: opened.slideCount,
             outDir,
@@ -1329,12 +1321,6 @@ export async function startServer(
           await dropPartial(outDir)
           throw cause
         }
-      }
-      case 'thumbnails.result': {
-        const params = parseParams('thumbnails.result', raw)
-        for (const path of params.paths ?? []) previews.allowFile(path ?? undefined)
-        thumbnails.settle(params.requestId, { value: params.paths, error: params.error })
-        return {}
       }
       case 'catalog.list': {
         parseParams('catalog.list', raw)

@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import type { PptxJob } from '@orca-ppt/deck-core'
 import { app, BrowserWindow } from 'electron'
 
 /**
@@ -14,10 +15,6 @@ import { app, BrowserWindow } from 'electron'
  * 写到哪由 server 定(应用数据目录里的一个临时文件),导出器自己再守一道只写那个目录;
  * 挪到用户选的位置是 server 的事。
  */
-export interface PptxJob {
-  previewUrl: string
-  outPath: string
-}
 
 const VIEW = { width: 5760, height: 3240 }
 
