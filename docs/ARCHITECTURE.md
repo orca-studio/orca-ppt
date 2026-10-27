@@ -406,17 +406,24 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     把 `orca-ppt skill` 打印的目录链进助手读 skill 的目录、确认连得上;开工作台、`tools` / `call`、
     注意事项写在 `skills/orca-ppt/references/workbench.md`(SKILL.md 开头一句「本机有 `orca-ppt` 命令时」
     指过去)。规范只在 skill 一处(AGENTS.md 边界 4),而且跟着包发版,说明和命令对得上。
-  - **初次使用默认走 CLI + 浏览器工作台**(2026-10-27 定,写在 `site/src/llms-web.txt`;`llms.txt` 保持桌面版 + MCP,教学视频在用):装 npm 包、
-    `serve --detach`、`tools` / `call`。不用在助手里配 MCP、请用户点「信任」,不用下 DMG。MCP 和桌面版
-    是「进阶」:工具直接进助手的工具列表、截图内联给模型看;全屏放映、取锚裁切图、后台不限速。
+  - **默认接入仍是桌面版 + MCP,CLI + 浏览器工作台是备选**(2026-10-27 定;同一天先定过反过来,当天改回):
+    `llms.txt` 是桌面版 + MCP,开头一句把 Linux、不想装桌面版、只想要 skill 的用户分到 `llms-web.txt`(npm 包、
+    `serve --detach`、`tools` / `call`)。备选那条不用配 MCP、不用点「信任」、不用下 DMG,但要 Node 和
+    Chrome、截图给的是文件路径、浏览器后台限速、没有全屏放映和取锚裁切图;桌面版没有这些问题。
   - **后台常驻**:`orca-ppt serve --detach` 起一个独立进程就返回,`stop` 停掉;正在跑的那个记在
     `~/.orca-ppt/serve.json`(进程号、端口、带 token 的网址,只给自己读),再跑 `--detach` 只报网址。
     AI 助手的命令有超时,前台的 serve 会被掐掉;有了它,助手发现 6722 连不上可以自己拉起来。
   - **稿子引的是另一份 skill**(桌面版建的稿子拿到 npm 包的 serve 里开、只装 skill 时建的稿子):
     预览托管只放行这份稿子入口页**真引用到的**、往上几层有 `SKILL.md` 的目录
     (`preview-host.ts` 的 `referencedSkills`),不然画布是白的、入口页照样 200。别的照旧 403。
-  - **还没做**:上面的稳定路径。全局安装(`npm install -g`)时包的目录在升级前后不变,稿子引的
-    skill 路径跟着还在;换了 Node 版本(nvm 这类)全局目录会变,老稿子就丢样式。
+  - **skill 的固定位置(已落地,`packages/deck-core/src/stable-skill.ts`)**:`~/.local/share/orca-ppt/skill`
+    (Windows `%LOCALAPPDATA%\OrcaPPT\skill`,目录联接)是一根链接,server(桌面版和 serve)、CLI 启动时把它
+    指向自己带的那份 skill,两个都装就是后启动的说了算;那里是真目录就不碰。新建的稿子经它引 skill
+    (算相对路径时只对上一级取真实路径,链接本身不解析),`orca-ppt skill` 打印它、给助手链。
+    npm 全局目录跟着 Node 版本走(fnm、nvm)、Windows 桌面版每个版本装在 `app-<版本>` 下 —— 升级、换版本后
+    新建的稿子和助手的 skill 都不坏。预览放行这根链接的字面路径,解析后的真实位置每次比对时现解析。
+    没做的:`orca-ppt` 命令本身仍跟着 Node 版本走,换版本要重装(重装后链接自动指回来);不加
+    ego-lite 那样的版本目录层,也不往 `~/.local/bin` 放命令 —— 不搞复杂。
   - **阶段提示词按调用方说怎么读规范**(已落地):`phaseGate` / `phasePrompt` 的 `skillAccess`
     默认 `mcp`,叫 agent 用 `read_skill` / `list_skill`;CLI 传 `files`,叫它直接读 skill 目录里的
     SKILL.md,并写明稿子目录的绝对路径 —— CLI 场景下 agent 的当前目录不一定是稿子。
@@ -518,6 +525,7 @@ CDN 上,离线就坏)· **每份稿子自带一份运行时**(引擎、reveal、
 | 2026-10-27 | `capture.mjs` 默认不出视频:出关键帧(每页转场 5 帧 + 停稳 1 帧,写到系统临时目录)和每次转场动了几帧,动的不到一半就提醒;`-o x.mp4` 才拼视频。SKILL.md 第 7、8 步改成看关键帧                                                                                        | ffmpeg 不该是必须依赖:新手机器上多半没有。自检要的是关键帧和「转场动没动」,mp4 只是载体;agent 多半放不了视频,本来就是抽帧看。关键帧不写进稿子目录,应用在监听那里                          |
 | 2026-10-27 | 浏览器版的稿子放在另一个源,iframe 和界面只用 `postMessage` 说话(方案 B);server 托管稿子时加一行 `<script>` 引 guest 脚本,只收固定动作名、写死对方的源                                                                                                            | 同源时稿子脚本碰得到界面和启动 token,浏览器版不该比桌面版的独立 partition 松;reveal.js 官方的遥控接口和演讲者视图都是这个路子                                                             |
 | 2026-10-27 | 初次使用默认走 CLI + 浏览器工作台(npm 包、`orca-ppt serve --detach`、`orca-ppt tools` / `call`);MCP + 桌面版改为进阶。`tools` / `call` 是 `/mcp` 的薄客户端                                                                                                      | 尽可能降低初次使用的门槛:不用配 MCP、点「信任」,不用下 200 MB 的安装包;依赖由 AI 助手装。工具只维护 `/mcp` 一份                                                                           |
+| 2026-10-27 | 改回:默认接入仍是桌面版 + MCP,CLI + 浏览器工作台是备选(推翻同日上一条)。skill 加固定位置 `~/.local/share/orca-ppt/skill`(一根链接,server、CLI 启动时指向自己那份)                                                                                                | CLI + 网页省掉的是装的时候几步,运行时的坑多(依赖、令牌、后台限速、截图走文件、功能少),桌面版没有这些;固定位置让 npm 包换 Node 版本、Windows 桌面版升级之后新稿子不丢样式                  |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
 
 ### 已实现的打包和按需读取

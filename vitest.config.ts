@@ -13,6 +13,8 @@ export default defineConfig({
       ORCA_PPT_THUMBNAIL_DIR: join(tmpdir(), `orca-ppt-test-thumbnails-${process.pid}`),
       // server 起来时会清旧版的样片缓存,别清到真的 ~/.orca-ppt
       ORCA_PPT_PREVIEW_DIR: join(tmpdir(), `orca-ppt-test-previews-${process.pid}`),
+      // skill 的固定位置:别把真的 ~/.local/share/orca-ppt/skill 改指到测试用的 skill
+      ORCA_PPT_STABLE_SKILL: join(tmpdir(), `orca-ppt-test-stable-${process.pid}`, 'skill'),
     },
   },
 })

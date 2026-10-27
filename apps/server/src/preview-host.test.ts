@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile, mkdir } from 'node:fs/promises'
+import { mkdtemp, writeFile, mkdir, symlink, unlink } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -172,5 +172,31 @@ describe('稿子引的是另一份 skill', () => {
     const { root, at } = await layout()
     const response = await fetch(at(join(root, 'secrets/key.txt')))
     expect(response.status).toBe(403)
+  })
+})
+
+describe('skill 的固定位置(链接)', () => {
+  it('链接被改指到另一份 skill(另一个程序启动了)之后,经它引的文件照样取得到', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'stable-')))
+    for (const name of ['a', 'b']) {
+      await mkdir(join(root, name, 'runtime'), { recursive: true })
+      await writeFile(join(root, name, 'SKILL.md'), name)
+      await writeFile(join(root, name, 'runtime/tokens.css'), `/* ${name} */`)
+    }
+    const link = join(root, 'skill')
+    await symlink(join(root, 'a'), link)
+    await host.allow(join(root, 'a'))
+    await host.allowLink(link)
+    await mkdir(join(root, 'deck'))
+    await writeFile(join(root, 'deck/deck.html'), '<link href="../skill/runtime/tokens.css">')
+    const { token } = host.mount(planPreview(join(root, 'deck'), join(root, 'deck/deck.html')))
+    const url = `${base}/p/${token}${join(link, 'runtime/tokens.css')}`
+    expect(await (await fetch(url)).text()).toBe('/* a */')
+
+    await unlink(link)
+    await symlink(join(root, 'b'), link)
+    const response = await fetch(url)
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('/* b */')
   })
 })

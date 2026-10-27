@@ -7,6 +7,7 @@ import {
   editPages,
   findEntryName,
   createDeck,
+  linkStableSkill,
   expandHome,
   listRecipes,
   listTemplates,
@@ -535,6 +536,9 @@ export async function startServer(
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
   // 把 skill 目录列进 allow root,那些请求就还能服务到。
   await previews.allow(catalog.skillPath)
+  // skill 的固定位置指向这一份;新建的稿子引它,skill 换了位置稿子也不坏(stable-skill.ts)
+  const skillLink = catalog.skillPath ? await linkStableSkill(catalog.skillPath) : undefined
+  await previews.allowLink(skillLink)
   // 旧版本在首页现录的样片缓存,现在封面跟着同款放在 skill 里了,清掉一次
   void dropOldPreviews()
 
@@ -827,6 +831,7 @@ export async function startServer(
           parentDir: params.parentDir,
           from: params.from,
           theme: params.theme,
+          skillLink,
         })
       }
       case 'catalog.templates': {

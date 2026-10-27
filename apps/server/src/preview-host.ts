@@ -23,6 +23,8 @@ export class PreviewHost {
    * 目录里 —— 放行整个目录太宽,只认 server 自己经手过的那几个路径。
    */
   readonly #allowFiles = new Set<string>()
+  /** skill 的固定位置(链接)。它指向哪儿会变(另一个程序启动时改指),每次比对时现解析。 */
+  readonly #allowLinks: string[] = []
   /** 浏览器版:入口页末尾加一行引它的 `<script>`(见 injectGuest)。桌面版不加。 */
   #guestScript: string | undefined
 
@@ -49,6 +51,18 @@ export class PreviewHost {
       resolved = resolve(root)
     }
     if (!this.#allowRoots.includes(resolved)) this.#allowRoots.push(resolved)
+  }
+
+  /**
+   * 放行 skill 的固定位置(一个链接,stable-skill.ts)。**链接本身不解析**:稿子按链接的路径引,
+   * 请求来的就是链接的路径;解析成真正的位置,字面比对就对不上。真正的位置由 allow(skill) 放行,
+   * 下面「解析之后再检一次」比对的是它。上一级照样取真实路径(/var → /private/var 这类)。
+   */
+  async allowLink(link: string | undefined): Promise<void> {
+    if (!link) return
+    const at = join(await realpath(dirname(link)).catch(() => dirname(link)), basename(link))
+    if (!this.#allowRoots.includes(at)) this.#allowRoots.push(at)
+    if (!this.#allowLinks.includes(at)) this.#allowLinks.push(at)
   }
 
   /**
@@ -128,7 +142,11 @@ export class PreviewHost {
     try {
       // 符号链接可以指到允许目录外面,所以解析之后再检一次。
       const real = await realpath(target)
-      if (!roots.some((root) => within(resolve(root), real))) {
+      // 固定位置此刻指向哪儿:桌面版和 npm 包都装时,后启动的那个会把它改指到自己那份
+      const linked = await Promise.all(
+        this.#allowLinks.map((link) => realpath(link).catch(() => link)),
+      )
+      if (![...roots, ...linked].some((root) => within(resolve(root), real))) {
         res.writeHead(403).end()
         return true
       }
@@ -320,6 +338,8 @@ export async function referencedSkills(entryFile: string): Promise<string[]> {
           () => false,
         )
       ) {
+        // 稿子可能经链接引(skill 的固定位置):字面路径和真实路径都放行,后面解析之后还会再检一次
+        found.add(dir)
         found.add(await realpath(dir).catch(() => dir))
         break
       }

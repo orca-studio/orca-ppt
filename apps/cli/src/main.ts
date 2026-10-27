@@ -11,6 +11,7 @@ import {
   createDeck,
   expandHome,
   findEntryName,
+  linkStableSkill,
   listRecipes,
   listTemplates,
   phaseGate,
@@ -147,6 +148,8 @@ switch (command) {
     const created = await createDeck({
       skillPath,
       themes,
+      // 新稿子经固定位置引 skill:升级、换 Node 版本之后也不坏
+      skillLink: await linkStableSkill(skillPath),
       title,
       parentDir: opt('--dir'),
       from: opt('--from'),
@@ -301,7 +304,9 @@ switch (command) {
     break
   }
   case 'skill': {
-    const path = await skill()
+    // 给助手链的是固定位置:升级、换 Node 版本之后链接也不失效。建不了就给真正的位置
+    const real = await skill()
+    const path = (await linkStableSkill(real)) ?? real
     print(path, { path })
     break
   }

@@ -1,5 +1,5 @@
 import { copyFile, mkdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
-import nodePath, { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+import nodePath, { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path'
 
 /**
  * 新建稿子从哪儿起头。**只有 skill 的空白起始文件** —— 汇报稿和故事稿两份。
@@ -67,12 +67,14 @@ export async function instantiate(options: {
   palette?: string
   /** 稿子的名字,替掉起始文件里的 `{{TITLE}}`。 */
   title?: string
+  /** skill 的固定位置(stable-skill.ts)。给了,稿子就引它,不引 skill 真正的位置。 */
+  skillLink?: string | undefined
 }): Promise<string> {
-  const { skillPath, templateId, targetDir, theme, palette, title } = options
+  const { skillPath, templateId, targetDir, theme, palette, title, skillLink } = options
   const [kind, name] = splitId(templateId)
   if (kind !== 'template') throw new Error(`只能从空白起始文件新建,不认识:${templateId}`)
   // 建目录之前先查跨盘:拒绝了就别留下一个空目录
-  relativeUrl(resolve(targetDir), await realpath(skillPath))
+  relativeUrl(resolve(targetDir), skillLink ?? (await realpath(skillPath)))
   await mkdir(join(targetDir, '.deck'), { recursive: true })
 
   /*
@@ -83,7 +85,7 @@ export async function instantiate(options: {
    * 最难发现的那种坏法。
    */
   const realTarget = await realpath(targetDir)
-  const realSkill = await realpath(skillPath)
+  const realSkill = skillLink ? await linkPath(skillLink) : await realpath(skillPath)
   const toSkill = relativeUrl(realTarget, realSkill)
   const entry = join(targetDir, 'deck.html')
 
@@ -112,9 +114,13 @@ export async function instantiateSample(options: {
   entry: string
   targetDir: string
   title?: string
+  /** skill 和它的固定位置。给了,引到 skill 里的东西都改成经固定位置引。 */
+  skill?: { path: string; link: string } | undefined
 }): Promise<string> {
-  const { sampleDir, entry, targetDir, title } = options
+  const { sampleDir, entry, targetDir, title, skill } = options
   const realSample = await realpath(sampleDir)
+  const realSkill = skill ? await realpath(skill.path) : undefined
+  const viaLink = skill ? await linkPath(skill.link) : undefined
   relativeUrl(resolve(targetDir), realSample)
   await mkdir(join(targetDir, '.deck'), { recursive: true })
   const realTarget = await realpath(targetDir)
@@ -129,7 +135,13 @@ export async function instantiateSample(options: {
       copies.add(inside)
       return url
     }
-    return relativeUrl(realTarget, absolute) + rest
+    // 引到 skill 里的(runtime、reveal、示例共用素材):经固定位置引,skill 换了位置稿子也不坏
+    const inSkill = realSkill ? relative(realSkill, absolute) : undefined
+    const via =
+      viaLink && inSkill !== undefined && !inSkill.startsWith('..') && !isAbsolute(inSkill)
+        ? join(viaLink, inSkill)
+        : absolute
+    return relativeUrl(realTarget, via) + rest
   }
 
   let html = (await readFile(entry, 'utf8'))
@@ -158,6 +170,14 @@ export async function instantiateSample(options: {
   const out = join(targetDir, 'deck.html')
   await writeFile(out, html)
   return out
+}
+
+/**
+ * 链接自己的位置:上一级取真实路径(macOS 的 /tmp → /private/tmp 这类),**链接本身不解析** ——
+ * 解析了就又指回 skill 真正的位置,固定位置等于白建。
+ */
+async function linkPath(link: string): Promise<string> {
+  return join(await realpath(dirname(link)), basename(link))
 }
 
 /**

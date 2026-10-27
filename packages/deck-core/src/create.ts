@@ -40,8 +40,10 @@ export async function createDeck(options: {
   parentDir?: string | undefined
   from?: string | undefined
   theme?: string | undefined
+  /** skill 的固定位置(linkStableSkill 的返回值)。给了,新稿子就引它。 */
+  skillLink?: string | undefined
 }): Promise<{ path: string }> {
-  const { skillPath, themes, title, from, theme } = options
+  const { skillPath, themes, title, from, theme, skillLink } = options
   const path = join(expandHome(options.parentDir ?? DEFAULT_DECKS_DIR), slugify(title))
 
   if (from?.startsWith('recipe:')) {
@@ -49,7 +51,13 @@ export async function createDeck(options: {
     if (!sample) throw new Error(`不认识的同款:${from}(id 来自 list_recipes)`)
     if (sample.kind === 'example')
       throw new Error(`${from} 是案例,不是同款:案例只能打开看,不能做同款`)
-    await instantiateSample({ sampleDir: sample.dir, entry: sample.entry, targetDir: path, title })
+    await instantiateSample({
+      sampleDir: sample.dir,
+      entry: sample.entry,
+      targetDir: path,
+      title,
+      ...(skillPath && skillLink ? { skill: { path: skillPath, link: skillLink } } : {}),
+    })
   } else if (from) {
     if (!skillPath) throw new Error('找不到 skill,没有起始文件可用')
     // 主题文件里没有颜色,配色得一起链上 —— 不然建出来的稿子是没颜色的。
@@ -61,6 +69,7 @@ export async function createDeck(options: {
       title,
       ...(theme ? { theme } : {}),
       ...(palette ? { palette } : {}),
+      ...(skillLink ? { skillLink } : {}),
     })
   } else {
     await mkdir(join(path, '.deck'), { recursive: true })
