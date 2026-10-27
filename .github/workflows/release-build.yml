@@ -59,6 +59,10 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
         run: node tools/release-mac.mjs build
+      # 不带壳的 npm 包(orca-ppt serve / CLI):和安装包同一次发版、同一个版本号。
+      # 平台无关,在这台机器上打一次就够;上一步已经 build 过界面
+      - name: Pack the npm package
+        run: node tools/pack-npm.mjs dist/release
       - name: Summary
         run: |
           {

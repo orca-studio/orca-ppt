@@ -8,14 +8,15 @@
   },
   "scripts": {
     "dev": "node tools/brand-dev-electron.mjs && node tools/dev.mjs",
-    "serve": "pnpm build && node apps/server/dist/serve.js",
+    "serve": "pnpm build && node apps/server/dist/serve-main.js",
     "orca-ppt": "node apps/cli/dist/main.js",
     "build": "pnpm -r build",
     "typecheck": "tsc -b && tsc -p apps/web",
     "test": "vitest run",
     "lint": "prettier --check .",
     "format": "prettier --write .",
-    "package": "pnpm build && node tools/package.mjs"
+    "package": "pnpm build && node tools/package.mjs",
+    "pack:npm": "pnpm build && node tools/pack-npm.mjs"
   },
   "devDependencies": {
     "@electron/fuses": "^2.1.3",

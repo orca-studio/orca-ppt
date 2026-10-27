@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises'
+import { spawn } from 'node:child_process'
+import { existsSync, openSync, readFileSync } from 'node:fs'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { DeckPhase, PptxExportReport } from '@orca-ppt/contracts'
@@ -18,6 +21,7 @@ import {
   summarizePptx,
 } from '@orca-ppt/deck-core'
 import { playwrightRenderer } from '@orca-ppt/render'
+import { readServeState, serve } from '@orca-ppt/server/serve'
 
 /**
  * `orca-ppt`:不开应用也能做稿子。agent 批量新建、按阶段写、检查、导出,人想看再开
@@ -44,8 +48,11 @@ const HELP = `用法:orca-ppt <命令> [参数]
   export [--deck <目录>] [-o <文件.pptx>] [--report <文件.json>]
                     导出 PPTX,要系统里有 Chrome 或 Edge。不给 -o 就放在稿子目录旁边。
                     --report 写完整的导出报告,skill 的 check-pptx.mjs 拿它核对导出的包
-  serve [--port 6722] [--deck <目录>] [--no-open]
-                    在浏览器里打开工作台
+  serve [--port 6722] [--deck <目录>] [--no-open] [--detach]
+                    在浏览器里打开工作台。--detach 放到后台常驻,打印网址就返回;
+                    已经在跑就只打印它的网址
+  stop              停掉后台的 serve
+  --version         版本号
 
   --json            机器可读的输出
   --deck 不给就是当前目录。阶段:${DeckPhase.options.join(' ')}
@@ -57,6 +64,28 @@ const SHOWN: Record<string, string> = {
   fade: '淡入淡出',
   wipe: '擦除',
   none: '无转场',
+}
+
+/**
+ * 发布出去的包(tools/pack-npm.mjs)是这个形状:bin/orca-ppt.js 旁边有 web/ 和 skill/。
+ * 在仓里跑时(apps/cli/dist/main.js)界面在 apps/web/dist,skill 由 locateSkill 按开发位置找。
+ */
+const here = dirname(fileURLToPath(import.meta.url))
+const packaged = existsSync(join(here, '../skill/SKILL.md'))
+if (packaged) {
+  // 和桌面版一样:skill 跟着这个包一起发,版本对得上
+  process.env.ORCA_PPT_BUNDLED_SKILL ??= join(here, '../skill')
+  process.env.ORCA_PPT_APP_VERSION ??= version()
+}
+const webRoot = packaged ? join(here, '../web') : join(here, '../../web/dist')
+
+function version(): string {
+  try {
+    return (JSON.parse(readFileSync(join(here, '../package.json'), 'utf8')) as { version: string })
+      .version
+  } catch {
+    return '0.0.0'
+  }
 }
 
 const args = process.argv.slice(2)
@@ -218,11 +247,24 @@ switch (command) {
     break
   }
   case 'serve': {
-    // 同一个 server 入口:apps/cli/dist 旁边的 apps/server/dist/serve.js,参数原样交过去
-    const here = dirname(fileURLToPath(import.meta.url))
-    await import(pathToFileURL(join(here, '../../server/dist/serve.js')).href)
+    if (args.includes('--detach')) await detach()
+    else await serve(args.slice(1), { webRoot })
     break
   }
+  case 'stop': {
+    const state = await readServeState()
+    if (!state) {
+      print('没有在后台跑的 serve', { stopped: false })
+      break
+    }
+    process.kill(state.pid, 'SIGTERM')
+    print(`停了(进程 ${state.pid})`, { stopped: true, pid: state.pid })
+    break
+  }
+  case '--version':
+  case '-v':
+    print(version(), { version: version() })
+    break
   case undefined:
   case 'help':
   case '--help':
@@ -232,4 +274,40 @@ switch (command) {
   default:
     process.stderr.write(`不认识的命令:${command}\n\n${HELP}`)
     process.exit(1)
+}
+
+/**
+ * 放到后台常驻:AI 助手的命令一般有超时,前台跑的 serve 会被它掐掉。
+ * 已经在跑就只报它的网址,不起第二个;起不来就把日志末尾交代出来。
+ */
+async function detach(): Promise<void> {
+  const running = await readServeState()
+  if (running) {
+    print([`已经在跑:${running.url}`], { ...running, started: false })
+    return
+  }
+  const log = join(homedir(), '.orca-ppt', 'serve.log')
+  await mkdir(dirname(log), { recursive: true })
+  const out = openSync(log, 'a')
+  const child = spawn(
+    process.execPath,
+    [process.argv[1]!, ...args.filter((arg) => arg !== '--detach')],
+    { detached: true, stdio: ['ignore', out, out], windowsHide: true },
+  )
+  child.unref()
+  let exited = false
+  child.once('exit', () => {
+    exited = true
+  })
+  for (let waited = 0; waited < 20_000; waited += 200) {
+    const state = await readServeState()
+    if (state && state.pid === child.pid) {
+      print([`在后台跑起来了:${state.url}`, `日志:${log}`], { ...state, started: true, log })
+      return
+    }
+    if (exited) break
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  const tail = readFileSync(log, 'utf8').trim().split('\n').slice(-5).join('\n')
+  fail(`后台的 serve 没起来。日志(${log})末尾:\n${tail}`)
 }

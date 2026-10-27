@@ -389,15 +389,24 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
   `deck.exportPptx`)。录屏自检、核稿子这些是 skill 的脚本,照 SKILL.md 直接跑,不包进 CLI。
   和界面的同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并
   刷新画布,CLI 不需要知道有没有 server 在跑。
-  - **还没做**:分发(现在要从仓里 build 再 `node apps/cli/dist/main.js`)、上面的稳定路径
-    (现在稿子指向仓里或 `ORCA_PPT_SKILL` 那份 skill)。
+  - **后台常驻**:`orca-ppt serve --detach` 起一个独立进程就返回,`stop` 停掉;正在跑的那个记在
+    `~/.orca-ppt/serve.json`(进程号、端口、带 token 的网址,只给自己读),再跑 `--detach` 只报网址。
+    AI 助手的命令有超时,前台的 serve 会被掐掉;有了它,助手发现 6722 连不上可以自己拉起来。
+  - **还没做**:上面的稳定路径。全局安装(`npm install -g`)时包的目录在升级前后不变,稿子引的
+    skill 路径跟着还在;换了 Node 版本(nvm 这类)全局目录会变,老稿子就丢样式。
   - **阶段提示词按调用方说怎么读规范**(已落地):`phaseGate` / `phasePrompt` 的 `skillAccess`
     默认 `mcp`,叫 agent 用 `read_skill` / `list_skill`;CLI 传 `files`,叫它直接读 skill 目录里的
     SKILL.md,并写明稿子目录的绝对路径 —— CLI 场景下 agent 的当前目录不一定是稿子。
 
-分发:一个 `orca-ppt` 包,里面有 CLI、server、web 打包产物、skill,同一个版本号。桌面 app
-把同一个包放进 Resources,像 ego-lite 那样把 CLI 也露出来 —— 和「交付形态」那节「三件
-一起发版」是同一个道理,只是多了一个不带壳的入口。
+分发(npm 包已落地,`tools/pack-npm.mjs`):一个 `orca-ppt` 包,CLI 和 server 打成一个文件
+(`bin/orca-ppt.js`),旁边是界面打包产物和 skill —— skill 连同它自己的 `node_modules` 一起打进去,
+稿子按相对路径引 `node_modules/reveal.js/…`,交给 npm 装会被提到顶层。所以 tgz 自己用 tar 打,
+不用 npm pack(它会剔掉 node_modules)。**不发 npmjs**:和安装包同一次发版传到 GitHub Release
+(`orca-ppt-<版本>.tgz` 加固定名字 `orca-ppt.tgz`,摘要并进 `SHA256SUMS.txt`),
+`npm install -g <tgz 地址>` 就能装,llms.txt 里「不装桌面版」一节。依赖(Node、Chrome)由用户的
+AI 助手检查、缺了它来装,产品不自己下载浏览器。
+
+还没做:桌面 app 把同一个包放进 Resources、把 CLI 也露出来(ego-lite 的做法)。
 
 ### 规则
 

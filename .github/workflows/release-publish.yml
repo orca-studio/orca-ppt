@@ -77,6 +77,10 @@ jobs:
           SETUP="$(node -p "require('./release-win.json').setup")"
           NUPKG="$(node -p "require('./release-win.json').nupkg")"
           cat SHA256SUMS-win.txt >> SHA256SUMS.txt
+          # npm 包(tools/pack-npm.mjs):macOS 那台机器上打的,和安装包同一个版本
+          TGZ="orca-ppt-$VERSION.tgz"
+          [[ -f "$TGZ" && -f orca-ppt.tgz && -f SHA256SUMS-npm.txt ]] || { echo "没有 npm 包(build 里 Pack the npm package 那一步失败了?)" >&2; exit 1; }
+          cat SHA256SUMS-npm.txt >> SHA256SUMS.txt
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "$TAG 已经发布过,不覆盖" >&2; exit 1
           fi
@@ -86,14 +90,14 @@ jobs:
           cp "$SETUP" OrcaPPT-win-x64-Setup.exe
           # RELEASES 必须叫这个名字、放在 Release 根上:update.electronjs.org 按这个固定名字去取
           gh release create "$TAG" "$DMG" OrcaPPT-mac-arm64.dmg "$ZIP" \
-            "$SETUP" OrcaPPT-win-x64-Setup.exe RELEASES "$NUPKG" SHA256SUMS.txt \
+            "$SETUP" OrcaPPT-win-x64-Setup.exe RELEASES "$NUPKG" "$TGZ" orca-ppt.tgz SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Orca PPT $VERSION" \
-            --notes "Orca PPT ${VERSION}。macOS(Apple Silicon)下载 \`$DMG\`,Windows(x64)下载 \`$SETUP\`;已安装的版本会自动更新。"
+            --notes "Orca PPT ${VERSION}。macOS(Apple Silicon)下载 \`$DMG\`,Windows(x64)下载 \`$SETUP\`;已安装的版本会自动更新。不装桌面版:\`npm install -g https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$TGZ\`,然后 \`orca-ppt serve\`。"
           # 匿名下载回来对一遍摘要:确认发出去的就是公证过的那一份
           mkdir -p ../verify && cd ../verify
           curl -fsSL -o "$DMG" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$DMG"
-          for name in "$ZIP" "$SETUP" RELEASES "$NUPKG"; do
+          for name in "$ZIP" "$SETUP" RELEASES "$NUPKG" "$TGZ"; do
             curl -fsSL -o "$name" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$name"
           done
           shasum -a 256 -c ../release/SHA256SUMS.txt
