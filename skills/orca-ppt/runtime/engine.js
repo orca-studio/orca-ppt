@@ -20,6 +20,8 @@
   const CAPTURE = new URLSearchParams(location.search).has("capture");
   // 被回顾屏（.s-recap）嵌着放的那一份：不接键盘，不再嵌自己。总是和 ?capture 一起出现
   const EMBED = new URLSearchParams(location.search).has("embed");
+  // 总览里的一格（?embed&capture&still#/页号）：停在这一页动画放完的样子，和工作台的页胶片一样
+  const STILL = EMBED && new URLSearchParams(location.search).has("still");
   // 减少动效。**显式开关**:URL 带 ?calm,或 <html> / <body> 上写 data-motion="calm"。
   // 不跟系统的 prefers-reduced-motion 走 —— 放映时是演讲者电脑上的设置在决定观众看到什么,
   // 观众并没有选过;自动退化等于演讲者不知情地把稿子的价值关掉了。录制模式忽略它。
@@ -2703,6 +2705,14 @@
     margin: 0,
     center: false,
     controls: STANDALONE,
+    // 单独打开时换成自己的总览（见文末 openOverview）：reveal 的总览不按窗口排，当前页摆正中，
+    // AI 助手那种窄高的面板里只剩下半截的一条
+    overview: !STANDALONE,
+    // reveal 在窄于 435px 的窗口里自动改成竖着滚的「滚动视图」：AI 助手的窄面板、总览里的小格子
+    // 都会被它变成一长条。稿子永远按页放
+    scrollActivationWidth: null,
+    // reveal 默认最小缩到 0.2：总览的格子 300px 宽只要 0.16，按 0.2 放就裁掉了左右两边
+    minScale: 0.05,
     progress: false,
     hash: true,
     transition: "none",
@@ -2718,7 +2728,8 @@
     // 而 OrcaPPT 的页胶片是竖着排的，人会顺手按上下。
     keyboard: EMBED
       ? false
-      : { 32: advance, 34: advance, 39: advance, 40: advance, 76: advance, 78: advance, 38: () => Reveal.prev() },
+      : { 32: advance, 34: advance, 39: advance, 40: advance, 76: advance, 78: advance, 38: () => Reveal.prev(),
+          ...(STANDALONE ? { 27: () => openOverview(), 79: () => openOverview() } : {}) },
   });
   Reveal.on("ready", (e) => {
     lastIndex = e.indexh;
@@ -2726,6 +2737,7 @@
     playVideos(e.currentSlide, 0);
     startRecap(e.currentSlide, 0);
     if (EMBED) serveRecap();
+    if (STILL) window.__capture.go(e.indexh).then(() => window.__capture.seek(1e7));
   });
   Reveal.on("slidechanged", onSlide);
 
@@ -2809,4 +2821,67 @@
     // capture.mjs 的 --interrupt 按它录「中途打断」那一段,两边必须是同一个数。
     finishMs: FINISH_S * 1000,
   };
+
+  // ── 单独打开时的总览 ───────────────────────────────────────────────
+  // 每页一格，按窗口宽度排成网格，一屏放不下就竖着滚：横的窗口一行几页，AI 助手窄高的面板里一两列。
+  // 每格是一个小 iframe，载入同一个文件、停在那一页动画放完的样子（?embed&capture&still）——
+  // 不克隆 DOM：克隆的页面会被引擎当成真的页面查到，版式规则也只认 .reveal .slides 下面。
+  // 进出：Esc / O，或右下角箭头旁的按钮；点一格跳到那一页。
+  let overview = null;
+  function openOverview() {
+    if (overview) return closeOverview();
+    const here = Reveal.getIndices().h;
+    overview = document.createElement("div");
+    overview.className = "st-overview";
+    overview.setAttribute("role", "dialog");
+    overview.setAttribute("aria-label", "总览");
+    const base = location.href.split(/[?#]/)[0];
+    for (let i = 0; i < Reveal.getTotalSlides(); i++) {
+      // 不用 <button>：按钮里不能放 iframe，Chrome 会把里面的页面画坏
+      const cell = document.createElement("div");
+      cell.className = "st-overview-cell";
+      cell.setAttribute("role", "button");
+      cell.tabIndex = 0;
+      if (i === here) cell.setAttribute("aria-current", "page");
+      cell.setAttribute("aria-label", `第 ${i + 1} 页`);
+      const frame = document.createElement("iframe");
+      frame.src = `${base}?embed&capture&still#/${i}`;
+      frame.tabIndex = -1;
+      const label = document.createElement("span");
+      label.textContent = i + 1;
+      cell.append(frame, label);
+      const pick = () => { closeOverview(); Reveal.slide(i); };
+      cell.addEventListener("click", pick);
+      cell.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+      overview.append(cell);
+    }
+    document.body.append(overview);
+    overview.querySelector("[aria-current]")?.scrollIntoView({ block: "center" });
+    overview.querySelector("[aria-current]")?.focus({ preventScroll: true });
+    // 开着时键盘归总览：Esc / O 关掉，别的键不翻底下的页
+    window.addEventListener("keydown", overviewKeys, true);
+  }
+  function closeOverview() {
+    overview?.remove();
+    overview = null;
+    window.removeEventListener("keydown", overviewKeys, true);
+  }
+  function overviewKeys(e) {
+    if (e.key === "Escape" || e.key === "o" || e.key === "O") {
+      e.preventDefault();
+      closeOverview();
+    }
+    if (e.key === "Enter" || e.key === " " || e.key === "Tab") return; // 按钮自己的点击和焦点移动
+    e.stopPropagation();
+  }
+  if (STANDALONE) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "st-overview-button";
+    button.setAttribute("aria-label", "总览");
+    button.title = "总览（Esc）";
+    button.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+    button.addEventListener("click", () => openOverview());
+    document.body.append(button);
+  }
 })();
