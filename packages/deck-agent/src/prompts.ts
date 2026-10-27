@@ -16,13 +16,28 @@ export interface PhaseContext {
   skillPath?: string | undefined
   /** 可选的主题列表,给 theme 阶段挑。 */
   themes?: string[]
+  /**
+   * agent 怎么读规范。`mcp`(默认):经 Orca PPT 的 MCP 工具 read_skill / list_skill 读,宿主
+   * 不一定能读本地文件;`files`:CLI 场景,agent 自己有文件工具,直接读 skill 目录 ——
+   * 那里没有 read_skill 这个工具,叫它去调只会让它到处找。
+   */
+  skillAccess?: 'mcp' | 'files'
+  /** 稿子目录的绝对路径。`files` 时写进提示词:CLI 场景下 agent 的当前目录不一定是稿子。 */
+  deckPath?: string | undefined
 }
 
 const COMMON = (context: PhaseContext): string => {
-  const skill = context.skillPath
-    ? `转场规范、主题、版式模板都在 \`${context.skillPath}\`。先调用 read_skill 读取 SKILL.md；引用资料通过 list_skill / read_skill 按相对路径获取，按 next 继续分页。无需宿主直接读本地文件。`
-    : '找不到随应用附带的规范(skill)—— 先说明这一点,不要凭印象编一套规范出来。'
-  return `你在一个演示稿工程目录里工作,当前目录就是这份 deck。\n${skill}`
+  const files = context.skillAccess === 'files'
+  const skill = !context.skillPath
+    ? '找不到随应用附带的规范(skill)—— 先说明这一点,不要凭印象编一套规范出来。'
+    : files
+      ? `转场规范、主题、版式模板都在 \`${context.skillPath}\`。先读那里的 SKILL.md;引用资料按它写的相对路径到这个目录下读。`
+      : `转场规范、主题、版式模板都在 \`${context.skillPath}\`。先调用 read_skill 读取 SKILL.md；引用资料通过 list_skill / read_skill 按相对路径获取，按 next 继续分页。无需宿主直接读本地文件。`
+  const where =
+    files && context.deckPath
+      ? `这份 deck 的目录是 \`${context.deckPath}\`,下面说的路径都相对它。`
+      : '当前目录就是这份 deck。'
+  return `你在一个演示稿工程目录里工作,${where}\n${skill}`
 }
 
 export function phasePrompt(phase: DeckPhase, context: PhaseContext): string {

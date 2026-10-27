@@ -47,6 +47,25 @@ describe('phasePrompt', () => {
     expect(prompt).toContain('不要凭印象编')
   })
 
+  it('经 MCP 时叫它用 read_skill 读规范,当前目录就是稿子', () => {
+    const prompt = phasePrompt('brief', context)
+    expect(prompt).toContain('read_skill')
+    expect(prompt).toContain('当前目录就是这份 deck')
+  })
+
+  it('CLI 场景直接读 skill 目录里的文件,不提不存在的 read_skill;写明稿子目录', () => {
+    const prompt = phasePrompt('brief', {
+      ...context,
+      skillAccess: 'files',
+      deckPath: '/d/季度汇报',
+    })
+    expect(prompt).not.toContain('read_skill')
+    expect(prompt).not.toContain('list_skill')
+    expect(prompt).toContain('先读那里的 SKILL.md')
+    expect(prompt).toContain('/s/skill')
+    expect(prompt).toContain('这份 deck 的目录是 `/d/季度汇报`')
+  })
+
   it('每个阶段都要求写完就停 —— 一口气写到底就看不见中间的判断', () => {
     for (const phase of ['brief', 'theme', 'outline', 'plan'] as const) {
       expect(phasePrompt(phase, context)).toContain('写完就停')

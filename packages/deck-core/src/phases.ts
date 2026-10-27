@@ -108,6 +108,8 @@ export async function phaseGate(
     skillPath?: string | undefined
     themes?: string[]
     spec?: Spec | undefined
+    /** 规范怎么读:MCP 工具还是直接读文件(CLI)。见 deck-agent 的 PhaseContext。 */
+    skillAccess?: 'mcp' | 'files'
   },
 ): Promise<{ prompt?: string; blockedBy?: DeckPhase; issues: string[] }> {
   for (const upstream of phaseOrder.slice(0, phaseOrder.indexOf(phase))) {
@@ -127,6 +129,7 @@ export async function phaseGate(
       request: context.request ?? '',
       skillPath: context.skillPath,
       ...(context.themes ? { themes: context.themes } : {}),
+      ...(context.skillAccess ? { skillAccess: context.skillAccess, deckPath } : {}),
     }),
     issues: [],
   }

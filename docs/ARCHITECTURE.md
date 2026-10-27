@@ -390,8 +390,10 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
   和界面的同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并
   刷新画布,CLI 不需要知道有没有 server 在跑。
   - **还没做**:分发(现在要从仓里 build 再 `node apps/cli/dist/main.js`)、上面的稳定路径
-    (现在稿子指向仓里或 `ORCA_PPT_SKILL` 那份 skill)、阶段提示词里叫 agent 用 MCP 的
-    `read_skill` 读规范 —— CLI 场景下 agent 直接读文件就行,提示词得按调用方说。
+    (现在稿子指向仓里或 `ORCA_PPT_SKILL` 那份 skill)。
+  - **阶段提示词按调用方说怎么读规范**(已落地):`phaseGate` / `phasePrompt` 的 `skillAccess`
+    默认 `mcp`,叫 agent 用 `read_skill` / `list_skill`;CLI 传 `files`,叫它直接读 skill 目录里的
+    SKILL.md,并写明稿子目录的绝对路径 —— CLI 场景下 agent 的当前目录不一定是稿子。
 
 分发:一个 `orca-ppt` 包,里面有 CLI、server、web 打包产物、skill,同一个版本号。桌面 app
 把同一个包放进 Resources,像 ego-lite 那样把 CLI 也露出来 —— 和「交付形态」那节「三件
@@ -412,7 +414,7 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 3. web 里抽 `Host` 和 `CanvasDriver`。**已完成。**
 4. `serve`:托管界面,Origin 校验 + token;稿子换到另一个源,iframe 画布改走 `postMessage`;
    playwright 渲染器。**已完成。**
-5. CLI。**已完成**(分发、稳定路径、提示词措辞见上面 CLI 那条的「还没做」)。
+5. CLI。**已完成**(分发、稳定路径见上面 CLI 那条的「还没做」)。
 
 前两步做完桌面版行为不变,内核已经不依赖界面;CLI 和 `serve` 只是在外面再加一层。
 

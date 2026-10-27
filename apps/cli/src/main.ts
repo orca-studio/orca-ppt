@@ -148,6 +148,8 @@ switch (command) {
       skillPath,
       themes: (await readCatalog(skillPath)).themes.map((theme) => theme.name),
       spec: await readSpec(skillPath),
+      // CLI 的 agent 自己有文件工具,没有 MCP 的 read_skill
+      skillAccess: 'files',
     })
     if (!result.prompt) {
       print(
