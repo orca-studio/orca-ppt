@@ -148,7 +148,7 @@ function MyDecks({
   return (
     <div className="gallery-grid gallery-grid--decks">
       {decks.map((deck) => (
-        <article key={deck.path} className="gallery-recipe" data-ui-target="gallery.deck">
+        <article key={deck.path} className="gallery-deck" data-ui-target="gallery.deck">
           <button
             type="button"
             className="gallery-play"
@@ -164,11 +164,14 @@ function MyDecks({
               <span className="gallery-placeholder">{deck.title}</span>
             )}
           </button>
-          <span className="gallery-title">{deck.title}</span>
-          <span className="gallery-meta">
-            {deck.slideCount > 0 ? `${deck.slideCount} 页 · ` : '还没有成品 · '}
-            {when(deck.updatedAt)}
-          </span>
+          {/* 标题和页数、时间是一组,和封面隔开:三样等距排开,读起来像三条不相干的信息 */}
+          <div className="gallery-deck-text">
+            <span className="gallery-deck-title">{deck.title}</span>
+            <span className="gallery-meta">
+              {deck.slideCount > 0 ? `${deck.slideCount} 页 · ` : '还没有成品 · '}
+              {when(deck.updatedAt)}
+            </span>
+          </div>
         </article>
       ))}
     </div>
