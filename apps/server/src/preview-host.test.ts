@@ -140,3 +140,37 @@ describe('assetFilePath', () => {
     expect(assetFilePath('/x.png', 'win32')).toBe('/x.png')
   })
 })
+
+describe('稿子引的是另一份 skill', () => {
+  /** 一个目录里:另一份 skill(有 SKILL.md)、一个不是 skill 的目录、一份稿子引它们。 */
+  async function layout() {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'cross-')))
+    await mkdir(join(root, 'other-skill/runtime'), { recursive: true })
+    await writeFile(join(root, 'other-skill/SKILL.md'), '# skill')
+    await writeFile(join(root, 'other-skill/runtime/tokens.css'), 'body{}')
+    await mkdir(join(root, 'secrets'), { recursive: true })
+    await writeFile(join(root, 'secrets/key.txt'), 'nope')
+    await mkdir(join(root, 'deck'), { recursive: true })
+    await writeFile(
+      join(root, 'deck/deck.html'),
+      '<link href="../other-skill/runtime/tokens.css"><img src="../secrets/key.txt">',
+    )
+    const plan = planPreview(join(root, 'deck'), join(root, 'deck/deck.html'))
+    const { token } = host.mount(plan)
+    // 挂载路径镜像绝对路径:/p/<token> + 文件的绝对路径
+    return { root, at: (abs: string) => `${base}/p/${token}${abs}` }
+  }
+
+  it('放行稿子真引用到的那份 skill —— 不然画布是白的', async () => {
+    const { root, at } = await layout()
+    const response = await fetch(at(join(root, 'other-skill/runtime/tokens.css')))
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('body{}')
+  })
+
+  it('稿子引用的不是 skill(往上找不到 SKILL.md)照旧拒绝', async () => {
+    const { root, at } = await layout()
+    const response = await fetch(at(join(root, 'secrets/key.txt')))
+    expect(response.status).toBe(403)
+  })
+})

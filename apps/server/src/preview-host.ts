@@ -112,8 +112,14 @@ export class PreviewHost {
       return true
     }
 
-    const roots = [plan.root, ...this.#allowRoots]
-    const target = resolveWithinRoots(roots, match[2] ?? '/')
+    let roots = [plan.root, ...this.#allowRoots]
+    let target = resolveWithinRoots(roots, match[2] ?? '/')
+    if (!target) {
+      // 稿子引的可能是另一份 skill(桌面版建的稿子拿到 npm 包的 serve 里开、只装 skill 时建的稿子……):
+      // 只放行这份稿子真引用到的、确实是 skill 的目录,别的照旧拒绝
+      roots = [...roots, ...(await referencedSkills(plan.entryFile))]
+      target = resolveWithinRoots(roots, match[2] ?? '/')
+    }
     if (!target) {
       res.writeHead(403).end()
       return true
@@ -278,6 +284,51 @@ export function parseRange(
   }
   if (start >= size || start > end) return 'unsatisfiable'
   return { start, end }
+}
+
+/**
+ * 稿子入口页引用到的 skill 目录(往上几层有 SKILL.md 的那一层),真实路径。
+ *
+ * 稿子用相对路径引 skill(`{{ROOT}}/runtime/…`、`{{ROOT}}/node_modules/reveal.js/…`),指向建它的那一份。
+ * 这台 server 自己放行的 skill 未必是那一份 —— 不放行的话画布是白的,入口页照样 200。
+ * 只认这份稿子真写了的引用,只认确实是 skill 的目录:不因此放出一个通用的文件服务。
+ */
+export async function referencedSkills(entryFile: string): Promise<string[]> {
+  let html: string
+  try {
+    html = await readFile(entryFile, 'utf8')
+  } catch {
+    return []
+  }
+  const base = dirname(entryFile)
+  const found = new Set<string>()
+  const tried = new Set<string>()
+  for (const [, url = ''] of html.matchAll(/\b(?:src|href)="([^"]+)"/g)) {
+    // 只看跳出稿子目录的相对引用
+    if (!url.startsWith('../')) continue
+    let dir: string
+    try {
+      dir = dirname(resolve(base, decodeURIComponent(url.split(/[?#]/)[0] ?? '')))
+    } catch {
+      continue
+    }
+    for (let depth = 0; depth < 6 && !tried.has(dir); depth++) {
+      tried.add(dir)
+      if (
+        await stat(join(dir, 'SKILL.md')).then(
+          (info) => info.isFile(),
+          () => false,
+        )
+      ) {
+        found.add(await realpath(dir).catch(() => dir))
+        break
+      }
+      const up = dirname(dir)
+      if (up === dir) break
+      dir = up
+    }
+  }
+  return [...found]
 }
 
 /** 在 `</body>` 前(没有就在最后)加一行 `<script src>`。 */
