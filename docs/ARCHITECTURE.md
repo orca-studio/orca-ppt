@@ -259,6 +259,142 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 
 ---
 
+## 一个内核,三种形态:桌面、本地 Web、CLI
+
+**目标形态,还没实现。** 同一个内核同时撑起 Electron 界面、浏览器里的本地工作台和不开界面
+的 CLI。WorkBuddy 这类 agent 装好 CLI 和 skill 就能新建、改写、检查、导出;人想看、想指给
+AI 看,再开桌面版或 `orca-ppt serve`。
+
+**Web 版只做本地。** 没有云端稿子、没有线上工作台:server 永远跑在用户自己的机器上,
+稿子永远是磁盘上的目录。上面「否掉:纯 web 主客户端」那条依旧成立 —— 本地 Web 版的 server
+还在本地,拿得到文件、字体和导出,否掉的是把 server 也搬走。
+
+```
+┌──────────── 内核(纯库,不起进程、不持有状态)────────────┐
+│ deck-agent   品味:阶段提示、产物校验、spec-check、配方提示  │
+│ deck-core    机械:新建/实例化、找入口、切页、改字、改页、    │
+│              模板/主题/同款列表、阶段状态、预览路径规划       │
+│ Renderer     接口:截单页 / 缩略图 / 导 PPTX / 录视频         │
+└────────────────────────────────────────────────────────┘
+        ▲                          ▲
+   CLI 直接调                server(有状态:打开的稿子、撤销、控制权、
+  (批量、无界面)              操作记录、文件监听、协议、/p、/mcp、托管界面)
+                                   ▲ WebSocket 协议
+                     ┌─────────────┴─────────────┐
+                Electron 界面                浏览器界面
+          (同一份 apps/web,差别只在 Host 和 CanvasDriver)
+```
+
+### 四个接缝
+
+**`deck-core`。** 现在 `apps/server/src` 里只吃路径的纯函数搬出来:`templates.ts`、
+`recipes.ts`、`phases.ts`、`decks.ts`、`page-edit.ts`、`edit.ts`;`spec-check.ts` 是确定性
+检查,按「Deck Mode」那张表归 `deck-agent`。内核包不 import `electron` / `ws`,不持有进程级
+状态 —— 撤销历史、控制权、操作记录是「有人在场协作」才有的东西,留在 server。
+
+**`Renderer`。** 所有「开一个浏览器把稿子渲出来」的活走一个接口。样板已经在 skill 里:
+`scripts/lib/pptx-export.mjs` 的 `exportDeck(page)` 只依赖 `evaluate` + `screenshot`。
+
+- playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(即 `capture.mjs` / `export-pptx.mjs`
+  现在的做法);
+- Electron 隐藏窗口一份,给桌面版用(即 `pptx-exporter.ts` / `thumbnail-queue.ts`)。server
+  跑在 `utilityProcess` 里,经 parentPort 直接找主进程要,不再绕界面。
+
+server 启动时注入其一。现在 `pptxExports` / `thumbnails` 那两个 Roundtrip 广播给界面、界面
+再转给壳,界面不在就失败,改完就没有这个依赖了。**例外是 `capture_slide`:** 它的语义是
+「人此刻在画布上看到的那一页」,有界面连着时照旧走界面;没有时退回 Renderer 无头截。
+
+**`Host`。** 取代 web 里直接调的 `window.orca`,只剩真正的壳能力:
+
+| 能力                 | Electron                  | 浏览器                                              |
+| -------------------- | ------------------------- | --------------------------------------------------- |
+| 选稿子目录           | 原生对话框                | 最近打开 + 填路径(不在 server 里分平台弹系统对话框) |
+| 放映                 | 新窗口,盖住菜单栏         | Fullscreen API                                      |
+| 菜单、红绿灯、主题   | 有                        | 没有或页内替代                                      |
+| 裁切图、缩略图、导出 | 走协议,server 调 Renderer | 同左                                                |
+
+**`CanvasDriver`。** 取代 `Stage.tsx` 里直接用的 `<webview>`,只有 `eval`、`load`、
+`onNavigate`、注入 guest 脚本这几个动作,Stage 其余逻辑不动。
+
+- `WebviewDriver`:现在的写法。
+- `IframeDriver`:server 同时托管界面和 `/p`,两边**同源**,直接经 `contentWindow` 调
+  `__orcaCanvas` / `__orcaEdit`,guest 脚本用 `<script>` 塞进去。上面「放映画布」否掉 iframe
+  的理由是 CSP 和同源上打架,同源之后不成立;webview 照旧是桌面版的选择。
+
+### 三种形态怎么拼
+
+- **桌面版**:Electron 起 server、注入 Electron Renderer;界面用 `ElectronHost` +
+  `WebviewDriver`。行为和现在一样。
+- **`orca-ppt serve`**:同一个 server 入口,注入 playwright Renderer,多托管一份
+  `apps/web` 的打包产物,打开浏览器;界面用 `BrowserHost` + `IframeDriver`。**浏览器能连上来
+  之前必须先补 Origin 校验和启动 token**(token 放在打开的 URL 里):现在 `server.ts` 的
+  WebSocket 不校验来源,只有 Electron 连还好,放给浏览器之后,用户开着的任何网页都能连
+  `ws://127.0.0.1:6722` 改稿子。
+- **CLI**:直接调 `deck-core`、`deck-agent` 和 playwright Renderer,不经过 server。和界面的
+  同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并刷新
+  画布,CLI 不需要知道有没有 server 在跑。
+
+分发:一个 `orca-ppt` 包,里面有 CLI、server、web 打包产物、skill,同一个版本号。桌面 app
+把同一个包放进 Resources,像 ego-lite 那样把 CLI 也露出来 —— 和「交付形态」那节「三件
+一起发版」是同一个道理,只是多了一个不带壳的入口。
+
+### 规则
+
+1. 内核只吃路径、只返回值。
+2. server 不 import `electron`,渲染一律走 `Renderer`。
+3. `apps/web` 只经 `Host` 和 `CanvasDriver` 碰外界。
+4. CLI 是**库客户端**,不走协议,但它能做的操作协议里必须也有 —— AGENTS.md 边界 3 的延伸,
+   防止 CLI 长出界面和 MCP 都没有的能力。
+
+### 顺序
+
+1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。
+2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。
+3. web 里抽 `Host` 和 `CanvasDriver`。
+4. `serve`:托管界面,Origin 校验 + token。
+5. CLI。
+
+前两步做完桌面版行为不变,内核已经不依赖界面;CLI 和 `serve` 只是在外面再加一层。
+
+**稿子引运行时走一个稳定路径。** 稿子现在用相对路径指回 skill 的安装位置(`templates.ts`
+的 `{{ROOT}}` 改写)。应用里 skill 跟着 app 走看不出来;CLI 一升级换了目录,老稿子就全白。
+做法:CLI 和桌面版都把当前版本的 skill 链到同一个稳定路径(如 `~/.local/share/orca-ppt/skill`,
+和上面作废的软链设计是同一个位置),`{{ROOT}}` 改写成指向它的相对路径。升级只换链接,
+稿子不动;谁建的稿子都指向同一处。代价:老稿子跑新引擎,`engine.js` 对稿子 HTML 要向后
+兼容 —— 这和应用里升级 skill 的现状一样,不是新负担。
+
+稳定路径按平台定:
+
+| 平台    | 位置                            | 链接                                                  |
+| ------- | ------------------------------- | ----------------------------------------------------- |
+| macOS   | `~/.local/share/orca-ppt/skill` | 软链                                                  |
+| Windows | `%LOCALAPPDATA%\OrcaPPT\skill`  | 目录 junction(软链要管理员或开发者模式;junction 不要) |
+
+server 比对路径前一律 realpath(见「放映画布怎么找资源」),软链和 junction 都会被解析成
+当前版本的真实目录,预览照常放行。
+
+**稿子和 skill 必须在同一个盘上。** Windows 上 D 盘的稿子没有相对路径能指到 C 盘的 skill:
+`path.relative` 跨盘时直接返回 `C:\…` 这样的绝对路径,写进 href 成了 `C:/…`,浏览器把
+`C:` 当成协议名,资源全白,入口页照样 200。新建稿子时检测到跨盘就直接拒绝,说清两个盘符;
+不写成 `file:///C:/…` —— 画布是 http 页面,加载不了 `file://` 子资源。
+
+**ffmpeg 不是必须依赖。** `capture.mjs` 默认只做转场自检:逐帧 seek,出每页的关键帧、每次
+转场动了几帧、页面自报的问题,不拼视频;`-o x.mp4` 才调 ffmpeg,没装就说清怎么办。CLI 的
+「过一遍转场」就是它。`capture` / `export-pptx` 要系统 Chrome,怎么交到新手手里,CLI 对外发
+之前要定。Windows 上很多机器只有 Edge,浏览器按 `chrome` →
+`msedge` 的顺序找。浏览器版的「选目录」两边都先做「最近打开 + 填路径」,不在 server 里分
+平台弹系统对话框。CLI 单文件分发时,macOS 要签名和公证,Windows 要代码签名、过 SmartScreen,
+各一套。
+
+_否掉:_ 线上 / 云端 Web 工作台(稿子要么搬进云端存储,违反「deck 是磁盘上的目录」;要么
+公网页面连本机 server,浏览器的本地网络访问限制加上一套授权,换来的只是不用装)·
+CLI 走 server(那就又得先把应用开着,正是要去掉的前提)· 运行时引 CDN(主题和字体不在
+CDN 上,离线就坏)· **每份稿子自带一份运行时**(引擎、reveal、GSAP、主题拷进稿子目录:每份
+多出十来 MB 的打包产物;更糟的是稿子各带各的旧引擎,画布检视脚本得兼容所有出过的
+`engine.js` 版本,兼容矩阵又回来了 —— 换来的「拿走即用」现在不需要)。
+
+---
+
 ## 变更表
 
 | 日期       | 变更                                                                                                                                                                                                                                                             | 理由                                                                                                                                                                                      |
@@ -283,6 +419,7 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 | 2026-10-26 | 改动框:agent 每改一处,画布上框出那一处并带一个说在做什么的标签(改文字、换图片、重写这一页…),整页改动框整页;撤销重做不管谁发起都走同一条 `edit.follow`。框画在宿主页面、webview 之上,不进稿子 DOM;删掉 guest 里的 outline 点亮和攒到下次加载的 `pendingSpotlight` | 只翻页、闪一下 outline,看录像的人分不出 agent 改的是标题还是说明;框画进稿子 DOM 会被 `capture_slide` 截进去,干扰 agent 自检;撤销已改成就地换页,攒到下次加载的点亮再也等不到               |
 | 2026-10-25 | 修复 agent 的改动在界面上看不到:经 MCP 的写操作在串行队列里等画布跟上(翻页、框出、确认上屏)再做下一条,常开;改字就地换不整份重载。新功能 `studio.orca/ui-targets` v1(resolve_ui_targets、回执和操作记录里的 uiTargets),删 `visual_target`。可选:演示模式,默认关   | agent 几十条改动几十毫秒做完、被改的页不在画面上,看着的人只觉得「说改好了却什么都没变」,提示词约束不住。MCP 调用不带位置,录屏要加标注只能由应用报出来;节奏由录屏方后期补,不要求应用加模式 |
 | 2026-10-25 | 只改了几页时画布只换那几页,不整份重载:server 按页比对两版推 `deck.patched`,稿子的 engine 加 `__orcaReplaceSlide`(重做那一页的准备 + `Reveal.sync`/`syncSlide`);新增 `read_page` / `write_page`。稿子仍是一份 HTML,不拆文件                                       | 整份重载画面白一下、转场状态全丢。拆成多个文件会断掉跨页转场(要在同一个 DOM 里配对)、双击打开(`file://` 拉不到别的文件)和「目录拿走能接着用」;reveal 本来就支持改 DOM 后 sync             |
+| 2026-10-27 | 新增「一个内核,三种形态」:内核拆成 `deck-core` + `deck-agent` + `Renderer` 接口,web 抽 `Host` / `CanvasDriver`,加 `orca-ppt serve` 和 CLI;Web 版只做本地;稿子经稳定路径引运行时,不自带一份(目标形态,未实现)                                                      | 让 agent 不开应用也能新建、检查、导出;人在浏览器里也能看稿和指给 AI 看。不做云端:稿子必须留在本地磁盘                                                                                     |
 | 2026-10-27 | `capture.mjs` 默认不出视频:出关键帧(每页转场 5 帧 + 停稳 1 帧,写到系统临时目录)和每次转场动了几帧,动的不到一半就提醒;`-o x.mp4` 才拼视频。SKILL.md 第 7、8 步改成看关键帧                                                                                        | ffmpeg 不该是必须依赖:新手机器上多半没有。自检要的是关键帧和「转场动没动」,mp4 只是载体;agent 多半放不了视频,本来就是抽帧看。关键帧不写进稿子目录,应用在监听那里                          |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
 
