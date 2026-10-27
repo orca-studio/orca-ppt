@@ -1,0 +1,51 @@
+# npm 包(orca-ppt.tgz)在 Windows 上试装、试用:打包 → 全局装 → 新建 / 检查 / 导出 → 后台 serve →
+# orca-ppt call → 截图 → 停掉(tools/smoke-npm-win.ps1)。不发 Release、不碰签名凭据。
+# 正式的 tgz 跟着 release-build.yml 在 macOS 那台机器上打,见 docs/RELEASE.md。
+name: npm package on Windows (test)
+
+on:
+  # 手动触发要求这个文件已经在 main 上;在那之前推到 windows/ 开头的分支上试
+  push:
+    branches: ['windows/**']
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 要测的分支、tag 或提交
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: windows-2022
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install -g pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          (cd skills/orca-ppt && npm ci --no-audit --no-fund)
+      - name: Build and pack
+        run: |
+          set -euo pipefail
+          pnpm build
+          node tools/pack-npm.mjs release
+      # GitHub 的 Windows 机器上装了 Chrome:渲染器(缩略图、截图、导出)用它
+      - name: Install and use the package
+        shell: pwsh
+        run: tools/smoke-npm-win.ps1 release

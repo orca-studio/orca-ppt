@@ -8,23 +8,22 @@
 
 1. **检查依赖，缺什么装什么**：Node.js 22.18 以上（`node -v`）；Chrome 或 Edge（缩略图、截图、导出 PPTX
    用，不会自己下载浏览器）。
-2. **安装**（升级也是重跑这几行）：
+2. **安装**（升级也是重跑这一行；macOS、Windows、Linux 同一行）：
 
-   ```bash
-   curl -fL -o /tmp/orca-ppt.tgz https://github.com/orca-studio/orca-ppt/releases/latest/download/orca-ppt.tgz
-   curl -fsSL -o /tmp/orca-ppt-SHA256SUMS.txt https://github.com/orca-studio/orca-ppt/releases/latest/download/SHA256SUMS.txt
-   grep -q "$(shasum -a 256 /tmp/orca-ppt.tgz | cut -d' ' -f1)" /tmp/orca-ppt-SHA256SUMS.txt && echo OK   # 应为 OK
-   npm install -g /tmp/orca-ppt.tgz
+   ```
+   npm install -g https://github.com/orca-studio/orca-ppt/releases/latest/download/orca-ppt.tgz
    ```
 
-   摘要对不上就停下，告诉用户。Windows 上用 `curl.exe`，摘要用 PowerShell 的
-   `(Get-FileHash <文件> -Algorithm SHA256).Hash.ToLower()` 算，再到 SHA256SUMS.txt 里找。
-3. **开工作台**：`orca-ppt serve --detach`。它放到后台常驻、打开浏览器；已经在跑就只打印网址，
-   `orca-ppt stop` 停掉。**每次用之前由你先跑一遍**，不用请用户做什么。请用户把工作台的标签页留在前台
+3. **开工作台**：`orca-ppt serve --detach --no-open`，打印出网址（已经在跑就只打印它的网址）。
+   **你有自带的浏览器就用它打开这个网址**，用户在你旁边就能看到工作台；没有就跑
+   `orca-ppt serve --detach`（不带 `--no-open`），它会用 Chrome 或 Edge 打开。网址里的令牌每次启动都换，
+   别用记着的旧网址。**每次用之前由你先跑一遍**，`orca-ppt stop` 停掉。请用户把工作台留在前台
    （在后台浏览器会限速）。
-4. **学会怎么操作**：跑 `orca-ppt tools`，读它打印的用法和全部工具。之后用
-   `orca-ppt call <工具> '<JSON 参数>'` 调，比如 `orca-ppt call show_slide '{"index":2}'`。工具报错时
-   退出码是 1，原因照原文打出来；返回的图片存成文件、打印路径，要看画面就读那个文件。
+4. **学会怎么操作**：跑 `orca-ppt tools`，读它打印的用法和全部工具。之后用 `orca-ppt call <工具> 参数` 调：
+   `orca-ppt call show_slide index=2`（`key=value`，值按 JSON 读）、`orca-ppt call show_slide '{"index":2}'`，
+   或者把 JSON 从标准输入喂给 `orca-ppt call <工具> -`。Windows 的 PowerShell 会吃掉参数里的双引号，
+   在那里用 `key=value` 或标准输入。工具报错时退出码是 1，原因照原文打出来；返回的图片存成文件、
+   打印路径，要看画面就读那个文件。
 5. **验证**：`orca-ppt call deck_status`，返回 `NO_DECK_OPEN` 或页数都算好了。
 6. **告诉用户可以开始了**：在工作台首页挑同款点「做同款」，把复制的话发给你；或者直接说要做什么稿子。
 

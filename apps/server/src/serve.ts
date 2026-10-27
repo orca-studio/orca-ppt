@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -102,19 +103,39 @@ export async function readServeState(env = process.env): Promise<ServeState | un
   }
 }
 
-/** 用系统默认浏览器打开。打不开不算失败:网址已经打出来了,人自己点。 */
+/**
+ * 打开工作台:先找 Chrome,再找 Edge,都没有才用系统默认浏览器。
+ *
+ * 渲染器截图、导出用的就是 Chrome / Edge(Chromium):工作台在同一个内核里看,转场才和截图、导出
+ * 对得上 —— 默认浏览器可能是 Safari 或 Firefox。打不开不算失败:网址已经打出来了,人自己点。
+ */
 function openBrowser(href: string): void {
-  const [command, ...rest] =
-    process.platform === 'darwin'
-      ? ['open', href]
-      : process.platform === 'win32'
-        ? ['cmd', '/c', 'start', '""', href]
-        : ['xdg-open', href]
-  try {
-    spawn(command!, rest, { stdio: 'ignore', detached: true })
-      .on('error', () => {})
-      .unref()
-  } catch {
-    // 同上
+  const launch = (command: string, rest: string[]) => {
+    try {
+      spawn(command, rest, { stdio: 'ignore', detached: true, windowsHide: true })
+        .on('error', () => {})
+        .unref()
+    } catch {
+      // 同上
+    }
   }
+  if (process.platform === 'darwin') {
+    const app = ['Google Chrome', 'Microsoft Edge'].find((name) =>
+      existsSync(`/Applications/${name}.app`),
+    )
+    return launch('open', app ? ['-a', app, href] : [href])
+  }
+  if (process.platform === 'win32') {
+    const chrome = [
+      process.env.PROGRAMFILES,
+      process.env['PROGRAMFILES(X86)'],
+      process.env.LOCALAPPDATA,
+    ]
+      .filter(Boolean)
+      .map((dir) => join(dir!, 'Google/Chrome/Application/chrome.exe'))
+      .find((file) => existsSync(file))
+    // Edge 是 Windows 10/11 自带的;start msedge 走系统登记的应用路径
+    return chrome ? launch(chrome, [href]) : launch('cmd', ['/c', 'start', '""', 'msedge', href])
+  }
+  launch('xdg-open', [href])
 }

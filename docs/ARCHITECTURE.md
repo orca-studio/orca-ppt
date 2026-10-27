@@ -394,12 +394,23 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     给的使用说明和全部工具、参数;`call` 调一个,文字照打,图片存成文件打印路径,工具报错退出码 1。
     工具、说明、行为只有 `/mcp` 那一份;操作照样记成 agent 做的,界面照样框出改动,接管时照样拦。
     连的端口:`--port`,其次后台 serve 记下的,再是 6722(桌面版也在这,所以也能操作桌面版)。
+    参数三种写法:`key=value`(值按 JSON 读)、一个 JSON 对象、`-` 从标准输入读 JSON —— Windows 上
+    PowerShell 调 npm 生成的 `orca-ppt.cmd` 会吃掉参数里的双引号,前后两种不靠引号。
+  - **打开工作台**:`serve` 先找 Chrome、再找 Edge,都没有才用系统默认浏览器 —— 渲染器截图、导出用的
+    就是 Chromium,工作台在同一个内核里看,转场才对得上。llms-web.txt 让助手优先用它**自带的浏览器**
+    打开 `serve --detach --no-open` 打印的网址,用户在助手旁边就能看到。浏览器版启动时先试连一次:
+    令牌是上一次启动的、或者 serve 没在跑,直说原因,不留白屏。
+  - **Windows**:`.github/workflows/npm-package-windows.yml` 在 Windows 构建机上打包、全局装、新建 /
+    检查 / 导出、后台 serve、三种参数写法的 `call`、截图、停掉(`tools/smoke-npm-win.ps1`)。Linux 不测。
   - **初次使用默认走 CLI + 浏览器工作台**(2026-10-27 定,写在 `site/src/llms-web.txt`;`llms.txt` 保持桌面版 + MCP,教学视频在用):装 npm 包、
     `serve --detach`、`tools` / `call`。不用在助手里配 MCP、请用户点「信任」,不用下 DMG。MCP 和桌面版
     是「进阶」:工具直接进助手的工具列表、截图内联给模型看;全屏放映、取锚裁切图、后台不限速。
   - **后台常驻**:`orca-ppt serve --detach` 起一个独立进程就返回,`stop` 停掉;正在跑的那个记在
     `~/.orca-ppt/serve.json`(进程号、端口、带 token 的网址,只给自己读),再跑 `--detach` 只报网址。
     AI 助手的命令有超时,前台的 serve 会被掐掉;有了它,助手发现 6722 连不上可以自己拉起来。
+  - **稿子引的是另一份 skill**(桌面版建的稿子拿到 npm 包的 serve 里开、只装 skill 时建的稿子):
+    预览托管只放行这份稿子入口页**真引用到的**、往上几层有 `SKILL.md` 的目录
+    (`preview-host.ts` 的 `referencedSkills`),不然画布是白的、入口页照样 200。别的照旧 403。
   - **还没做**:上面的稳定路径。全局安装(`npm install -g`)时包的目录在升级前后不变,稿子引的
     skill 路径跟着还在;换了 Node 版本(nvm 这类)全局目录会变,老稿子就丢样式。
   - **阶段提示词按调用方说怎么读规范**(已落地):`phaseGate` / `phasePrompt` 的 `skillAccess`

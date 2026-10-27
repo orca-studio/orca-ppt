@@ -54,9 +54,13 @@ const HELP = `用法:orca-ppt <命令> [参数]
                     已经在跑就只打印它的网址
   stop              停掉后台的 serve
   tools [--port]    列出 Orca PPT 的全部工具和用法(和 MCP 的是同一份)。要先有 serve 或桌面版在跑
-  call <工具> ['<JSON 参数>'] [--port]
-                    调一个工具,例如 orca-ppt call show_slide '{"slide":2}'。不用在助手里配 MCP、
-                    点「信任」;界面照样跟着走。返回的图片存成文件,打印路径;工具报错时退出码 1
+  call <工具> [参数] [--port]
+                    调一个工具。不用在助手里配 MCP、点「信任」;界面照样跟着走。参数三种写法:
+                      orca-ppt call show_slide index=2          (key=value,值按 JSON 读,读不了就是字符串)
+                      orca-ppt call show_slide '{"index":2}'    (一个 JSON 对象)
+                      echo '{"index":2}' | orca-ppt call show_slide -   (从标准输入读 JSON)
+                    Windows 的 PowerShell 会吃掉参数里的双引号,用 key=value 或标准输入。
+                    返回的图片存成文件,打印路径;工具报错时退出码 1
   --version         版本号
 
   --json            机器可读的输出
@@ -270,7 +274,7 @@ switch (command) {
           ),
           '',
         ]),
-        "调用:orca-ppt call <工具> '<JSON 参数>'",
+        '调用:orca-ppt call <工具> key=value …(或一个 JSON 对象,或 - 从标准输入读 JSON)',
       ],
       { instructions, tools },
     )
@@ -279,15 +283,7 @@ switch (command) {
   case 'call': {
     const name = positional(1)
     if (!name) fail("要给工具名:orca-ppt call <工具> '<JSON 参数>'(工具列表见 orca-ppt tools)")
-    let input: Record<string, unknown> = {}
-    const raw = positional(2)
-    if (raw) {
-      try {
-        input = JSON.parse(raw) as Record<string, unknown>
-      } catch {
-        fail(`参数要是 JSON 对象,例如 '{"slide":2}':${raw}`)
-      }
-    }
+    const input = await callArgs(args.slice(args.indexOf(name) + 1))
     const result = await callTool(await mcpPort(), name, input)
     print([...result.text, ...result.images.map((file) => `图片:${file}`)], result)
     if (result.isError) process.exit(1)
@@ -316,6 +312,48 @@ switch (command) {
   default:
     process.stderr.write(`不认识的命令:${command}\n\n${HELP}`)
     process.exit(1)
+}
+
+/**
+ * `call` 的参数:一个 JSON 对象;`-` 从标准输入读 JSON;或者若干 `key=value`(值按 JSON 读,
+ * 读不了就当字符串)。后两种不靠引号 —— Windows 上 PowerShell 调 npm 生成的 .cmd 会吃掉双引号。
+ */
+async function callArgs(rest: string[]): Promise<Record<string, unknown>> {
+  const words: string[] = []
+  for (let i = 0; i < rest.length; i++) {
+    const word = rest[i]!
+    if (word === '--port') i++
+    else if (word !== '--json') words.push(word)
+  }
+  const asObject = (text: string, from: string) => {
+    try {
+      const value: unknown = JSON.parse(text)
+      if (value && typeof value === 'object' && !Array.isArray(value))
+        return value as Record<string, unknown>
+    } catch {
+      // 下面一起报
+    }
+    fail(`参数要是 JSON 对象(${from}):${text}`)
+  }
+  if (words.length === 1 && words[0] === '-') {
+    let text = ''
+    for await (const chunk of process.stdin) text += String(chunk)
+    return asObject(text.trim() || '{}', '标准输入')
+  }
+  if (words.length === 1 && words[0]!.trimStart().startsWith('{'))
+    return asObject(words[0]!, '参数')
+  const input: Record<string, unknown> = {}
+  for (const word of words) {
+    const at = word.indexOf('=')
+    if (at <= 0) fail(`参数写成 key=value、一个 JSON 对象,或者 - 从标准输入读:${word}`)
+    const raw = word.slice(at + 1)
+    try {
+      input[word.slice(0, at)] = JSON.parse(raw)
+    } catch {
+      input[word.slice(0, at)] = raw
+    }
+  }
+  return input
 }
 
 /** `tools` / `call` 连哪个端口:--port,其次后台 serve 记下的端口,再是默认的 6722(桌面版也在这)。 */
