@@ -16,6 +16,7 @@ const port = read('--orca-server-port=')
 
 electron.contextBridge.exposeInMainWorld('orca', {
   serverPort: port ? Number(port) : undefined,
+  token: read('--orca-token='),
   // 渲染层要知道平台:macOS 的红绿灯按钮浮在窗口左上角,那块地方不能放东西。
   platform: process.platform,
   contentBounds: () => electron.ipcRenderer.invoke('app:content-bounds'),

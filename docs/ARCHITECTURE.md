@@ -327,11 +327,32 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 和 Stage 里,两种画布共用。
 
 - webview:桌面版,和原来一样。
-- iframe:浏览器里。要和界面**同源**才摸得到稿子页面,经 `contentWindow.eval` 跑代码,
-  结果按 JSON 拷回来;console 和报错在每次加载后进页面挂钩子转出来,所以**加载完成前的报错
-  听不到**(webview 能从外面听到)。server 托管界面时天然同源;开发时 Vite 把 `/p/`、`/asset/`
-  代理给 server,`sameOrigin` 把预览地址改成只取路径。上面「放映画布」否掉 iframe 的理由是
-  CSP 和同源上打架,同源之后不成立;webview 照旧是桌面版的选择。
+- iframe:浏览器里。**现状(第 3 步)**是要和界面同源,经 `contentWindow.eval` 跑代码,结果按
+  JSON 拷回来;console 和报错在每次加载后进页面挂钩子转出来,所以**加载完成前的报错听不到**
+  (webview 能从外面听到)。开发时 Vite 把 `/p/`、`/asset/` 代理给 server,`sameOrigin` 把预览
+  地址改成只取路径。webview 照旧是桌面版的选择。
+
+**定了(2026-10-27):浏览器里的稿子放在另一个源,和界面只用 `postMessage` 说话(方案 B)。**
+第 4 步按这个改 iframe 那一份 `CanvasView`,Stage 不动。
+
+- 为什么:同源时稿子里的脚本也碰得到界面 —— `window.parent`、界面的 DOM、第 4 步的启动 token。
+  稿子来自用户自己时风险不大,可同款样稿、别人发来的稿子都是没逐行看过的代码。桌面版的
+  webview 有独立 partition,没有这个问题;浏览器版不该比它松。
+- 先例:reveal.js 自己就是这么设计的 —— `postMessage` 配置默认开,外层发
+  `{ method, args }` 调 `Reveal` 上的方法、回 `callback`,有一张不许远程调的黑名单;官方演讲者
+  视图(notes 插件)也是新窗口 + iframe + `postMessage`。我们 `engine.js` 里的回顾屏同样只用
+  `postMessage`,因为 `file://` 下内外层本来就不同源。
+- 怎么做:server 托管稿子时在入口 HTML 末尾加一行 `<script>` 引 guest 脚本(磁盘上的文件
+  不动,效果和 webview 运行时注入一样);guest 脚本加一个收消息、执行、回结果的入口;
+  iframe 那一份 `CanvasView` 的 `run` 改成发消息等回复。只用 reveal 的接口不够:检视几何、
+  双击改字、取锚、自动播放、就地换页都在我们自己注入的 `__orcaCanvas` / `__orcaEdit` 里。
+- 比 reveal 收紧两处:目标源写死对方的源,不用 `'*'`;只收几个固定的动作名,不收任意代码 ——
+  稿子里的脚本借不了这条通道反过来驱动工作台。
+- 浏览器版的全屏放映用新窗口,和官方演讲者视图一个路子。
+
+_否掉:_ 同源 iframe(上面的理由)· 把稿子塞进界面的 DOM 或 Shadow DOM,包括 reveal 的
+`embedded: true` 多实例(稿子是完整 HTML,要改写才塞得进去;Shadow DOM 不隔离 JS)·
+server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全得重写)。
 
 浏览器里还没有的(都要壳或渲染器):`capture_slide` 截画布(界面直说「浏览器版还不能截图」)、
 取锚时的裁切图、页胶片缩略图(server 没有渲染器时报 `NO_RENDERER`)、全屏放映窗口。等第 4 步
@@ -341,11 +362,17 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 
 - **桌面版**:Electron 起 server、注入 Electron Renderer;界面用 `ElectronHost` +
   `WebviewDriver`。行为和现在一样。
-- **`orca-ppt serve`**:同一个 server 入口,注入 playwright Renderer,多托管一份
-  `apps/web` 的打包产物,打开浏览器;界面用 `BrowserHost` + `IframeDriver`。**浏览器能连上来
-  之前必须先补 Origin 校验和启动 token**(token 放在打开的 URL 里):现在 `server.ts` 的
-  WebSocket 不校验来源,只有 Electron 连还好,放给浏览器之后,用户开着的任何网页都能连
-  `ws://127.0.0.1:6722` 改稿子。
+- **`orca-ppt serve`**(`apps/server/src/serve.ts`,开发时 `pnpm serve`):同一个 server 入口,
+  多托管一份 `apps/web` 的打包产物(`web-host.ts`),打印网址并打开浏览器;界面用浏览器的
+  `host` + iframe 画布(稿子换到另一个源见上面「定了」那段,**还没做**)。渲染器要注入
+  playwright 那一份,**还没做** —— 现在浏览器版的页胶片缩略图是空的、导出报 `NO_RENDERER`。
+  - **启动 token(已落地)**:浏览器里任何网页都能往 `ws://127.0.0.1:6722` 发连接,所以带
+    Origin 的连接必须带对 token(`allowClient`),不带 Origin 的本机进程不拦 —— 它们本来就能
+    直接读写稿子目录。token 每次启动现生成:`serve` 写在打开的网址里(`?token=`,可选
+    `&deck=` 直接开一份稿子),桌面版由壳生成、经 `ORCA_PPT_TOKEN` 交给 server、经 preload 交给
+    界面。网址里缺 token 时界面直说,不留白页。`/mcp` 不在这条规则里。
+  - **后台标签页会被节流**:工作台标签页不在前台时,浏览器会压低定时器和 `requestAnimationFrame`,
+    agent 这时发的检视、跟随改动会变慢甚至等到超时。桌面版窗口没有这个问题。
 - **CLI**:直接调 `deck-core`、`deck-agent` 和 playwright Renderer,不经过 server。和界面的
   同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并刷新
   画布,CLI 不需要知道有没有 server 在跑。
@@ -367,7 +394,8 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。**已完成。**
 2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。**已完成(桌面版)。**
 3. web 里抽 `Host` 和 `CanvasDriver`。**已完成。**
-4. `serve`:托管界面,Origin 校验 + token。
+4. `serve`:托管界面,Origin 校验 + token(**已完成**);稿子换到另一个源,iframe 画布改走
+   `postMessage`;playwright 渲染器。
 5. CLI。
 
 前两步做完桌面版行为不变,内核已经不依赖界面;CLI 和 `serve` 只是在外面再加一层。
@@ -437,6 +465,7 @@ CDN 上,离线就坏)· **每份稿子自带一份运行时**(引擎、reveal、
 | 2026-10-25 | 只改了几页时画布只换那几页,不整份重载:server 按页比对两版推 `deck.patched`,稿子的 engine 加 `__orcaReplaceSlide`(重做那一页的准备 + `Reveal.sync`/`syncSlide`);新增 `read_page` / `write_page`。稿子仍是一份 HTML,不拆文件                                       | 整份重载画面白一下、转场状态全丢。拆成多个文件会断掉跨页转场(要在同一个 DOM 里配对)、双击打开(`file://` 拉不到别的文件)和「目录拿走能接着用」;reveal 本来就支持改 DOM 后 sync             |
 | 2026-10-27 | 新增「一个内核,三种形态」:内核拆成 `deck-core` + `deck-agent` + `Renderer` 接口,web 抽 `Host` / `CanvasDriver`,加 `orca-ppt serve` 和 CLI;Web 版只做本地;稿子经稳定路径引运行时,不自带一份(目标形态,未实现)                                                      | 让 agent 不开应用也能新建、检查、导出;人在浏览器里也能看稿和指给 AI 看。不做云端:稿子必须留在本地磁盘                                                                                     |
 | 2026-10-27 | `capture.mjs` 默认不出视频:出关键帧(每页转场 5 帧 + 停稳 1 帧,写到系统临时目录)和每次转场动了几帧,动的不到一半就提醒;`-o x.mp4` 才拼视频。SKILL.md 第 7、8 步改成看关键帧                                                                                        | ffmpeg 不该是必须依赖:新手机器上多半没有。自检要的是关键帧和「转场动没动」,mp4 只是载体;agent 多半放不了视频,本来就是抽帧看。关键帧不写进稿子目录,应用在监听那里                          |
+| 2026-10-27 | 浏览器版的稿子放在另一个源,iframe 和界面只用 `postMessage` 说话(方案 B);server 托管稿子时加一行 `<script>` 引 guest 脚本,只收固定动作名、写死对方的源                                                                                                            | 同源时稿子脚本碰得到界面和启动 token,浏览器版不该比桌面版的独立 partition 松;reveal.js 官方的遥控接口和演讲者视图都是这个路子                                                             |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
 
 ### 已实现的打包和按需读取

@@ -13,6 +13,8 @@ const renderer = parentPortRenderer()
 const server = await startServer({
   port: process.env.ORCA_PPT_PORT ? Number(process.env.ORCA_PPT_PORT) : DEFAULT_PORT,
   ...(renderer ? { renderer } : {}),
+  // 桌面壳生成、经 preload 交给界面;浏览器发来的连接没带对它就拒(见 web-host.ts)
+  ...(process.env.ORCA_PPT_TOKEN ? { token: process.env.ORCA_PPT_TOKEN } : {}),
 })
 
 // 桌面壳读这一行拿端口。格式别改。

@@ -1286,3 +1286,11 @@ body[data-resizing] iframe {
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-2);
 }
+
+/* serve 打开的网址缺 token:界面连不上 server,只留这一句 */
+.boot-notice {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}

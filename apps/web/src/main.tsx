@@ -15,8 +15,17 @@ document.documentElement.dataset.platform = host.platform ?? 'web'
 // 默认跟随系统。显式选过的会在这里被重新应用。
 applyTheme(readTheme())
 
+// serve 托管的界面要带启动 token 才连得上 server。没带就直说,不留一张白页让人猜
+const missingToken = host.kind === 'browser' && !host.token && !import.meta.env.DEV
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App serverUrl={`ws://127.0.0.1:${port}`} />
+    {missingToken ? (
+      <p className="boot-notice">
+        网址里缺少启动令牌,连不上 Orca PPT。请用 <code>orca-ppt serve</code> 打印的完整网址打开。
+      </p>
+    ) : (
+      <App serverUrl={`ws://127.0.0.1:${port}`} />
+    )}
   </StrictMode>,
 )

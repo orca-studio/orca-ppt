@@ -25,6 +25,7 @@ import {
   writePage,
 } from '@orca-ppt/deck-core'
 import { noRenderer } from './renderer-port.js'
+import { allowClient, serveWeb } from './web-host.js'
 import { readSpec } from '@orca-ppt/deck-agent'
 import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
@@ -108,6 +109,10 @@ export async function startServer(
      * 测试给一个假的;不给就一律报 NO_RENDERER。
      */
     renderer?: Renderer
+    /** 托管界面的目录(`orca-ppt serve`)。不给就不托管 —— 桌面版从本地文件加载界面。 */
+    webRoot?: string
+    /** 启动 token。给了,浏览器发来的 WebSocket 连接就必须带对它(见 web-host.ts 的 allowClient)。 */
+    token?: string
   } = {},
 ): Promise<OrcaServer> {
   const bus = new PushBus()
@@ -432,6 +437,7 @@ export async function startServer(
     void (async () => {
       if (await mcp.handle(req, res)) return
       if (await previews.handle(req, res)) return
+      if (options.webRoot && (await serveWeb(options.webRoot, req, res))) return
       res.writeHead(404).end()
     })().catch((error: unknown) => {
       // 吞掉错误会让调试变成猜谜 —— 至少把它打出来。
@@ -439,7 +445,14 @@ export async function startServer(
       if (!res.headersSent) res.writeHead(500).end()
     })
   })
-  const wss = new WebSocketServer({ server: http })
+  const wss = new WebSocketServer({
+    server: http,
+    verifyClient: (info: { origin: string; req: { url?: string | undefined } }) =>
+      allowClient(options.token, info.origin || undefined, info.req.url),
+  })
+  // ws 会把 http server 的 error 原样再发一遍;监听失败已经在下面 listen 那里报出去了,
+  // 这里不接的话同一个错误会变成进程级的未捕获异常
+  wss.on('error', () => {})
 
   wss.on('connection', (socket) => {
     const connectionId = randomUUID()
@@ -469,7 +482,14 @@ export async function startServer(
   })
 
   // 只绑 loopback。这个 server 拥有用户的文件,不该出现在局域网上。
-  await new Promise<void>((done) => http.listen(options.port ?? 0, '127.0.0.1', done))
+  // 端口被占要报出来(serve 据此说人话),不能变成进程级的未捕获异常
+  await new Promise<void>((done, fail) => {
+    http.once('error', fail)
+    http.listen(options.port ?? 0, '127.0.0.1', () => {
+      http.off('error', fail)
+      done()
+    })
+  })
   const port = (http.address() as AddressInfo).port
   // MCP server 是另一个进程,靠这个文件找到我们。
   await writePortFile(port)

@@ -104,7 +104,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
   useEffect(() => {
     // 图片和 WebSocket 连同一个端口 —— 先告诉 assets 去哪儿取。
     useAssetOrigin(serverUrl)
-    const next = new Transport(serverUrl)
+    // token 只加在 WebSocket 地址上:serverUrl 还要用来拼素材地址(useAssetOrigin)
+    const next = new Transport(
+      host.token ? `${serverUrl}/?token=${encodeURIComponent(host.token)}` : serverUrl,
+    )
     transport.current = next
     next.onStateChange = (current) => {
       setState(current)

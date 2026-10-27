@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -57,6 +57,8 @@ const supervisor = new ServerSupervisor((entry, env) => {
   return child
 })
 const isMac = process.platform === 'darwin'
+/** 每次启动现生成;只交给 server 和自己的界面。 */
+const serverToken = randomBytes(24).toString('base64url')
 
 /**
  * 应用图标。壳是直接 `electron dist/main.js` 跑起来的,没有打包出 .app,Dock 默认显示
@@ -150,6 +152,8 @@ function bundledSkill(): Record<string, string> {
 async function createWindow(): Promise<void> {
   const port = await supervisor.start(join(here, '../../server/dist/main.js'), {
     ...bundledSkill(),
+    // 界面连 server 要带它:浏览器里别的网页连不上(见 apps/server/src/web-host.ts)
+    ORCA_PPT_TOKEN: serverToken,
     // 握手时报的版本号、doctor 里的版本都用它 —— server 自己不知道 app 是哪一版。
     ORCA_PPT_APP_VERSION: APP_VERSION,
   })
@@ -179,6 +183,7 @@ async function createWindow(): Promise<void> {
       preload: join(here, 'preload.cjs'),
       additionalArguments: [
         `--orca-server-port=${port}`,
+        `--orca-token=${serverToken}`,
         // 开发时直接开一份稿子,省掉每次点目录选择器。也是 M1 的自动化验证入口。
         ...(process.env.ORCA_PPT_DECK ? [`--orca-deck=${process.env.ORCA_PPT_DECK}`] : []),
       ],

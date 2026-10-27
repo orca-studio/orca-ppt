@@ -7,6 +7,8 @@
  */
 export interface ElectronBridge {
   serverPort?: number
+  /** 连 server 要带的启动 token(见 apps/server/src/web-host.ts)。 */
+  token?: string
   platform?: string
   /** 开发时通过 ORCA_PPT_DECK 指定,启动就打开这份稿子。 */
   initialDeck?: string
@@ -73,4 +75,23 @@ const bridge = typeof window === 'undefined' ? undefined : window.orca
 // 桥是 contextBridge 交过来的普通对象,拷一份再补上 kind
 export const host: Host = bridge
   ? Object.assign({}, bridge, { kind: 'electron' as const })
-  : { kind: 'browser', platform: 'web' }
+  : browserHost()
+
+/**
+ * 浏览器里:`orca-ppt serve` 托管界面,打开的网址带着 token 和(可选的)稿子路径;
+ * 端口就是界面自己的端口。开发时界面在 Vite 上,端口回落到 SERVER_PORT。
+ */
+function browserHost(): Host {
+  const query = typeof location === 'undefined' ? undefined : new URLSearchParams(location.search)
+  const served =
+    typeof location !== 'undefined' && location.protocol.startsWith('http') && !import.meta.env.DEV
+  const token = query?.get('token') ?? undefined
+  const deck = query?.get('deck') ?? undefined
+  return {
+    kind: 'browser',
+    platform: 'web',
+    ...(served && location.port ? { serverPort: Number(location.port) } : {}),
+    ...(token ? { token } : {}),
+    ...(deck ? { initialDeck: deck } : {}),
+  }
+}
