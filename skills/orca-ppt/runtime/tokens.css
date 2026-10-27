@@ -55,16 +55,21 @@
 html, body, .reveal { background: var(--bg); }
 .reveal { font-family: var(--font); color: var(--text); }
 .reveal .slides { text-align: left; }
-/* 单独打开时的翻页箭头（engine.js 的 STANDALONE）：reveal 默认是黑的，深底上看不见 */
-.reveal .controls { color: var(--text-dim); }
-/* 单独打开时的总览（engine.js 的 openOverview）：按钮在翻页箭头左边，网格铺满窗口、竖着滚 */
-.st-overview-button { position: fixed; right: 108px; bottom: 16px; z-index: 30; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; background: none; color: var(--text-dim); cursor: pointer; }
-.st-overview-button:hover { color: var(--text); }
-.st-overview { position: fixed; inset: 0; z-index: 40; overflow: auto; overscroll-behavior: contain; display: grid; gap: 16px; padding: 16px; align-content: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); background: var(--bg); }
-.st-overview-cell { position: relative; aspect-ratio: 16 / 9; padding: 0; border: 0; border-radius: 6px; overflow: hidden; background: var(--bg); cursor: pointer; outline: 1px solid color-mix(in srgb, var(--text) 18%, transparent); outline-offset: 0; }
+/* 单独打开时的播放条（engine.js 文末）：底部居中的半透明胶囊，鼠标停下 2 秒淡出 */
+.st-bar { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 72%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--text) 14%, transparent), 0 4px 16px rgb(0 0 0 / 0.25); backdrop-filter: blur(12px); color: var(--text-dim); font: 13px/1 var(--font); transition: opacity 240ms ease; }
+.st-bar-idle { opacity: 0; }
+.st-bar button { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 999px; background: none; color: inherit; cursor: pointer; }
+.st-bar button:hover:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--text) 10%, transparent); }
+.st-bar button:disabled { opacity: 0.35; cursor: default; }
+.st-bar-page { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+@media (hover: none) { .st-bar-idle { opacity: 1; } }
+/* 单独打开时的总览（engine.js 的 openOverview）：网格铺满窗口、竖着滚 */
+.st-overview { position: fixed; inset: 0; z-index: 40; overflow: auto; overscroll-behavior: contain; display: grid; gap: 16px; padding: 16px; align-content: start; background: var(--bg); }
+/* 16:9 用 padding 撑：aspect-ratio 的格子在网格里行高按错的宽度算，一列时会叠在一起 */
+.st-overview-cell { position: relative; height: 0; padding: 0 0 56.25%; border: 0; border-radius: 6px; overflow: hidden; background: var(--bg); cursor: pointer; outline: 1px solid color-mix(in srgb, var(--text) 18%, transparent); outline-offset: 0; }
 .st-overview-cell:hover, .st-overview-cell:focus-visible { outline: 2px solid var(--text-dim); }
 .st-overview-cell[aria-current] { outline: 2px solid var(--accent); }
-.st-overview-cell iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.st-overview-thumb { position: absolute; inset: 0; pointer-events: none; }
 .st-overview-cell span { position: absolute; left: 6px; bottom: 4px; font: 12px/1 var(--font); color: var(--text-dim); text-shadow: 0 1px 2px rgb(0 0 0 / 0.6); }
 .reveal .slides > section { width: var(--canvas-w); height: var(--canvas-h); padding: 0; }
 .reveal .slides > section > *,

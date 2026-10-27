@@ -20,8 +20,6 @@
   const CAPTURE = new URLSearchParams(location.search).has("capture");
   // 被回顾屏（.s-recap）嵌着放的那一份：不接键盘，不再嵌自己。总是和 ?capture 一起出现
   const EMBED = new URLSearchParams(location.search).has("embed");
-  // 总览里的一格（?embed&capture&still#/页号）：停在这一页动画放完的样子，和工作台的页胶片一样
-  const STILL = EMBED && new URLSearchParams(location.search).has("still");
   // 减少动效。**显式开关**:URL 带 ?calm,或 <html> / <body> 上写 data-motion="calm"。
   // 不跟系统的 prefers-reduced-motion 走 —— 放映时是演讲者电脑上的设置在决定观众看到什么,
   // 观众并没有选过;自动退化等于演讲者不知情地把稿子的价值关掉了。录制模式忽略它。
@@ -2694,17 +2692,29 @@
   prepareStory();
   prepareVideos();
   prepareRecaps();
-  // 单独打开（双击 deck.html、AI 助手的内置浏览器）时给翻页箭头：没有 Orca PPT 的画布和工具栏，
-  // 页面上又没有任何能点的东西，不知道按键盘的人只能看到第一页。
-  // 在 Orca PPT 里（http 加载）、录制和导出（?capture、自动化浏览器）、画廊的 iframe 里都不给。
-  const STANDALONE = location.protocol === "file:" && !CAPTURE && !EMBED &&
-    !navigator.webdriver && window.top === window;
+  // 单独打开（双击 deck.html、AI 助手的内置浏览器）时给一条播放条（见文末）：没有 Orca PPT 的画布和
+  // 工具栏，页面上又没有任何能点的东西，不知道按键盘的人只能看到第一页。
+  // 在 Orca PPT 里（画布、放映都经 http 加载）、录制和导出（?capture、自动化浏览器）、总览和回顾屏的
+  // 小格子（?embed）里都不给。只看「不是 http(s)」，不认准 file:：AI 助手的内置浏览器未必直接开文件 ——
+  // DeepSeek Harness 把引到的 CSS / JS 打包成 blob: 地址，套进沙箱 iframe 里放。
+  const STANDALONE = !/^https?:$/.test(location.protocol) && !CAPTURE && !EMBED && !navigator.webdriver;
+  // 页号写进网址（#/3）要能改 history。沙箱里的 blob: 页面（DeepSeek Harness 的内置浏览器）一改就抛错，
+  // reveal 的 ready、换页事件跟着断掉 —— 改不了就不写，翻页照常
+  const HASH = (() => {
+    try {
+      // 照 reveal 的写法试（路径 + 查询，再带上原来的 #，网址不变）：不带网址、带完整网址的调用沙箱里都放行
+      history.replaceState(history.state, "", location.pathname + location.search + location.hash);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
   Reveal.initialize({
     width: W,
     height: H,
     margin: 0,
     center: false,
-    controls: STANDALONE,
+    controls: false,
     // 单独打开时换成自己的总览（见文末 openOverview）：reveal 的总览不按窗口排，当前页摆正中，
     // AI 助手那种窄高的面板里只剩下半截的一条
     overview: !STANDALONE,
@@ -2714,7 +2724,7 @@
     // reveal 默认最小缩到 0.2：总览的格子 300px 宽只要 0.16，按 0.2 放就裁掉了左右两边
     minScale: 0.05,
     progress: false,
-    hash: true,
+    hash: HASH,
     transition: "none",
     backgroundTransition: "none",
     autoAnimateDuration: 0.9,
@@ -2737,7 +2747,6 @@
     playVideos(e.currentSlide, 0);
     startRecap(e.currentSlide, 0);
     if (EMBED) serveRecap();
-    if (STILL) window.__capture.go(e.indexh).then(() => window.__capture.seek(1e7));
   });
   Reveal.on("slidechanged", onSlide);
 
@@ -2824,8 +2833,9 @@
 
   // ── 单独打开时的总览 ───────────────────────────────────────────────
   // 每页一格，按窗口宽度排成网格，一屏放不下就竖着滚：横的窗口一行几页，AI 助手窄高的面板里一两列。
-  // 每格是一个小 iframe，载入同一个文件、停在那一页动画放完的样子（?embed&capture&still）——
-  // 不克隆 DOM：克隆的页面会被引擎当成真的页面查到，版式规则也只认 .reveal .slides 下面。
+  // 每格是这一页的克隆，放在 shadow DOM 里：引擎查页面（document.querySelectorAll）查不进去，
+  // 不会把克隆当成真的页面；把稿子的样式表也抄进去、外面套一层 .reveal .slides，版式规则照样生效。
+  // 不用「每格一个 iframe 再载入一次这个文件」：AI 助手的内置浏览器未必能再载入一次（DeepSeek 的 blob:）。
   // 进出：Esc / O，或右下角箭头旁的按钮；点一格跳到那一页。
   let overview = null;
   function openOverview() {
@@ -2835,7 +2845,7 @@
     overview.className = "st-overview";
     overview.setAttribute("role", "dialog");
     overview.setAttribute("aria-label", "总览");
-    const base = location.href.split(/[?#]/)[0];
+    const sheets = [...document.querySelectorAll('link[rel="stylesheet"], style')];
     for (let i = 0; i < Reveal.getTotalSlides(); i++) {
       // 不用 <button>：按钮里不能放 iframe，Chrome 会把里面的页面画坏
       const cell = document.createElement("div");
@@ -2844,24 +2854,60 @@
       cell.tabIndex = 0;
       if (i === here) cell.setAttribute("aria-current", "page");
       cell.setAttribute("aria-label", `第 ${i + 1} 页`);
-      const frame = document.createElement("iframe");
-      frame.src = `${base}?embed&capture&still#/${i}`;
-      frame.tabIndex = -1;
       const label = document.createElement("span");
       label.textContent = i + 1;
-      cell.append(frame, label);
+      cell.append(thumbnail(Reveal.getSlide(i), sheets), label);
       const pick = () => { closeOverview(); Reveal.slide(i); };
       cell.addEventListener("click", pick);
       cell.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
       overview.append(cell);
     }
     document.body.append(overview);
+    fitOverview();
+    window.addEventListener("resize", fitOverview);
     overview.querySelector("[aria-current]")?.scrollIntoView({ block: "center" });
     overview.querySelector("[aria-current]")?.focus({ preventScroll: true });
     // 开着时键盘归总览：Esc / O 关掉，别的键不翻底下的页
     window.addEventListener("keydown", overviewKeys, true);
   }
+  // 列数按窗口宽度算：每格至少 280px 宽。不交给 CSS 的 auto-fill —— 那样行高按最小列宽算，
+  // 格子实际更宽、更高，一列时会叠在一起
+  function fitOverview() {
+    if (!overview) return;
+    const columns = Math.max(1, Math.floor((overview.clientWidth - 16) / (280 + 16)));
+    overview.style.gridTemplateColumns = `repeat(${columns}, minmax(0, 1fr))`;
+  }
+  function thumbnail(slide, sheets) {
+    const host = document.createElement("div");
+    host.className = "st-overview-thumb";
+    const root = host.attachShadow({ mode: "open" });
+    for (const sheet of sheets) root.append(sheet.cloneNode(true));
+    const stage = document.createElement("div");
+    stage.className = "reveal";
+    stage.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;transform-origin:0 0;overflow:hidden;background:var(--bg)`;
+    const slides = document.createElement("div");
+    slides.className = "slides";
+    slides.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px;margin:0;transform:none`;
+    const page = slide.cloneNode(true);
+    page.classList.remove("past", "future");
+    page.classList.add("present");
+    page.removeAttribute("hidden");
+    page.removeAttribute("aria-hidden");
+    page.style.display = "block";
+    // 克隆的视频别自己放、别抢声音
+    for (const video of page.querySelectorAll("video")) {
+      video.removeAttribute("autoplay");
+      video.muted = true;
+      video.preload = "metadata";
+    }
+    slides.append(page);
+    stage.append(slides);
+    root.append(stage);
+    new ResizeObserver(() => { stage.style.transform = `scale(${host.clientWidth / W})`; }).observe(host);
+    return host;
+  }
   function closeOverview() {
+    window.removeEventListener("resize", fitOverview);
     overview?.remove();
     overview = null;
     window.removeEventListener("keydown", overviewKeys, true);
@@ -2874,14 +2920,53 @@
     if (e.key === "Enter" || e.key === " " || e.key === "Tab") return; // 按钮自己的点击和焦点移动
     e.stopPropagation();
   }
+  // 单独打开时底部居中的播放条：上一页、页码、总览、下一页。鼠标停 2 秒淡出，一动就出来；
+  // 触屏没有悬停，一直显示（见 tokens.css）。下一页走 advance：页内有分步动画时先放完这一步
   if (STANDALONE) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "st-overview-button";
-    button.setAttribute("aria-label", "总览");
-    button.title = "总览（Esc）";
-    button.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
-    button.addEventListener("click", () => openOverview());
-    document.body.append(button);
+    const ICONS = {
+      prev: '<path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+      next: '<path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+      grid: '<path d="M2.5 2.5h4.5v4.5H2.5zM9 2.5h4.5v4.5H9zM2.5 9h4.5v4.5H2.5zM9 9h4.5v4.5H9z" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+    };
+    const bar = document.createElement("div");
+    bar.className = "st-bar";
+    bar.setAttribute("role", "toolbar");
+    bar.setAttribute("aria-label", "放映");
+    const button = (icon, label, onClick) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", label);
+      b.title = label;
+      b.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">${ICONS[icon]}</svg>`;
+      b.addEventListener("click", onClick);
+      return b;
+    };
+    const prev = button("prev", "上一页（←）", () => Reveal.prev());
+    const next = button("next", "下一页（→）", () => advance());
+    const page = document.createElement("span");
+    page.className = "st-bar-page";
+    bar.append(prev, page, button("grid", "总览（Esc）", () => openOverview()), next);
+    document.body.append(bar);
+
+    const update = () => {
+      const at = Reveal.getIndices().h;
+      const total = Reveal.getTotalSlides();
+      page.textContent = `${at + 1} / ${total}`;
+      // 下一页不置灰：最后一页也可能还有没放完的分步动画
+      prev.disabled = at === 0;
+    };
+    Reveal.on("ready", update);
+    Reveal.on("slidechanged", update);
+    if (Reveal.isReady()) update();
+
+    let idle;
+    const wake = () => {
+      bar.classList.remove("st-bar-idle");
+      clearTimeout(idle);
+      idle = setTimeout(() => { if (!bar.matches(":hover, :focus-within")) bar.classList.add("st-bar-idle"); }, 2000);
+    };
+    window.addEventListener("pointermove", wake);
+    window.addEventListener("keydown", wake);
+    wake();
   }
 })();
