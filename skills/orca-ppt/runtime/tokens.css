@@ -55,6 +55,8 @@
 html, body, .reveal { background: var(--bg); }
 .reveal { font-family: var(--font); color: var(--text); }
 .reveal .slides { text-align: left; }
+/* 单独打开时的翻页箭头（engine.js 的 STANDALONE）：reveal 默认是黑的，深底上看不见 */
+.reveal .controls { color: var(--text-dim); }
 .reveal .slides > section { width: var(--canvas-w); height: var(--canvas-h); padding: 0; }
 .reveal .slides > section > *,
 .st-layer > * { position: absolute; margin: 0; }

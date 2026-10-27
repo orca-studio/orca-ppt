@@ -2692,12 +2692,17 @@
   prepareStory();
   prepareVideos();
   prepareRecaps();
+  // 单独打开（双击 deck.html、AI 助手的内置浏览器）时给翻页箭头：没有 Orca PPT 的画布和工具栏，
+  // 页面上又没有任何能点的东西，不知道按键盘的人只能看到第一页。
+  // 在 Orca PPT 里（http 加载）、录制和导出（?capture、自动化浏览器）、画廊的 iframe 里都不给。
+  const STANDALONE = location.protocol === "file:" && !CAPTURE && !EMBED &&
+    !navigator.webdriver && window.top === window;
   Reveal.initialize({
     width: W,
     height: H,
     margin: 0,
     center: false,
-    controls: false,
+    controls: STANDALONE,
     progress: false,
     hash: true,
     transition: "none",
