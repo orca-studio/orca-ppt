@@ -1,22 +1,18 @@
 # 安装 Orca PPT（桌面版 + MCP）
 
-## 步骤
-
-Linux、或者用户不想装桌面版时，改读 [llms-web.txt](https://ppt.orca-studio.ai/llms-web.txt)（npm 包 + 浏览器工作台 + `orca-ppt` 命令）；
-只想要 skill 时走最后一节「只装 skill」。
+Linux、或者用户不想装桌面版、只想要 skill 时，改读 [llms-web.txt](https://ppt.orca-studio.ai/llms-web.txt)
+（npm 包，带 skill、`orca-ppt` 命令和浏览器工作台）。
 
 1. **装好并打开 Orca PPT**（已装就只打开），见「安装」。应用开着时 MCP 在
    `http://127.0.0.1:6722/mcp`（Streamable HTTP，本机，无鉴权）；GET 它返回 406 就是在跑。
 2. **加 MCP**：按你自己是哪个助手，照下面对应一节加，名字一律 `orca-ppt`。
    改配置文件前先读原文件、留备份，只加这一条；要用户「批准 / 信任」的，让用户自己点，别改批准记录。
-3. **请用户重启你**，并告诉他：以后先开 Orca PPT，再开 AI 助手。
+3. **请用户重启你**。
 4. **验证**：调 `deck_status`，返回 `NO_DECK_OPEN` 或页数都算连上了。
-5. **告诉用户装好了**。
 
 ## 安装
 
-约 200 MB。命令有超时就后台下载或调长超时，断了用 `curl -C -` 续传。装好后应用会自己更新。
-Linux 没有桌面应用：改读 llms-web.txt。
+约 200 MB。命令有超时就后台下载或调长超时，断了用 `curl -C -` 续传。
 
 ### macOS（12 以上，Apple Silicon）
 
@@ -48,7 +44,7 @@ Start-Process $setup -ArgumentList '--silent' -Wait
 Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"
 ```
 
-摘要对不上（`False`）就停下：删掉安装包，告诉用户。以后从开始菜单的「Orca PPT」打开。
+摘要对不上（`False`）就停下：删掉安装包，告诉用户。
 
 命令被你的权限拦下时，把下载链接给用户自己装。Windows 提示「已保护你的电脑」时点「更多信息」→「仍要运行」。
 
@@ -56,7 +52,7 @@ Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"
 
 ### WorkBuddy
 
-写进 `~/.workbuddy/mcp.json`（设了 `WORKBUDDY_CONFIG_DIR` 就在那个目录下），已有文件就往 `mcpServers` 里加：
+写进 `~/.workbuddy/mcp.json`，已有文件就往 `mcpServers` 里加：
 
 ```json
 {
@@ -89,10 +85,3 @@ claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
 
 在 MCP 设置里加：名字 `orca-ppt`，HTTP / Streamable HTTP，地址 `http://127.0.0.1:6722/mcp`。
 只支持 stdio 的现在接不上，如实告诉用户。
-
-## 只装 skill
-
-1. 需要 Node.js 和系统里的 Chrome：核版式、转场自检、导出 PPTX 的脚本都用它（不下载浏览器）。
-2. 取得仓库里的 `skills/orca-ppt/`（`git clone https://github.com/orca-studio/orca-ppt` 或下载压缩包），
-   放进或软链进你读 skill 的目录，名字用 `orca-ppt`（Claude Code 是 `~/.claude/skills/orca-ppt`）。
-3. 之后按 `SKILL.md` 做稿，装依赖、做同款怎么读配方它都写了。

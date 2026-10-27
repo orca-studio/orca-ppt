@@ -36,17 +36,18 @@
 
 2. **做第一份稿子。** 在 Orca PPT 首页挑一个同款，点「做同款」，把复制的那段话贴给 AI 助手，补上你的内容。
 
-### 用法二：只装 Orca PPT skill
+### 用法二：不装桌面版
 
-skill 是 Orca PPT 的设计规范和脚本，AI 助手照着它直接做出 HTML 稿子。不需要装应用，也不限于 Mac。
+装一个 npm 包：带 Orca PPT 的 skill（设计规范和脚本，AI 助手照着它做出 HTML 稿子）、`orca-ppt` 命令和
+浏览器里的工作台。不需要装应用，也不限于 Mac。
 
-1. **让 AI 助手装好 skill。** 把下面这句话发给你的 AI 助手：
+1. **让 AI 助手装好。** 把下面这句话发给你的 AI 助手：
 
    ```
-   读 https://ppt.orca-studio.ai/llms.txt ，按「只装 skill」那一节，把 Orca PPT 的 skill 装好。
+   读 https://ppt.orca-studio.ai/llms-web.txt ，帮我装好 Orca PPT。
    ```
 
-   电脑上要有 Node.js；录视频、导出 PPTX 还要装 Chrome。
+   要用的 Node.js、Chrome 它会自己检查、装上。
 
 2. **做第一份稿子。** 直接跟它说「用 orca-ppt 做一份……」；想照某个效果做，先在
    [官网](https://ppt.orca-studio.ai) 挑一个同款，再说「照 orca-ppt 的 forest-timeline 同款做一份……」。
