@@ -1,8 +1,4 @@
-# Orca PPT
-
-> 本地桌面应用（macOS / Windows），用来看、改、放映会动的演示稿。它不带 AI，通过 MCP 把工作台交给
-> 用户自己的 AI 助手。这份文件写给 AI 助手：怎么替用户装好它、把你自己连上。连上之后怎么做稿，
-> 以 MCP 返回的 instructions 为准。
+# 安装 Orca PPT（桌面版 + MCP）
 
 ## 步骤
 
@@ -15,7 +11,7 @@ Linux、或者用户不想装桌面版时，改读 [llms-web.txt](https://ppt.or
    改配置文件前先读原文件、留备份，只加这一条；要用户「批准 / 信任」的，让用户自己点，别改批准记录。
 3. **请用户重启你**，并告诉他：以后先开 Orca PPT，再开 AI 助手。
 4. **验证**：调 `deck_status`，返回 `NO_DECK_OPEN` 或页数都算连上了。
-5. **告诉用户可以开始了**：在 Orca PPT 首页挑同款点「做同款」，把复制的话发给你；或者直接说要做什么稿子。
+5. **告诉用户装好了**。
 
 ## 安装
 
@@ -96,14 +92,7 @@ claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
 
 ## 只装 skill
 
-成品是一个 HTML，浏览器打开就能放映；没有工作台（不能在画面上点选），也没有同款首页。
-
 1. 需要 Node.js 和系统里的 Chrome：核版式、转场自检、导出 PPTX 的脚本都用它（不下载浏览器）。
 2. 取得仓库里的 `skills/orca-ppt/`（`git clone https://github.com/orca-studio/orca-ppt` 或下载压缩包），
    放进或软链进你读 skill 的目录，名字用 `orca-ppt`（Claude Code 是 `~/.claude/skills/orca-ppt`）。
 3. 之后按 `SKILL.md` 做稿，装依赖、做同款怎么读配方它都写了。
-
-## 更多
-
-- [README](https://github.com/orca-studio/orca-ppt/blob/main/README.md)：给人看的介绍
-- [开发者文档](https://github.com/orca-studio/orca-ppt/blob/main/docs/DEVELOPMENT.md)：架构、MCP 工具、从源码运行

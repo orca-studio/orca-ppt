@@ -1,36 +1,18 @@
-# Orca PPT：命令行 + 浏览器工作台
+# 安装 Orca PPT（命令行 + 浏览器工作台）
 
-> 用来看、改、放映会动的演示稿。它不带 AI，把工作台交给用户自己的 AI 助手操作。这份文件写给 AI 助手：
-> 装一个 npm 包，浏览器里开工作台，你用 `orca-ppt` 命令操作 —— 不用配 MCP、不用请用户点「信任」、
-> 不用下 200 MB 的安装包。macOS、Windows、Linux 都是这一条路。
-
-## 开始
-
-1. **检查依赖，缺什么装什么**：Node.js 22.18 以上（`node -v`）；Chrome 或 Edge（缩略图、截图、导出 PPTX
-   用，不会自己下载浏览器）。
-2. **安装**（升级也是重跑这一行；macOS、Windows、Linux 同一行）：
+1. **检查依赖，缺什么装什么**：Node.js 22.18 以上（`node -v`）；Chrome 或 Edge（`orca-ppt` 用它渲染稿子，
+   不会自己下载浏览器）。
+2. **装 `orca-ppt`**（升级也是重跑这一行）：
 
    ```
    npm install -g https://github.com/orca-studio/orca-ppt/releases/latest/download/orca-ppt.tgz
    ```
 
-3. **开工作台**：`orca-ppt serve --detach --no-open`，打印出网址（已经在跑就只打印它的网址）。
-   **你有自带的浏览器就用它打开这个网址**，用户在你旁边就能看到工作台；没有就跑
-   `orca-ppt serve --detach`（不带 `--no-open`），它会用 Chrome 或 Edge 打开。网址里的令牌每次启动都换，
-   别用记着的旧网址。**每次用之前由你先跑一遍**，`orca-ppt stop` 停掉。请用户把工作台留在前台
-   （在后台浏览器会限速）。
-4. **学会怎么操作**：跑 `orca-ppt tools`，读它打印的用法和全部工具。之后用 `orca-ppt call <工具> 参数` 调：
-   `orca-ppt call show_slide index=2`（`key=value`，值按 JSON 读）、`orca-ppt call show_slide '{"index":2}'`，
-   或者把 JSON 从标准输入喂给 `orca-ppt call <工具> -`。Windows 的 PowerShell 会吃掉参数里的双引号，
-   在那里用 `key=value` 或标准输入。工具报错时退出码是 1，原因照原文打出来；返回的图片存成文件、
-   打印路径，要看画面就读那个文件。
-5. **验证**：`orca-ppt call deck_status`，返回 `NO_DECK_OPEN` 或页数都算好了。
-6. **告诉用户可以开始了**：在工作台首页挑同款点「做同款」，把复制的话发给你；或者直接说要做什么稿子。
-
-6722 端口被 Orca PPT 桌面版占着时 `serve` 起不来：`orca-ppt call` 照样能操作开着的桌面版。
-
-## 更多
-
-- 用户要装桌面版、或者想把 Orca PPT 的工具加进你的工具列表（MCP）时：读
-  [llms.txt](https://ppt.orca-studio.ai/llms.txt)
-- [README](https://github.com/orca-studio/orca-ppt/blob/main/README.md)：给人看的介绍
+3. **装 skill**：`orca-ppt skill` 打印随包附带的 skill 目录，把它链进你读 skill 的目录，名字用 `orca-ppt`：
+   WorkBuddy 是 `~/.workbuddy/skills/orca-ppt`，Claude Code 是 `~/.claude/skills/orca-ppt`，Codex 等是
+   `~/.agents/skills/orca-ppt`。macOS、Linux 用 `ln -s`；Windows 用目录联接
+   `cmd /c mklink /J <链接> <skill 目录>`（不用管理员）。那里已经有一个 `orca-ppt` 时先问用户再换。
+   升级不用重链：包装在原处，链接一直指着最新的。
+4. **确认连得上**：`orca-ppt serve --detach --no-open` 打印出工作台的网址，`orca-ppt call deck_status`
+   返回 `NO_DECK_OPEN` 或页数，就都好了。
+5. **告诉用户装好了**，请他新开一个对话 / 任务（skill 一般在新对话里才加载）。之后说要做稿子，你照 skill 来。

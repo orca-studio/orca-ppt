@@ -61,6 +61,7 @@ const HELP = `用法:orca-ppt <命令> [参数]
                       echo '{"index":2}' | orca-ppt call show_slide -   (从标准输入读 JSON)
                     Windows 的 PowerShell 会吃掉参数里的双引号,用 key=value 或标准输入。
                     返回的图片存成文件,打印路径;工具报错时退出码 1
+  skill             打印随这个包一起发的 skill 目录(规范、用法都在它的 SKILL.md 里),链进你读 skill 的目录
   --version         版本号
 
   --json            机器可读的输出
@@ -297,6 +298,11 @@ switch (command) {
     }
     process.kill(state.pid, 'SIGTERM')
     print(`停了(进程 ${state.pid})`, { stopped: true, pid: state.pid })
+    break
+  }
+  case 'skill': {
+    const path = await skill()
+    print(path, { path })
     break
   }
   case '--version':

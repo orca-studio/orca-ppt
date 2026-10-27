@@ -402,6 +402,10 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     令牌是上一次启动的、或者 serve 没在跑,直说原因,不留白屏。
   - **Windows**:`.github/workflows/npm-package-windows.yml` 在 Windows 构建机上打包、全局装、新建 /
     检查 / 导出、后台 serve、三种参数写法的 `call`、截图、停掉(`tools/smoke-npm-win.ps1`)。Linux 不测。
+  - **llms 只写安装,用法在 skill**(2026-10-27 定):`llms-web.txt` 只有装依赖、`npm install -g`、
+    把 `orca-ppt skill` 打印的目录链进助手读 skill 的目录、确认连得上;开工作台、`tools` / `call`、
+    注意事项写在 `skills/orca-ppt/references/workbench.md`(SKILL.md 开头一句「本机有 `orca-ppt` 命令时」
+    指过去)。规范只在 skill 一处(AGENTS.md 边界 4),而且跟着包发版,说明和命令对得上。
   - **初次使用默认走 CLI + 浏览器工作台**(2026-10-27 定,写在 `site/src/llms-web.txt`;`llms.txt` 保持桌面版 + MCP,教学视频在用):装 npm 包、
     `serve --detach`、`tools` / `call`。不用在助手里配 MCP、请用户点「信任」,不用下 DMG。MCP 和桌面版
     是「进阶」:工具直接进助手的工具列表、截图内联给模型看;全屏放映、取锚裁切图、后台不限速。

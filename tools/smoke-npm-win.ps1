@@ -19,6 +19,8 @@ function Run([string]$label, [scriptblock]$command) {
 Run '安装' { npm install -g $tgz.FullName } | Out-Null
 Run '版本' { orca-ppt --version } | Out-Null
 Run '起始文件' { orca-ppt templates } | Out-Null
+$skill = (Run 'skill 目录' { orca-ppt skill }).Trim()
+if (-not (Test-Path (Join-Path $skill 'references\workbench.md'))) { throw "包里的 skill 不全:$skill" }
 
 # 稿子放在 C 盘:全局 npm 目录在 C 盘,稿子和 skill 要在同一个盘(跨盘会被拒,见 llms-web.txt)
 $decks = Join-Path $env:TEMP 'orca-ppt-smoke'

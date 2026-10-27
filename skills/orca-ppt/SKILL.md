@@ -14,6 +14,9 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | **汇报稿** | 工作汇报、产品介绍、数据复盘。页面由文字、数字、面板组成 | `references/visual-spec.md` + `references/transitions.md` |
 | **故事稿** | 讲演变、讲历史。一页一张照片，靠照片里形状的呼应串起来 | `references/story-mode.md` + `references/transitions.md` 的「核心原则」「自检标准」 |
 
+**本机有 `orca-ppt` 命令时**（`orca-ppt --version` 有输出），先读 `references/workbench.md`：开工作台、
+用 `orca-ppt call` 操作 —— 用户在浏览器里和你看着同一块画布。
+
 **用户拿来一个参考说「做个同款」时**（一段视频、别人的稿子、「像 XX 那样的结尾页」），
 先读 `recipes/README.md`，有现成同款就照它的 `RECIPE.md` 做；没有的就按通用规范做，别临场发明配方。
 
