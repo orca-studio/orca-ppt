@@ -43,7 +43,7 @@ skill 是 Orca PPT 的设计规范和脚本，AI 助手照着它直接做出 HTM
 1. **让 AI 助手装好 skill。** 把下面这句话发给你的 AI 助手：
 
    ```
-   读 https://ppt.orca-studio.ai/llms.txt ，按「不装应用，只装 skill」那一节，把 Orca PPT 的 skill 装好。
+   读 https://ppt.orca-studio.ai/llms.txt ，按「只装 skill」那一节，把 Orca PPT 的 skill 装好。
    ```
 
    电脑上要有 Node.js；录视频、导出 PPTX 还要装 Chrome。

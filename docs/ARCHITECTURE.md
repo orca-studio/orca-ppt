@@ -389,6 +389,14 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
   `deck.exportPptx`)。录屏自检、核稿子这些是 skill 的脚本,照 SKILL.md 直接跑,不包进 CLI。
   和界面的同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并
   刷新画布,CLI 不需要知道有没有 server 在跑。
+  - **`orca-ppt tools` / `orca-ppt call <工具> '<JSON>'`(已落地,`apps/cli/src/mcp.ts`)**:CLI 当
+    server 的又一个 MCP 客户端,连本机的 `/mcp`(本机进程不带 Origin,不要 token)。`tools` 打印 MCP 握手
+    给的使用说明和全部工具、参数;`call` 调一个,文字照打,图片存成文件打印路径,工具报错退出码 1。
+    工具、说明、行为只有 `/mcp` 那一份;操作照样记成 agent 做的,界面照样框出改动,接管时照样拦。
+    连的端口:`--port`,其次后台 serve 记下的,再是 6722(桌面版也在这,所以也能操作桌面版)。
+  - **初次使用默认走 CLI + 浏览器工作台**(2026-10-27 定,写在 `site/src/llms-web.txt`;`llms.txt` 保持桌面版 + MCP,教学视频在用):装 npm 包、
+    `serve --detach`、`tools` / `call`。不用在助手里配 MCP、请用户点「信任」,不用下 DMG。MCP 和桌面版
+    是「进阶」:工具直接进助手的工具列表、截图内联给模型看;全屏放映、取锚裁切图、后台不限速。
   - **后台常驻**:`orca-ppt serve --detach` 起一个独立进程就返回,`stop` 停掉;正在跑的那个记在
     `~/.orca-ppt/serve.json`(进程号、端口、带 token 的网址,只给自己读),再跑 `--detach` 只报网址。
     AI 助手的命令有超时,前台的 serve 会被掐掉;有了它,助手发现 6722 连不上可以自己拉起来。
@@ -403,7 +411,7 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 稿子按相对路径引 `node_modules/reveal.js/…`,交给 npm 装会被提到顶层。所以 tgz 自己用 tar 打,
 不用 npm pack(它会剔掉 node_modules)。**不发 npmjs**:和安装包同一次发版传到 GitHub Release
 (`orca-ppt-<版本>.tgz` 加固定名字 `orca-ppt.tgz`,摘要并进 `SHA256SUMS.txt`),
-`npm install -g <tgz 地址>` 就能装,llms.txt 里「不装桌面版」一节。依赖(Node、Chrome)由用户的
+`npm install -g <tgz 地址>` 就能装,写在 `site/src/llms-web.txt`。依赖(Node、Chrome)由用户的
 AI 助手检查、缺了它来装,产品不自己下载浏览器。
 
 还没做:桌面 app 把同一个包放进 Resources、把 CLI 也露出来(ego-lite 的做法)。
@@ -413,8 +421,9 @@ AI 助手检查、缺了它来装,产品不自己下载浏览器。
 1. 内核只吃路径、只返回值。
 2. server 不 import `electron`,渲染一律走 `Renderer`。
 3. `apps/web` 只经 `Host` 和 `CanvasDriver` 碰外界。
-4. CLI 是**库客户端**,不走协议,但它能做的操作协议里必须也有 —— AGENTS.md 边界 3 的延伸,
-   防止 CLI 长出界面和 MCP 都没有的能力。
+4. CLI 的 `new`、`check`、`export` 这些是**库客户端**,不走协议,但它能做的操作协议里必须也有 ——
+   AGENTS.md 边界 3 的延伸,防止 CLI 长出界面和 MCP 都没有的能力。`tools` / `call` 是 **MCP 的薄客户端**,
+   一个工具都不另写。
 
 ### 顺序
 
@@ -493,6 +502,7 @@ CDN 上,离线就坏)· **每份稿子自带一份运行时**(引擎、reveal、
 | 2026-10-27 | 新增「一个内核,三种形态」:内核拆成 `deck-core` + `deck-agent` + `Renderer` 接口,web 抽 `Host` / `CanvasDriver`,加 `orca-ppt serve` 和 CLI;Web 版只做本地;稿子经稳定路径引运行时,不自带一份(目标形态,未实现)                                                      | 让 agent 不开应用也能新建、检查、导出;人在浏览器里也能看稿和指给 AI 看。不做云端:稿子必须留在本地磁盘                                                                                     |
 | 2026-10-27 | `capture.mjs` 默认不出视频:出关键帧(每页转场 5 帧 + 停稳 1 帧,写到系统临时目录)和每次转场动了几帧,动的不到一半就提醒;`-o x.mp4` 才拼视频。SKILL.md 第 7、8 步改成看关键帧                                                                                        | ffmpeg 不该是必须依赖:新手机器上多半没有。自检要的是关键帧和「转场动没动」,mp4 只是载体;agent 多半放不了视频,本来就是抽帧看。关键帧不写进稿子目录,应用在监听那里                          |
 | 2026-10-27 | 浏览器版的稿子放在另一个源,iframe 和界面只用 `postMessage` 说话(方案 B);server 托管稿子时加一行 `<script>` 引 guest 脚本,只收固定动作名、写死对方的源                                                                                                            | 同源时稿子脚本碰得到界面和启动 token,浏览器版不该比桌面版的独立 partition 松;reveal.js 官方的遥控接口和演讲者视图都是这个路子                                                             |
+| 2026-10-27 | 初次使用默认走 CLI + 浏览器工作台(npm 包、`orca-ppt serve --detach`、`orca-ppt tools` / `call`);MCP + 桌面版改为进阶。`tools` / `call` 是 `/mcp` 的薄客户端                                                                                                      | 尽可能降低初次使用的门槛:不用配 MCP、点「信任」,不用下 200 MB 的安装包;依赖由 AI 助手装。工具只维护 `/mcp` 一份                                                                           |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
 
 ### 已实现的打包和按需读取

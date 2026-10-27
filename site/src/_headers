@@ -1,3 +1,5 @@
 # Cloudflare 静态资源的响应头。纯文本默认只回 text/plain、不带编码,浏览器会按西文编码解,中文全成乱码
 /llms.txt
   Content-Type: text/plain; charset=utf-8
+/llms-web.txt
+  Content-Type: text/plain; charset=utf-8

@@ -14,15 +14,15 @@
 
 ## 产物
 
-| 文件                                                 | 给谁                                                         |
-| ---------------------------------------------------- | ------------------------------------------------------------ |
-| `OrcaPPT-<版本>-arm64.dmg`                           | macOS 第一次安装:打开后把应用拖进 Applications               |
-| `OrcaPPT-darwin-arm64-<版本>.zip`                    | macOS 自动更新:`update.electronjs.org` 按文件名认平台和架构  |
-| `OrcaPPT-win32-x64-<版本>-Setup.exe`                 | Windows 第一次安装:双击,装到 `%LOCALAPPDATA%\OrcaPPT`        |
-| `RELEASES`、`OrcaPPT-<版本>-full.nupkg`              | Windows 自动更新:Squirrel 读 `RELEASES`,再下 nupkg           |
-| `OrcaPPT-mac-arm64.dmg`、`OrcaPPT-win-x64-Setup.exe` | 官网和 llms.txt 的固定下载名,和带版本号的是同一个文件        |
-| `orca-ppt-<版本>.tgz`、`orca-ppt.tgz`                | 不装桌面版:`npm install -g` 它,`orca-ppt serve`(见 llms.txt) |
-| `SHA256SUMS.txt`                                     | 校验(两个平台和 npm 包的都在里面)                            |
+| 文件                                                 | 给谁                                                             |
+| ---------------------------------------------------- | ---------------------------------------------------------------- |
+| `OrcaPPT-<版本>-arm64.dmg`                           | macOS 第一次安装:打开后把应用拖进 Applications                   |
+| `OrcaPPT-darwin-arm64-<版本>.zip`                    | macOS 自动更新:`update.electronjs.org` 按文件名认平台和架构      |
+| `OrcaPPT-win32-x64-<版本>-Setup.exe`                 | Windows 第一次安装:双击,装到 `%LOCALAPPDATA%\OrcaPPT`            |
+| `RELEASES`、`OrcaPPT-<版本>-full.nupkg`              | Windows 自动更新:Squirrel 读 `RELEASES`,再下 nupkg               |
+| `OrcaPPT-mac-arm64.dmg`、`OrcaPPT-win-x64-Setup.exe` | 官网和 llms.txt 的固定下载名,和带版本号的是同一个文件            |
+| `orca-ppt-<版本>.tgz`、`orca-ppt.tgz`                | 不装桌面版:`npm install -g` 它,`orca-ppt serve`(见 llms-web.txt) |
+| `SHA256SUMS.txt`                                     | 校验(两个平台和 npm 包的都在里面)                                |
 
 应用开着时每小时问一次 `update.electronjs.org`,它读本仓的 GitHub Releases(只认公开、非草稿、
 semver tag 的 Release),有新版就下载,下次启动替换。只在发布版里开,见 `apps/desktop/src/main.ts`。

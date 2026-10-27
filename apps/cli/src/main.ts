@@ -22,6 +22,7 @@ import {
 } from '@orca-ppt/deck-core'
 import { playwrightRenderer } from '@orca-ppt/render'
 import { readServeState, serve } from '@orca-ppt/server/serve'
+import { callTool, listTools } from './mcp.js'
 
 /**
  * `orca-ppt`:不开应用也能做稿子。agent 批量新建、按阶段写、检查、导出,人想看再开
@@ -52,6 +53,10 @@ const HELP = `用法:orca-ppt <命令> [参数]
                     在浏览器里打开工作台。--detach 放到后台常驻,打印网址就返回;
                     已经在跑就只打印它的网址
   stop              停掉后台的 serve
+  tools [--port]    列出 Orca PPT 的全部工具和用法(和 MCP 的是同一份)。要先有 serve 或桌面版在跑
+  call <工具> ['<JSON 参数>'] [--port]
+                    调一个工具,例如 orca-ppt call show_slide '{"slide":2}'。不用在助手里配 MCP、
+                    点「信任」;界面照样跟着走。返回的图片存成文件,打印路径;工具报错时退出码 1
   --version         版本号
 
   --json            机器可读的输出
@@ -251,6 +256,43 @@ switch (command) {
     else await serve(args.slice(1), { webRoot })
     break
   }
+  case 'tools': {
+    const { instructions, tools } = await listTools(await mcpPort())
+    print(
+      [
+        ...(instructions ? [instructions, ''] : []),
+        ...tools.flatMap((tool) => [
+          `${tool.name}${tool.title ? `  ${tool.title}` : ''}`,
+          ...(tool.description ? [`  ${tool.description.replace(/\n/g, '\n  ')}`] : []),
+          ...tool.params.map(
+            (param) =>
+              `  - ${param.name}${param.required ? '' : '?'}: ${param.type}${param.description ? `  ${param.description}` : ''}`,
+          ),
+          '',
+        ]),
+        "调用:orca-ppt call <工具> '<JSON 参数>'",
+      ],
+      { instructions, tools },
+    )
+    break
+  }
+  case 'call': {
+    const name = positional(1)
+    if (!name) fail("要给工具名:orca-ppt call <工具> '<JSON 参数>'(工具列表见 orca-ppt tools)")
+    let input: Record<string, unknown> = {}
+    const raw = positional(2)
+    if (raw) {
+      try {
+        input = JSON.parse(raw) as Record<string, unknown>
+      } catch {
+        fail(`参数要是 JSON 对象,例如 '{"slide":2}':${raw}`)
+      }
+    }
+    const result = await callTool(await mcpPort(), name, input)
+    print([...result.text, ...result.images.map((file) => `图片:${file}`)], result)
+    if (result.isError) process.exit(1)
+    break
+  }
   case 'stop': {
     const state = await readServeState()
     if (!state) {
@@ -274,6 +316,13 @@ switch (command) {
   default:
     process.stderr.write(`不认识的命令:${command}\n\n${HELP}`)
     process.exit(1)
+}
+
+/** `tools` / `call` 连哪个端口:--port,其次后台 serve 记下的端口,再是默认的 6722(桌面版也在这)。 */
+async function mcpPort(): Promise<number> {
+  const given = opt('--port')
+  if (given) return Number(given)
+  return (await readServeState())?.port ?? 6722
 }
 
 /**
