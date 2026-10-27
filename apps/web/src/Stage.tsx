@@ -14,10 +14,6 @@ import {
   type PushData,
   type RequestParams,
 } from '@orca-ppt/contracts'
-import autoplayScript from './guest/autoplay.guest.js?raw'
-import editScript from './guest/edit.guest.js?raw'
-import canvasScript from './guest/canvas.guest.js?raw'
-import inspectScript from './guest/inspect.guest.js?raw'
 import { Canvas, type CanvasView } from './canvas.js'
 
 /**
@@ -100,14 +96,6 @@ interface ChangeFlag {
   shown: boolean
   seq: number
 }
-
-/**
- * 往前翻一页。走 skill 引擎的 advance:转场还没放完就翻,它会先把剩下的放完,不跳帧
- * (见 skills/orca-ppt/runtime/engine.js)。老稿子的引擎没有它,就退回 Reveal.next()。
- */
-const ADVANCE = 'window.__orcaAdvance ? window.__orcaAdvance() : Reveal.next()'
-/** 明说要去下一页:转场先放完,页内动画不再一步一步推。老引擎不认参数,照旧。 */
-const NEXT_PAGE = 'window.__orcaAdvance ? window.__orcaAdvance({ page: true }) : Reveal.next()'
 
 /** 这一页在画布上的情况。右栏「页」那一档显示它。 */
 export interface SlideInfo {
@@ -251,13 +239,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       }
       watching.current = true
       void view
-        .run('window.__orcaEdit?.arm()')
+        .call('editArm')
         .then(async (result) => {
           const edit = result as TextEdit | null
           if (!edit) return
           const reason = await onTextEditRef.current(edit)
           if (reason) {
-            void view.run(`window.__orcaEdit.notify(${JSON.stringify(reason)})`).catch(() => {})
+            void view.call('editNotify', reason).catch(() => {})
           }
         })
         .then(watchEdits)
@@ -272,18 +260,15 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     const onLoad = () => {
       const epoch = loadEpoch.current
       void view
-        .run(
-          `window.Reveal?.configure({ controls: false });${inspectScript};${autoplayScript};${editScript};${canvasScript}`,
-        )
+        .inject()
+        .then(() => view.call('setup'))
         .then(async () => {
           if (epoch !== loadEpoch.current) return
           // Keep the desired page across successive watcher reloads. A user/agent
           // navigation during injection supersedes the earlier restore target.
           for (;;) {
             const slide = restoreTo.current
-            const index = await view
-              .run(`Reveal.slide(${slide}); Reveal.getIndices().h`)
-              .catch(() => undefined)
+            const index = await view.call('slideTo', slide).catch(() => undefined)
             if (epoch !== loadEpoch.current) return
             if (slide !== restoreTo.current) continue
             injected.current = true
@@ -359,7 +344,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       for (;;) {
         const view = ref.current
         if (!view) return
-        const editing = await view.run('!!window.__orcaEdit?.editing()').catch(() => false)
+        const editing = await view.call('editing').catch(() => false)
         if (!editing) {
           view.reload()
           return
@@ -381,7 +366,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     // 焦点留在画布里的话,方向键会直接进 reveal,绕过下面的拦截。
     view.blur()
     // 收起双击改字。守候那一轮的 Promise 会解成 null,watchEdits 看到只读就不再接上。
-    void view.run('window.__orcaEdit?.editing() || window.__orcaEdit?.disarm()').catch(() => {})
+    void view.call('editRelease').catch(() => {})
   }, [readOnly, ready])
 
   const inspectCanvas = async (
@@ -392,9 +377,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     if (!view) throw new Error('UI_DISCONNECTED: 没有可见画布。')
     const deadline = Date.now() + 10000
     for (;;) {
-      const value = await view
-        .run(`window.__orcaCanvas?.inspect(${JSON.stringify(include)})`)
-        .catch(() => undefined)
+      const value = await view.call('inspect', include).catch(() => undefined)
       if (value) {
         const evidence = CanvasEvidence.parse(value)
         evidence.ready =
@@ -405,12 +388,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           (evidence.ready && evidence.renderedRevision === expectedRevision)
         ) {
           if (evidence.ready) {
-            await view.run(
-              `Promise.race([document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))), new Promise((_, reject) => setTimeout(() => reject(new Error('RENDER_NOT_READY: 字体尚未加载。')), 3000))])`,
-            )
-            const fresh = CanvasEvidence.parse(
-              await view.run(`window.__orcaCanvas.inspect(${JSON.stringify(include)})`),
-            )
+            await view.call('settle')
+            const fresh = CanvasEvidence.parse(await view.call('inspect', include))
             fresh.ready =
               fresh.ready && injected.current && !loading.current && !reloadWaiting.current
             fresh.errors = mergeErrors(runtimeErrors.current, fresh.errors)
@@ -500,11 +479,8 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     const view = ref.current
     if (!view || loading.current || !injected.current)
       return queries.map(() => ({ status: 'unavailable', reason: 'canvas_not_ready' }))
-    const found = (await view
-      .run(
-        `${JSON.stringify(queries)}.map(q => window.__orcaCanvas?.locate(q) ?? { status: 'unavailable', reason: 'canvas_not_ready' })`,
-      )
-      .catch(() => undefined)) as StageTarget[] | undefined
+    const found = (await view.call('locate', queries).catch(() => undefined)) as
+      StageTarget[] | undefined
     if (!found) return queries.map(() => ({ status: 'unavailable', reason: 'canvas_not_ready' }))
     return found.map(toHost)
   }
@@ -515,23 +491,21 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
       inspectCanvas,
       selectCanvas: async (input) => {
         await inspectCanvas('context', input.expectedRevision)
-        await ref.current?.run(`window.__orcaCanvas.select(${JSON.stringify(input)})`)
+        await ref.current?.call('select', input)
         return inspectCanvas('context', input.expectedRevision)
       },
       pick: async () => {
-        const result = await ref.current?.run('window.__orcaInspect?.arm()')
+        const result = await ref.current?.call('pick')
         return (result as PickedAnchor | null) ?? null
       },
       cancelPick: () => {
-        void ref.current?.run('window.__orcaInspect?.disarm()').catch(() => {})
+        void ref.current?.call('cancelPick').catch(() => {})
       },
       autoplay: (on: boolean) => {
-        void ref.current?.run(`window.__orcaAutoplay?.${on ? 'start' : 'stop'}()`).catch(() => {})
+        void ref.current?.call('autoplay', on).catch(() => {})
       },
       autoplayRunning: async () => {
-        const running = await ref.current
-          ?.run('!!window.__orcaAutoplay?.running()')
-          .catch(() => false)
+        const running = await ref.current?.call('autoplayRunning').catch(() => false)
         return Boolean(running)
       },
       reload: (slide: number) => {
@@ -544,42 +518,24 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
           return
         }
         // 正好是下一页就当成「往前翻」:走 advance,上一段转场没放完时先放完,不跳帧,
-        // 而且翻过去照样有转场。别的页是跳页,跳页本来就没有转场,直接去。
-        const index = Math.trunc(slide)
-        void ref.current
-          ?.run(`Reveal.getIndices().h + 1 === ${index} ? (${NEXT_PAGE}) : Reveal.slide(${index})`)
-          .catch(() => {})
+        // 而且翻过去照样有转场。别的页是跳页,跳页本来就没有转场,直接去(见 bridge.guest.js)。
+        void ref.current?.call('goto', Math.trunc(slide)).catch(() => {})
       },
       navigate: (action, from) => {
-        const command =
-          action === 'previous'
-            ? 'Reveal.prev()'
-            : action === 'replay'
-              ? `Reveal.slide(${Math.trunc(from ?? 0)}); setTimeout(() => { ${ADVANCE} }, 260)`
-              : action === 'replayPage'
-                ? // 已经在这一页时 Reveal.slide 不会触发翻页,页内动画要引擎自己从头放;老引擎没有就算了
-                  `Reveal.slide(${Math.trunc(from ?? 0)}); window.__orcaReplayBuild?.()`
-                : ADVANCE
-        void ref.current?.run(`window.__orcaAutoplay?.stop(); ${command}`).catch(() => {})
+        void ref.current?.call('navigate', action, Math.trunc(from ?? 0)).catch(() => {})
       },
       guestId: () => ref.current?.guestId(),
       locate,
       patch: async (input) => {
         const view = ref.current
         if (!view || loading.current || reloadWaiting.current || !injected.current) return false
-        const done = await guest(
-          view,
-          `window.__orcaCanvas.patch(${JSON.stringify(input)})`,
-          'patch',
-        ).catch(() => false)
+        const done = await view.call('patch', input).catch(() => false)
         return done === true
       },
       revision: async () => {
         const view = ref.current
         if (!view || loading.current || !injected.current) return null
-        const value = await guest(view, 'window.__orcaCanvas.revision()', 'revision').catch(
-          () => null,
-        )
+        const value = await view.call('revision').catch(() => null)
         return typeof value === 'string' ? value : null
       },
       follow: async ({ revision, slide, query, label }) => {
@@ -590,28 +546,13 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         await inspectCanvas('context', revision)
         if (slide !== undefined) {
           // 直接跳,不放转场:要看的是改动,不是翻页动画
-          await guest(
-            view,
-            `Reveal.getIndices().h === ${slide} || void Reveal.slide(${slide})`,
-            'slide',
-          )
-          await guest(
-            view,
-            'new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))',
-            'frame',
-          )
+          await view.call('show', slide)
+          await view.call('frame')
         }
         if (slide === undefined) return undefined
-        const area = () =>
-          guest(view, 'window.__orcaCanvas.slideArea()', 'area') as Promise<StageTarget>
+        const area = () => view.call('slideArea') as Promise<StageTarget>
         const found = query
-          ? toHost(
-              (await guest(
-                view,
-                `window.__orcaCanvas.locate(${JSON.stringify(query)})`,
-                'locate',
-              )) as StageTarget,
-            )
+          ? toHost(((await view.call('locate', [query])) as StageTarget[])[0]!)
           : undefined
         // 那一处认不准(重名、被藏起来)也框整页:至少让人知道动的是这一页
         showFlag(found?.rect ? found : toHost(await area()), label)
@@ -620,15 +561,11 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
         return found
       },
       slideInfo: async () => {
-        const result = await ref.current
-          ?.run('window.__orcaInspect?.slideInfo() ?? null')
-          .catch(() => null)
+        const result = await ref.current?.call('slideInfo').catch(() => null)
         return (result as SlideInfo | null) ?? null
       },
       notify: (message: string) => {
-        void ref.current
-          ?.run(`window.__orcaEdit?.notify(${JSON.stringify(message)})`)
-          .catch(() => {})
+        void ref.current?.call('editNotify', message).catch(() => {})
       },
       whenReady: (timeoutMs = 4_000) =>
         new Promise<boolean>((resolve) => {
@@ -715,15 +652,6 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
     </div>
   )
 })
-
-/** 在 guest 里跑一段,出错时带回真正的原因 —— webview 自己只会说「脚本执行失败」。 */
-async function guest(view: CanvasView, expression: string, step: string): Promise<unknown> {
-  const result = (await view.run(
-    `(async () => { try { return { value: await (${expression}) } } catch (e) { return { error: String((e && e.stack) || e) } } })()`,
-  )) as { value?: unknown; error?: string }
-  if (result.error) throw new Error(`${step}: ${result.error}`)
-  return result.value
-}
 
 function mergeErrors(...lists: CanvasError[][]): CanvasError[] {
   const errors = new Map<string, CanvasError>()

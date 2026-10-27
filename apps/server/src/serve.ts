@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { playwrightRenderer } from './playwright-renderer.js'
 import { startServer } from './server.js'
 import { defaultWebRoot } from './web-host.js'
 
@@ -23,6 +24,8 @@ const port = Number(opt('--port') ?? process.env.ORCA_PPT_PORT ?? 6722)
 const deck = opt('--deck')
 const token = randomBytes(24).toString('base64url')
 const here = dirname(fileURLToPath(import.meta.url))
+// 缩略图、导出 PPTX、浏览器里截图:系统 Chrome(没有就 Edge),第一次用时才开
+const renderer = playwrightRenderer()
 
 let server: Awaited<ReturnType<typeof startServer>>
 try {
@@ -30,6 +33,9 @@ try {
     port,
     token,
     webRoot: process.env.ORCA_PPT_WEB_ROOT ?? defaultWebRoot(here),
+    // 稿子放到另一个端口(另一个源),界面经 postMessage 叫它做事;guest.js 由界面这个源给
+    isolate: { previewPort: 0, guestScript: '/guest.js' },
+    renderer,
   })
 } catch (error) {
   if ((error as NodeJS.ErrnoException).code === 'EADDRINUSE') {
@@ -49,7 +55,7 @@ if (!args.includes('--no-open')) openBrowser(url.href)
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
-    void server.close().then(() => process.exit(0))
+    void Promise.all([server.close(), renderer.close()]).then(() => process.exit(0))
   })
 }
 

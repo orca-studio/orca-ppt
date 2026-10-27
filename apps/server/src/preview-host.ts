@@ -23,6 +23,17 @@ export class PreviewHost {
    * 目录里 —— 放行整个目录太宽,只认 server 自己经手过的那几个路径。
    */
   readonly #allowFiles = new Set<string>()
+  /** 浏览器版:入口页末尾加一行引它的 `<script>`(见 injectGuest)。桌面版不加。 */
+  #guestScript: string | undefined
+
+  /**
+   * 浏览器版的稿子在另一个源,界面摸不到页面,检视、改字这些 guest 脚本只能由稿子自己加载:
+   * 入口页送出去时在末尾加一行 `<script src>`。磁盘上的文件不动 —— 效果和桌面版 webview
+   * 在运行时注入是一样的(见 apps/web/src/guest/bridge.guest.js)。
+   */
+  injectGuest(url: string): void {
+    this.#guestScript = url
+  }
 
   /**
    * 放行一个目录。**要 realpath**:deck 路径是 realpath 过的,allow root 不跟着解析的话,
@@ -124,10 +135,11 @@ export class PreviewHost {
 
       if (real === (await realpath(plan.entryFile))) {
         const before = await deckRevision(plan.root)
-        const bytes = await readFile(real)
+        const source = await readFile(real)
         const after = await deckRevision(plan.root)
         // Concurrent writes cannot be labelled as a confirmed version.
-        const stable = before === after && bytes.equals(await readFile(real))
+        const stable = before === after && source.equals(await readFile(real))
+        const bytes = this.#guestScript ? withScript(source, this.#guestScript) : source
         res.writeHead(200, {
           'content-type': contentTypeFor(real),
           'content-length': bytes.length,
@@ -266,6 +278,14 @@ export function parseRange(
   }
   if (start >= size || start > end) return 'unsatisfiable'
   return { start, end }
+}
+
+/** 在 `</body>` 前(没有就在最后)加一行 `<script src>`。 */
+export function withScript(html: Buffer, src: string): Buffer {
+  const text = html.toString('utf8')
+  const tag = `<script src="${src.replace(/"/g, '&quot;')}"></script>`
+  const at = text.toLowerCase().lastIndexOf('</body>')
+  return Buffer.from(at === -1 ? text + tag : text.slice(0, at) + tag + text.slice(at), 'utf8')
 }
 
 function within(root: string, target: string): boolean {

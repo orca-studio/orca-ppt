@@ -353,7 +353,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
         try {
           if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
           // 截画布要壳(按 guest 截);浏览器里没有壳,说实话,别说成画布没加载
-          if (!host.captureCanvas) throw new Error('这个客户端截不了画布:浏览器版还不能截图')
+          // server 认这个前缀,退回渲染器离屏截那一页
+          if (!host.captureCanvas) throw new Error('CANVAS_UNCAPTURABLE: 这个客户端截不了画布')
           const canvas = stage.current
           if (!canvas || !(await canvas.whenReady())) throw new Error('RENDER_NOT_READY')
           const before = await canvas.inspectCanvas('context', data.expectedRevision)

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest'
-import { iframeView, sameOrigin, webviewView, type CanvasEvents } from './canvas.js'
+import { iframeView, webviewView, type CanvasEvents } from './canvas.js'
 
 const noop = (): CanvasEvents => ({
   navigated: vi.fn(),
@@ -11,29 +11,15 @@ const noop = (): CanvasEvents => ({
   console: vi.fn(),
 })
 
-describe('sameOrigin', () => {
-  it('和界面同源就原样用', () => {
-    expect(sameOrigin('http://127.0.0.1:6722/p/abc/a/deck.html', 'http://127.0.0.1:6722')).toBe(
-      'http://127.0.0.1:6722/p/abc/a/deck.html',
-    )
-  })
-
-  it('不同源(开发时界面在 Vite 上)只取路径,交给代理', () => {
-    expect(
-      sameOrigin('http://127.0.0.1:6722/p/abc/a/deck.html?x=1#/2', 'http://127.0.0.1:5273'),
-    ).toBe('/p/abc/a/deck.html?x=1#/2')
-  })
-})
-
 describe('webviewView', () => {
   /** 扮演 webview:能发事件、能跑代码。 */
-  function fakeWebview() {
+  function fakeWebview(reply: unknown = { value: 42 }) {
     const element = document.createElement('div') as unknown as HTMLElement & {
       executeJavaScript: (code: string) => Promise<unknown>
       reload: () => void
       getWebContentsId: () => number
     }
-    element.executeJavaScript = vi.fn(async () => 42)
+    element.executeJavaScript = vi.fn(async () => reply)
     element.reload = vi.fn()
     element.getWebContentsId = () => 7
     const fire = (name: string, detail: object = {}) =>
@@ -68,52 +54,79 @@ describe('webviewView', () => {
     expect(events.domReady).not.toHaveBeenCalled()
   })
 
-  it('跑代码、要 guest id 都转给 webview', async () => {
+  it('只按动作名叫画布,参数按 JSON 传;guest id 转给 webview', async () => {
     const { element } = fakeWebview()
     const view = webviewView(element)
-    await expect(view.run('1 + 1')).resolves.toBe(42)
+    await expect(view.call('goto', 3)).resolves.toBe(42)
+    expect(element.executeJavaScript).toHaveBeenCalledWith('window.__orcaHost.call("goto", [3])')
     expect(view.guestId()).toBe(7)
+  })
+
+  it('动作出错带回真正的原因', async () => {
+    const { element } = fakeWebview({ error: 'TypeError: Reveal is undefined' })
+    await expect(webviewView(element).call('slideTo', 0)).rejects.toThrow(
+      'slideTo: TypeError: Reveal is undefined',
+    )
   })
 })
 
 describe('iframeView', () => {
-  /** jsdom 里的同源 iframe:等它加载完再用。 */
+  const DECK = 'http://127.0.0.1:7001/p/abc/deck.html'
+
+  /** jsdom 里的 iframe:不真的去加载稿子,只拿它的 contentWindow 当消息来源。 */
   async function frame() {
     const element = document.createElement('iframe')
     document.body.append(element)
     await new Promise((resolve) => setTimeout(resolve, 0))
-    return element
+    Object.defineProperty(element, 'src', { value: DECK })
+    const sent: Array<{ message: unknown; origin: string }> = []
+    element.contentWindow!.postMessage = ((message: unknown, origin: string) =>
+      sent.push({ message, origin })) as Window['postMessage']
+    const from = (data: object, origin = 'http://127.0.0.1:7001') =>
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: { orca: true, ...data },
+          origin,
+          source: element.contentWindow,
+        }),
+      )
+    return { element, sent, from }
   }
 
-  it('同源时在页面里求值,等 Promise,结果按 JSON 拷回来', async () => {
-    const element = await frame()
-    const win = element.contentWindow as Window & { eval: (code: string) => unknown }
-    // jsdom 的 iframe 不跑脚本,给它一个能求值的 eval
-    win.eval = (code: string) => Promise.resolve({ code, at: new Date(0) })
-    const value = await iframeView(element).run('x')
-    expect(value).toEqual({ code: 'x', at: '1970-01-01T00:00:00.000Z' })
+  it('调用发给稿子的源,按 id 认回复;别的源冒充的不认', async () => {
+    const { element, sent, from } = await frame()
+    const view = iframeView(element)
+    const pending = view.call('inspect', 'context')
+    expect(sent[0]).toEqual({
+      message: { orca: true, type: 'call', id: '1', action: 'inspect', args: ['context'] },
+      origin: 'http://127.0.0.1:7001',
+    })
+    from({ type: 'reply', id: '1', value: 'fake' }, 'http://evil.example')
+    from({ type: 'reply', id: '1', value: { ready: true } })
+    await expect(pending).resolves.toEqual({ ready: true })
+    view.dispose()
   })
 
-  it('加载完报 DOM 好了;页面里的 console 转给画布,guest 脚本靠它报翻页', async () => {
-    const element = await frame()
+  it('稿子报 ready、console、要走了;要走时挂着的调用一律失败', async () => {
+    const { element, from } = await frame()
+    const view = iframeView(element)
     const events = noop()
-    iframeView(element).subscribe(events)
-    element.dispatchEvent(new Event('load'))
-    expect(events.loadingStopped).toHaveBeenCalled()
+    view.subscribe(events)
+    from({ type: 'ready' })
     expect(events.domReady).toHaveBeenCalled()
-
-    const guest = element.contentWindow as Window & { console: Console }
-    guest.console.debug('__orca:slide 2')
-    guest.console.error('坏了')
+    from({ type: 'console', message: '__orca:slide 2', error: false })
     expect(events.console).toHaveBeenCalledWith({ message: '__orca:slide 2', error: false })
-    expect(events.console).toHaveBeenCalledWith({ message: '坏了', error: true })
 
-    element.contentWindow!.dispatchEvent(new Event('pagehide'))
+    const arm = view.call('editArm')
+    from({ type: 'leaving' })
     expect(events.navigated).toHaveBeenCalled()
     expect(events.loadingStarted).toHaveBeenCalled()
+    await expect(arm).rejects.toThrow('画布重载了')
+    view.dispose()
   })
 
   it('浏览器里没有 guest id —— 截图要走 server 的渲染器', async () => {
-    expect(iframeView(await frame()).guestId()).toBeUndefined()
+    const { element } = await frame()
+    expect(iframeView(element).guestId()).toBeUndefined()
   })
 })

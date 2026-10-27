@@ -113,6 +113,11 @@ export async function startServer(
     webRoot?: string
     /** 启动 token。给了,浏览器发来的 WebSocket 连接就必须带对它(见 web-host.ts 的 allowClient)。 */
     token?: string
+    /**
+     * 浏览器版:稿子放到另一个源(另开一个端口,`0` 是随便一个),入口页末尾加一行引 guest
+     * 脚本的 `<script>`(`guestScript`,以 `/` 开头就拼在界面的源上)。桌面版不给。
+     */
+    isolate?: { previewPort: number; guestScript: string }
   } = {},
 ): Promise<OrcaServer> {
   const bus = new PushBus()
@@ -412,7 +417,7 @@ export async function startServer(
   function mountPreview(opened: OpenedDeck): string {
     if (!opened.entryFile) return ''
     const plan = planPreview(opened.deck.path, opened.entryFile)
-    return `http://127.0.0.1:${port}${previews.mount(plan).urlPath}`
+    return `http://127.0.0.1:${previewPort}${previews.mount(plan).urlPath}`
   }
 
   // 稿子同一时刻只归一方动:agent 拿着时拦人(见 handle),人接管时拦 agent(见下面的 gate)。
@@ -436,6 +441,8 @@ export async function startServer(
   const http = createHttpServer((req, res) => {
     void (async () => {
       if (await mcp.handle(req, res)) return
+      // 隔离时稿子只在预览端口上给:界面这个源上不出现稿子页面
+      if (options.isolate && (req.url ?? '').startsWith('/p/')) return void res.writeHead(404).end()
       if (await previews.handle(req, res)) return
       if (options.webRoot && (await serveWeb(options.webRoot, req, res))) return
       res.writeHead(404).end()
@@ -491,6 +498,27 @@ export async function startServer(
     })
   })
   const port = (http.address() as AddressInfo).port
+  // 浏览器版的稿子:另一个端口 = 另一个源,只服务稿子
+  const previewHttp = options.isolate
+    ? createHttpServer((req, res) => {
+        void previews
+          .handle(req, res)
+          .then((handled) => handled || res.writeHead(404).end())
+          .catch(() => res.headersSent || res.writeHead(500).end())
+      })
+    : undefined
+  if (previewHttp && options.isolate) {
+    await new Promise<void>((done, fail) => {
+      previewHttp.once('error', fail)
+      previewHttp.listen(options.isolate!.previewPort, '127.0.0.1', () => {
+        previewHttp.off('error', fail)
+        done()
+      })
+    })
+    const guest = options.isolate.guestScript
+    previews.injectGuest(guest.startsWith('/') ? `http://127.0.0.1:${port}${guest}` : guest)
+  }
+  const previewPort = previewHttp ? (previewHttp.address() as AddressInfo).port : port
   // MCP server 是另一个进程,靠这个文件找到我们。
   await writePortFile(port)
 
@@ -1209,14 +1237,46 @@ export async function startServer(
         const params = parseParams('deck.capture', raw)
         const root = deckPathOf(params.deckId)
         if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
-        if (bus.connectionCount === 0) throw new Error(AgentError.uiDisconnected())
         const revision = await deckRevision(root)
         if (params.expectedRevision && params.expectedRevision !== revision)
           throw new Error('STALE_REVISION')
-        const shot = await captures.request(params.deckId, {
-          ...(params.slide === undefined ? {} : { slide: params.slide }),
-          ...(params.expectedRevision ? { expectedRevision: params.expectedRevision } : {}),
-        })
+        /*
+         * 截「人此刻在画布上看到的那一页」只有界面答得了。界面截不了(浏览器版没有壳)、或者
+         * 根本没开界面时,退回渲染器离屏渲那一页 —— 渲的是磁盘上的当前版本,不是画布。
+         */
+        const headless = async () => {
+          if (renderer === noRenderer) throw new Error(AgentError.uiDisconnected())
+          const opened = await openDeck(root)
+          const previewUrl = mountPreview(opened)
+          if (!previewUrl) throw new Error(AgentError.noBuild())
+          const slide = Math.min(
+            params.slide ?? visibleSlides.get(params.deckId) ?? 0,
+            Math.max(opened.slideCount - 1, 0),
+          )
+          const [path] = await renderer.thumbnails({
+            previewUrl,
+            slideCount: opened.slideCount,
+            slides: [slide],
+            width: 1920,
+          })
+          if (!path) throw new Error('这一页渲不出来')
+          if ((await deckRevision(root)) !== revision)
+            throw new Error('STALE_REVISION: 截图过程中稿子变了。')
+          return { path, slide, renderedRevision: revision }
+        }
+        const shot =
+          bus.connectionCount === 0
+            ? await headless()
+            : await captures
+                .request(params.deckId, {
+                  ...(params.slide === undefined ? {} : { slide: params.slide }),
+                  ...(params.expectedRevision ? { expectedRevision: params.expectedRevision } : {}),
+                })
+                .catch((cause: unknown) => {
+                  if (cause instanceof Error && cause.message.startsWith('CANVAS_UNCAPTURABLE'))
+                    return headless()
+                  throw cause
+                })
         if (params.deckId !== lastOpened) throw new Error('DOCUMENT_CHANGED')
         if (
           params.expectedRevision &&
@@ -1394,6 +1454,7 @@ export async function startServer(
         wss.close()
         http.close(() => done())
       })
+      await new Promise<void>((done) => (previewHttp ? previewHttp.close(() => done()) : done()))
     },
   }
 }

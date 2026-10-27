@@ -1,17 +1,24 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
+import autoplayScript from './guest/autoplay.guest.js?raw'
+import bridgeScript from './guest/bridge.guest.js?raw'
+import canvasScript from './guest/canvas.guest.js?raw'
+import editScript from './guest/edit.guest.js?raw'
+import inspectScript from './guest/inspect.guest.js?raw'
 import { host } from './host.js'
 
 /**
  * 画布驱动:Stage 只经这里摸稿子页面(见 docs/ARCHITECTURE.md「一个内核,三种形态」的
- * CanvasDriver)。桌面版是 Electron `<webview>`;浏览器里是 `<iframe>`,要和界面**同源**才摸得到
- * 里面 —— server 同时托管界面和 `/p` 预览时就是同源,开发时由 Vite 把 `/p` 代理过去。
+ * CanvasDriver)。桌面版是 Electron `<webview>`;浏览器里是 `<iframe>`,稿子在**另一个源**,
+ * 两边只用 `postMessage` 说话。
  *
- * 只有这几个动作:跑一段代码、重载、失焦、量位置,外加几个加载事件。检视、改字、翻页的
- * 逻辑都在注入的 guest 脚本和 Stage 里,两种画布共用。
+ * 宿主叫画布做事只能用 `guest/bridge.guest.js` 里那张固定的动作表,不送任意代码进去 ——
+ * 浏览器里稿子是另一个源的页面,它的脚本也借不了这条通道反过来驱动工作台。
  */
 export interface CanvasView {
-  /** 在稿子页面里求一个表达式的值(会等 Promise),结果按 JSON 拷回来。摸不到页面时 reject。 */
-  run(code: string): Promise<unknown>
+  /** 调动作表里的一个动作(会等 Promise),结果按 JSON 拷回来。动作出错或摸不到页面时 reject。 */
+  call(action: CanvasAction, ...args: unknown[]): Promise<unknown>
+  /** 页面加载好之后把 guest 脚本装进去。浏览器里 server 托管稿子时已经装好了,这里什么都不做。 */
+  inject(): Promise<void>
   reload(): void
   blur(): void
   /** 画布元素在宿主页面里的位置。 */
@@ -20,6 +27,31 @@ export interface CanvasView {
   guestId(): number | undefined
   subscribe(events: CanvasEvents): () => void
 }
+
+/** `guest/bridge.guest.js` 的动作表。两边要对上。 */
+export type CanvasAction =
+  | 'setup'
+  | 'slideTo'
+  | 'editArm'
+  | 'editNotify'
+  | 'editing'
+  | 'editRelease'
+  | 'inspect'
+  | 'settle'
+  | 'select'
+  | 'pick'
+  | 'cancelPick'
+  | 'autoplay'
+  | 'autoplayRunning'
+  | 'goto'
+  | 'navigate'
+  | 'locate'
+  | 'patch'
+  | 'revision'
+  | 'show'
+  | 'frame'
+  | 'slideArea'
+  | 'slideInfo'
 
 export interface CanvasEvents {
   /** 主框架开始整页导航(重载、换稿)。之前注入的东西全没了。 */
@@ -39,6 +71,13 @@ export interface CanvasProps {
   onView: (view: CanvasView | null) => void
 }
 
+/** 动作表的回复:`{ value }` 或 `{ error }`(见 bridge.guest.js)。 */
+type Reply = { value?: unknown; error?: string }
+const unwrap = (action: string, reply: Reply): unknown => {
+  if (reply.error !== undefined) throw new Error(`${action}: ${reply.error}`)
+  return reply.value
+}
+
 /** 按运行形态选画布。 */
 export function Canvas(props: CanvasProps) {
   return host.kind === 'electron' ? <WebviewCanvas {...props} /> : <IframeCanvas {...props} />
@@ -50,6 +89,11 @@ interface WebviewElement extends HTMLElement {
   reload(): void
   getWebContentsId(): number
 }
+
+/** 桌面版每次加载后注入的那几份 guest 脚本,动作表在最后。 */
+const GUEST_SCRIPTS = [inspectScript, autoplayScript, editScript, canvasScript, bridgeScript].join(
+  ';\n',
+)
 
 function WebviewCanvas({ src, onView }: CanvasProps) {
   const attach = useCallback(
@@ -68,7 +112,16 @@ function WebviewCanvas({ src, onView }: CanvasProps) {
 
 export function webviewView(view: WebviewElement): CanvasView {
   return {
-    run: (code) => view.executeJavaScript(code),
+    call: async (action, ...args) =>
+      unwrap(
+        action,
+        (await view.executeJavaScript(
+          `window.__orcaHost.call(${JSON.stringify(action)}, ${JSON.stringify(args)})`,
+        )) as Reply,
+      ),
+    inject: async () => {
+      await view.executeJavaScript(GUEST_SCRIPTS)
+    },
     reload: () => view.reload(),
     blur: () => view.blur(),
     rect: () => view.getBoundingClientRect(),
@@ -120,94 +173,119 @@ export function webviewView(view: WebviewElement): CanvasView {
 }
 
 function IframeCanvas({ src, onView }: CanvasProps) {
+  const current = useRef<IframeView | null>(null)
   const attach = useCallback(
-    (element: HTMLIFrameElement | null) => onView(element ? iframeView(element) : null),
+    (element: HTMLIFrameElement | null) => {
+      current.current?.dispose()
+      current.current = element ? iframeView(element) : null
+      onView(current.current)
+    },
     [onView],
   )
-  return <iframe ref={attach} src={sameOrigin(src)} title="稿子" />
+  return <iframe ref={attach} src={src} title="稿子" />
+}
+
+export interface IframeView extends CanvasView {
+  /** 摘掉 message 监听,挂着的调用一律失败。 */
+  dispose(): void
 }
 
 /**
- * server 给的预览地址是绝对的(`http://127.0.0.1:6722/p/…`)。浏览器里要同源才摸得到稿子页面:
- * 界面和它同源就原样用,不同源(开发时界面在 Vite 上)就只取路径,交给 Vite 代理。
+ * 浏览器里的画布。稿子在另一个源:server 托管它时在末尾加了一行
+ * `<script src="<界面的源>/guest.js">`,里面的动作表认界面这个源发来的消息(见 bridge.guest.js)。
+ * 这边反过来只认那个 iframe、那个源发回来的消息。
  */
-export function sameOrigin(src: string, origin: string = location.origin): string {
-  try {
-    const url = new URL(src)
-    return url.origin === origin ? src : url.pathname + url.search + url.hash
-  } catch {
-    return src
-  }
-}
+export function iframeView(frame: HTMLIFrameElement, win: Window = window): IframeView {
+  const origin = () => new URL(frame.src, win.location.href).origin
+  const pending = new Map<
+    string,
+    { resolve: (value: unknown) => void; reject: (e: Error) => void }
+  >()
+  const subscribers = new Set<CanvasEvents>()
+  let seq = 0
 
-/** 页面里的 window,只用到这几个。 */
-type GuestWindow = Window & { eval(code: string): unknown; console: Console }
-
-export function iframeView(frame: HTMLIFrameElement): CanvasView {
-  const guest = () => {
-    const win = frame.contentWindow as GuestWindow | null
-    if (!win) throw new Error('画布还没加载')
-    return win
+  const failAll = (why: string) => {
+    for (const [id, waiting] of pending) {
+      pending.delete(id)
+      waiting.reject(new Error(why))
+    }
   }
-  return {
-    run: async (code) => {
-      // 不同源时这里直接抛 SecurityError,和 webview 摸不到 guest 一样当失败处理
-      const value = await guest().eval(code)
-      // 和 webview 一样只交回能序列化的值,不把稿子页面里的对象漏到界面里
-      return value === undefined ? undefined : JSON.parse(JSON.stringify(value))
-    },
-    reload: () => {
+
+  const onMessage = (event: MessageEvent) => {
+    if (event.source !== frame.contentWindow || event.origin !== origin()) return
+    const data = event.data as {
+      orca?: unknown
+      type?: string
+      id?: string
+      value?: unknown
+      error?: string
+      message?: string
+      source?: string | null
+    }
+    if (!data || data.orca !== true) return
+    if (data.type === 'reply' && typeof data.id === 'string') {
+      const waiting = pending.get(data.id)
+      if (!waiting) return
+      pending.delete(data.id)
       try {
-        guest().location.reload()
-      } catch {
-        frame.src = frame.src
+        waiting.resolve(unwrap('call', data))
+      } catch (error) {
+        waiting.reject(error as Error)
       }
+      return
+    }
+    for (const events of subscribers) {
+      if (data.type === 'ready') events.domReady()
+      else if (data.type === 'leaving') {
+        events.navigated()
+        events.loadingStarted()
+      } else if (data.type === 'console')
+        events.console({
+          message: String(data.message ?? ''),
+          error: Boolean(data.error),
+          ...(data.source ? { source: data.source } : {}),
+        })
+    }
+    // 页面要走了:改字、取锚这类一直挂着的调用不会再有回音
+    if (data.type === 'leaving') failAll('画布重载了')
+  }
+  win.addEventListener('message', onMessage)
+
+  const onLoad = () => {
+    for (const events of subscribers) events.loadingStopped()
+  }
+  frame.addEventListener('load', onLoad)
+
+  return {
+    call: (action, ...args) =>
+      new Promise((resolve, reject) => {
+        const target = frame.contentWindow
+        if (!target) return reject(new Error('画布还没加载'))
+        const id = String(++seq)
+        pending.set(id, {
+          resolve,
+          reject: (error) => reject(new Error(`${action}: ${error.message}`)),
+        })
+        target.postMessage({ orca: true, type: 'call', id, action, args }, origin())
+      }),
+    inject: async () => {},
+    reload: () => {
+      // 不同源,摸不到它的 location:重设一次地址
+      const src = frame.src
+      frame.src = 'about:blank'
+      frame.src = src
     },
     blur: () => frame.blur(),
     rect: () => frame.getBoundingClientRect(),
     guestId: () => undefined,
     subscribe: (events) => {
-      const onLoad = () => {
-        try {
-          hook(guest(), events)
-        } catch {
-          // 不同源:摸不到页面,只报加载完成。检视、改字这些会在 run 时失败
-        }
-        events.loadingStopped()
-        events.domReady()
-      }
-      frame.addEventListener('load', onLoad)
-      return () => frame.removeEventListener('load', onLoad)
+      subscribers.add(events)
+      return () => subscribers.delete(events)
+    },
+    dispose: () => {
+      win.removeEventListener('message', onMessage)
+      frame.removeEventListener('load', onLoad)
+      failAll('画布已卸下')
     },
   }
-}
-
-/**
- * 每次加载后挂一遍:页面要走(重载、换稿)时报导航;console 和报错转给画布。
- * webview 能从外面听到这些,iframe 只能进页面里挂 —— 所以加载完成前的报错听不到。
- */
-function hook(win: GuestWindow, events: CanvasEvents): void {
-  win.addEventListener('pagehide', () => {
-    events.navigated()
-    events.loadingStarted()
-  })
-  const console = win.console as unknown as Record<string, (...args: unknown[]) => void>
-  for (const level of ['debug', 'log', 'info', 'warn', 'error']) {
-    const original = console[level]
-    if (!original) continue
-    console[level] = (...args: unknown[]) => {
-      original.apply(win.console, args)
-      events.console({ message: args.map(String).join(' '), error: level === 'error' })
-    }
-  }
-  win.addEventListener('error', (event) =>
-    events.console({
-      message: event.message,
-      error: true,
-      ...(event.filename ? { source: event.filename } : {}),
-    }),
-  )
-  win.addEventListener('unhandledrejection', (event) =>
-    events.console({ message: String(event.reason), error: true }),
-  )
 }

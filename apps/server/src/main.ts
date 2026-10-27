@@ -15,6 +15,10 @@ const server = await startServer({
   ...(renderer ? { renderer } : {}),
   // 桌面壳生成、经 preload 交给界面;浏览器发来的连接没带对它就拒(见 web-host.ts)
   ...(process.env.ORCA_PPT_TOKEN ? { token: process.env.ORCA_PPT_TOKEN } : {}),
+  // 开发时在浏览器里直接开 Vite:稿子放到另一个源,guest.js 由 Vite 给(apps/web/vite.config.ts)
+  ...(process.env.ORCA_PPT_GUEST_SCRIPT
+    ? { isolate: { previewPort: 0, guestScript: process.env.ORCA_PPT_GUEST_SCRIPT } }
+    : {}),
 })
 
 // 桌面壳读这一行拿端口。格式别改。

@@ -298,8 +298,9 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 把稿子渲出来」的活走一个接口:缩略图、导 PPTX。样板已经在 skill 里:
 `scripts/lib/pptx-export.mjs` 的 `exportDeck(page)` 只依赖 `evaluate` + `screenshot`。
 
-- playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(即 `capture.mjs` / `export-pptx.mjs`
-  现在的做法)。**还没做。**
+- playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(`apps/server/src/playwright-renderer.ts`,
+  已落地)。playwright-core 和导出逻辑都从 skill 里取,和 `capture.mjs` / `export-pptx.mjs` 是同一份;
+  先找 Chrome,没有再找 Edge,不下载浏览器;第一次用时才开,一次只渲一件事。
 - Electron 隐藏窗口一份,给桌面版用(`pptx-exporter.ts` / 主进程的缩略图渲染)。server 跑在
   `utilityProcess` 里,经 parentPort 发 `RenderRequest`、收 `RenderReply`
   (`apps/server/src/renderer-port.ts`),不经过界面:窗口关了、界面断了照样渲得出来。
@@ -308,8 +309,9 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 原来的 `thumbnails.request` / `pptx.request` 推送和 `thumbnails.result` / `pptx.result` 回传已经从
 契约里删掉。PPTX 报告的形状在 server 这边按契约校验,渲染方是另一个进程。
 
-**例外是 `capture_slide`:** 它的语义是「人此刻在画布上看到的那一页」,有界面连着时照旧走界面;
-没有界面时退回 Renderer 无头截 —— 这条等 playwright 那一份一起做。
+**例外是 `capture_slide`:** 它的语义是「人此刻在画布上看到的那一页」,有界面连着时照旧走界面。
+界面截不了(浏览器版没有壳,回 `CANVAS_UNCAPTURABLE`)或者根本没开界面时,退回渲染器离屏渲
+那一页(要的页,没给就是界面最近报的可见页),宽 1920 —— 渲的是磁盘上的当前版本,不是画布。
 
 **`Host`(`apps/web/src/host.ts`,已落地)。** 取代 web 里直接调的 `window.orca`:界面只读 `host`,
 桌面版是 preload 的窄桥,浏览器里这些能力缺着,界面按「缺」处理。只剩真正的壳能力:
@@ -327,13 +329,19 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 和 Stage 里,两种画布共用。
 
 - webview:桌面版,和原来一样。
-- iframe:浏览器里。**现状(第 3 步)**是要和界面同源,经 `contentWindow.eval` 跑代码,结果按
-  JSON 拷回来;console 和报错在每次加载后进页面挂钩子转出来,所以**加载完成前的报错听不到**
-  (webview 能从外面听到)。开发时 Vite 把 `/p/`、`/asset/` 代理给 server,`sameOrigin` 把预览
-  地址改成只取路径。webview 照旧是桌面版的选择。
+- iframe:浏览器里,稿子在另一个源,只用 `postMessage` 说话(下面「定了」那段,已落地)。
+
+两种画布叫稿子做事都只能用 `guest/bridge.guest.js` 里那张固定的动作表(`setup`、`inspect`、
+`goto`、`editArm`……,`CanvasView.call(动作, 参数)`):webview 用 executeJavaScript 调
+`window.__orcaHost.call`,iframe 发消息。Stage 里不再拼代码字符串。
 
 **定了(2026-10-27):浏览器里的稿子放在另一个源,和界面只用 `postMessage` 说话(方案 B)。**
-第 4 步按这个改 iframe 那一份 `CanvasView`,Stage 不动。
+已落地:`serve` 把稿子放在另开的预览端口上(界面那个源上 `/p/` 一律 404);server 送入口页时
+在 `</body>` 前加一行 `<script src="<界面的源>/guest.js">`(`PreviewHost.injectGuest`);
+`guest.js` 由 Vite 把几份 guest 脚本拼成一个(`apps/web/vite.config.ts`),检视、改字这些只在稿子
+被嵌在工作台里时才装,渲染器单独打开稿子时只留动作表。动作表只认 `guest.js` 那个源、父窗口
+发来的消息;界面只认那个 iframe、那个源回的消息;页面要走时挂着的调用一律失败。开发时在浏览器
+里直接开 Vite:server 设 `ORCA_PPT_GUEST_SCRIPT=http://127.0.0.1:5273/guest.js`。
 
 - 为什么:同源时稿子里的脚本也碰得到界面 —— `window.parent`、界面的 DOM、第 4 步的启动 token。
   稿子来自用户自己时风险不大,可同款样稿、别人发来的稿子都是没逐行看过的代码。桌面版的
@@ -354,18 +362,17 @@ _否掉:_ 同源 iframe(上面的理由)· 把稿子塞进界面的 DOM 或 Shad
 `embedded: true` 多实例(稿子是完整 HTML,要改写才塞得进去;Shadow DOM 不隔离 JS)·
 server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全得重写)。
 
-浏览器里还没有的(都要壳或渲染器):`capture_slide` 截画布(界面直说「浏览器版还不能截图」)、
-取锚时的裁切图、页胶片缩略图(server 没有渲染器时报 `NO_RENDERER`)、全屏放映窗口。等第 4 步
-和 playwright 渲染器一起补。
+浏览器里现在有的:页胶片缩略图、导出 PPTX、`capture_slide`(都走 playwright 渲染器)。
+还没有的:取锚时的裁切图(锚本身照样有,文字描述永远带上)、全屏放映窗口(打算用新窗口,
+和官方演讲者视图一个路子)、加载完成前的页面报错(guest 脚本在 `</body>` 前才装上)。
 
 ### 三种形态怎么拼
 
-- **桌面版**:Electron 起 server、注入 Electron Renderer;界面用 `ElectronHost` +
-  `WebviewDriver`。行为和现在一样。
+- **桌面版**:Electron 起 server、注入 Electron Renderer;界面用桌面版的 `host`(preload
+  的窄桥)+ webview 画布。
 - **`orca-ppt serve`**(`apps/server/src/serve.ts`,开发时 `pnpm serve`):同一个 server 入口,
   多托管一份 `apps/web` 的打包产物(`web-host.ts`),打印网址并打开浏览器;界面用浏览器的
-  `host` + iframe 画布(稿子换到另一个源见上面「定了」那段,**还没做**)。渲染器要注入
-  playwright 那一份,**还没做** —— 现在浏览器版的页胶片缩略图是空的、导出报 `NO_RENDERER`。
+  `host` + iframe 画布(稿子在另一个源,见上面「定了」那段),注入 playwright 渲染器。
   - **启动 token(已落地)**:浏览器里任何网页都能往 `ws://127.0.0.1:6722` 发连接,所以带
     Origin 的连接必须带对 token(`allowClient`),不带 Origin 的本机进程不拦 —— 它们本来就能
     直接读写稿子目录。token 每次启动现生成:`serve` 写在打开的网址里(`?token=`,可选
@@ -394,8 +401,8 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 1. 搬出 `deck-core`(spec-check 进 `deck-agent`),server 改成调它,行为不变。**已完成。**
 2. 抽 `Renderer`,server 去掉对界面的 pptx / 缩略图 Roundtrip。**已完成(桌面版)。**
 3. web 里抽 `Host` 和 `CanvasDriver`。**已完成。**
-4. `serve`:托管界面,Origin 校验 + token(**已完成**);稿子换到另一个源,iframe 画布改走
-   `postMessage`;playwright 渲染器。
+4. `serve`:托管界面,Origin 校验 + token;稿子换到另一个源,iframe 画布改走 `postMessage`;
+   playwright 渲染器。**已完成。**
 5. CLI。
 
 前两步做完桌面版行为不变,内核已经不依赖界面;CLI 和 `serve` 只是在外面再加一层。

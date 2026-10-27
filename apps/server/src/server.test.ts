@@ -816,6 +816,40 @@ describe('version-bound canvas capture', () => {
     stop()
     expect(result.error.message).toContain('SLIDE_CHANGED')
   })
+  it('界面截不了画布(浏览器版)就退回渲染器离屏渲那一页', async () => {
+    const { id } = await builtDeck(
+      '<div class="slides"><section>1</section><section>2</section></div>',
+    )
+    const jobs: any[] = []
+    render.thumbnails = async (job) => {
+      jobs.push(job)
+      return ['/tmp/headless.png']
+    }
+    const stop = replyToCapture((request) =>
+      call('capture.result', {
+        requestId: request.requestId,
+        error: 'CANVAS_UNCAPTURABLE: 这个客户端截不了画布',
+      }),
+    )
+    const revision = (await call('deck.inspect', { deckId: id })).data.revision
+    const result = await call('deck.capture', { deckId: id, slide: 1 })
+    stop()
+    expect(jobs[0]).toMatchObject({ slides: [1], width: 1920, slideCount: 2 })
+    expect(result.data).toMatchObject({
+      path: '/tmp/headless.png',
+      slide: 1,
+      renderedRevision: revision,
+    })
+  })
+  it('别的截图失败照旧报出来,不退回渲染器', async () => {
+    const { id } = await builtDeck()
+    const stop = replyToCapture((request) =>
+      call('capture.result', { requestId: request.requestId, error: 'RENDER_NOT_READY' }),
+    )
+    const result = await call('deck.capture', { deckId: id, slide: 0 })
+    stop()
+    expect(result.error.message).toContain('RENDER_NOT_READY')
+  })
 })
 
 describe('shared page and image edits', () => {

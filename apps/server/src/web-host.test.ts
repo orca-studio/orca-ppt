@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -74,5 +74,42 @@ describe('serve:托管界面 + 拦浏览器连接', () => {
     const host = await start()
     const port = Number(host.split(':')[1])
     await expect(startServer({ port })).rejects.toMatchObject({ code: 'EADDRINUSE' })
+  })
+})
+
+describe('浏览器版的稿子放在另一个源', () => {
+  let server: OrcaServer | undefined
+  afterEach(async () => {
+    await server?.close()
+    server = undefined
+  })
+
+  it('稿子在另一个端口,入口页末尾加一行 guest 脚本;界面那个源上不给稿子', async () => {
+    server = await startServer({ isolate: { previewPort: 0, guestScript: '/guest.js' } })
+    const dir = await mkdtemp(join(tmpdir(), 'deck-'))
+    await writeFile(join(dir, 'deck.html'), '<html><body><p>稿子</p></body></html>')
+
+    const socket = new WebSocket(`ws://127.0.0.1:${server.port}/`)
+    await new Promise((done) => socket.once('open', done))
+    const opened = await new Promise<any>((done) => {
+      socket.on('message', (raw: Buffer) => {
+        const message = JSON.parse(raw.toString())
+        if (message.id === 'open') done(message)
+      })
+      socket.send(JSON.stringify({ id: 'open', method: 'deck.open', params: { path: dir } }))
+    })
+    socket.close()
+
+    const preview = new URL(opened.data.previewUrl)
+    expect(preview.port).not.toBe(String(server.port))
+    const html = await (await fetch(preview)).text()
+    expect(html).toBe(
+      `<html><body><p>稿子</p><script src="http://127.0.0.1:${server.port}/guest.js"></script></body></html>`,
+    )
+    // 磁盘上的文件不动
+    expect(await readFile(join(dir, 'deck.html'), 'utf8')).not.toContain('guest.js')
+
+    preview.port = String(server.port)
+    expect((await fetch(preview)).status).toBe(404)
   })
 })
