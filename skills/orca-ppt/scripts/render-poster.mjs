@@ -7,6 +7,7 @@
 // 截哪一刻由 frontmatter 决定：`preview: 2-4` 是看点那几页（从 1 数），`cover: 2.5` 是从看点开头算的第几秒，
 // 不写取 75% 处。时间轴和 OrcaPPT 以前首页录样片时一样：从中间页起时，起始页先停 0.6 秒，
 // 接着是后面每页的转场和停留。案例不写 preview 就截第一页。
+// 没有 RECIPE.md / EXAMPLE.md 的示例要点名才截（第一页，只给 gallery 用，不写 frontmatter，也不因此上应用首页）。
 // 和 capture.mjs 一样用系统 Chrome，不下载浏览器。
 import { chromium } from "playwright-core";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -35,7 +36,14 @@ if (!homes.length) {
 
 function readMeta(home) {
   const file = ["RECIPE.md", "EXAMPLE.md"].map((f) => path.join(home, f)).find((f) => existsSync(f));
-  if (!file) return undefined;
+  // 没有说明文件的示例(主题、版式的技术演示,不上应用首页):也截一张,给 gallery 当缩略图。
+  // 截第一页,不写 frontmatter —— 有 poster.jpg 就算有封面
+  // 只截点名的那几个:--all 不管它们,同款样稿用的是同款自己的封面
+  if (!file) {
+    if (args.includes("--all") || !existsSync(path.join(home, "index.html"))) return undefined;
+    const has = existsSync(path.join(home, NAME));
+    return { file: undefined, text: "", meta: has ? { poster: NAME } : {}, example: true };
+  }
   const text = readFileSync(file, "utf8");
   const block = /^---\n([\s\S]*?)\n---/.exec(text)?.[1] ?? "";
   const meta = {};
@@ -114,7 +122,7 @@ try {
       await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
       const out = path.join(home, NAME);
       await page.screenshot({ path: out, type: "jpeg", quality: 82 });
-      if (!meta.poster) {
+      if (file && !meta.poster) {
         writeFileSync(file, text.replace(/\n---\n/, `\nposter: ${NAME}\n---\n`));
       }
       console.log(`${id}：第 ${hit.index + 1} 页，${(at / 1000).toFixed(2)} 秒 → ${path.relative(SKILL, out)}`);
