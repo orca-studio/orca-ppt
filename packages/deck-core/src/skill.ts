@@ -10,7 +10,7 @@ import { keepKnown, parseVocabulary, tagIssues, tagLine, type Vocabulary } from 
  * (2026-10-10 并进来的,带着原仓的历史);发布版的 skill 是**跟着 app 一起发的那一份**
  * (见 docs/ARCHITECTURE.md「交付形态」),开发时读仓内这一份。
  *
- * 仓内的 skill 按这个文件的位置往上找(src 和 dist 都在 apps/server/ 下一层),
+ * 仓内的 skill 按这个文件的位置往上找(src 和 dist 都在 packages/deck-core/ 下一层),
  * 不写死开发机路径。后面几条是并仓之前的老位置,本地还没清掉的话照样认。
  */
 const REPO_SKILL = fileURLToPath(new URL('../../../skills/orca-ppt', import.meta.url))
@@ -139,7 +139,7 @@ export async function readCatalog(skillPath: string | undefined): Promise<Catalo
 }
 
 /** 页面类型词表(`runtime/pages.json`)。读不到就当空。 */
-export async function readPageTypes(
+export async function readPageTypeVocabulary(
   skillPath: string,
 ): Promise<Array<{ id: string; label: string }>> {
   try {

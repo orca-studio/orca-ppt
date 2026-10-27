@@ -1,0 +1,19 @@
+{
+  "name": "@orca-ppt/cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "orca-ppt": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@orca-ppt/contracts": "workspace:*",
+    "@orca-ppt/deck-agent": "workspace:*",
+    "@orca-ppt/deck-core": "workspace:*",
+    "@orca-ppt/render": "workspace:*",
+    "@orca-ppt/server": "workspace:*"
+  }
+}

@@ -14,6 +14,7 @@
     "@orca-ppt/deck-agent": "workspace:*",
     "@orca-ppt/deck-core": "workspace:*",
     "@orca-ppt/proc": "workspace:*",
+    "@orca-ppt/render": "workspace:*",
     "ws": "^8.18.3",
     "zod": "^4.1.5"
   }

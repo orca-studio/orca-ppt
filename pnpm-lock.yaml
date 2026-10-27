@@ -57,6 +57,24 @@ importers:
         specifier: ^4.1.10
         version: 4.1.11(@types/node@26.6.1)(jsdom@27.4.0)(vite@7.3.6(@types/node@26.6.1))
 
+  apps/cli:
+    dependencies:
+      '@orca-ppt/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@orca-ppt/deck-agent':
+        specifier: workspace:*
+        version: link:../../packages/deck-agent
+      '@orca-ppt/deck-core':
+        specifier: workspace:*
+        version: link:../../packages/deck-core
+      '@orca-ppt/render':
+        specifier: workspace:*
+        version: link:../../packages/render
+      '@orca-ppt/server':
+        specifier: workspace:*
+        version: link:../server
+
   apps/desktop:
     dependencies:
       '@orca-ppt/contracts':
@@ -86,6 +104,9 @@ importers:
       '@orca-ppt/proc':
         specifier: workspace:*
         version: link:../../packages/proc
+      '@orca-ppt/render':
+        specifier: workspace:*
+        version: link:../../packages/render
       ws:
         specifier: ^8.18.3
         version: 8.21.3
@@ -136,6 +157,12 @@ importers:
         version: 4.6.5
 
   packages/proc: {}
+
+  packages/render:
+    dependencies:
+      '@orca-ppt/deck-core':
+        specifier: workspace:*
+        version: link:../deck-core
 
 packages:
 

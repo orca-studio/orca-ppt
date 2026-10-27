@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { playwrightRenderer } from './playwright-renderer.js'
+import { playwrightRenderer } from '@orca-ppt/render'
 import { startServer } from './server.js'
 import { defaultWebRoot } from './web-host.js'
 

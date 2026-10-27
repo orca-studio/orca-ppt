@@ -4,10 +4,15 @@
  * 品味不在这里,在 deck-agent。
  */
 export * from './asset-digest.js'
+export * from './create.js'
 export * from './decks.js'
 export * from './edit.js'
 export * from './page-edit.js'
 export * from './phases.js'
+export * from './pptx.js'
+export * from './recent.js'
 export * from './recipes.js'
 export * from './renderer.js'
+export * from './skill.js'
+export * from './tags.js'
 export * from './templates.js'

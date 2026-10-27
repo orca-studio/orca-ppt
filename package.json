@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node tools/brand-dev-electron.mjs && node tools/dev.mjs",
     "serve": "pnpm build && node apps/server/dist/serve.js",
+    "orca-ppt": "node apps/cli/dist/main.js",
     "build": "pnpm -r build",
     "typecheck": "tsc -b && tsc -p apps/web",
     "test": "vitest run",

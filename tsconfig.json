@@ -14,7 +14,13 @@
       "path": "packages/deck-core"
     },
     {
+      "path": "packages/render"
+    },
+    {
       "path": "apps/server"
+    },
+    {
+      "path": "apps/cli"
     },
     {
       "path": "apps/desktop"

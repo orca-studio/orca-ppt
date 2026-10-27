@@ -6,8 +6,8 @@ import {
   deckSnapshot,
   editPages,
   findEntryName,
-  instantiate,
-  instantiateSample,
+  createDeck,
+  expandHome,
   listRecipes,
   listTemplates,
   openDeck,
@@ -34,7 +34,6 @@ import { randomUUID } from 'node:crypto'
 import { copyFile, mkdir, readFile, rm, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { homedir } from 'node:os'
 import { basename, dirname, join, relative, isAbsolute, extname } from 'node:path'
 import {
   CanvasEvidence,
@@ -55,7 +54,7 @@ import {
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
-import { pptxExportDir, pptxTargetProblem, summarizePptx } from './pptx.js'
+import { pptxExportDir, pptxTargetProblem, summarizePptx } from '@orca-ppt/deck-core'
 import {
   dropPartial,
   partialDir,
@@ -66,7 +65,7 @@ import {
 import { DeckWatcher } from './deck-watch.js'
 import { DeckControl } from './control.js'
 import { EditHistory } from './history.js'
-import { noteThemeUsed, readRecentThemes, themeOf } from './recent.js'
+import { noteThemeUsed, readRecentThemes, themeOf } from '@orca-ppt/deck-core'
 import { McpEndpoint } from './mcp-http.js'
 import { mcpCall } from './mcp-origin.js'
 import { AgentError } from './agent-errors.js'
@@ -76,7 +75,13 @@ import { PreviewHost } from './preview-host.js'
 import { clearPortFile, writePortFile } from './port-file.js'
 import { PushBus } from './push-bus.js'
 import { RequestQueue } from './requests-queue.js'
-import { readCatalog, readPageTypes, readVocabulary, locateSkill, type Catalog } from './skill.js'
+import {
+  readCatalog,
+  readPageTypeVocabulary,
+  readVocabulary,
+  locateSkill,
+  type Catalog,
+} from '@orca-ppt/deck-core'
 import { dropOldPreviews } from './recipe-preview.js'
 import { readTransitionPlan } from './transitions.js'
 import { planEditSummary, textEditSummary, textStepSummary } from './change-summary.js'
@@ -409,11 +414,6 @@ export async function startServer(
     return opened
   }
 
-  /** 这个主题默认配哪套配色。主题里没有颜色,不链配色建出来的稿子是白的。 */
-  function paletteFor(theme: string | undefined): string | undefined {
-    return theme ? catalog.themes.find((item) => item.name === theme)?.palette : undefined
-  }
-
   function mountPreview(opened: OpenedDeck): string {
     if (!opened.entryFile) return ''
     const plan = planPreview(opened.deck.path, opened.entryFile)
@@ -527,7 +527,9 @@ export async function startServer(
   const catalog: Catalog = await readCatalog(skill.path)
   // 词表读一次就够 —— 它跟着 skill 的文件走,和 catalog 一样。
   const vocabulary = catalog.skillPath ? readVocabulary(catalog.skillPath) : Promise.resolve([])
-  const pageTypes = catalog.skillPath ? readPageTypes(catalog.skillPath) : Promise.resolve([])
+  const pageTypes = catalog.skillPath
+    ? readPageTypeVocabulary(catalog.skillPath)
+    : Promise.resolve([])
   // 出稿检查的规范数字(skill 的 runtime/spec.json)。读不到就跳过坐标检查,不自己编一份
   const spec = readSpec(catalog.skillPath)
   // deck 和 skill 隔得远时,稿子里的 `{{ROOT}}` 会深到把请求顶到服务器根。
@@ -816,35 +818,16 @@ export async function startServer(
       }
       case 'deck.create': {
         const params = parseParams('deck.create', raw)
-        const path = join(expandHome(params.parentDir ?? DEFAULT_DECKS_DIR), slugify(params.title))
-
-        if (params.from?.startsWith('recipe:')) {
-          // 做同款:从同款的样稿起头,主题和配色沿用样稿的
-          const sample = await recipeEntry(catalog.skillPath, params.from.slice('recipe:'.length))
-          if (!sample) throw new Error(`不认识的同款:${params.from}(id 来自 list_recipes)`)
-          if (sample.kind === 'example')
-            throw new Error(`${params.from} 是案例,不是同款:案例只能打开看,不能做同款`)
-          await instantiateSample({
-            sampleDir: sample.dir,
-            entry: sample.entry,
-            targetDir: path,
-            title: params.title,
-          })
-        } else if (params.from) {
-          if (!catalog.skillPath) throw new Error(AgentError.skillNotFound())
-          await instantiate({
-            skillPath: catalog.skillPath,
-            templateId: params.from,
-            targetDir: path,
-            title: params.title,
-            ...(params.theme ? { theme: params.theme } : {}),
-            // 主题文件里没有颜色,配色得一起链上 —— 不然建出来的稿子是没颜色的。
-            ...(paletteFor(params.theme) ? { palette: paletteFor(params.theme)! } : {}),
-          })
-        } else {
-          await mkdir(join(path, '.deck'), { recursive: true })
-        }
-        return { path }
+        if (params.from && !params.from.startsWith('recipe:') && !catalog.skillPath)
+          throw new Error(AgentError.skillNotFound())
+        return createDeck({
+          skillPath: catalog.skillPath,
+          themes: catalog.themes,
+          title: params.title,
+          parentDir: params.parentDir,
+          from: params.from,
+          theme: params.theme,
+        })
       }
       case 'catalog.templates': {
         parseParams('catalog.templates', raw)
@@ -1484,20 +1467,6 @@ function pngSize(bytes: Buffer): { width: number; height: number } | undefined {
  * agent 拿着稿子时,界面发来的这几个一律拒绝:它们都会改磁盘上的稿子。
  * 翻页、放映、指给 agent 看不在里面 —— 那些不改稿子,人随时能做。
  */
-/**
- * agent 新建稿子没说放哪时的默认目录。不给默认值的话,agent 会从别的稿子路径里猜,
- * 猜出来的地方每次不一样。稿子是磁盘上的普通目录,放在文稿里用户找得到、拿得走。
- */
-const DEFAULT_DECKS_DIR = join(homedir(), 'Documents', 'Orca PPT')
-
-/**
- * agent 常写 `~/Documents/…`。不展开的话它会被当成相对路径,拼到 server 的工作目录下
- * (`apps/desktop/~/Documents/…`),报一个让人摸不着头脑的 ENOENT。
- */
-export function expandHome(path: string): string {
-  return path === '~' ? homedir() : path.startsWith('~/') ? join(homedir(), path.slice(2)) : path
-}
-
 const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.editText',
   'deck.editPlan',
@@ -1507,9 +1476,3 @@ const HUMAN_EDITS = new Set<RequestMethod>([
   'deck.undo',
   'deck.redo',
 ])
-
-/** 目录名。中文标题原样留着,只把路径里不能用的字符换掉。 */
-function slugify(title: string): string {
-  const cleaned = title.trim().replace(/[/\\:*?"<>|]/g, '-')
-  return cleaned || `deck-${Date.now()}`
-}

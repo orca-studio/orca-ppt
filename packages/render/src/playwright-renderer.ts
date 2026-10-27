@@ -3,8 +3,12 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { PptxJob, Renderer, ThumbnailJob } from '@orca-ppt/deck-core'
-import { resolveSkillPath } from './skill.js'
+import {
+  resolveSkillPath,
+  type PptxJob,
+  type Renderer,
+  type ThumbnailJob,
+} from '@orca-ppt/deck-core'
 
 /**
  * 不开桌面版时的渲染器:playwright 开系统里装好的 Chrome(没有就试 Edge),不下载浏览器。

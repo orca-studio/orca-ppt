@@ -289,7 +289,9 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 
 **`deck-core`(`packages/deck-core`,已落地)。** 原来 `apps/server/src` 里只吃路径的纯函数:
 `templates.ts`、`recipes.ts`、`phases.ts`、`decks.ts`、`page-edit.ts`、`edit.ts`、
-`asset-digest.ts`。`spec-check.ts` 是确定性检查,按「Deck Mode」那张表进了 `deck-agent`;
+`asset-digest.ts`;第 5 步又挪进来找 skill 和读主题目录的 `skill.ts`(连同 `tags.ts`、`recent.ts`)、
+PPTX 目标路径检查和报告摘要的 `pptx.ts`,以及新建稿子的编排 `create.ts`(`createDeck`,server 的
+`deck.create` 和 CLI 的 `new` 共用)。`spec-check.ts` 是确定性检查,按「Deck Mode」那张表进了 `deck-agent`;
 依赖方向是 deck-core → deck-agent,所以 `checkDeck` 不自己切页,由调用方用 deck-core 的
 `sliceSections` 切好传进去 —— 切页要解析 HTML,是机械活。内核包不 import `electron` / `ws`,不持有进程级
 状态 —— 撤销历史、控制权、操作记录是「有人在场协作」才有的东西,留在 server。
@@ -298,7 +300,7 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 把稿子渲出来」的活走一个接口:缩略图、导 PPTX。样板已经在 skill 里:
 `scripts/lib/pptx-export.mjs` 的 `exportDeck(page)` 只依赖 `evaluate` + `screenshot`。
 
-- playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(`apps/server/src/playwright-renderer.ts`,
+- playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(`packages/render`,
   已落地)。playwright-core 和导出逻辑都从 skill 里取,和 `capture.mjs` / `export-pptx.mjs` 是同一份;
   先找 Chrome,没有再找 Edge,不下载浏览器;第一次用时才开,一次只渲一件事。
 - Electron 隐藏窗口一份,给桌面版用(`pptx-exporter.ts` / 主进程的缩略图渲染)。server 跑在
@@ -380,9 +382,16 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     界面。网址里缺 token 时界面直说,不留白页。`/mcp` 不在这条规则里。
   - **后台标签页会被节流**:工作台标签页不在前台时,浏览器会压低定时器和 `requestAnimationFrame`,
     agent 这时发的检视、跟随改动会变慢甚至等到超时。桌面版窗口没有这个问题。
-- **CLI**:直接调 `deck-core`、`deck-agent` 和 playwright Renderer,不经过 server。和界面的
-  同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并刷新
-  画布,CLI 不需要知道有没有 server 在跑。
+- **CLI**(`apps/cli`,命令 `orca-ppt`,开发时 `pnpm orca-ppt`,已落地):直接调 `deck-core`、
+  `deck-agent` 和 playwright 渲染器,不经过 server。命令:`new`、`recipes`、`templates`、`themes`、
+  `prompt <阶段>`、`check`、`export`(`--report` 写完整报告给 skill 的 `check-pptx.mjs`)、`serve`;
+  都有 `--json`。每一条在协议里都有对应的方法(`deck.create`、`catalog.*`、`phase.*`、
+  `deck.exportPptx`)。录屏自检、核稿子这些是 skill 的脚本,照 SKILL.md 直接跑,不包进 CLI。
+  和界面的同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并
+  刷新画布,CLI 不需要知道有没有 server 在跑。
+  - **还没做**:分发(现在要从仓里 build 再 `node apps/cli/dist/main.js`)、上面的稳定路径
+    (现在稿子指向仓里或 `ORCA_PPT_SKILL` 那份 skill)、阶段提示词里叫 agent 用 MCP 的
+    `read_skill` 读规范 —— CLI 场景下 agent 直接读文件就行,提示词得按调用方说。
 
 分发:一个 `orca-ppt` 包,里面有 CLI、server、web 打包产物、skill,同一个版本号。桌面 app
 把同一个包放进 Resources,像 ego-lite 那样把 CLI 也露出来 —— 和「交付形态」那节「三件
@@ -403,7 +412,7 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 3. web 里抽 `Host` 和 `CanvasDriver`。**已完成。**
 4. `serve`:托管界面,Origin 校验 + token;稿子换到另一个源,iframe 画布改走 `postMessage`;
    playwright 渲染器。**已完成。**
-5. CLI。
+5. CLI。**已完成**(分发、稳定路径、提示词措辞见上面 CLI 那条的「还没做」)。
 
 前两步做完桌面版行为不变,内核已经不依赖界面;CLI 和 `serve` 只是在外面再加一层。
 
