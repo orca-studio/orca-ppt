@@ -122,7 +122,7 @@ _否掉(试过,是错的):_ 「按逃逸层数往上倒推一个公共服务根�
 | 样式          | CSS token 层                | 主题、密度、动效归 app 所有         |
 | 操作记录      | JSONL,只追加                | `~/.orca-ppt/recording.jsonl`       |
 | deck 运行时   | reveal.js + GSAP            | 来自 `skills/orca-ppt/`,原样复用    |
-| 录制          | playwright-core,逐帧 seek   | skill 的 `capture.mjs`,自检用       |
+| 转场自检      | playwright-core,逐帧 seek   | skill 的 `capture.mjs`,出关键帧     |
 | 测试          | Vitest                      |                                     |
 
 ---
@@ -283,6 +283,7 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 | 2026-10-26 | 改动框:agent 每改一处,画布上框出那一处并带一个说在做什么的标签(改文字、换图片、重写这一页…),整页改动框整页;撤销重做不管谁发起都走同一条 `edit.follow`。框画在宿主页面、webview 之上,不进稿子 DOM;删掉 guest 里的 outline 点亮和攒到下次加载的 `pendingSpotlight` | 只翻页、闪一下 outline,看录像的人分不出 agent 改的是标题还是说明;框画进稿子 DOM 会被 `capture_slide` 截进去,干扰 agent 自检;撤销已改成就地换页,攒到下次加载的点亮再也等不到               |
 | 2026-10-25 | 修复 agent 的改动在界面上看不到:经 MCP 的写操作在串行队列里等画布跟上(翻页、框出、确认上屏)再做下一条,常开;改字就地换不整份重载。新功能 `studio.orca/ui-targets` v1(resolve_ui_targets、回执和操作记录里的 uiTargets),删 `visual_target`。可选:演示模式,默认关   | agent 几十条改动几十毫秒做完、被改的页不在画面上,看着的人只觉得「说改好了却什么都没变」,提示词约束不住。MCP 调用不带位置,录屏要加标注只能由应用报出来;节奏由录屏方后期补,不要求应用加模式 |
 | 2026-10-25 | 只改了几页时画布只换那几页,不整份重载:server 按页比对两版推 `deck.patched`,稿子的 engine 加 `__orcaReplaceSlide`(重做那一页的准备 + `Reveal.sync`/`syncSlide`);新增 `read_page` / `write_page`。稿子仍是一份 HTML,不拆文件                                       | 整份重载画面白一下、转场状态全丢。拆成多个文件会断掉跨页转场(要在同一个 DOM 里配对)、双击打开(`file://` 拉不到别的文件)和「目录拿走能接着用」;reveal 本来就支持改 DOM 后 sync             |
+| 2026-10-27 | `capture.mjs` 默认不出视频:出关键帧(每页转场 5 帧 + 停稳 1 帧,写到系统临时目录)和每次转场动了几帧,动的不到一半就提醒;`-o x.mp4` 才拼视频。SKILL.md 第 7、8 步改成看关键帧                                                                                        | ffmpeg 不该是必须依赖:新手机器上多半没有。自检要的是关键帧和「转场动没动」,mp4 只是载体;agent 多半放不了视频,本来就是抽帧看。关键帧不写进稿子目录,应用在监听那里                          |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
 
 ### 已实现的打包和按需读取

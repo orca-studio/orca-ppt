@@ -39,7 +39,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 
 ## 流程（按顺序，不许跳）
 
-0. **装依赖**：本 skill 根目录下没有 `node_modules/` 时，先在根目录跑 `npm install`（页面引用里面的 reveal.js 和 GSAP，录制要用 playwright-core）。
+0. **装依赖**：本 skill 根目录下没有 `node_modules/` 时，先在根目录跑 `npm install`（页面引用里面的 reveal.js 和 GSAP，过转场要用 playwright-core）。
 1. **读规范**：按上表读。
 2. **列内容**：每页一个主角。故事稿先写出这一期要推的一个论点。
    页面要用数据时读 `references/data.md`：数从哪来、表格文件怎么读、出处怎么记。
@@ -56,22 +56,27 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
    `.t-metric`、强调块上的文字有没有加 `.t-on-accent`、大数字压在面板上有没有加
    `.t-on-surface`。**它不管你把东西放在哪**，只核放完之后对不对得上；`✗` 要修，`·` 是提醒。
 
-7. **录制**：
+7. **过一遍转场**：
    ```bash
-   node <skill>/scripts/capture.mjs <deck>.html -o <deck>.mp4
+   node <skill>/scripts/capture.mjs <deck>.html
    ```
-   输出末尾「页面报告的问题」必须为空。有报错先修。
+   逐帧 seek 整份稿子，不出视频，不用装 ffmpeg。输出末尾「页面报告的问题」必须为空，有报错先修。
+   「提醒（转场可能没动起来）」里列的页：那次转场里只有不到一半的帧在动，多半是跳过去了，先看它的关键帧。
 
-   工具要解析结果时加 `--json <报告>.json`：同样的内容（页面自报的问题、每页的转场帧区间
-   和时长），但是机器可读的。**别去解析 stdout** —— 那是给人看的，措辞随时会改。
-8. **看视频**：先按正常速度完整看一遍（抽帧拼图代替不了这一步，太快的转场在拼图里看着是连续的）。
-   再按 capture 打印的「转场帧」区间抽帧，逐条对照 `transitions.md` 末尾的「自检标准」。
-   有问题回第 5 步改。
+   工具要解析结果时加 `--json <报告>.json`：同样的内容（页面自报的问题、提醒、每页的转场帧区间、
+   动了几帧、关键帧路径），但是机器可读的。**别去解析 stdout** —— 那是给人看的，措辞随时会改。
 
-   自己没法播放视频时，用帧差量运动：每次转场里，画面变化明显的帧应该连续占满转场区间的大部分，
-   而不是集中在一两帧。
+   用户要视频时才加 `-o <deck>.mp4`，这要系统里有 ffmpeg。
+8. **看关键帧**：capture 打印的关键帧目录里，每页有转场里均匀取的 5 帧 `pNN-t1.png` … `pNN-t5.png`
+   和停稳后的 `pNN-end.png`。逐页对照 `transitions.md` 末尾的「自检标准」：上一页的 `-end` 和这一页的
+   `-t1` 看有没有跳变，`-t2` … `-t4` 看共享元素是不是连续飞过去、中途有没有重叠出界，`-t5` 和 `-end`
+   看落位。有问题回第 5 步改。
 
-   **匹配剪辑（`match-cut`）不适用这一条** —— 它是硬切，没有转场帧，验法见 `transitions.md`「自检标准」第 7 条。
+   关键帧看不出节奏：太快的转场在几张图里也像是连续的。能放视频、或者用户开着 OrcaPPT 应用时，
+   再按正常速度放一遍。
+
+   **匹配剪辑（`match-cut`）没有转场帧**，只有 `-end`。它是硬切，验法见 `transitions.md`「自检标准」第 7 条：
+   把上一页的 `-end` 和这一页的 `-end` 叠起来看。
 
 ## 放映
 
@@ -98,7 +103,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | `runtime/palettes/` | 配色，只给那 10 个颜色变量。**任意配色配任意主题**，在主题之后引入 |
 | `runtime/pairs.json` | 颜色配对表（哪个类压在哪个类上），`check-palettes.mjs` 读它 |
 | `runtime/engine.js` | reveal 初始化 + 各种转场的实现 + 录制接口 |
-| `scripts/capture.mjs` | 逐帧录视频（系统 Chrome，不下载浏览器），打印每次转场的帧区间；`--json` 出机器可读报告 |
+| `scripts/capture.mjs` | 逐帧过一遍转场（系统 Chrome，不下载浏览器）：出每页的关键帧、每次转场动了几帧、页面自报的问题；`--json` 出机器可读报告，`-o x.mp4` 才拼视频（要 ffmpeg） |
 | `scripts/export-pptx.mjs` | 导出 PPTX（功能不完整的导出选项），按 `transitions.md`「导出 PPTX」回退，打印哪几次翻页降级；`--json` 出报告 |
 | `scripts/check-pptx.mjs` | 拿 `export-pptx.mjs` 的报告核对导出的包：结构、文字、共享元素的名字、每页的转场档位 |
 | `scripts/check-deck.mjs` | 核稿子有没有违反 `visual-spec.md` 里写死数值的规则（`npm run deck`） |
