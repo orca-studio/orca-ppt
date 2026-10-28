@@ -11,7 +11,7 @@
 //   - 图片只有报告里写了原因的那些，没有意外转成图片的元素
 //   - 形状 id 不重复，动画和图片引用的东西都在
 //   - 共享元素在前后两页里都有：一块的叫 `!!键`，几块的每块叫 `!!键~标签`（不收成组，组里的形状平滑不按名字配），
-//     名字不重复
+//     名字不重复；前后两页至少有一块名字相同
 //   - 绕圆心转的元素每页都写了旋转（0° 也写）
 // 降级（references/transitions.md「导出 PPTX」）：
 //   - 每次翻页的转场按表来：保真档是平滑，降级档是淡入淡出……
@@ -191,6 +191,12 @@ slideParts.forEach((part, i) => {
     for (const key of expected.facts.shared) {
       if (!prev?.named.has(`!!${key}`) || !pages[i].named.has(`!!${key}`)) {
         err(where, `共享元素 ${key} 在前后两页里没有都叫 !!${key}，平滑配不上`);
+        continue;
+      }
+      // 一页叫 `!!键`、一页叫 `!!键~标签`，或者两页的标签没有一个相同：一块也配不上
+      const before = new Set(prev.named.get(`!!${key}`).map(nameOf));
+      if (!pages[i].named.get(`!!${key}`).some((s) => before.has(nameOf(s)))) {
+        err(where, `共享元素 ${key} 前后两页的形状名字没有一个相同，平滑配不上`);
       }
     }
   }

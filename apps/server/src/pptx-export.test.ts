@@ -237,6 +237,12 @@ describe('check-pptx 抓得到坏包', () => {
       (x) => x.replace('name="!!q"', 'name="!!q~sp"').replace('name="s1 t 2"', 'name="!!q~sp"'),
       /!!q~sp 有 2 个/,
     ],
+    [
+      '共享元素前后两页名字对不上',
+      'ppt/slides/slide1.xml',
+      (x) => x.replace('name="!!q"', 'name="!!q~sp"'),
+      /名字没有一个相同/,
+    ],
     ['旋转没写', 'ppt/slides/slide1.xml', (x) => x.replace(' rot="0"', ''), /没写旋转/],
     [
       '平滑变成淡入淡出',

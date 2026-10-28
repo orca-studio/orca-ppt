@@ -742,6 +742,14 @@ export async function exportDeck(page, options = {}) {
   // 第二遍：配对和转场要看前后两页
   const { fonts, substituted } = embedFonts(slides);
   const model = { slides: [], media, fonts };
+  // 哪页有几块，整份稿子里它每页都按 `!!键~标签` 起名：一页整块截成一张图（`!!q1`）、下一页拆成两块
+  // （`!!q1~s-prism`、`!!q1~svg`），名字对不上，平滑配不起来，柱子成了淡出淡入
+  const split = new Set();
+  for (const s of slides) {
+    const count = new Map();
+    for (const { identity } of s.shapes) if (identity) count.set(identity, (count.get(identity) ?? 0) + 1);
+    for (const [key, k] of count) if (k > 1) split.add(key);
+  }
   slides.forEach((s, i) => {
     const prev = slides[i - 1];
     const ids = (sl) => new Set(sl.shapes.map((x) => x.identity).filter(Boolean));
@@ -749,7 +757,7 @@ export async function exportDeck(page, options = {}) {
     const facts = { ...s.measured.facts, shared, duration: Math.max(0.3, Math.min(3, s.timing.transition / 1000 || 1)) };
     const transition = i === 0 ? { kind: "none", technique: null, tier: "保真", elements: [] } : pageTransition(facts);
 
-    // 共享元素的名字：只有一块就叫 `!!键`；几块的不收成组（组里的形状 PowerPoint 的平滑不按名字配，
+    // 共享元素的名字：只有一块就叫 `!!键`；几块的（哪页有几块就算）不收成组（组里的形状 PowerPoint 的平滑不按名字配，
     // 前后两页的吊灯成了一盏淡出、一盏淡入），每块单独叫 `!!键~标签`，同一个标签第二块起加 `-2`、`-3`
     const shapes = [];
     const named = [];
@@ -787,7 +795,7 @@ export async function exportDeck(page, options = {}) {
       named.push({ shape, selector: item.selector });
     }
     for (const [key, list] of pieces) {
-      if (list.length === 1) {
+      if (list.length === 1 && !split.has(key)) {
         list[0].shape.name = `!!${key}`;
         continue;
       }
