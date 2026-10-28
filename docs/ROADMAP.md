@@ -119,3 +119,5 @@ PDF / pptx 导出 · 参考库锚定(从 ppt.orca-studio.ai 取风格锚)· 多 
 PPTX 保真模式与导出器演进(已提议,未排期):见 [PPTX-FIDELITY.md](./PPTX-FIDELITY.md)。
 
 导出 PPTX 搬出 skill、做会员功能、云端导出(已提议,未排期):见 [PPTX-FIDELITY.md](./PPTX-FIDELITY.md)「导出放哪、做不做会员」。
+
+借鉴 taste-skill 的几条(主题抽签、论点层、静帧评分、交付报告、文案套话检查、找图、评测集;已记录,未排期):见 [TASTE-SKILL-NOTES.md](./TASTE-SKILL-NOTES.md)。
