@@ -2591,7 +2591,7 @@
   // 宿主（比如 OrcaPPT 的画布、自动播放）要往前翻时调 window.__orcaAdvance()，别直接 Reveal.next()。
   // 人明说要去下一页（点了页胶片上的下一页）时调 window.__orcaAdvance({ page: true })：转场照样先放完，
   // 但不再一步一步推页内动画 —— 不然页内动画正在放时点下一页，只放完这一步、页不动，页胶片和画布就对不上了。
-  const FINISH_S = 0.15;
+  const FINISH_S = 0.3;   // 0.15 秒收尾像一下跳到终点，2026-10-28 并排看过定 0.3
   let queued = 0;
   const cssTransitions = () =>
     document.getAnimations().filter((a) => a instanceof CSSTransition && a.playState === "running");
