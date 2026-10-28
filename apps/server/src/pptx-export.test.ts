@@ -84,6 +84,8 @@ describe('PPTX 回退表', () => {
     })
     // 元素级降级拖低整页档位，但不换转场
     expect(pageTransition({ ...base, text: true })).toMatchObject({ kind: 'morph', tier: '降级' })
+    // 光每页截一张，平滑只能交叉淡化
+    expect(pageTransition({ ...base, lit: true })).toMatchObject({ kind: 'morph', tier: '近似' })
     expect(pageTransition({ ...base, autoAnimate: false, shared: [] })).toMatchObject({
       kind: 'none',
     })
@@ -662,5 +664,50 @@ describe('嵌入字体', () => {
     expect(xml).not.toContain('typeface="PingFang')
     expect(xml).toContain('<a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/>')
     expect(xml).toContain('<a:latin typeface="Hanken Grotesk"/><a:ea typeface="Microsoft YaHei"/>')
+  }, 60_000)
+})
+
+describe('被灯照亮的那一层', () => {
+  it('层里的字连遮罩截成图，共有这一层的翻页报近似，光束报页内动画', async (context) => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-pptx-lit-'))
+    const href = (path: string) => pathToFileURL(join(skill, path)).href
+    const page = (angle: number) => `<section data-auto-animate>
+<p class="t-h1" style="left:0px; top:460px; width:1920px; text-align:center;">台上的字</p>
+<div data-id="stage" class="s-group s-light" data-lit="beam" style="left:0px; top:0px; width:1920px; height:950px;">
+<p class="t-h1" style="left:0px; top:460px; width:1920px; text-align:center; color:var(--bg);">台上的字</p>
+</div>
+<div data-id="lamp" class="s-surface" data-light="beam" data-path="0 960 100 ${angle}" style="left:936px; top:76px; width:48px; height:48px; border-radius:50%;"></div>
+</section>`
+    writeFileSync(
+      join(dir, 'deck.html'),
+      `<!doctype html><html lang="zh-CN" data-layout="standard"><head><meta charset="utf-8"><title>光</title>
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reset.css')}">
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reveal.css')}">
+<link rel="stylesheet" href="${href('runtime/tokens.css')}">
+</head><body><div class="reveal"><div class="slides">${page(170)}${page(200)}</div></div>
+<script src="${href('node_modules/reveal.js/dist/reveal.js')}"></script>
+<script src="${href('node_modules/gsap/dist/gsap.min.js')}"></script>
+<script src="${href('runtime/engine.js')}"></script></body></html>`,
+    )
+    const exported = run('export-pptx.mjs', [
+      join(dir, 'deck.html'),
+      '-o',
+      join(dir, 'deck.pptx'),
+      '--json',
+      join(dir, 'report.json'),
+    ])
+    if (exported.status !== 0 && /chrome|Executable|browserType\.launch/i.test(exported.stderr)) {
+      context.skip()
+    }
+    expect(exported.status, exported.stderr).toBe(0)
+    const report = JSON.parse(readFileSync(join(dir, 'report.json'), 'utf8'))
+    // 页面上那份字是文本框；层里那份和遮罩一起截成一张图，不另出一个盖住它的文本框
+    expect(report.slides[0].texts).toEqual(['台上的字'])
+    expect(report.slides[0].rasters.map((r: { identity: string }) => r.identity)).toContain('stage')
+    expect(report.slides[1].transition).toMatchObject({ kind: 'morph', tier: '近似' })
+    expect(report.slides[1].transition.elements).toEqual([{ name: '跟着灯走的光', tier: '近似' }])
+    expect(report.slides[0].lost).toEqual(['页内动画：PowerPoint 里直接是放完的样子'])
+    const checked = run('check-pptx.mjs', [join(dir, 'deck.pptx'), join(dir, 'report.json')])
+    expect(checked.status, checked.stdout + checked.stderr).toBe(0)
   }, 60_000)
 })

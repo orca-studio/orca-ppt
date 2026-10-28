@@ -22,6 +22,7 @@ export const ELEMENT_TECHNIQUES = {
   turn: { name: "绕圆心转", tier: "保真" },
   swap: { name: "原地替换", tier: "保真" },
   flip: { name: "翻面", tier: "近似" },
+  lit: { name: "跟着灯走的光", tier: "近似" },
   text: { name: "文字级匹配", tier: "降级" },
   roll: { name: "逐位滚轮", tier: "降级" },
 };
@@ -36,12 +37,12 @@ export const LOST = {
 
 /**
  * 进入第 i 页的那次翻页用什么转场。facts 是在页面里量的：
- *   { st, autoAnimate, shared: [跟上一页共有的 data-id], match, turn, swap, flip, text, roll, duration, direction }
+ *   { st, autoAnimate, shared: [跟上一页共有的 data-id], match, turn, swap, flip, lit, text, roll, duration, direction }
  * 返回 { kind, duration, dir, technique, tier, elements: [{ name, tier }] }
  */
 export function pageTransition(facts) {
   const elements = [];
-  for (const key of ["turn", "swap", "flip", "text", "roll"]) {
+  for (const key of ["turn", "swap", "flip", "lit", "text", "roll"]) {
     if (facts[key]) elements.push(ELEMENT_TECHNIQUES[key]);
   }
   let technique = null;

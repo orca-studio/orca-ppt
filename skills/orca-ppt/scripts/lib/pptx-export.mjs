@@ -470,9 +470,11 @@ function measure(index) {
     if (grad && bordered) reasons.push("渐变或背景图");
 
     // mask / clip-path 管的是整棵子树：孩子拆出去单独截，就截不到遮罩（文字镂空的色块淡出会丢，导成一块实心）。
-    // 里面没有要导成文本框的字时整块截；有字的（片尾名单）照旧拆开，字还是字
+    // 里面没有要导成文本框的字时整块截；有字的（片尾名单）照旧拆开，字还是字。
+    // 被灯照亮的那一层（data-lit、.s-lit）有字也整块截：层里的字是页面上那份字的「亮」版，拆成文本框就没了遮罩，
+    // 盖住页面上的字（stage-spotlight 的题目整行成了和底色一样的红字）
     const masks = reasons.includes("mask") || reasons.includes("clip-path");
-    if (masks && ![...textBlocks.keys()].some((block) => el.contains(block))) {
+    if (masks && (el.matches("[data-lit], .s-lit") || ![...textBlocks.keys()].some((block) => el.contains(block)))) {
       el.dataset.pptxK = String(k);
       items.push({ ...base, k: k++, kind: "raster", whole: true, reason: reasons.join("、") });
       skipInside.add(el);
@@ -538,8 +540,11 @@ function measure(index) {
     flip: q("[data-flip]"),
     text: q("[data-text]:not([data-roll])"),
     roll: q("[data-roll]"),
+    // 被灯照亮的那一层：网页里光每一帧跟着灯重算，PPTX 里是每页截一张，平滑只能交叉淡化。和上一页共有才算（第二遍判）
+    lit: [...section.querySelectorAll("[data-lit][data-id], .s-lit[data-id]")].map((el) => el.dataset.id),
     lost: [
-      ...(q("[data-anim], [data-step], [data-path]") ? ["anim"] : []),
+      // 光束（data-light 写在 data-path 上）、照亮的层、进页开灯都是页内动画
+      ...(q("[data-anim], [data-step], [data-path], [data-lit], .s-lamp[data-lamp-on]") ? ["anim"] : []),
       ...(q("video") ? ["video"] : []),
       ...(q("[data-auto-animate-delay]") ? ["rhythm"] : []),
     ],
@@ -754,7 +759,7 @@ export async function exportDeck(page, options = {}) {
     const prev = slides[i - 1];
     const ids = (sl) => new Set(sl.shapes.map((x) => x.identity).filter(Boolean));
     const shared = prev ? [...ids(s)].filter((id) => ids(prev).has(id)) : [];
-    const facts = { ...s.measured.facts, shared, duration: Math.max(0.3, Math.min(3, s.timing.transition / 1000 || 1)) };
+    const facts = { ...s.measured.facts, shared, lit: s.measured.facts.lit.some((id) => shared.includes(id)), duration: Math.max(0.3, Math.min(3, s.timing.transition / 1000 || 1)) };
     const transition = i === 0 ? { kind: "none", technique: null, tier: "保真", elements: [] } : pageTransition(facts);
 
     // 共享元素的名字：只有一块就叫 `!!键`；几块的（哪页有几块就算）不收成组（组里的形状 PowerPoint 的平滑不按名字配，
