@@ -1064,7 +1064,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
         title: '全屏放映',
         annotations: looking,
         description:
-          '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。用户说「放给我看」「演示一遍」时调它。转场只有放映时才看得见,截图看不出。只是自己检查效果的话不用放映,工作台里的画布一样能看、navigate 翻的也是它。放完用 stop_present 关掉放映;close_deck 也会顺带关掉。',
+          '把稿子在用户屏幕上全屏放映起来,从指定页开始(不给就从第一页)。只在用户明确要全屏放映时调它。用户说「放给我看」「演示一遍」,在工作台里用 navigate next 一页页翻就行:画布翻页放的就是真转场(截图看不出转场),也不会占住用户整块屏幕。放完用 stop_present 关掉放映;close_deck 也会顺带关掉。',
         inputSchema: {
           slide: z
             .number()
