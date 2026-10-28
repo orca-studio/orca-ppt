@@ -32,8 +32,6 @@
 
 - [x] **一变多、多合一的缓动**:10-28 左右并排放过,定为 `power2.inOut`,和共享元素、文字级匹配统一。
 - [x] **中途打断时的快进时长**:10-28 左右并排看过,`FINISH_S` 从 0.15 秒调到 0.3 秒(页内动画的分步跳过同一个数)。
-- [ ] **两个 skill 的镜头曲线对齐**:orca-motion-skill `references/principles.md` 写「镜头用
-      `power3.inOut`」,和 ppt-skill 引擎的结论(`power3` 起步太慢)相反。改那边。
 
 ## 4. 有需要再做
 

@@ -760,11 +760,6 @@ URL 带 `?calm`,或者 `<html>` / `<body>` 上写 `data-motion="calm"`,就打开
 | 新元素入场 | 上浮 `power2.out`;从基线长出 `power3.out`;弹出 `back.out(1.6)` | `data-enter` | 入场要开头就动;长出来的柱子要落得稳 |
 | 旧元素退场 | `power1.in`,0.3–0.35 秒 | 各手法里没配对的旧元素 | 加速离开;新元素 0.6 秒才入场,之前要让出位置 |
 
-**还没统一的:**
-
-- orca-motion-skill 的 `references/principles.md` 第 5 节写「镜头用 `power3.inOut`」,和上面
-  放大进元素那一行的结论相反。两个 skill 的镜头应该取同一个结论。
-
 ## 组合规则
 
 - 任何手法的页之后，下一页都可以用任何手法（包括共享元素）。
