@@ -5,7 +5,8 @@
 // 1px = 12192000 / 1920 = 6350 EMU = 0.5pt。
 //
 // 模型：
-//   { slides: [{ background: { color } | { media }, transition, shapes: [形状…] }], media: Map<名字, Buffer> }
+//   { slides: [{ background: { color } | { media }, transition, shapes: [形状…] }], media: Map<名字, Buffer>,
+//     fonts?: [{ typeface, regular?, bold?, italic?, boldItalic? }] }   嵌进文件的字体，每一档是 EOT（lib/ttf.mjs）
 //   形状 sp： { type: "sp", name, x, y, w, h, rot?, geom, radius?, fill?, line?, text? }
 //   形状 pic：{ type: "pic", name, x, y, w, h, rot?, media }
 //   形状 grp：{ type: "grp", name, children: [形状…] }
@@ -125,10 +126,23 @@ function textBody(t) {
   // 只有单行的框写 wrap="none"，字体量得宽一点也不会被挤成两行
   // 竖排：eaVert 让一段成一列、从右往左排（和 writing-mode: vertical-rl 一样），标点自动换成竖排的写法
   const vert = t.vertical ? ' vert="eaVert"' : "";
-  const body = `<a:bodyPr${vert} wrap="${t.wrap ? "square" : "none"}" lIns="${emu(ins.l)}" tIns="${emu(ins.t)}" rIns="${emu(ins.r)}" bIns="${emu(ins.b)}" anchor="t" rtlCol="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>`;
+  // 交给 PowerPoint 折的西文框放宽 0.25em：浏览器里常有一行离框边不到 1px，PowerPoint 的字宽差一点就挤下去一个词。
+  // 0.25em 比「空格 + 一个字母」窄，不会反过来把下一行的词拉上来。有中文的不放：中文按字折、标点不许放行首，
+  // 浏览器常在行尾空出将近一个字，放宽了 PowerPoint 就多塞一个字（实测更差）。
+  // 放宽用负的内边距，带底色的形状大小不变
+  let { l, r } = ins;
+  const cjk = t.paras.some((p) => p.runs.some((run) => /[　-鿿＀-￯]/.test(run.text)));
+  if (t.wrap && !cjk) {
+    const slack = 0.25 * Math.max(...t.paras.flatMap((p) => p.runs.map((run) => run.size)));
+    const align = t.paras[0]?.align;
+    if (align === "ctr") [l, r] = [l - slack / 2, r - slack / 2];
+    else if (align === "r") l -= slack;
+    else r -= slack;
+  }
+  const body = `<a:bodyPr${vert} wrap="${t.wrap ? "square" : "none"}" lIns="${emu(l)}" tIns="${emu(ins.t)}" rIns="${emu(r)}" bIns="${emu(ins.b)}" anchor="t" rtlCol="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>`;
   const paras = t.paras
     .map((p) => {
-      const ppr = `<a:pPr algn="${p.align || "l"}"><a:lnSpc><a:spcPts val="${Math.round(p.lineHeight * 50)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:buNone/></a:pPr>`;
+      const ppr = `<a:pPr algn="${p.align || "l"}" hangingPunct="0"><a:lnSpc><a:spcPts val="${Math.round(p.lineHeight * 50)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:buNone/></a:pPr>`;
       const end = p.runs[0] ? `<a:endParaRPr lang="zh-CN" sz="${Math.round(p.runs[0].size * 50)}" dirty="0"/>` : "";
       return `<a:p>${ppr}${p.runs.map(run).join("")}${end}</a:p>`;
     })
@@ -269,6 +283,19 @@ export function buildPptx(model, meta = {}) {
     ];
   });
 
+  // 嵌入字体：ppt/fonts/fontN.fntdata，presentation.xml 的 embeddedFontLst 按字体名列出各档
+  const SLOTS = ["regular", "bold", "italic", "boldItalic"];
+  const fontFiles = [];
+  const fontList = (model.fonts ?? [])
+    .map((f) => {
+      const slots = SLOTS.filter((slot) => f[slot]).map((slot) => {
+        fontFiles.push(f[slot]);
+        return `<p:${slot} r:id="rId${n + 5 + fontFiles.length}"/>`;
+      });
+      return `<p:embeddedFont><p:font typeface="${esc(f.typeface)}"/>${slots.join("")}</p:embeddedFont>`;
+    })
+    .join("");
+
   const types = { png: "image/png", jpeg: "image/jpeg", jpg: "image/jpeg" };
   files.push({
     name: "[Content_Types].xml",
@@ -278,6 +305,7 @@ export function buildPptx(model, meta = {}) {
       `<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>` +
       `<Default Extension="xml" ContentType="application/xml"/>` +
       [...mediaTypes].map((ext) => `<Default Extension="${ext}" ContentType="${types[ext]}"/>`).join("") +
+      (fontFiles.length ? `<Default Extension="fntdata" ContentType="application/x-fontdata"/>` : "") +
       `<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>` +
       `<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>` +
       `<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>` +
@@ -315,10 +343,11 @@ export function buildPptx(model, meta = {}) {
     name: "ppt/presentation.xml",
     data:
       XML +
-      `<p:presentation xmlns:a="${NS_A}" xmlns:r="${NS_R}" xmlns:p="${NS_P}" saveSubsetFonts="1">` +
+      `<p:presentation xmlns:a="${NS_A}" xmlns:r="${NS_R}" xmlns:p="${NS_P}" saveSubsetFonts="1"${fontFiles.length ? ' embedTrueTypeFonts="1"' : ""}>` +
       `<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>` +
       `<p:sldIdLst>${model.slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 2}"/>`).join("")}</p:sldIdLst>` +
       `<p:sldSz cx="${SLIDE_W}" cy="${SLIDE_H}"/><p:notesSz cx="6858000" cy="9144000"/>` +
+      (fontList ? `<p:embeddedFontLst>${fontList}</p:embeddedFontLst>` : "") +
       `<p:defaultTextStyle><a:lvl1pPr><a:defRPr sz="1800"/></a:lvl1pPr></p:defaultTextStyle></p:presentation>`,
   });
   files.push({
@@ -330,6 +359,7 @@ export function buildPptx(model, meta = {}) {
       [`rId${n + 3}`, "presProps", "presProps.xml"],
       [`rId${n + 4}`, "viewProps", "viewProps.xml"],
       [`rId${n + 5}`, "tableStyles", "tableStyles.xml"],
+      ...fontFiles.map((_, i) => [`rId${n + 6 + i}`, "font", `fonts/font${i + 1}.fntdata`]),
     ]),
   });
   files.push({ name: "ppt/presProps.xml", data: XML + `<p:presentationPr xmlns:a="${NS_A}" xmlns:r="${NS_R}" xmlns:p="${NS_P}"/>` });
@@ -357,5 +387,6 @@ export function buildPptx(model, meta = {}) {
   files.push({ name: "ppt/theme/theme1.xml", data: THEME });
   files.push(...slideFiles.flat());
   for (const [name, data] of model.media) files.push({ name: `ppt/media/${name}`, data });
+  fontFiles.forEach((data, i) => files.push({ name: `ppt/fonts/font${i + 1}.fntdata`, data }));
   return writeZip(files);
 }

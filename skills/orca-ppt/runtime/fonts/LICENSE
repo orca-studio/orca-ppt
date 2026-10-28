@@ -1,4 +1,5 @@
-本目录下的 .woff2 由 scripts/fetch-fonts.mjs 从 Google Fonts 取得,随包分发。
+本目录下的 .woff2 和 pptx/ 里的 .ttf(导出 PPTX 时嵌进文件用,只改了字体名)由 scripts/fetch-fonts.mjs
+从 Google Fonts 取得,随包分发。
 
 下列字体均以 SIL Open Font License 1.1 发布,允许随作品捆绑、再分发:
 

@@ -12,13 +12,20 @@
 //
 // 产物是 runtime/fonts/(woff2 + fonts.css),进仓库 —— 用的时候不该再依赖公网。
 // 字体都是 OFL,可以随包分发,许可抄在 runtime/fonts/LICENSE 里。
+//
+// 另外取一份给导出 PPTX 嵌进文件用的:runtime/fonts/pptx/(静态字重的 .ttf + fonts.json)。
+// PowerPoint 只认 TrueType、按字体名找字;网页用的是可变字体的 woff2,字体名还带着光学尺寸
+// (「Newsreader 16pt」),对不上。Google 的旧版接口(css?family=…&subset=latin,不带现代 UA)
+// 回的正是每个字重一个、只含拉丁字形的静态 .ttf,字体名就是家族名。
 
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { fontNames, pptxName, renameFont } from './lib/ttf.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT = join(ROOT, 'runtime', 'fonts')
+const PPTX_OUT = join(OUT, 'pptx')
 
 /**
  * 主题里现在用到的全部字体,取各主题的并集。
@@ -157,4 +164,53 @@ async function main() {
   console.log(`→ ${join(OUT, 'fonts.css')}`)
 }
 
+/** css2 的查询串(`Inter:wght@400;500`、`Instrument+Serif:ital@0;1`)→ 旧版接口的(`Inter:400,500`) */
+function legacySpec(spec) {
+  const [name, axes] = spec.split(':')
+  if (!axes) return `${name}:400`
+  const [keys, values] = axes.split('@')
+  const names = keys.split(',')
+  const faces = values.split(';').map((tuple) => {
+    const parts = Object.fromEntries(tuple.split(',').map((v, i) => [names[i], v]))
+    return `${parts.wght ?? 400}${parts.ital === '1' ? 'italic' : ''}`
+  })
+  return `${name}:${[...new Set(faces)].join(',')}`
+}
+
+/** 导出 PPTX 嵌字体用的静态 .ttf。fonts.json:CSS 里的家族名 + 字重 + 正斜 → 文件和 PowerPoint 里的字体名 */
+async function fetchPptxFonts() {
+  mkdirSync(PPTX_OUT, { recursive: true })
+  const entries = []
+  let downloaded = 0
+  for (const spec of FAMILIES) {
+    // 不带 UA:回 truetype
+    const url = `https://fonts.googleapis.com/css?family=${legacySpec(spec)}&subset=latin`
+    const response = await fetch(url)
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText} — ${url}`)
+    const css = await response.text()
+    for (const block of css.match(/@font-face\s*\{[^}]*\}/g) ?? []) {
+      const family = field(block, 'font-family').replace(/['"]/g, '')
+      const style = field(block, 'font-style') ?? 'normal'
+      const weight = Number(field(block, 'font-weight') ?? 400)
+      const source = block.match(/url\((https:\/\/[^)]+\.ttf)\)/)?.[1]
+      if (!source) throw new Error(`${family} 没拿到 ttf`)
+      const file = `${slug(family)}-${style}-${weight}.ttf`
+      if (!existsSync(join(PPTX_OUT, file))) {
+        const font = await fetch(source)
+        if (!font.ok) throw new Error(`下载失败 ${source}`)
+        // Google 给的静态字体里名字常带着光学尺寸和默认字重(「Newsreader 16pt 16pt」「Space Grotesk Light」),
+        // 在 PowerPoint 的字体菜单里看着像别的字体:改成家族名 + 字重名
+        const named = renameFont(Buffer.from(await font.arrayBuffer()), pptxName(family, weight, style === 'italic'))
+        writeFileSync(join(PPTX_OUT, file), named)
+        downloaded += 1
+      }
+      const names = fontNames(readFileSync(join(PPTX_OUT, file)))
+      entries.push({ family, weight, style, file, typeface: names.family, subfamily: names.subfamily })
+    }
+  }
+  writeFileSync(join(PPTX_OUT, 'fonts.json'), JSON.stringify(entries, null, 2) + '\n')
+  console.log(`PPTX 嵌入字体 ${downloaded} 个新下载,共 ${entries.length} 个 → ${PPTX_OUT}`)
+}
+
 await main()
+await fetchPptxFonts()

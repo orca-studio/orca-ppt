@@ -6,8 +6,10 @@
 //   page.screenshot({ clip, transparent })  截视口里的一块，返回 PNG 的 Buffer
 //
 // 调用方负责把稿子用 `?capture#/0` 打开、视口设成 VIEW。
+import { existsSync, readFileSync } from "node:fs";
 import { buildPptx } from "./pptx-write.mjs";
 import { LOST, pageTransition } from "./pptx-fallback.mjs";
+import { eot } from "./ttf.mjs";
 
 const W = 1920;
 const H = 1080;
@@ -273,6 +275,7 @@ function measure(index) {
         font,
         ea,
         size: fontSize,
+        weight: parseInt(ecs.fontWeight, 10),
         bold: parseInt(ecs.fontWeight, 10) >= 600,
         italic: ecs.fontStyle === "italic",
         spacing: ecs.letterSpacing === "normal" ? 0 : parseFloat(ecs.letterSpacing) || 0,
@@ -512,6 +515,46 @@ function measure(index) {
 }
 
 
+// 嵌进 PPTX 的字体：skill 自带的网页字体，每个字重一个静态 .ttf（scripts/fetch-fonts.mjs 取的）
+const FONT_DIR = new URL("../../runtime/fonts/pptx/", import.meta.url);
+const FONTS = existsSync(new URL("fonts.json", FONT_DIR)) ? JSON.parse(readFileSync(new URL("fonts.json", FONT_DIR), "utf8")) : [];
+
+/** CSS 里的家族名 + 字重 + 正斜 → 嵌哪个字体文件。没有这个家族返回 null（系统字体，不嵌） */
+function embeddedFont(family, weight, italic) {
+  const style = italic ? "italic" : "normal";
+  const same = FONTS.filter((f) => f.family.toLowerCase() === family.toLowerCase());
+  const pool = same.filter((f) => f.style === style).length ? same.filter((f) => f.style === style) : same;
+  if (!pool.length) return null;
+  return pool.reduce((best, f) => (Math.abs(f.weight - weight) < Math.abs(best.weight - weight) ? f : best));
+}
+
+/**
+ * 把字换成嵌进文件的字体：每个字重是一个单独的字体（「Inter SemiBold」），粗、斜按那个字体自己的档来，
+ * 不让 PowerPoint 再加粗一遍。返回 model.fonts：[{ typeface, regular?, bold?, italic?, boldItalic? }]（EOT）
+ */
+function embedFonts(slides) {
+  const used = new Map();
+  const runs = slides.flatMap((s) =>
+    s.shapes.flatMap((x) => (x.kind === "raster" || !x.text ? [] : x.text.paras.flatMap((p) => p.runs))),
+  );
+  for (const r of runs) {
+    const font = embeddedFont(r.font, r.weight ?? (r.bold ? 700 : 400), r.italic);
+    if (!font) continue;
+    if (r.ea === r.font) r.ea = font.typeface;
+    r.font = font.typeface;
+    r.bold = /Bold/.test(font.subfamily);
+    r.italic = /Italic/.test(font.subfamily);
+    used.set(font.file, font);
+  }
+  const byFace = new Map();
+  for (const font of used.values()) {
+    const slot = { Regular: "regular", Bold: "bold", Italic: "italic", "Bold Italic": "boldItalic" }[font.subfamily] ?? "regular";
+    if (!byFace.has(font.typeface)) byFace.set(font.typeface, { typeface: font.typeface });
+    byFace.get(font.typeface)[slot] = eot(readFileSync(new URL(font.file, FONT_DIR)));
+  }
+  return [...byFace.values()];
+}
+
 /**
  * 等稿子就绪，逐页量、截，拼成 PPTX。
  * 返回 { pptx: Buffer, report, frames }；frames 只在 options.frames 时有，每页一张 PNG。
@@ -629,7 +672,7 @@ export async function exportDeck(page, options = {}) {
   }
 
   // 第二遍：配对和转场要看前后两页
-  const model = { slides: [], media };
+  const model = { slides: [], media, fonts: embedFonts(slides) };
   slides.forEach((s, i) => {
     const prev = slides[i - 1];
     const ids = (sl) => new Set(sl.shapes.map((x) => x.identity).filter(Boolean));
@@ -707,7 +750,12 @@ export async function exportDeck(page, options = {}) {
 
   const title = await page.evaluate(() => document.title);
   const pptx = buildPptx(model, { title });
-  report.fonts = [...new Set(slides.flatMap((s) => s.shapes.flatMap((x) => x.text?.paras.flatMap((p) => p.runs.map((r) => r.font)) ?? [])))];
+  // 嵌进文件的字体；fonts 只列没嵌的（系统字体、中文字体），看的那台电脑要装
+  report.embeddedFonts = model.fonts.map((f) => f.typeface);
+  const embedded = new Set(report.embeddedFonts);
+  report.fonts = [
+    ...new Set(slides.flatMap((s) => s.shapes.flatMap((x) => x.text?.paras.flatMap((p) => p.runs.flatMap((r) => [r.font, r.ea])) ?? []))),
+  ].filter((f) => f && !embedded.has(f));
   report.degraded = report.slides
     .filter((s) => s.transition.tier !== "保真")
     .map((s) => ({ from: s.index - 1, to: s.index, technique: [s.transition.technique, ...s.transition.elements.filter((e) => e.tier !== "保真").map((e) => e.name)].filter(Boolean).join(" + "), tier: s.transition.tier, kind: s.transition.kind }));

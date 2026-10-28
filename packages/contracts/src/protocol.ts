@@ -44,7 +44,7 @@ export const PptxExportReport = z.object({
     }),
   ),
   degraded: z.array(PptxDegraded),
-  /** 用到的字体。字体不嵌进文件,看的那台电脑要装。 */
+  /** 没嵌进文件的字体(系统字体、中文字体),看的那台电脑要装。skill 自带的西文字体都嵌进文件。 */
   fonts: z.array(z.string()),
 })
 

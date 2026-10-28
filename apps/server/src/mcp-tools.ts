@@ -1112,7 +1112,7 @@ export function buildTools(call: ProtocolCaller, active: ActiveDeck): ToolSpec[]
           openWorldHint: false,
         },
         description:
-          '把当前稿子导出成 PowerPoint 文件。网页稿是作品本身,PPTX 是功能不完整的导出:每次翻页按随附规范 references/transitions.md「导出 PPTX」那张表回退。结果里有哪几次翻页降级了、哪些效果导不出来、要装哪些字体(字体不嵌进文件)—— 这些要告诉用户。只在用户要 PowerPoint 文件时调它,几十秒才导完。',
+          '把当前稿子导出成 PowerPoint 文件。网页稿是作品本身,PPTX 是功能不完整的导出:每次翻页按随附规范 references/transitions.md「导出 PPTX」那张表回退。结果里有哪几次翻页降级了、哪些效果导不出来、还要装哪些字体(稿子自带的西文字体嵌进文件,中文字体等系统字体没嵌)—— 这些要告诉用户。只在用户要 PowerPoint 文件时调它,几十秒才导完。',
         inputSchema: {
           path: z
             .string()

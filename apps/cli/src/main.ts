@@ -250,7 +250,7 @@ switch (command) {
           ),
           ...summary.lost.map((l) => `  第 ${l.slide} 页导不出来:${l.items.join('、')}`),
           ...(summary.rasters ? [`${summary.rasters} 个元素转成了图片`] : []),
-          `用到的字体(看的那台电脑要装):${summary.fonts.join('、') || '无'}`,
+          `没嵌进文件的字体(看的那台电脑要装):${summary.fonts.join('、') || '无'}`,
         ],
         summary,
       )

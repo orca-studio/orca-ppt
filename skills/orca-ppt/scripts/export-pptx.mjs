@@ -68,7 +68,8 @@ try {
   for (const s of report.slides.filter((s) => s.lost.length)) console.log(`  第 ${s.index} 页导不出来：${s.lost.join("、")}`);
   const rasterCount = report.slides.reduce((a, s) => a + s.rasters.length, 0);
   if (rasterCount) console.log(`${rasterCount} 个元素转成了图片（原因见 --json 报告）`);
-  console.log(`用到的字体（看的那台电脑要装）：${report.fonts.join("、")}`);
+  if (report.embeddedFonts.length) console.log(`嵌进文件的字体：${report.embeddedFonts.join("、")}`);
+  if (report.fonts.length) console.log(`没嵌的字体（看的那台电脑要装，没装会换成别的字体）：${report.fonts.join("、")}`);
   if (problems.length) console.log(`页面报错：\n  ${problems.join("\n  ")}`);
 } finally {
   await browser?.close().catch(() => {});

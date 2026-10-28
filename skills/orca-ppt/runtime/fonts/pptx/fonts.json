@@ -1,0 +1,290 @@
+[
+  {
+    "family": "Bricolage Grotesque",
+    "weight": 400,
+    "style": "normal",
+    "file": "bricolage-grotesque-normal-400.ttf",
+    "typeface": "Bricolage Grotesque",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bricolage Grotesque",
+    "weight": 500,
+    "style": "normal",
+    "file": "bricolage-grotesque-normal-500.ttf",
+    "typeface": "Bricolage Grotesque Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bricolage Grotesque",
+    "weight": 600,
+    "style": "normal",
+    "file": "bricolage-grotesque-normal-600.ttf",
+    "typeface": "Bricolage Grotesque SemiBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bricolage Grotesque",
+    "weight": 700,
+    "style": "normal",
+    "file": "bricolage-grotesque-normal-700.ttf",
+    "typeface": "Bricolage Grotesque",
+    "subfamily": "Bold"
+  },
+  {
+    "family": "Instrument Serif",
+    "weight": 400,
+    "style": "italic",
+    "file": "instrument-serif-italic-400.ttf",
+    "typeface": "Instrument Serif",
+    "subfamily": "Italic"
+  },
+  {
+    "family": "Instrument Serif",
+    "weight": 400,
+    "style": "normal",
+    "file": "instrument-serif-normal-400.ttf",
+    "typeface": "Instrument Serif",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "JetBrains Mono",
+    "weight": 400,
+    "style": "normal",
+    "file": "jetbrains-mono-normal-400.ttf",
+    "typeface": "JetBrains Mono",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "JetBrains Mono",
+    "weight": 500,
+    "style": "normal",
+    "file": "jetbrains-mono-normal-500.ttf",
+    "typeface": "JetBrains Mono Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Inter",
+    "weight": 400,
+    "style": "normal",
+    "file": "inter-normal-400.ttf",
+    "typeface": "Inter",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Inter",
+    "weight": 500,
+    "style": "normal",
+    "file": "inter-normal-500.ttf",
+    "typeface": "Inter Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Inter",
+    "weight": 600,
+    "style": "normal",
+    "file": "inter-normal-600.ttf",
+    "typeface": "Inter SemiBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Inter",
+    "weight": 700,
+    "style": "normal",
+    "file": "inter-normal-700.ttf",
+    "typeface": "Inter",
+    "subfamily": "Bold"
+  },
+  {
+    "family": "Cormorant Garamond",
+    "weight": 400,
+    "style": "normal",
+    "file": "cormorant-garamond-normal-400.ttf",
+    "typeface": "Cormorant Garamond",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Cormorant Garamond",
+    "weight": 500,
+    "style": "normal",
+    "file": "cormorant-garamond-normal-500.ttf",
+    "typeface": "Cormorant Garamond Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Cormorant Garamond",
+    "weight": 600,
+    "style": "normal",
+    "file": "cormorant-garamond-normal-600.ttf",
+    "typeface": "Cormorant Garamond SemiBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Work Sans",
+    "weight": 400,
+    "style": "normal",
+    "file": "work-sans-normal-400.ttf",
+    "typeface": "Work Sans",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Work Sans",
+    "weight": 500,
+    "style": "normal",
+    "file": "work-sans-normal-500.ttf",
+    "typeface": "Work Sans Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Work Sans",
+    "weight": 600,
+    "style": "normal",
+    "file": "work-sans-normal-600.ttf",
+    "typeface": "Work Sans SemiBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bodoni Moda",
+    "weight": 400,
+    "style": "normal",
+    "file": "bodoni-moda-normal-400.ttf",
+    "typeface": "Bodoni Moda",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bodoni Moda",
+    "weight": 700,
+    "style": "normal",
+    "file": "bodoni-moda-normal-700.ttf",
+    "typeface": "Bodoni Moda",
+    "subfamily": "Bold"
+  },
+  {
+    "family": "Bodoni Moda",
+    "weight": 800,
+    "style": "normal",
+    "file": "bodoni-moda-normal-800.ttf",
+    "typeface": "Bodoni Moda ExtraBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Bodoni Moda",
+    "weight": 900,
+    "style": "normal",
+    "file": "bodoni-moda-normal-900.ttf",
+    "typeface": "Bodoni Moda Black",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Manrope",
+    "weight": 500,
+    "style": "normal",
+    "file": "manrope-normal-500.ttf",
+    "typeface": "Manrope Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Manrope",
+    "weight": 700,
+    "style": "normal",
+    "file": "manrope-normal-700.ttf",
+    "typeface": "Manrope",
+    "subfamily": "Bold"
+  },
+  {
+    "family": "Manrope",
+    "weight": 800,
+    "style": "normal",
+    "file": "manrope-normal-800.ttf",
+    "typeface": "Manrope ExtraBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Source Serif 4",
+    "weight": 400,
+    "style": "normal",
+    "file": "source-serif-4-normal-400.ttf",
+    "typeface": "Source Serif 4",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Source Serif 4",
+    "weight": 500,
+    "style": "normal",
+    "file": "source-serif-4-normal-500.ttf",
+    "typeface": "Source Serif 4 Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Newsreader",
+    "weight": 400,
+    "style": "normal",
+    "file": "newsreader-normal-400.ttf",
+    "typeface": "Newsreader",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Newsreader",
+    "weight": 500,
+    "style": "normal",
+    "file": "newsreader-normal-500.ttf",
+    "typeface": "Newsreader Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Hanken Grotesk",
+    "weight": 400,
+    "style": "normal",
+    "file": "hanken-grotesk-normal-400.ttf",
+    "typeface": "Hanken Grotesk",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Hanken Grotesk",
+    "weight": 600,
+    "style": "normal",
+    "file": "hanken-grotesk-normal-600.ttf",
+    "typeface": "Hanken Grotesk SemiBold",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "DM Mono",
+    "weight": 400,
+    "style": "normal",
+    "file": "dm-mono-normal-400.ttf",
+    "typeface": "DM Mono",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "DM Mono",
+    "weight": 500,
+    "style": "normal",
+    "file": "dm-mono-normal-500.ttf",
+    "typeface": "DM Mono Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Space Grotesk",
+    "weight": 400,
+    "style": "normal",
+    "file": "space-grotesk-normal-400.ttf",
+    "typeface": "Space Grotesk",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Space Grotesk",
+    "weight": 500,
+    "style": "normal",
+    "file": "space-grotesk-normal-500.ttf",
+    "typeface": "Space Grotesk Medium",
+    "subfamily": "Regular"
+  },
+  {
+    "family": "Space Grotesk",
+    "weight": 700,
+    "style": "normal",
+    "file": "space-grotesk-normal-700.ttf",
+    "typeface": "Space Grotesk",
+    "subfamily": "Bold"
+  }
+]

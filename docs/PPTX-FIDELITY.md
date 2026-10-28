@@ -80,10 +80,31 @@
      元素在源文件里的位置记在 `data-pptx-src` 上;引擎自己搭的层取宿主的位置,复制出来的 ghost 带
      原件的。16 份同款 1419 个形状全部对回源文件,类名一致。
 
+3. **嵌入字体(2026-10-28)。**
+   - Mac 版 PowerPoint 实测:`ppt/fonts/*.fntdata` 原样放 .ttf 不认(换成 Calibri,OpenXmlValidator
+     照样 0 错误);套一个不压缩、不加密的 EOT 头就认。EOT 头和改字体名都在 `scripts/lib/ttf.mjs`,
+     不依赖别的库。
+   - 字体来源:Google Fonts 旧版接口(`css?family=…&subset=latin`,不带现代 UA)给的是每个字重一个、
+     只含拉丁字形的静态 .ttf。`fetch-fonts.mjs` 顺带取下来放 `runtime/fonts/pptx/`(36 个,1.7MB,
+     OFL),字体名改成家族名 + 字重名(原来带着「Newsreader 16pt 16pt」「Space Grotesk Light」
+     这种光学尺寸和默认字重)。
+   - 导出时每段字按 CSS 家族名 + 字重找文件:每个字重是单独的字体(「Inter SemiBold」),粗斜按那个
+     字体自己的档,不让 PowerPoint 再加粗。16 份同款一共只多 2MB。报告的 `fonts` 只列没嵌的
+     (看的电脑要装),另有 `embeddedFonts`。
+   - 段落属性加 `hangingPunct="0"`:PowerPoint 默认让「,。」挂出行尾,浏览器不会,中文段每行多塞
+     一个字。西文框放宽 0.25em(负的内边距,带底色的形状不变大):浏览器里常有一行离框边不到 1px。
+     中文框不放宽,实测放宽更差。
+   - 结果:PowerPoint 里折行和浏览器不一样的从 105/727 行降到 5/735 行(不算 swirl-rings 修好的
+     那 95 行)。剩下两段原因清楚:
+     - **PingFang SC 在 PowerPoint 里认不出**(macOS 的系统隐藏字体),中文落到微软雅黑、西文落到
+       Calibri。原来就这样,不是这次改的。要么换成 PowerPoint 认得的中文字体名,要么嵌一份开源
+       中文字体(要按用到的字裁剪,不然太大)。
+     - **光学尺寸**:Source Serif 4、Newsreader、Bodoni Moda、Bricolage Grotesque 是带 opsz 的可变
+       字体,浏览器按字号自动换字形;静态 .ttf 只有默认那一档,大字号时略宽。
+
 还没做的:
 
-- **字体。** 折行和外观都取决于看的那台电脑有没有稿子的字体。网页字体都是 OFL,可以考虑在 PPTX
-  里嵌字体(PowerPoint 支持嵌入),或者导出时附一份字体包;要先查 Mac 版 PowerPoint 对嵌入字体的支持。
+- PingFang SC 和光学尺寸,见上。
 - glass-bars 的棱柱、两个圆环同款按同款拆成原生形状。
 - 结构语义标注(列表、图表)和 PPTX 保真模式。
 

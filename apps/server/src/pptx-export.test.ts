@@ -471,3 +471,60 @@ describe('分段', () => {
     expect(checked.status, checked.stdout).toBe(0)
   }, 60_000)
 })
+
+describe('嵌入字体', () => {
+  const fontDir = join(skill, 'runtime/fonts/pptx')
+  const fonts = JSON.parse(readFileSync(join(fontDir, 'fonts.json'), 'utf8')) as {
+    family: string
+    weight: number
+    style: string
+    file: string
+    typeface: string
+    subfamily: string
+  }[]
+
+  it('每个字体文件的名字就是清单里写的：400 / 700 叫家族名，别的字重带字重名', async () => {
+    const { fontNames } = await lib('ttf.mjs')
+    for (const f of fonts) {
+      expect(fontNames(readFileSync(join(fontDir, f.file)))).toEqual({
+        family: f.typeface,
+        subfamily: f.subfamily,
+      })
+      if (f.weight === 400 || f.weight === 700) expect(f.typeface).toBe(f.family)
+      else expect(f.typeface).toMatch(new RegExp(`^${f.family} `))
+    }
+  })
+
+  it('EOT 头指向的字体数据就是原来的 .ttf', async () => {
+    const { eot } = await lib('ttf.mjs')
+    const ttf = readFileSync(join(fontDir, fonts[0]!.file))
+    const data = eot(ttf) as Buffer
+    expect(data.readUInt32LE(0)).toBe(data.length)
+    expect(data.readUInt32LE(4)).toBe(ttf.length)
+    expect(data.readUInt16LE(34)).toBe(0x504c) // MagicNumber
+    expect(data.subarray(data.length - ttf.length).equals(ttf)).toBe(true)
+  })
+
+  it('字体写进 embeddedFontLst，按档对上关系和 fntdata', async () => {
+    const { buildPptx } = await lib('pptx-write.mjs')
+    const { readZip } = await lib('zip.mjs')
+    const files = readZip(
+      buildPptx({
+        media: new Map(),
+        fonts: [{ typeface: 'Inter', regular: Buffer.from('r'), bold: Buffer.from('b') }],
+        slides: [{ background: { color: 'ffffff' }, transition: { kind: 'none' }, shapes: [] }],
+      }),
+    ) as Map<string, Buffer>
+    const presentation = files.get('ppt/presentation.xml')!.toString()
+    expect(presentation).toContain('embedTrueTypeFonts="1"')
+    expect(presentation).toMatch(
+      /<p:notesSz [^>]*\/><p:embeddedFontLst><p:embeddedFont><p:font typeface="Inter"\/><p:regular r:id="(rId\d+)"\/><p:bold r:id="(rId\d+)"\/>/,
+    )
+    const rels = files.get('ppt/_rels/presentation.xml.rels')!.toString()
+    for (const [, id] of presentation.matchAll(/<p:(?:regular|bold) r:id="(rId\d+)"/g)) {
+      const target = new RegExp(`Id="${id}" Type="[^"]+/font" Target="([^"]+)"`).exec(rels)?.[1]
+      expect(files.has(`ppt/${target}`)).toBe(true)
+    }
+    expect(files.get('[Content_Types].xml')!.toString()).toContain('Extension="fntdata"')
+  })
+})
