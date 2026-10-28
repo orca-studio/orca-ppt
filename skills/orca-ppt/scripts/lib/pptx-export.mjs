@@ -169,6 +169,23 @@ function measure(index) {
     }
     return deg;
   };
+  // 从这个元素到页面，一路上的旋转、缩放叠起来（只要线性部分，平移不管）。吊灯的吊线自己不转，
+  // 转的是外面那层 .lamp-rig；只看自己会把斜着的细线量成它的外接框，导成一个大方块
+  const linearOf = (el) => {
+    let m = new DOMMatrix();
+    for (let n = el; n && n !== section; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      const own = new DOMMatrix();
+      const r = /(-?[\d.]+)deg/.exec(cs.rotate || "");
+      if (r) own.rotateSelf(+r[1]);
+      const sc = (cs.scale || "none") === "none" ? null : cs.scale.split(/\s+/).map(Number);
+      if (sc) own.scaleSelf(sc[0], sc[1] ?? sc[0]);
+      if (cs.transform && cs.transform !== "none") own.multiplySelf(new DOMMatrix(cs.transform));
+      own.e = own.f = 0;
+      m = own.multiply(m);
+    }
+    return m;
+  };
   // 共享元素的键：data-id；匹配放大的 data-match；原地替换、文字级匹配的键也拿来配对
   const identityOf = (el) => {
     for (let n = el; n && n !== section; n = n.parentElement) {
@@ -382,15 +399,24 @@ function measure(index) {
     if (b.w < 0.5 && b.h < 0.5) continue;
     const identity = identityOf(el);
     if (outside(b) && !identity) continue;
-    const rot = rotationOf(cs);
     const turn = turnOf(el);
-    // 旋转的元素：盒子按没转的样子量（中心不变，尺寸取布局尺寸），旋转写进 rot。
+    // 旋转的元素：盒子按没转的样子量（中心不变，尺寸取布局尺寸乘上一路的缩放），旋转写进 rot。
+    // 转角连外层的一起算；外层转的（inherited）截图时抹不掉，截图那边退回外接框
     // <svg> 没有 offsetWidth（斜贴在立体柱侧面的小图标），布局尺寸从算好的样式里取
-    const lw = el.offsetWidth ?? parseFloat(cs.width), lh = el.offsetHeight ?? parseFloat(cs.height);
+    const own = rotationOf(cs);
+    const lin = linearOf(el);
+    const total = (Math.atan2(lin.b, lin.a) * 180) / Math.PI;
+    const inherited = Math.abs(total - own) > 0.01 && Math.abs(total) > 0.01;
+    const rot = inherited ? total : own;
+    const lw = (el.offsetWidth ?? parseFloat(cs.width)) * (inherited ? Math.hypot(lin.a, lin.b) : 1);
+    const lh = (el.offsetHeight ?? parseFloat(cs.height)) * (inherited ? Math.hypot(lin.c, lin.d) : 1);
     const geo = rot || turn
       ? { x: b.x + b.w / 2 - lw / 2, y: b.y + b.h / 2 - lh / 2, w: lw, h: lh }
       : b;
-    const base = { identity, turn, label: label(el), selector: selectorOf(el), ...geo, ...(rot || turn ? { rot } : {}) };
+    const base = {
+      identity, turn, label: label(el), selector: selectorOf(el), ...geo,
+      ...(rot || turn ? { rot } : {}), ...(inherited ? { box: b } : {}),
+    };
 
     const tag = el.tagName;
     if (RASTER_TAGS.has(tag) || el instanceof SVGSVGElement) {
@@ -648,6 +674,11 @@ export async function exportDeck(page, options = {}) {
       if (item.kind !== "raster") {
         shapes.push(item);
         continue;
+      }
+      // 外层转的元素抹不掉转角：按外接框截转好的样子，不写 rot
+      if (item.box) {
+        Object.assign(item, item.box);
+        delete item.rot;
       }
       // reveal 的 auto-animate 往页面里插 `.reveal [data-auto-animate="running"] [data-auto-animate-target=…]
       // { rotate: … !important }`，选择器得比它具体才压得住
