@@ -114,6 +114,18 @@
    - 结果:16 份同款在 PowerPoint 里的文字和折行和上一步一模一样,用 PingFang 的西文
      (「Election campaign.」这种)宽度和浏览器对上了。
 
+5. **吊灯在 PowerPoint 里摆起来(2026-10-28)。**
+   - 吊线、灯身自己不转,转的是外面那层 `.lamp-rig`。原来只看元素自己的转角:吊线按外接框量成
+     一个大灰块;灯身截的是转好的样子,前后两页是两张角度不同的图。现在转角、缩放连外层一起算;
+     截图时在元素上叠一个反向的转,绕自己的中心转回去,转角写进 `rot`。
+   - 几块组成的共享元素原来收成一个组(组叫 `!!键`)。PowerPoint 存视频逐帧看:组里的形状平滑
+     不按名字配,灯是一盏淡出、一盏淡入;拆掉组、每块单独叫 `!!键~标签` 才摆过去。check-pptx
+     跟着改:共享元素不许收成组,名字不许重复。
+   - 受影响的 5 份同款(glass-bars、pendant-lamp、stage-spotlight、style-swap、window-card-flip)
+     静态画面和拆组前逐像素一样,只有 pendant-lamp 灯身改了截法的两页有零星差别。
+   - PowerPoint 存视频:AppleScript `save active presentation in … as save as movie`,存出 .mov,
+     写完要等文件大小不再变。
+
 还没做的:
 
 - 光学尺寸,见上。

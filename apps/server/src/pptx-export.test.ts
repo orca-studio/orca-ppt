@@ -219,6 +219,23 @@ describe('check-pptx 抓得到坏包', () => {
       (x) => x.replace('name="!!q"', 'name="q"'),
       /!!q/,
     ],
+    [
+      '共享元素收成了组',
+      'ppt/slides/slide1.xml',
+      (x) =>
+        x.replace(
+          /<p:sp><p:nvSpPr><p:cNvPr id="\d+" name="!!q"\/>.*?<\/p:sp>/,
+          (sp) =>
+            `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="99" name="!!q"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${sp.replace('name="!!q"', 'name="!!q~sp"')}</p:grpSp>`,
+        ),
+      /收成了组/,
+    ],
+    [
+      '共享元素两块同名',
+      'ppt/slides/slide1.xml',
+      (x) => x.replace('name="!!q"', 'name="!!q~sp"').replace('name="s1 t 2"', 'name="!!q~sp"'),
+      /!!q~sp 有 2 个/,
+    ],
     ['旋转没写', 'ppt/slides/slide1.xml', (x) => x.replace(' rot="0"', ''), /没写旋转/],
     [
       '平滑变成淡入淡出',

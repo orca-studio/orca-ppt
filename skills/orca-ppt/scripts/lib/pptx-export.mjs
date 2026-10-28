@@ -401,7 +401,8 @@ function measure(index) {
     if (outside(b) && !identity) continue;
     const turn = turnOf(el);
     // 旋转的元素：盒子按没转的样子量（中心不变，尺寸取布局尺寸乘上一路的缩放），旋转写进 rot。
-    // 转角连外层的一起算；外层转的（inherited）截图时抹不掉，截图那边退回外接框
+    // 转角连外层的一起算。外层转的（吊灯的灯身挂在转着的 .lamp-rig 里）截图时在它自己身上叠一个
+    // 反向的转（undo），绕自己的中心转回去，中心不动
     // <svg> 没有 offsetWidth（斜贴在立体柱侧面的小图标），布局尺寸从算好的样式里取
     const own = rotationOf(cs);
     const lin = linearOf(el);
@@ -415,7 +416,8 @@ function measure(index) {
       : b;
     const base = {
       identity, turn, label: label(el), selector: selectorOf(el), ...geo,
-      ...(rot || turn ? { rot } : {}), ...(inherited ? { box: b } : {}),
+      ...(rot || turn ? { rot } : {}),
+      ...(inherited ? { undo: `${cs.transform === "none" ? "" : cs.transform} rotate(${(own - total).toFixed(3)}deg)` } : {}),
     };
 
     const tag = el.tagName;
@@ -655,11 +657,17 @@ export async function exportDeck(page, options = {}) {
       if (unrotated) {
         // auto-animate 给 rotate 挂了过渡，过渡压得过 !important：没关掉的话截到的还是转着的样子，
         // PowerPoint 里再转一次，角度就翻倍了
-        const left = await page.evaluate((sel) => {
-          const cs = getComputedStyle(document.querySelector(sel));
+        // 外层转的（undo）看外接框：转回来了，外接框就是它自己的大小
+        const left = await page.evaluate(({ sel, undo, w, h }) => {
+          const el = document.querySelector(sel);
+          if (undo) {
+            const b = el.getBoundingClientRect();
+            return Math.abs(b.width - w) < 1 && Math.abs(b.height - h) < 1 ? null : `外接框 ${b.width.toFixed(1)}×${b.height.toFixed(1)}`;
+          }
+          const cs = getComputedStyle(el);
           return cs.rotate === "none" || cs.rotate === "0deg" ? (cs.transform === "none" ? null : cs.transform) : cs.rotate;
         }, unrotated);
-        if (left) throw new Error(`第 ${i + 1} 页 ${unrotated} 截图前没转回 0°（还是 ${left}）`);
+        if (left) throw new Error(`第 ${i + 1} 页 ${unrotated.sel} 截图前没转回 0°（还是 ${left}）`);
       }
       const png = await page.screenshot({ clip, transparent: true });
       await remove();
@@ -675,11 +683,6 @@ export async function exportDeck(page, options = {}) {
         shapes.push(item);
         continue;
       }
-      // 外层转的元素抹不掉转角：按外接框截转好的样子，不写 rot
-      if (item.box) {
-        Object.assign(item, item.box);
-        delete item.rot;
-      }
       // reveal 的 auto-animate 往页面里插 `.reveal [data-auto-animate="running"] [data-auto-animate-target=…]
       // { rotate: … !important }`，选择器得比它具体才压得住
       const k = `[data-pptx-k="${item.k}"]`;
@@ -688,9 +691,11 @@ export async function exportDeck(page, options = {}) {
       const style =
         hideAll +
         `${sel}${item.whole ? `, ${sel} *` : ""} { visibility: visible !important; }` +
-        (item.rot !== undefined
-          ? `${sel} { rotate: none !important; transform: none !important; transition: none !important; animation: none !important; }`
-          : "");
+        (item.undo
+          ? `${sel} { transform: ${item.undo} !important; transition: none !important; animation: none !important; }`
+          : item.rot !== undefined
+            ? `${sel} { rotate: none !important; transform: none !important; transition: none !important; animation: none !important; }`
+            : "");
       const clip = { x: m.origin.x + item.x, y: m.origin.y + item.y, width: item.w, height: item.h };
       // 画外待命的元素（分层视差的封面页，各层压在画布下方一两千像素）可能出了视口，截不到。
       // 截图时临时挪进视口（独立的 translate 属性，叠在它自己的 transform 上），PPTX 里照旧写它在画外的位置
@@ -700,7 +705,7 @@ export async function exportDeck(page, options = {}) {
       const moved = dx || dy ? `${sel} { translate: ${dx}px ${dy}px !important; }` : "";
       clip.x += dx;
       clip.y += dy;
-      const png = await shot(style + moved, clip, item.rot !== undefined ? sel : null);
+      const png = await shot(style + moved, clip, item.rot !== undefined ? { sel, undo: !!item.undo, w: item.w, h: item.h } : null);
       const name = `s${i + 1}-${item.k}.png`;
       media.set(name, png);
       shapes.push({ ...item, media: name });
@@ -731,10 +736,11 @@ export async function exportDeck(page, options = {}) {
     const facts = { ...s.measured.facts, shared, duration: Math.max(0.3, Math.min(3, s.timing.transition / 1000 || 1)) };
     const transition = i === 0 ? { kind: "none", technique: null, tier: "保真", elements: [] } : pageTransition(facts);
 
-    // 同一个键的几块形状收成一个组，组叫 `!!键`；只有一块就直接给它起这个名字
-    const out = [];
-    const groups = new Map();
+    // 共享元素的名字：只有一块就叫 `!!键`；几块的不收成组（组里的形状 PowerPoint 的平滑不按名字配，
+    // 前后两页的吊灯成了一盏淡出、一盏淡入），每块单独叫 `!!键~标签`，同一个标签第二块起加 `-2`、`-3`
+    const shapes = [];
     const named = [];
+    const pieces = new Map();
     let n = 0;
     for (const item of s.shapes) {
       const shape =
@@ -760,25 +766,24 @@ export async function exportDeck(page, options = {}) {
             };
       // 没有键的形状名字里带页号：PowerPoint 不会因为名字一样把两页的它们配上
       shape.name = `s${i + 1} ${item.label} ${++n}`;
-      named.push({ shape, selector: item.selector });
       if (item.identity) {
-        if (!groups.has(item.identity)) {
-          const g = { type: "grp", name: `!!${item.identity}`, children: [] };
-          groups.set(item.identity, g);
-          out.push(g);
-        }
-        groups.get(item.identity).children.push(shape);
-      } else out.push(shape);
-    }
-    const nameOf = new Map();
-    const shapes = out.map((g) => {
-      if (g.type !== "grp") return g;
-      if (g.children.length === 1) {
-        nameOf.set(g.children[0], g.name);
-        return { ...g.children[0], name: g.name };
+        if (!pieces.has(item.identity)) pieces.set(item.identity, []);
+        pieces.get(item.identity).push({ shape, label: item.label });
       }
-      return g;
-    });
+      shapes.push(shape);
+      named.push({ shape, selector: item.selector });
+    }
+    for (const [key, list] of pieces) {
+      if (list.length === 1) {
+        list[0].shape.name = `!!${key}`;
+        continue;
+      }
+      const seen = new Map();
+      for (const { shape, label } of list) {
+        seen.set(label, (seen.get(label) ?? 0) + 1);
+        shape.name = `!!${key}~${label}${seen.get(label) > 1 ? `-${seen.get(label)}` : ""}`;
+      }
+    }
     model.slides.push({ background: s.background, transition, shapes });
 
     const lost = [...new Set(s.measured.facts.lost)].map((key) => LOST[key]);
@@ -792,8 +797,8 @@ export async function exportDeck(page, options = {}) {
       identities: [...ids(s)],
       turn: [...new Set(s.shapes.filter((x) => x.turn && x.identity).map((x) => x.identity))],
       rasters: s.rasters,
-      // 包里每个形状 ↔ 稿子里的元素（组里只有一块时，形状名是 `!!键`）
-      shapes: named.map(({ shape, selector }) => ({ name: nameOf.get(shape) ?? shape.name, selector })),
+      // 包里每个形状 ↔ 稿子里的元素
+      shapes: named.map(({ shape, selector }) => ({ name: shape.name, selector })),
       texts: s.shapes.filter((x) => x.text).flatMap((x) => x.text.paras.map((p) => p.runs.map((r) => r.text).join(""))),
       lost,
     });

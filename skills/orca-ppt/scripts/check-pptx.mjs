@@ -10,7 +10,8 @@
 //   - 文本框不缩字（noAutofit）：折行交给 PowerPoint，字号不许它改
 //   - 图片只有报告里写了原因的那些，没有意外转成图片的元素
 //   - 形状 id 不重复，动画和图片引用的东西都在
-//   - 共享元素在前后两页里各有一个、只有一个 `!!键`
+//   - 共享元素在前后两页里都有：一块的叫 `!!键`，几块的每块叫 `!!键~标签`（不收成组，组里的形状平滑不按名字配），
+//     名字不重复
 //   - 绕圆心转的元素每页都写了旋转（0° 也写）
 // 降级（references/transitions.md「导出 PPTX」）：
 //   - 每次翻页的转场按表来：保真档是平滑，降级档是淡入淡出……
@@ -142,23 +143,29 @@ slideParts.forEach((part, i) => {
     if (!ids.includes(t.attrs.spid)) err(where, `动画指向不存在的形状 ${t.attrs.spid}`);
   }
 
-  // 共享元素：每个键一个 `!!键`
+  // 共享元素：键 → 它的几块形状（`!!键` 或 `!!键~标签`）
   const named = new Map();
+  const names = new Map();
   for (const shape of findAll(tree, "p:sp").concat(findAll(tree, "p:pic"), findAll(tree, "p:grpSp"))) {
     const n = nameOf(shape);
     if (!n.startsWith("!!")) continue;
-    if (!named.has(n)) named.set(n, []);
-    named.get(n).push(shape);
+    names.set(n, (names.get(n) ?? 0) + 1);
+    const key = `!!${n.slice(2).split("~")[0]}`;
+    if (!named.has(key)) named.set(key, []);
+    named.get(key).push(shape);
   }
+  for (const [n, count] of names) if (count > 1) err(where, `${n} 有 ${count} 个，平滑不知道配哪个`);
   for (const key of expected?.identities ?? []) {
-    const count = named.get(`!!${key}`)?.length ?? 0;
-    if (count !== 1) err(where, `共享元素 ${key} 应该正好一个 !!${key}，现在 ${count} 个`);
+    const list = named.get(`!!${key}`) ?? [];
+    if (!list.length) err(where, `共享元素 ${key} 没有 !!${key} 开头的形状`);
+    else if (list.length > 1 && list.some((s) => nameOf(s) === `!!${key}`)) {
+      err(where, `共享元素 ${key} 有几块，每块要叫 !!${key}~标签，不能有一块叫 !!${key}`);
+    }
+    if (list.some((s) => s.name === "p:grpSp")) err(where, `共享元素 ${key} 收成了组，组里的形状平滑不按名字配`);
   }
   // 绕圆心转：每页都写 rot
   for (const key of expected?.turn ?? []) {
-    const shape = named.get(`!!${key}`)?.[0];
-    if (!shape) continue;
-    const leaves = shape.name === "p:grpSp" ? [...findAll(shape, "p:sp"), ...findAll(shape, "p:pic")] : [shape];
+    const leaves = named.get(`!!${key}`) ?? [];
     if (leaves.some((s) => xfrmOf(s)?.attrs.rot === undefined)) {
       err(where, `绕圆心转的 ${key} 没写旋转（0° 也要写，否则 PowerPoint 那一页会放大加虚化）`);
     }
