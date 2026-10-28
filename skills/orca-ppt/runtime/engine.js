@@ -1244,7 +1244,7 @@
     tl.to(oldRest, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
     targets.forEach((el, i) => {
       const end = ends[i];
-      tl.to(el, { ...end, borderRadius: `${end.borderRadius}px`, duration: move, ease: "power3.inOut" }, i * stagger);
+      tl.to(el, { ...end, borderRadius: `${end.borderRadius}px`, duration: move, ease: "power2.inOut" }, i * stagger);
     });
     const restAt = move * 0.7;
     newRest.forEach((el, i) => enterTween(tl, el, +(el.dataset.enterDelay ?? restAt + i * 0.04)));
@@ -1284,7 +1284,7 @@
     const tl = timeline();
     tl.to(oldRest, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
     srcs.forEach((el, i) => {
-      tl.to(el, { ...to, borderRadius: `${to.borderRadius}px`, duration: move, ease: "power3.inOut" }, i * stagger);
+      tl.to(el, { ...to, borderRadius: `${to.borderRadius}px`, duration: move, ease: "power2.inOut" }, i * stagger);
     });
     tl.set(target, { autoAlpha: 1 }, landed);
     tl.set(srcs, { autoAlpha: 0 }, landed);

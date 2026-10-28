@@ -1,13 +1,12 @@
 # 接下来的计划
 
-2026-09-24。按先后排;每一项写清在等什么、做到什么程度算完。
+2026-09-24 写,10-28 清过一遍。按先后排;每一项写清在等什么、做到什么程度算完。
 长期方向见 [docs/ROADMAP.md](./docs/ROADMAP.md),决策见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 
 ## 1. 在等别人
 
-- [ ] **和 Jevbot 联调「可录制应用」约定。** 约定草案在 jevbot-mac `docs/recordable-app-contract.md`,
-      orca-ppt 这一侧已实现(`23b74df`)。等 Jevbot 做完它那边的时间线、联调出问题再改。
-      **完成:** 联调通过、约定定稿;定稿有改动时同步改 `recording.ts` 和两个 `recording_*` 工具。
+(空。原来的「和 Jevbot 联调可录制应用约定」撤掉:10-19 起 Jevbot 是另一条线,orca-ppt 不再跟它联调。
+`recording_*` 工具和 `recording.ts` 留着,不再为它改。)
 
 ## 2. 发布前必须做(交付形态)
 
@@ -15,9 +14,8 @@
 
 - [x] **打包配置。** `pnpm package` 固定 Skill Git 提交并复制到 Resources/skill，包含锁定依赖和 bundle-manifest；正式签名、公证仍待完成。
 - [x] **MCP 按需读取 Skill。** list_skill / read_skill 提供受限相对路径、分页文本读取，phase_prompt 指向此入口。
-- [ ] **首次引导。** 先问人,同意后只链 `~/.agents/skills` 和 `~/.claude/skills`;软链三层
-      (各家目录 → `~/.local/share/orca-ppt/skill` → 当前版本),升级只换最后一根。
-      顺带引导把 MCP 加进用户的 agent。
+- [x] ~~**首次引导。**~~ 不做:装应用、连 MCP、链 skill 都交给 AI 助手按 llms.txt 做,应用里不替别家写配置。
+      各家目录链到稳定路径 `~/.local/share/orca-ppt/skill`(`4e0f798`),升级只换它指向哪里。
 - [x] **`doctor` 诊断工具。** 协议方法 `app.doctor` 加 MCP 工具 `doctor`:app 版本、skill 路径和
       来源(explicit / bundled / local / missing)及找过的位置、界面连没连上、开着哪些稿子、操作记录。
 - [x] **skill 里加 `references/install.md`。** 连不上时按顺序排查、错误码表;SKILL.md 指过去。
@@ -32,8 +30,7 @@
 
 都需要录出来并排看,是看出来的事,不是算出来的。录制可以用 `capture.mjs`(`--interrupt` 已有)。
 
-- [ ] **一变多、多合一的缓动**:现在是 `power3.inOut`,共享元素和文字级匹配是 `power2.inOut`。
-      要不要统一。(见 skill `references/transitions.md`「缓动曲线」)
+- [x] **一变多、多合一的缓动**:10-28 左右并排放过,定为 `power2.inOut`,和共享元素、文字级匹配统一。
 - [ ] **中途打断时的快进时长**:引擎 `FINISH_S` 现在 0.15 秒,快进第一帧变化很大。嫌猛就调长。
 - [ ] **两个 skill 的镜头曲线对齐**:orca-motion-skill `references/principles.md` 写「镜头用
       `power3.inOut`」,和 ppt-skill 引擎的结论(`power3` 起步太慢)相反。改那边。
@@ -44,8 +41,6 @@
       完整内容,现在只有改字有前后快照,而且只在内存里。
 - [ ] **事件日志覆盖更多操作。** 现在记改字、撤销、重做和外部修改;阶段产物(`.deck/*.json`)
       被 agent 直接写的只落成 external。视图操作(翻页)约定里是可报可不报,v1 没报。
-- [ ] **应用内要不要「经过」时间线。** 回放的主体定在 Harness;orca-ppt 自己要不要一个轻量的
-      时间线(点一步看当时的稿子),等 Jevbot 那边的时间线做出来再判断会不会重复。
 - [ ] **慢 GPU 下的转场。** 逐帧改尺寸只在 CPU 限速 6 倍下测过(稳 60 帧),没测真机投屏、
       没模拟慢 GPU。有人反馈卡顿再测。
 
