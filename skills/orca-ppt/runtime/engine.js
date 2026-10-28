@@ -2460,7 +2460,7 @@
     const stops = scene?.data?.stops;
     return stops ? { done: Math.max(0, stepAt), clicks: stops.length - 1 } : { done: 0, clicks: 0 };
   }
-  // 宿主（OrcaPPT 底栏的「第 1/3 下」）听这个事件，不用轮询
+  // 宿主（Orca PPT 底栏的「第 1/3 下」）听这个事件，不用轮询
   const reportStep = () => document.dispatchEvent(new CustomEvent("orca:step", { detail: stepState() }));
   function stepNext() {
     const stops = scene?.data?.stops;
@@ -2488,7 +2488,7 @@
     return stepTween?.isActive() ? (stepTween.duration() - stepTween.time()) / stepTween.timeScale() : 0;
   };
   window.__orcaStep = stepState;
-  // 把这一页的页内动画从头再放一遍（OrcaPPT 的「重放这页的动画」）。点击分步的页回到第 0 步，等人再按
+  // 把这一页的页内动画从头再放一遍（Orca PPT 的「重放这页的动画」）。点击分步的页回到第 0 步，等人再按
   window.__orcaReplayBuild = () => {
     const slide = Reveal.getCurrentSlide();
     if (!slide) return;
@@ -2496,7 +2496,7 @@
     startScene(slide, 0);
     reportStep();
   };
-  // 这一页的页内动画清单（只读）。OrcaPPT 的右栏「页」那一档显示它，宿主不用自己再解析一遍 data-anim。
+  // 这一页的页内动画清单（只读）。Orca PPT 的右栏「页」那一档显示它，宿主不用自己再解析一遍 data-anim。
   // 时长按放映算（步与步之间不空 STEP_GAP）；clicks 是要按几下翻页键才放完。没有页内动画时返回 null
   window.__orcaBuilds = (index) => {
     const slide = index === undefined ? Reveal.getCurrentSlide() : Reveal.getSlide(index);
@@ -2588,7 +2588,7 @@
   // 录制是离线逐帧 seek，永远碰不到这种情况，自检也查不出来。所以在翻页**之前**拦：
   //   - 转场在跑：把剩下的部分压到 FINISH_S 秒放完，再翻；
   //   - 压着的这段时间里又按了：当成要跳过去，放完后直接跳到目标页（跳页本来就没有转场）。
-  // 宿主（比如 OrcaPPT 的画布、自动播放）要往前翻时调 window.__orcaAdvance()，别直接 Reveal.next()。
+  // 宿主（比如 Orca PPT 的画布、自动播放）要往前翻时调 window.__orcaAdvance()，别直接 Reveal.next()。
   // 人明说要去下一页（点了页胶片上的下一页）时调 window.__orcaAdvance({ page: true })：转场照样先放完，
   // 但不再一步一步推页内动画 —— 不然页内动画正在放时点下一页，只放完这一步、页不动，页胶片和画布就对不上了。
   const FINISH_S = 0.3;   // 0.15 秒收尾像一下跳到终点，2026-10-28 并排看过定 0.3
@@ -2638,7 +2638,7 @@
   window.__orcaAdvance = advance;
 
   // ───────── 宿主换掉一页，不重载整份稿子 ─────────
-  // OrcaPPT 里 agent 或人只改了某一页时调 window.__orcaReplaceSlide(index, html)，html 是那一页 <section> 的源码。
+  // Orca PPT 里 agent 或人只改了某一页时调 window.__orcaReplaceSlide(index, html)，html 是那一页 <section> 的源码。
   // 换掉这一页的 DOM，只对它重做加载时的准备，再让 reveal 认新的这一页（Reveal.sync / syncSlide）。
   // 做不了就返回 false，宿主整份重载：页号不对、源码不是一个 section、有纵向页、页里有脚本（换进来不会执行）。
   window.__orcaReplaceSlide = (index, html) => {
@@ -2745,7 +2745,7 @@
       "letter-spacing", "border-width", "border-color", "border-radius", "outline", "outline-offset", "rotate"],
     // 往前翻的键都交给 advance（见上）。往回翻不管：往回本来就是硬切。
     // ↓ / ↑ 也翻页：稿子没有纵向的页，reveal 默认的上下导航在这里什么都不做，
-    // 而 OrcaPPT 的页胶片是竖着排的，人会顺手按上下。
+    // 而 Orca PPT 的页胶片是竖着排的，人会顺手按上下。
     keyboard: EMBED
       ? false
       : { 32: advance, 34: advance, 39: advance, 40: advance, 76: advance, 78: advance, 38: () => Reveal.prev(),

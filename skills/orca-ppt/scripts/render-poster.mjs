@@ -5,7 +5,7 @@
 //   加 --force 连已经有 poster.jpg 的也重截（自带 cover.html 拼的封面不动）
 //
 // 截哪一刻由 frontmatter 决定：`preview: 2-4` 是看点那几页（从 1 数），`cover: 2.5` 是从看点开头算的第几秒，
-// 不写取 75% 处。时间轴和 OrcaPPT 以前首页录样片时一样：从中间页起时，起始页先停 0.6 秒，
+// 不写取 75% 处。时间轴和 Orca PPT 以前首页录样片时一样：从中间页起时，起始页先停 0.6 秒，
 // 接着是后面每页的转场和停留。案例不写 preview 就截第一页。
 // 没有 RECIPE.md / EXAMPLE.md 的示例要点名才截（第一页，只给 gallery 用，不写 frontmatter，也不因此上应用首页）。
 // 和 capture.mjs 一样用系统 Chrome，不下载浏览器。

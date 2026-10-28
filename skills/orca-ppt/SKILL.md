@@ -77,7 +77,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
    `-t1` 看有没有跳变，`-t2` … `-t4` 看共享元素是不是连续飞过去、中途有没有重叠出界，`-t5` 和 `-end`
    看落位。有问题回第 5 步改。
 
-   关键帧看不出节奏：太快的转场在几张图里也像是连续的。能放视频、或者用户开着 OrcaPPT 应用时，
+   关键帧看不出节奏：太快的转场在几张图里也像是连续的。能放视频、或者用户开着 Orca PPT 应用时，
    再按正常速度放一遍。
 
    **匹配剪辑（`match-cut`）没有转场帧**，只有 `-end`。它是硬切，验法见 `transitions.md`「自检标准」第 7 条：
@@ -91,7 +91,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 `window.__orcaReplaceSlide(页号, 那一页 <section> 的源码)`，只换这一页、不重载整份；返回 false
 （页里有 `<script>`、有纵向页）就整份重载。
 
-**配套的 OrcaPPT 应用**（桌面端，可选）连不上、或者工具返回 `NO_DECK_OPEN`、`UI_DISCONNECTED`
+**配套的 Orca PPT 应用**（桌面端，可选）连不上、或者工具返回 `NO_DECK_OPEN`、`UI_DISCONNECTED`
 这类大写前缀的错误时，读 `references/install.md`：先告诉用户该做什么，别反复重试。
 
 **观众里有人会晕、给长辈看、用户说「动得太厉害」时**，打开减少动效：URL 加 `?calm`，或者

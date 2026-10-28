@@ -1,6 +1,6 @@
 # Jevbot 联调验收（2026-10-01）
 
-本次使用本地打包的 Apple Silicon OrcaPPT.app 和 Jevbot 的 CLI 入口连接真实模型。CLI 使用 Jevbot 的运行时、工具和审批流程；本次不包含 Jevbot 聊天窗口的视觉验收。
+本次使用本地打包的 Apple Silicon Orca PPT.app 和 Jevbot 的 CLI 入口连接真实模型。CLI 使用 Jevbot 的运行时、工具和审批流程；本次不包含 Jevbot 聊天窗口的视觉验收。
 
 ## 结果
 
