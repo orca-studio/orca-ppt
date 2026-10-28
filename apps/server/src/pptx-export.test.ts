@@ -342,3 +342,82 @@ describe('竖排文字', () => {
     expect(xml.match(/<a:p>/g)).toHaveLength(2)
   })
 })
+
+describe('渐变', () => {
+  const build = async (shape: Record<string, unknown>) => {
+    const { buildPptx } = await lib('pptx-write.mjs')
+    const { readZip } = await lib('zip.mjs')
+    const pptx = buildPptx({
+      media: new Map(),
+      slides: [
+        {
+          background: { color: '000000' },
+          transition: { kind: 'none' },
+          shapes: [
+            { type: 'sp', name: 's1 g 1', x: 0, y: 0, w: 400, h: 200, geom: 'rect', ...shape },
+          ],
+        },
+      ],
+    }) as Buffer
+    return (readZip(pptx) as Map<string, Buffer>).get('ppt/slides/slide1.xml')!.toString()
+  }
+  const stops = [
+    { pos: 0, color: 'ff0000', alpha: 1 },
+    { pos: 1, color: '0000ff', alpha: 0 },
+  ]
+
+  it('线性渐变写成原生渐变填充，角度换成 PowerPoint 的', async () => {
+    const xml = await build({ fill: { grad: { type: 'linear', angle: 90, stops } } })
+    expect(xml).toContain('<a:gradFill rotWithShape="1">')
+    expect(xml).toContain('<a:lin ang="5400000" scaled="0"/>')
+  })
+
+  const gsOf = (xml: string) => [...xml.matchAll(/<a:gs pos="(\d+)"><a:srgbClr val="(\w+)">/g)]
+
+  it('两个色标之间按 sRGB 补中间色标', async () => {
+    const opaque = [stops[0]!, { ...stops[1]!, alpha: 1 }]
+    const gs = gsOf(await build({ fill: { grad: { type: 'linear', angle: 0, stops: opaque } } }))
+    expect(gs.length).toBeGreaterThan(2)
+    // 红到蓝的正中是 sRGB 的平均
+    expect(gs.find((g) => g[1] === '50000')?.[2]).toBe('800080')
+    expect(gs.at(-1)![1]).toBe('100000')
+  })
+
+  it('全透明的一头取相邻的颜色，不混进透明那头的颜色', async () => {
+    const gs = gsOf(await build({ fill: { grad: { type: 'linear', angle: 0, stops } } }))
+    expect(gs.map((g) => g[2])).toEqual(gs.map(() => 'ff0000'))
+  })
+
+  it('径向渐变按路径写', async () => {
+    const xml = await build({
+      geom: 'ellipse',
+      fill: { grad: { type: 'radial', angle: 0, path: 'shape', stops } },
+    })
+    expect(xml).toContain('<a:path path="shape">')
+  })
+
+  it('渐变字写在字的 rPr 里', async () => {
+    const xml = await build({
+      text: {
+        insets: { l: 0, t: 0, r: 0, b: 0 },
+        paras: [
+          {
+            align: 'l',
+            lineHeight: 60,
+            runs: [
+              {
+                text: '渐变',
+                font: 'Inter',
+                size: 48,
+                color: 'ff0000',
+                alpha: 1,
+                grad: { type: 'linear', angle: 0, stops },
+              },
+            ],
+          },
+        ],
+      },
+    })
+    expect(xml).toMatch(/<a:rPr [^>]*><a:gradFill/)
+  })
+})

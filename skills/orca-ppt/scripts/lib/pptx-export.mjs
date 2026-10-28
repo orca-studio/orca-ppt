@@ -35,6 +35,110 @@ function measure(index) {
   };
   const withAlpha = (c, o) => (c ? { ...c, alpha: c.alpha * o } : null);
 
+  // 一层线性 / 径向渐变 → PowerPoint 的渐变填充（{ grad }）。认不准的（多层、平铺、calc、
+  // 非居中的径向、颜色提示）返回 null，照旧截成图
+  const splitTop = (s) => {
+    const parts = [];
+    let depth = 0, from = 0;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "(") depth++;
+      else if (s[i] === ")") depth--;
+      else if (s[i] === "," && depth === 0) {
+        parts.push(s.slice(from, i).trim());
+        from = i + 1;
+      }
+    }
+    parts.push(s.slice(from).trim());
+    return parts;
+  };
+  // 圆角半径 ≥ 50%：长宽一样是圆，不一样是椭圆（不是两头圆的胶囊）
+  const ovalOf = (cs, w, h) => {
+    const r = parseFloat(cs.borderTopLeftRadius) || 0;
+    return cs.borderTopLeftRadius.endsWith("%") ? r >= 50 : Math.abs(w - h) < 1 && r >= w / 2 - 0.5;
+  };
+  function gradientOf(cs, w, h, o) {
+    const oval = ovalOf(cs, w, h);
+    const m = /^(linear|radial)-gradient\((.*)\)$/.exec(cs.backgroundImage);
+    if (!m || splitTop(cs.backgroundImage).length > 1) return null;
+    if (!/^(auto|auto auto|100% 100%)$/.test(cs.backgroundSize)) return null;
+    const [type, body] = [m[1], m[2]];
+    const parts = splitTop(body);
+    let len, angle = 0, scale = 1, path = null;
+    if (type === "linear") {
+      // 方向换成单位向量（y 朝下）：0deg 朝上，顺时针
+      let v = { x: 0, y: 1 };
+      if (/^(to |-?[\d.]+(deg|turn|rad|grad))/.test(parts[0])) {
+        const dir = parts.shift();
+        if (dir.startsWith("to ")) {
+          const sx = /right/.test(dir) ? 1 : /left/.test(dir) ? -1 : 0;
+          const sy = /bottom/.test(dir) ? 1 : /top/.test(dir) ? -1 : 0;
+          // 朝角落：渐变线垂直于另外两个角的连线
+          v = sx && sy ? { x: sx * h, y: sy * w } : { x: sx, y: sy };
+        } else {
+          const n = parseFloat(dir);
+          const deg = dir.endsWith("turn") ? n * 360 : dir.endsWith("grad") ? n * 0.9 : dir.endsWith("rad") ? (n * 180) / Math.PI : n;
+          v = { x: Math.sin((deg * Math.PI) / 180), y: -Math.cos((deg * Math.PI) / 180) };
+        }
+      }
+      const a = Math.atan2(v.y, v.x);
+      len = Math.abs(w * Math.cos(a)) + Math.abs(h * Math.sin(a));
+      // PowerPoint 的 lin ang：0 朝右，顺时针
+      angle = (((a * 180) / Math.PI) % 360 + 360) % 360;
+    } else {
+      // 只认圆心居中、贴边（closest-side）或到角（farthest-corner，默认）的
+      let shape = "ellipse";
+      if (/^(circle|ellipse|closest|farthest)/.test(parts[0])) {
+        const conf = parts.shift();
+        if (/ at /.test(conf) && !/ at (50% 50%|center( center)?)$/.test(conf)) return null;
+        const size = conf.replace(/ at .*$/, "");
+        if (!/^((circle|ellipse) )?(closest-side|farthest-corner)?$|^(circle|ellipse)$/.test(size)) return null;
+        if (size.includes("circle") && Math.abs(w - h) > 1) return null;
+        shape = size.includes("closest-side") ? "side" : "corner";
+      } else shape = "corner";
+      if (Math.abs(w - h) < 1) {
+        // PowerPoint 的圆形路径是正圆，100% 落在外框的四个角，正好是 farthest-corner；
+        // closest-side 的 100% 在边上，离圆心只有到角的 1/√2
+        path = "circle";
+        len = shape === "side" ? w / 2 : w / Math.SQRT2;
+        scale = shape === "side" ? Math.SQRT1_2 : 1;
+      } else if (oval && shape === "side") {
+        // 椭圆形状：沿形状走的路径，等高线是椭圆，100% 在边上，就是 closest-side
+        path = "shape";
+        len = w / 2;
+      } else return null; // 长方形里的椭圆渐变 PowerPoint 画不出来（圆形路径不随长宽比拉伸）
+    }
+    const stops = [];
+    for (const p of parts) {
+      const cm = /^((?:[a-z-]+\([^)]*\))|[a-z]+)\s*(.*)$/i.exec(p);
+      if (!cm) return null;
+      const c = rgba(cm[1]) ?? { color: "000000", alpha: 0 };
+      const pos = cm[2] ? cm[2].split(/\s+/) : [];
+      if (pos.length > 2) return null;
+      const at = (s) => (s.endsWith("%") ? parseFloat(s) / 100 : s.endsWith("px") ? parseFloat(s) / len : NaN);
+      if (pos.some((s) => Number.isNaN(at(s)))) return null;
+      if (!pos.length) stops.push({ ...c, pos: null });
+      for (const s of pos) stops.push({ ...c, pos: at(s) });
+    }
+    if (stops.length < 2) return null;
+    // 没写位置的：首 0、尾 1，中间均分；位置不许倒退
+    if (stops[0].pos === null) stops[0].pos = 0;
+    if (stops.at(-1).pos === null) stops.at(-1).pos = 1;
+    for (let i = 1; i < stops.length; i++) {
+      if (stops[i].pos !== null) continue;
+      let j = i;
+      while (stops[j].pos === null) j++;
+      for (let k = i; k < j; k++) stops[k].pos = stops[i - 1].pos + ((stops[j].pos - stops[i - 1].pos) * (k - i + 1)) / (j - i + 1);
+    }
+    for (let i = 1; i < stops.length; i++) stops[i].pos = Math.max(stops[i].pos, stops[i - 1].pos);
+    if (stops[0].pos < 0 || stops.at(-1).pos > 1) return null;
+    // 底色会从渐变的透明处透出来，PowerPoint 一个形状只有一种填充
+    if (rgba(cs.backgroundColor) && stops.some((s) => s.alpha < 1)) return null;
+    const out = stops.map((s) => ({ pos: s.pos * scale, color: s.color, alpha: s.alpha * o }));
+    // 最后一个颜色铺到外面（CSS 里渐变画完之后就是它）
+    if (scale < 1) out.push({ ...out.at(-1), pos: 1 });
+    return { grad: { type, angle, ...(path ? { path } : {}), stops: out } };
+  }
+
   const opacityOf = (el) => {
     let o = 1;
     for (let n = el; n && n !== section.parentElement; n = n.parentElement) {
@@ -87,15 +191,28 @@ function measure(index) {
   };
   const RASTER_TAGS = new Set(["IMG", "VIDEO", "CANVAS", "svg", "IFRAME", "PICTURE", "OBJECT", "EMBED"]);
 
-  // 渐变字（background-clip: text）：PowerPoint 的文本框画不出按字形裁的渐变，字照常导会变成透明字压在一块渐变色块上。
-  // 整块截成图，字不进文本框（和文字镂空一样，在 PowerPoint 里不能改字）
+  // 渐变字（background-clip: text）：一层能认的线性 / 径向渐变 → 字的渐变填充（还是能改的字）。
+  // 认不出的（多层、平铺、带 filter 的扫光）整块截成图，字不进文本框（和文字镂空一样，在 PowerPoint 里不能改字）
   const clipsText = (el) => {
     const cs = getComputedStyle(el);
     return cs.backgroundClip === "text" || cs.webkitBackgroundClip === "text";
   };
+  const textGradients = new Map();
+  const textGradient = (el) => {
+    if (!textGradients.has(el)) {
+      const cs = getComputedStyle(el);
+      const ok = cs.filter === "none" && !["::before", "::after"].some((p) => getComputedStyle(el, p).content !== "none" && getComputedStyle(el, p).content !== "normal");
+      textGradients.set(el, ok ? gradientOf(cs, el.offsetWidth, el.offsetHeight, 1) : null);
+    }
+    return textGradients.get(el);
+  };
+  const clipOf = (node) => {
+    for (let n = node.parentElement; n && n !== section; n = n.parentElement) if (clipsText(n)) return n;
+    return null;
+  };
   const gradientText = (node) => {
-    for (let n = node.parentElement; n && n !== section; n = n.parentElement) if (clipsText(n)) return true;
-    return false;
+    const clip = clipOf(node);
+    return !!clip && !textGradient(clip);
   };
 
   // 页内文字：按「所在的块级元素」分组，每组一个文本框
@@ -147,6 +264,12 @@ function measure(index) {
         spacing: ecs.letterSpacing === "normal" ? 0 : parseFloat(ecs.letterSpacing) || 0,
         ...(withAlpha(rgba(ecs.color), eo) ?? { color: "000000", alpha: 0 }),
       };
+      const clip = clipOf(node);
+      if (clip) {
+        const { grad } = textGradient(clip);
+        style.grad = { ...grad, stops: grad.stops.map((s) => ({ ...s, alpha: s.alpha * eo })) };
+        Object.assign(style, { color: grad.stops[0].color, alpha: eo });
+      }
       const key = JSON.stringify(style);
       const chars = [...node.data];
       let at = 0;
@@ -184,6 +307,13 @@ function measure(index) {
     return { align, lineHeight: lh, lines: kept, ...(vertical ? { vertical: true } : {}) };
   }
 
+  const padOf = (cs) => ({
+    l: parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth),
+    t: parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth),
+    r: parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth),
+    b: parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth),
+  });
+
   const items = [];
   // 编号每页从 0 起：先清掉前几页留下的标记，否则截图时按编号会同时找到前几页的元素
   for (const el of document.querySelectorAll("[data-pptx-k]")) delete el.dataset.pptxK;
@@ -218,6 +348,14 @@ function measure(index) {
       continue;
     }
 
+    if (clipsText(el) && textGradient(el)) {
+      // 渐变只铺在字上：自己不出色块，字在下面按文本框导（textOf 给字填渐变）
+      if (textBlocks.has(el)) {
+        const text = textOf(el, o);
+        if (text) items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text: { ...text, insets: padOf(cs) } });
+      }
+      continue;
+    }
     if (clipsText(el)) {
       el.dataset.pptxK = String(k);
       items.push({ ...base, k: k++, kind: "raster", whole: true, reason: "渐变字" });
@@ -226,7 +364,8 @@ function measure(index) {
     }
 
     const reasons = [];
-    if (cs.backgroundImage !== "none") reasons.push("渐变或背景图");
+    const grad = cs.backgroundImage !== "none" ? gradientOf(cs, geo.w, geo.h, o) : null;
+    if (cs.backgroundImage !== "none" && !grad) reasons.push("渐变或背景图");
     if (cs.clipPath !== "none") reasons.push("clip-path");
     if (cs.maskImage && cs.maskImage !== "none") reasons.push("mask");
     // 引擎的动态模糊（url(#st-mb-…)）放完就是 0，不算
@@ -243,6 +382,8 @@ function measure(index) {
     const bordered = sides.some((s) => s.width > 0);
     const uniform = sides.every((s) => s.width === sides[0].width && s.color === sides[0].color);
     if (bordered && !uniform) reasons.push("单边描边");
+    // 渐变铺在描边里面，PowerPoint 的填充铺满整个形状：带描边的照旧截图
+    if (grad && bordered) reasons.push("渐变或背景图");
 
     // mask / clip-path 管的是整棵子树：孩子拆出去单独截，就截不到遮罩（文字镂空的色块淡出会丢，导成一块实心）。
     // 里面没有要导成文本框的字时整块截；有字的（片尾名单）照旧拆开，字还是字
@@ -258,12 +399,12 @@ function measure(index) {
       el.dataset.pptxK = String(k);
       items.push({ ...base, k: k++, kind: "raster", whole: false, reason: reasons.join("、") });
     } else {
-      const fill = withAlpha(rgba(cs.backgroundColor), o);
+      const fill = grad ?? withAlpha(rgba(cs.backgroundColor), o);
       const line = bordered ? { ...withAlpha(rgba(sides[0].color), o), width: sides[0].width } : null;
       if (fill || (line && line.color)) {
         const radius = parseFloat(cs.borderTopLeftRadius) || 0;
         const radiusPx = cs.borderTopLeftRadius.endsWith("%") ? (radius / 100) * Math.min(geo.w, geo.h) : radius;
-        const round = Math.abs(geo.w - geo.h) < 1 && radiusPx >= geo.w / 2 - 0.5;
+        const round = ovalOf(cs, geo.w, geo.h);
         items.push({
           ...base,
           kind: "box",
@@ -280,14 +421,8 @@ function measure(index) {
       const text = textOf(el, o);
       if (text) {
         const box = items.at(-1)?.owner === el ? items.at(-1) : null;
-        const pad = {
-          l: parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth),
-          t: parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth),
-          r: parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth),
-          b: parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth),
-        };
-        if (box) box.text = { ...text, insets: pad };
-        else items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text: { ...text, insets: pad } });
+        if (box) box.text = { ...text, insets: padOf(cs) };
+        else items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text: { ...text, insets: padOf(cs) } });
       }
     }
   }

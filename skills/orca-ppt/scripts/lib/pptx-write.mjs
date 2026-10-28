@@ -38,6 +38,57 @@ function solid({ color, alpha = 1 }) {
   return `<a:solidFill><a:srgbClr val="${color}">${a}</a:srgbClr></a:solidFill>`;
 }
 
+// PowerPoint 在两个色标之间不按 sRGB 插值，中段偏亮（蓝到紫中间发白、橙到紫中间发粉）。
+// 每段按浏览器的算法（sRGB、透明度预乘）补几个中间色标，PowerPoint 只在很近的两点间插，差别看不出来
+const DENSE = 8;
+function densify(input) {
+  // 全透明的色标颜色取相邻的：PowerPoint 不预乘，透明黑会在边上晕出一圈灰
+  const stops = input.map((s, i) => {
+    if (s.alpha > 0) return s;
+    const near = input[i - 1]?.alpha > 0 ? input[i - 1] : input[i + 1]?.alpha > 0 ? input[i + 1] : s;
+    return { ...s, color: near.color };
+  });
+  const rgb = (c) => [0, 2, 4].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const hex = (v) => v.map((x) => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, "0")).join("");
+  const out = [stops[0]];
+  for (let i = 1; i < stops.length; i++) {
+    const a = stops[i - 1], b = stops[i];
+    if (b.pos - a.pos > 0.001 && a.color !== b.color) {
+      const [ca, cb] = [rgb(a.color), rgb(b.color)];
+      for (let k = 1; k < DENSE; k++) {
+        const t = k / DENSE;
+        const alpha = a.alpha + (b.alpha - a.alpha) * t;
+        // 预乘透明度插值：一头透明时颜色取另一头的，不会混进透明那头的黑
+        const mix = ca.map((x, j) => (x * a.alpha * (1 - t) + cb[j] * b.alpha * t) / (alpha || 1));
+        out.push({ pos: a.pos + (b.pos - a.pos) * t, color: hex(mix), alpha });
+      }
+    }
+    out.push(b);
+  }
+  return out;
+}
+
+/**
+ * 填充：纯色 { color, alpha }，或渐变
+ * { grad: { type: "linear" | "radial", angle, path?: "circle" | "shape", stops: [{ pos: 0~1, color, alpha }] } }
+ */
+function fillXml(f) {
+  if (!f.grad) return solid(f);
+  const { type, angle, path, stops } = f.grad;
+  const gs = densify(stops)
+    .map((s) => {
+      const a = s.alpha < 0.999 ? `<a:alpha val="${Math.round(s.alpha * 100000)}"/>` : "";
+      return `<a:gs pos="${Math.round(s.pos * 100000)}"><a:srgbClr val="${s.color}">${a}</a:srgbClr></a:gs>`;
+    })
+    .join("");
+  // 径向从正中往外。circle：正圆，外框的四个角是 100%；shape：沿形状的边，边上是 100%
+  const shade =
+    type === "radial"
+      ? `<a:path path="${path || "circle"}"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path>`
+      : `<a:lin ang="${Math.round(angle * 60000) % 21600000}" scaled="0"/>`;
+  return `<a:gradFill rotWithShape="1"><a:gsLst>${gs}</a:gsLst>${shade}</a:gradFill>`;
+}
+
 function xfrm(s, tag = "a:xfrm") {
   // 绕圆心转的元素每页都写 rot，0° 也写（transitions.md「导出 PPTX」）
   const rot = s.rot !== undefined ? ` rot="${Math.round(s.rot * 60000)}"` : "";
@@ -62,7 +113,7 @@ function run(r) {
   const font = esc(r.font);
   const ea = esc(r.ea || r.font);
   return (
-    `<a:r><a:rPr ${attrs.join(" ")}>${solid(r)}` +
+    `<a:r><a:rPr ${attrs.join(" ")}>${r.grad ? fillXml(r) : solid(r)}` +
     `<a:latin typeface="${font}"/><a:ea typeface="${ea}"/><a:cs typeface="${font}"/></a:rPr>` +
     `<a:t>${esc(r.text)}</a:t></a:r>`
   );
@@ -102,7 +153,7 @@ function shapeXml(s, ctx) {
       `<p:spPr>${xfrm(s)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`
     );
   }
-  const fill = s.fill ? solid(s.fill) : "<a:noFill/>";
+  const fill = s.fill ? fillXml(s.fill) : "<a:noFill/>";
   const line = s.line ? `<a:ln w="${emu(s.line.width)}">${solid(s.line)}</a:ln>` : "<a:ln><a:noFill/></a:ln>";
   const txBox = s.text && !s.fill && !s.line ? ' txBox="1"' : "";
   return (
