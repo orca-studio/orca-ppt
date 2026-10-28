@@ -3,18 +3,22 @@
 // 都只要交进来一个 page：
 //
 //   page.evaluate(fn, arg)            在页面里跑 fn(arg)，fn 不能引用外面的变量；返回结果（可以是 Promise）
-//   page.screenshot({ clip, transparent })  截视口里的一块，返回 PNG 的 Buffer
+//   page.screenshot({ clip, transparent, quality })  截视口里的一块，返回 PNG 的 Buffer；给了 quality 返回这个质量的 JPG
 //
 // 调用方负责把稿子用 `?capture#/0` 打开、视口设成 VIEW。
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { buildPptx } from "./pptx-write.mjs";
 import { LOST, pageTransition } from "./pptx-fallback.mjs";
+import { opaque } from "./png.mjs";
 import { eot } from "./ttf.mjs";
 
 const W = 1920;
 const H = 1080;
 // 视口比画布大一圈：出画的元素（圆心贴边的圆环、等着入画的共享元素）也要截得到
 export const VIEW = { width: W * 3, height: H * 3 };
+// 不透明截图存 JPG 的质量：85 在 1920 宽的油画背景上看不出块，一张 3MB 的 PNG 变 0.4MB
+const JPG_QUALITY = 85;
 
 /**
  * 在页面里跑：量当前页。返回 { background, facts, items }。
@@ -641,6 +645,7 @@ export async function exportDeck(page, options = {}) {
   const total = await page.evaluate(() => window.__capture.count());
   const frames = [];
   const media = new Map();
+  const stored = new Map();
   const slides = [];
   const report = { slides: [] };
 
@@ -669,9 +674,20 @@ export async function exportDeck(page, options = {}) {
         }, unrotated);
         if (left) throw new Error(`第 ${i + 1} 页 ${unrotated.sel} 截图前没转回 0°（还是 ${left}）`);
       }
+      // 整块不透明的（照片、油画背景）存 JPG，小七八倍；带透明的留 PNG
       const png = await page.screenshot({ clip, transparent: true });
+      const out = opaque(png) ? { data: await page.screenshot({ clip, quality: JPG_QUALITY }), ext: "jpg" } : { data: png, ext: "png" };
       await remove();
-      return png;
+      return out;
+    };
+    // 内容一样的图只存一份，几页共用（同一张背景每页都截一次）
+    const store = (base, { data, ext }) => {
+      const hash = createHash("sha1").update(data).digest("hex");
+      if (!stored.has(hash)) {
+        stored.set(hash, `${base}.${ext}`);
+        media.set(`${base}.${ext}`, data);
+      }
+      return stored.get(hash);
     };
     const hideAll =
       "html, body, .reveal, .reveal-viewport { background: transparent !important; }" +
@@ -705,22 +721,19 @@ export async function exportDeck(page, options = {}) {
       const moved = dx || dy ? `${sel} { translate: ${dx}px ${dy}px !important; }` : "";
       clip.x += dx;
       clip.y += dy;
-      const png = await shot(style + moved, clip, item.rot !== undefined ? { sel, undo: !!item.undo, w: item.w, h: item.h } : null);
-      const name = `s${i + 1}-${item.k}.png`;
-      media.set(name, png);
+      const name = store(
+        `s${i + 1}-${item.k}`,
+        await shot(style + moved, clip, item.rot !== undefined ? { sel, undo: !!item.undo, w: item.w, h: item.h } : null),
+      );
       shapes.push({ ...item, media: name });
       rasters.push({ name: item.label, identity: item.identity, reason: item.reason, selector: item.selector });
     }
     let background = m.background;
     if (background.raster) {
-      const png = await shot(".reveal .slides * { visibility: hidden !important; }", {
-        x: m.origin.x,
-        y: m.origin.y,
-        width: W,
-        height: H,
-      });
-      const name = `s${i + 1}-bg.png`;
-      media.set(name, png);
+      const name = store(
+        `s${i + 1}-bg`,
+        await shot(".reveal .slides * { visibility: hidden !important; }", { x: m.origin.x, y: m.origin.y, width: W, height: H }),
+      );
       background = { media: name };
     }
     slides.push({ measured: m, shapes, background, timing, rasters });

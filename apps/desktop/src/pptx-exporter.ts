@@ -35,6 +35,8 @@ interface Page {
   screenshot: (input: {
     clip: { x: number; y: number; width: number; height: number }
     transparent?: boolean
+    /** 给了就截 JPG(这个质量),否则 PNG */
+    quality?: number
   }) => Promise<Buffer>
 }
 interface ExportCore {
@@ -94,7 +96,7 @@ export async function exportPptx(job: PptxJob): Promise<unknown> {
         }
         return result.result.value
       },
-      screenshot: async ({ clip, transparent }) => {
+      screenshot: async ({ clip, transparent, quality }) => {
         if (transparent) {
           await send('Emulation.setDefaultBackgroundColorOverride', {
             color: { r: 0, g: 0, b: 0, a: 0 },
@@ -102,7 +104,7 @@ export async function exportPptx(job: PptxJob): Promise<unknown> {
         }
         try {
           const shot = (await send('Page.captureScreenshot', {
-            format: 'png',
+            ...(quality ? { format: 'jpeg', quality } : { format: 'png' }),
             clip: { ...clip, scale: 1 },
           })) as { data: string }
           return Buffer.from(shot.data, 'base64')

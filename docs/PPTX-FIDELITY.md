@@ -126,6 +126,16 @@
    - PowerPoint 存视频:AppleScript `save active presentation in … as save as movie`,存出 .mov,
      写完要等文件大小不再变。
 
+6. **不透明的截图存 JPG,同样的图只存一份(2026-10-28)。**
+   - 截图先按 PNG(带透明)截,`scripts/lib/png.mjs` 看 alpha:全不透明就用同一个裁剪框再截一张
+     质量 85 的 JPG。截图接口加了 `quality`,命令行(Playwright)和应用(CDP)各自出 JPG。
+   - 按内容的 SHA-1 去重:同一张背景几页都截一次,包里只存一份。
+   - 图片多的几份:city-cutout 33.5MB → 2.9MB,window-card-flip 27.5MB → 3.9MB,
+     parallax-layers 70.4MB → 40.4MB。原尺寸对比看不出区别(PSNR 39dB)。
+   - 剩下的大图都带透明,只能留 PNG:分层视差的抠图层(比画布宽、每页位置略不同,去不了重)、
+     团队页的抠图人像。style-swap 的拼贴大图只有圆角那 0.01% 的像素透明,整张留了 PNG;要变小
+     得存 JPG 再给图片套圆角形状。
+
 还没做的:
 
 - 光学尺寸,见上。

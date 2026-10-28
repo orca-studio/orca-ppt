@@ -44,7 +44,8 @@ try {
   const { pptx, report, frames } = await exportDeck(
     {
       evaluate: (fn, arg) => page.evaluate(fn, arg),
-      screenshot: ({ clip, transparent }) => page.screenshot({ clip, omitBackground: !!transparent }),
+      screenshot: ({ clip, transparent, quality }) =>
+        page.screenshot({ clip, omitBackground: !!transparent, ...(quality ? { type: "jpeg", quality } : {}) }),
     },
     { frames: !!framesDir },
   );

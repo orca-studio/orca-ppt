@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { deflateSync } from 'node:zlib'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -487,6 +488,78 @@ describe('分段', () => {
     const checked = run('check-pptx.mjs', [join(dir, 'deck.pptx'), join(dir, 'report.json')])
     expect(checked.status, checked.stdout).toBe(0)
   }, 60_000)
+})
+
+describe('截图存 JPG 还是 PNG', () => {
+  /** 拼一张 RGBA 的 PNG：每行一个过滤方式（0 不过滤、2 减上一行），alpha 由 alphas 给 */
+  const png = (width: number, rows: number[][], filters: number[]) => {
+    const raw: number[] = []
+    let prev = new Array(width * 4).fill(0)
+    rows.forEach((alphas, y) => {
+      const row = alphas.flatMap((a, x) => [x * 40, y * 90, 200, a])
+      raw.push(
+        filters[y]!,
+        ...row.map((v, i) => (filters[y] === 2 ? (v - prev[i]! + 256) % 256 : v)),
+      )
+      prev = row
+    })
+    const chunk = (type: string, data: Buffer) => {
+      const head = Buffer.alloc(8)
+      head.writeUInt32BE(data.length)
+      head.write(type, 4, 'latin1')
+      return Buffer.concat([head, data, Buffer.alloc(4)])
+    }
+    const ihdr = Buffer.alloc(13)
+    ihdr.writeUInt32BE(width, 0)
+    ihdr.writeUInt32BE(rows.length, 4)
+    ihdr.set([8, 6, 0, 0, 0], 8)
+    return Buffer.concat([
+      Buffer.from('89504e470d0a1a0a', 'hex'),
+      chunk('IHDR', ihdr),
+      chunk('IDAT', deflateSync(Buffer.from(raw))),
+      chunk('IEND', Buffer.alloc(0)),
+    ])
+  }
+
+  it('全不透明的才算不透明，哪怕只有一个像素透一点', async () => {
+    const { opaque } = await lib('png.mjs')
+    expect(
+      opaque(
+        png(
+          3,
+          [
+            [255, 255, 255],
+            [255, 255, 255],
+          ],
+          [0, 2],
+        ),
+      ),
+    ).toBe(true)
+    expect(
+      opaque(
+        png(
+          3,
+          [
+            [255, 255, 255],
+            [255, 254, 255],
+          ],
+          [0, 2],
+        ),
+      ),
+    ).toBe(false)
+    expect(
+      opaque(
+        png(
+          3,
+          [
+            [0, 255, 255],
+            [255, 255, 255],
+          ],
+          [2, 0],
+        ),
+      ),
+    ).toBe(false)
+  })
 })
 
 describe('嵌入字体', () => {
