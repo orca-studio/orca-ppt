@@ -235,7 +235,8 @@ function measure(index) {
 
   const fontOf = (cs) => {
     const families = cs.fontFamily.split(",").map((f) => f.trim().replace(/^["']|["']$/g, ""));
-    const cjk = families.find((f) => /SC|TC|CN|JP|KR|Hei|Song|Kai|Ming|PingFang|Hiragino|YaHei|CJK|Han/i.test(f));
+    // 不忽略大小写：「Hanken Grotesk」里的 Han、「Source Serif」里的 Sc 都不是中文字体
+    const cjk = families.find((f) => /\b(SC|TC|HK|CN|JP|KR)\b|Hei|Song|Kai|Ming|PingFang|Hiragino|YaHei|CJK|Source Han|SimSun|STSong|FangSong/.test(f));
     return { font: families[0], ea: cjk ?? families[0] };
   };
   const transformText = (s, cs) =>
@@ -528,16 +529,34 @@ function embeddedFont(family, weight, italic) {
   return pool.reduce((best, f) => (Math.abs(f.weight - weight) < Math.abs(best.weight - weight) ? f : best));
 }
 
+// PowerPoint 认不出的系统字体 → Office 自带、Mac 和 Windows 都有的替身。PingFang 放在 macOS 按需下载的
+// 资源目录里，Office 不扫那里，原样写进去会把中文换成微软雅黑、西文换成 Calibri（窄 14%，折行全变）。
+// 微软雅黑的西文字宽和字身高跟 PingFang 最接近（宽差 3% 以内），中文本来就是一字一格
+const SUBSTITUTES = {
+  "PingFang SC": "Microsoft YaHei",
+  "PingFang TC": "Microsoft JhengHei",
+  "PingFang HK": "Microsoft JhengHei",
+  "PingFang MO": "Microsoft JhengHei",
+};
+
 /**
  * 把字换成嵌进文件的字体：每个字重是一个单独的字体（「Inter SemiBold」），粗、斜按那个字体自己的档来，
- * 不让 PowerPoint 再加粗一遍。返回 model.fonts：[{ typeface, regular?, bold?, italic?, boldItalic? }]（EOT）
+ * 不让 PowerPoint 再加粗一遍；PowerPoint 认不出的换成替身。返回 { fonts, substituted }：
+ * fonts 是 model.fonts（[{ typeface, regular?, bold?, italic?, boldItalic? }]，EOT），substituted 是 [{ from, to }]
  */
 function embedFonts(slides) {
   const used = new Map();
+  const substituted = new Map();
   const runs = slides.flatMap((s) =>
     s.shapes.flatMap((x) => (x.kind === "raster" || !x.text ? [] : x.text.paras.flatMap((p) => p.runs))),
   );
   for (const r of runs) {
+    for (const key of ["font", "ea"]) {
+      const to = SUBSTITUTES[r[key]];
+      if (!to) continue;
+      substituted.set(r[key], to);
+      r[key] = to;
+    }
     const font = embeddedFont(r.font, r.weight ?? (r.bold ? 700 : 400), r.italic);
     if (!font) continue;
     if (r.ea === r.font) r.ea = font.typeface;
@@ -552,7 +571,7 @@ function embedFonts(slides) {
     if (!byFace.has(font.typeface)) byFace.set(font.typeface, { typeface: font.typeface });
     byFace.get(font.typeface)[slot] = eot(readFileSync(new URL(font.file, FONT_DIR)));
   }
-  return [...byFace.values()];
+  return { fonts: [...byFace.values()], substituted: [...substituted].map(([from, to]) => ({ from, to })) };
 }
 
 /**
@@ -672,7 +691,8 @@ export async function exportDeck(page, options = {}) {
   }
 
   // 第二遍：配对和转场要看前后两页
-  const model = { slides: [], media, fonts: embedFonts(slides) };
+  const { fonts, substituted } = embedFonts(slides);
+  const model = { slides: [], media, fonts };
   slides.forEach((s, i) => {
     const prev = slides[i - 1];
     const ids = (sl) => new Set(sl.shapes.map((x) => x.identity).filter(Boolean));
@@ -752,6 +772,7 @@ export async function exportDeck(page, options = {}) {
   const pptx = buildPptx(model, { title });
   // 嵌进文件的字体；fonts 只列没嵌的（系统字体、中文字体），看的那台电脑要装
   report.embeddedFonts = model.fonts.map((f) => f.typeface);
+  report.substitutedFonts = substituted;
   const embedded = new Set(report.embeddedFonts);
   report.fonts = [
     ...new Set(slides.flatMap((s) => s.shapes.flatMap((x) => x.text?.paras.flatMap((p) => p.runs.flatMap((r) => [r.font, r.ea])) ?? []))),

@@ -96,15 +96,27 @@
      中文框不放宽,实测放宽更差。
    - 结果:PowerPoint 里折行和浏览器不一样的从 105/727 行降到 5/735 行(不算 swirl-rings 修好的
      那 95 行)。剩下两段原因清楚:
-     - **PingFang SC 在 PowerPoint 里认不出**(macOS 的系统隐藏字体),中文落到微软雅黑、西文落到
-       Calibri。原来就这样,不是这次改的。要么换成 PowerPoint 认得的中文字体名,要么嵌一份开源
-       中文字体(要按用到的字裁剪,不然太大)。
+     - **PingFang SC 在 PowerPoint 里认不出**,中文落到微软雅黑、西文落到 Calibri。见下一步。
      - **光学尺寸**:Source Serif 4、Newsreader、Bodoni Moda、Bricolage Grotesque 是带 opsz 的可变
        字体,浏览器按字号自动换字形;静态 .ttf 只有默认那一档,大字号时略宽。
 
+4. **PingFang 换成微软雅黑(2026-10-28)。**
+   - 原因:PingFang 在 macOS 按需下载的资源目录(`/System/Library/AssetsV2/…`)里,别的 App 能用,
+     Office 不扫那里。`PingFang SC`、`PingFangSC-Regular`、`苹方-简` 三个名字都试过,全落空;
+     同在系统里的 Songti SC、Kaiti SC、Hiragino Sans GB、Heiti SC 都认得。
+   - 选替身:Office 自带、Mac 和 Windows 都有的字体里,微软雅黑的西文字宽和 PingFang 差 3% 以内,
+     字身上沿一样高;原来落到的 Calibri 窄 14%。中文本来就一字一格,换哪个都不影响折行。所以
+     PingFang SC 的西文、中文都写成微软雅黑,PingFang TC/HK/MO 写成微软正黑。嵌一份裁剪过的开源
+     中文字体没做:中文换替身不影响折行,字形差别不值得多带几 MB。
+   - 顺手修了认中文字体的正则:原来不分大小写,`Hanken Grotesk` 里的 Han 被当成中文字体,
+     cobalt-grid 的中文就写成了 Hanken Grotesk。
+   - 报告加 `substitutedFonts: [{ from, to }]`,`export-pptx.mjs` 打印「换掉的字体」。
+   - 结果:16 份同款在 PowerPoint 里的文字和折行和上一步一模一样,用 PingFang 的西文
+     (「Election campaign.」这种)宽度和浏览器对上了。
+
 还没做的:
 
-- PingFang SC 和光学尺寸,见上。
+- 光学尺寸,见上。
 - glass-bars 的棱柱、两个圆环同款按同款拆成原生形状。
 - 结构语义标注(列表、图表)和 PPTX 保真模式。
 

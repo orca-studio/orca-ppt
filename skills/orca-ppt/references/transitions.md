@@ -807,8 +807,8 @@ URL 带 `?calm`,或者 `<html>` / `<body>` 上写 `data-motion="calm"`,就打开
   原生渐变填充；多层叠的、平铺的、长方形里的椭圆渐变，和图片、视频、`clip-path` 这类一样截成图片，
   报告里写明每一张的原因。
 - skill 自带的西文字体（`runtime/fonts/`）按用到的字重嵌进文件，没装这些字体的电脑也照样显示。
-  中文字体（PingFang、Songti 这类系统字体）嵌不了：PowerPoint 认不出 PingFang，中文会落到微软雅黑；
-  报告里列出没嵌的字体。
+  中文字体（PingFang、Songti 这类系统字体）不嵌。PowerPoint 认不出 PingFang，导出时换成 Office 自带的
+  微软雅黑（繁体换微软正黑），西文宽窄和 PingFang 最接近；报告里列出换掉的和没嵌的字体。
 - 文字一段导成一段：浏览器里折出来的行并回去，交给 PowerPoint 按框宽折，在 PowerPoint 里改字后面的行会跟着走；
   `<br>` 另起一段。只有一行的（标题）不让 PowerPoint 折。没装稿子字体的电脑上，替代字体宽窄不同，折行会和网页不一样。
 - 文字镂空（`.s-knockout`）整块截成一张透明底的 PNG：字孔和淡出都在，但在 PowerPoint 里不能改字，换字要回网页改了再导。

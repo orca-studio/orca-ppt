@@ -527,4 +527,44 @@ describe('嵌入字体', () => {
     }
     expect(files.get('[Content_Types].xml')!.toString()).toContain('Extension="fntdata"')
   })
+
+  it('PingFang 换成微软雅黑，西文字体名里的 Han 不算中文字体', async (context) => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-pptx-fonts-'))
+    const href = (path: string) => pathToFileURL(join(skill, path)).href
+    writeFileSync(
+      join(dir, 'deck.html'),
+      `<!doctype html><html lang="zh-CN" data-layout="standard"><head><meta charset="utf-8"><title>字体</title>
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reset.css')}">
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reveal.css')}">
+<link rel="stylesheet" href="${href('runtime/tokens.css')}">
+</head><body><div class="reveal"><div class="slides"><section>
+<p class="t-body" style="left:100px; top:100px; font-family:'PingFang SC', sans-serif;">苹方 PingFang</p>
+<p class="t-body" style="left:100px; top:400px; font-family:'Hanken Grotesk', 'Helvetica Neue', 'PingFang SC', sans-serif;">混排 Hanken</p>
+</section></div></div>
+<script src="${href('node_modules/reveal.js/dist/reveal.js')}"></script>
+<script src="${href('node_modules/gsap/dist/gsap.min.js')}"></script>
+<script src="${href('runtime/engine.js')}"></script></body></html>`,
+    )
+    const exported = run('export-pptx.mjs', [
+      join(dir, 'deck.html'),
+      '-o',
+      join(dir, 'deck.pptx'),
+      '--json',
+      join(dir, 'report.json'),
+    ])
+    if (exported.status !== 0 && /chrome|Executable|browserType\.launch/i.test(exported.stderr)) {
+      context.skip()
+    }
+    expect(exported.status, exported.stderr).toBe(0)
+    const report = JSON.parse(readFileSync(join(dir, 'report.json'), 'utf8'))
+    expect(report.substitutedFonts).toEqual([{ from: 'PingFang SC', to: 'Microsoft YaHei' }])
+    expect(report.fonts).toEqual(['Microsoft YaHei'])
+    const { readZip } = await lib('zip.mjs')
+    const xml = (readZip(readFileSync(join(dir, 'deck.pptx'))) as Map<string, Buffer>)
+      .get('ppt/slides/slide1.xml')!
+      .toString()
+    expect(xml).not.toContain('typeface="PingFang')
+    expect(xml).toContain('<a:latin typeface="Microsoft YaHei"/><a:ea typeface="Microsoft YaHei"/>')
+    expect(xml).toContain('<a:latin typeface="Hanken Grotesk"/><a:ea typeface="Microsoft YaHei"/>')
+  }, 60_000)
 })

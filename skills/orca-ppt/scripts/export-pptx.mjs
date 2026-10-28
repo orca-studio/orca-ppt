@@ -69,6 +69,8 @@ try {
   const rasterCount = report.slides.reduce((a, s) => a + s.rasters.length, 0);
   if (rasterCount) console.log(`${rasterCount} 个元素转成了图片（原因见 --json 报告）`);
   if (report.embeddedFonts.length) console.log(`嵌进文件的字体：${report.embeddedFonts.join("、")}`);
+  if (report.substitutedFonts.length)
+    console.log(`换掉的字体（PowerPoint 认不出）：${report.substitutedFonts.map((f) => `${f.from} → ${f.to}`).join("、")}`);
   if (report.fonts.length) console.log(`没嵌的字体（看的那台电脑要装，没装会换成别的字体）：${report.fonts.join("、")}`);
   if (problems.length) console.log(`页面报错：\n  ${problems.join("\n  ")}`);
 } finally {
