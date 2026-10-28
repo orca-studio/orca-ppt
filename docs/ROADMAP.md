@@ -117,3 +117,5 @@ render → critique → revise 的自动闭环等以后真有需要再说。当�
 PDF / pptx 导出 · 参考库锚定(从 ppt.orca-studio.ai 取风格锚)· 多 deck 工作区 · 协作评审。
 
 PPTX 保真模式与导出器演进(已提议,未排期):见 [PPTX-FIDELITY.md](./PPTX-FIDELITY.md)。
+
+导出 PPTX 搬出 skill、做会员功能、云端导出(已提议,未排期):见 [PPTX-FIDELITY.md](./PPTX-FIDELITY.md)「导出放哪、做不做会员」。

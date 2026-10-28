@@ -156,6 +156,31 @@ HTML 仍是唯一的权威源,在它上面加四件事:
 4. **导出前查溢出。** 按 PowerPoint 的字体度量估文本高度,诊断定位到页和元素
    (参考 DSH 的 `pptd_check` / text-overflow)。
 
+## 导出放哪、做不做会员(已提议,未排期)
+
+2026-10-28 登记。
+
+- **已定:skill 不负责导出 PPTX。** skill 只管 HTML 排版和转场。导出器(`export-pptx.mjs`、
+  `check-pptx.mjs`、`scripts/lib/` 下的 pptx-export / pptx-write / pptx-fallback / ttf / png / zip、
+  `runtime/fonts/pptx/`)以后搬出 `skills/orca-ppt/`。engine.js 的 `__capture` 和 `data-pptx-src`
+  是运行时的,留在 skill。「导出 PPTX」回退表要看保真模式做不做:要做就是写稿规则,留在 skill。
+- **想法:导出 PPTX 做成会员功能。** 仓库是 MIT 开源,app 也开源,所以导出器放在开源代码里
+  只能是软门槛(卖一键导出的方便)。会员资格按仓库规矩做成协议方法,由 server 判断,界面和
+  MCP 都走它。
+- **在考虑:云端导出。** 门槛最实在,代码只在服务器上。要先解决:
+  - 字体:服务器(Linux)没有 PingFang、Songti SC、Helvetica Neue,量出来的文本框宽度和 Mac 上
+    不一样。西文用 skill 自带字体不受影响,中文一字一格、PPTX 里本来就换成微软雅黑,误差主要在
+    中英混排的西文。
+  - 版本:稿子链接 skill 的 runtime,服务器要按用户做稿时的 runtime 版本渲染。
+  - 上传和隐私:整个稿子目录连图片都要传,导完删掉,产品里写明。
+  - 成本:一次导出开 5760×3240 视口的 Chrome 跑几十秒、截几十到上百张图,要排队、限并发。
+  - 离线导不了;要有账号和付费渠道(仓库里现在没有)。
+- **折中:本地量、云端写。** 测量和截图在用户机器上做(字体、版本都是用户看到的),只传测量
+  结果和截图,云端写包、套回退表、嵌字体、检查。门槛比全云端软一些。
+- **排上时的第一步:** 用 Playwright 的 Docker 镜像在 Linux 上导 pendant-lamp、cobalt-grid、
+  window-card-flip,和 Mac 上导的比文本框宽度、折行和画面,差得小走全云端,差得大走折中。
+  (要下载带 Chromium 的镜像,先问用户。)
+
 ## OOXML 结构验证
 
 导出的检查链改成:
