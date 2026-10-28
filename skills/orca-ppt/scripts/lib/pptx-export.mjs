@@ -179,6 +179,10 @@ function measure(index) {
     return null;
   };
   const turnOf = (el) => !!el.closest("[data-st-turn]");
+  // 元素在源文件里的位置：引擎在录制模式下改页面之前记在 data-pptx-src 上（从 .slides 起一路 :nth-child）。
+  // 报告里按形状名对上它，PowerPoint 或验证器指出的问题能落回 HTML 里的那个元素。
+  // 引擎自己搭的层（包层、遮罩）没有，取最近一个有的祖先
+  const selectorOf = (el) => el.closest("[data-pptx-src]")?.dataset.pptxSrc ?? null;
   const label = (el) => {
     const cls = [...el.classList].filter((c) => /^[tsvl]-/.test(c)).join(".");
     return cls || el.tagName.toLowerCase();
@@ -249,10 +253,20 @@ function measure(index) {
     const vertical = cs.writingMode.startsWith("vertical");
     const lines = [];
     const range = document.createRange();
+    // 作者写的换行（<br>、pre 里的回车）在 PowerPoint 里另起一段；排版折出来的行并回同一段
+    let hard = false;
+    let prev = null;
     for (const node of textBlocks.get(block)) {
+      if (prev) {
+        range.setStart(prev, prev.length);
+        range.setEnd(node, 0);
+        if (range.cloneContents().querySelector("br")) hard = true;
+      }
+      prev = node;
       const ecs = getComputedStyle(node.parentElement);
       const eo = opacityOf(node.parentElement);
       if (eo < 0.05) continue;
+      const keepsNewlines = /^(pre|pre-wrap|pre-line|break-spaces)$/.test(ecs.whiteSpace);
       const fontSize = parseFloat(ecs.fontSize);
       const { font, ea } = fontOf(ecs);
       const style = {
@@ -274,6 +288,7 @@ function measure(index) {
       const chars = [...node.data];
       let at = 0;
       for (const ch of chars) {
+        if (ch === "\n" && keepsNewlines) hard = true;
         range.setStart(node, at);
         range.setEnd(node, at + ch.length);
         at += ch.length;
@@ -283,8 +298,9 @@ function measure(index) {
         const left = r.left - origin.left;
         let line = lines.at(-1);
         if (!line || (vertical ? Math.abs(left - line.left) > fontSize * 0.6 : top > line.top + fontSize * 0.6)) {
-          line = { top, left, runs: [] };
+          line = { top, left, runs: [], hard: !line || hard };
           lines.push(line);
+          hard = false;
         }
         const text = /\s/.test(ch) ? " " : vertical ? (VERTICAL_PUNCT[ch] ?? ch) : transformText(ch, ecs);
         const last = line.runs.at(-1);
@@ -293,18 +309,50 @@ function measure(index) {
       }
     }
     for (const line of lines) {
-      // 行首行尾的空白是排版换行留下的，PowerPoint 里会变成可见的空格
+      // 行首行尾的空白是排版换行留下的，PowerPoint 里会变成可见的空格；记下来，并行时补回一个
       const first = line.runs[0];
-      if (first) first.text = first.text.replace(/^\s+/, "");
+      if (first) {
+        line.spaceBefore = /^\s/.test(first.text);
+        first.text = first.text.replace(/^\s+/, "");
+      }
       const last = line.runs.at(-1);
-      if (last) last.text = last.text.replace(/\s+$/, "");
-      line.runs = line.runs.filter((r) => r.text).map(({ key, ...r }) => r);
+      if (last) {
+        line.spaceAfter = /\s$/.test(last.text);
+        last.text = last.text.replace(/\s+$/, "");
+      }
+      line.runs = line.runs.filter((r) => r.text);
     }
     const kept = lines.filter((l) => l.runs.length);
     if (!kept.length) return null;
+    // 一段 = 作者写的一段：折出来的行接回去，交给 PowerPoint 按框宽重新折（改字时后面的行跟着走）。
+    // 竖排照旧一列一段
+    const paras = [];
+    for (const line of kept) {
+      const para = paras.at(-1);
+      if (!para || line.hard || vertical) {
+        paras.push({ runs: line.runs.map((r) => ({ ...r })), lines: 1, spaceAfter: line.spaceAfter });
+        continue;
+      }
+      if (para.spaceAfter || line.spaceBefore) para.runs.at(-1).text += " ";
+      for (const r of line.runs) {
+        const end = para.runs.at(-1);
+        if (end.key === r.key) end.text += r.text;
+        else para.runs.push({ ...r });
+      }
+      para.lines++;
+      para.spaceAfter = line.spaceAfter;
+    }
+    if (paras.at(-1)) delete paras.at(-1).spaceAfter;
     const align = { center: "ctr", right: "r", end: "r", justify: "just" }[cs.textAlign] ?? "l";
     const lh = cs.lineHeight === "normal" ? parseFloat(cs.fontSize) * 1.2 : parseFloat(cs.lineHeight);
-    return { align, lineHeight: lh, lines: kept, ...(vertical ? { vertical: true } : {}) };
+    return {
+      align,
+      lineHeight: lh,
+      paras: paras.map((p) => ({ lines: p.lines, runs: p.runs.map(({ key, ...r }) => r) })),
+      // 有段落折了行，才交给 PowerPoint 折；只有一行的（标题）不折，宽一点点也不会被挤成两行
+      wrap: !vertical && paras.some((p) => p.lines > 1),
+      ...(vertical ? { vertical: true } : {}),
+    };
   }
 
   const padOf = (cs) => ({
@@ -338,7 +386,7 @@ function measure(index) {
     const geo = rot || turn
       ? { x: b.x + b.w / 2 - lw / 2, y: b.y + b.h / 2 - lh / 2, w: lw, h: lh }
       : b;
-    const base = { identity, turn, label: label(el), ...geo, ...(rot || turn ? { rot } : {}) };
+    const base = { identity, turn, label: label(el), selector: selectorOf(el), ...geo, ...(rot || turn ? { rot } : {}) };
 
     const tag = el.tagName;
     if (RASTER_TAGS.has(tag) || el instanceof SVGSVGElement) {
@@ -563,7 +611,7 @@ export async function exportDeck(page, options = {}) {
       const name = `s${i + 1}-${item.k}.png`;
       media.set(name, png);
       shapes.push({ ...item, media: name });
-      rasters.push({ name: item.label, identity: item.identity, reason: item.reason });
+      rasters.push({ name: item.label, identity: item.identity, reason: item.reason, selector: item.selector });
     }
     let background = m.background;
     if (background.raster) {
@@ -592,6 +640,7 @@ export async function exportDeck(page, options = {}) {
     // 同一个键的几块形状收成一个组，组叫 `!!键`；只有一块就直接给它起这个名字
     const out = [];
     const groups = new Map();
+    const named = [];
     let n = 0;
     for (const item of s.shapes) {
       const shape =
@@ -611,11 +660,13 @@ export async function exportDeck(page, options = {}) {
               text: item.text && {
                 insets: item.text.insets,
                 vertical: item.text.vertical,
-                paras: item.text.lines.map((l) => ({ align: item.text.align, lineHeight: item.text.lineHeight, runs: l.runs })),
+                wrap: item.text.wrap,
+                paras: item.text.paras.map((p) => ({ align: item.text.align, lineHeight: item.text.lineHeight, runs: p.runs })),
               },
             };
       // 没有键的形状名字里带页号：PowerPoint 不会因为名字一样把两页的它们配上
       shape.name = `s${i + 1} ${item.label} ${++n}`;
+      named.push({ shape, selector: item.selector });
       if (item.identity) {
         if (!groups.has(item.identity)) {
           const g = { type: "grp", name: `!!${item.identity}`, children: [] };
@@ -625,9 +676,13 @@ export async function exportDeck(page, options = {}) {
         groups.get(item.identity).children.push(shape);
       } else out.push(shape);
     }
+    const nameOf = new Map();
     const shapes = out.map((g) => {
       if (g.type !== "grp") return g;
-      if (g.children.length === 1) return { ...g.children[0], name: g.name };
+      if (g.children.length === 1) {
+        nameOf.set(g.children[0], g.name);
+        return { ...g.children[0], name: g.name };
+      }
       return g;
     });
     model.slides.push({ background: s.background, transition, shapes });
@@ -643,14 +698,16 @@ export async function exportDeck(page, options = {}) {
       identities: [...ids(s)],
       turn: [...new Set(s.shapes.filter((x) => x.turn && x.identity).map((x) => x.identity))],
       rasters: s.rasters,
-      texts: s.shapes.filter((x) => x.text).flatMap((x) => x.text.lines.map((l) => l.runs.map((r) => r.text).join(""))),
+      // 包里每个形状 ↔ 稿子里的元素（组里只有一块时，形状名是 `!!键`）
+      shapes: named.map(({ shape, selector }) => ({ name: nameOf.get(shape) ?? shape.name, selector })),
+      texts: s.shapes.filter((x) => x.text).flatMap((x) => x.text.paras.map((p) => p.runs.map((r) => r.text).join(""))),
       lost,
     });
   });
 
   const title = await page.evaluate(() => document.title);
   const pptx = buildPptx(model, { title });
-  report.fonts = [...new Set(slides.flatMap((s) => s.shapes.flatMap((x) => x.text?.lines.flatMap((l) => l.runs.map((r) => r.font)) ?? [])))];
+  report.fonts = [...new Set(slides.flatMap((s) => s.shapes.flatMap((x) => x.text?.paras.flatMap((p) => p.runs.map((r) => r.font)) ?? [])))];
   report.degraded = report.slides
     .filter((s) => s.transition.tier !== "保真")
     .map((s) => ({ from: s.index - 1, to: s.index, technique: [s.transition.technique, ...s.transition.elements.filter((e) => e.tier !== "保真").map((e) => e.name)].filter(Boolean).join(" + "), tier: s.transition.tier, kind: s.transition.kind }));

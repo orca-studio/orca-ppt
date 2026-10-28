@@ -18,6 +18,16 @@
 // 录制模式（URL 带 ?capture）：动画全部暂停，由 scripts/capture.mjs 调 __capture.seek(ms) 逐帧推进。
 (() => {
   const CAPTURE = new URLSearchParams(location.search).has("capture");
+  // 录制模式下，引擎改动页面（包层、插 ghost、搭灯的支架）之前，先给每个元素记下它在源文件里的位置
+  // （从 .slides 起一路 :nth-child）。导出 PPTX 按它把每个形状对回稿子里的元素；复制出来的 ghost 带着原件的
+  if (CAPTURE) {
+    const slides = document.querySelector(".reveal .slides");
+    for (const el of slides?.querySelectorAll("*") ?? []) {
+      const path = [];
+      for (let n = el; n !== slides; n = n.parentElement) path.unshift(`:nth-child(${[...n.parentElement.children].indexOf(n) + 1})`);
+      el.dataset.pptxSrc = `.reveal .slides > ${path.join(" > ")}`;
+    }
+  }
   // 被回顾屏（.s-recap）嵌着放的那一份：不接键盘，不再嵌自己。总是和 ?capture 一起出现
   const EMBED = new URLSearchParams(location.search).has("embed");
   // 减少动效。**显式开关**:URL 带 ?calm,或 <html> / <body> 上写 data-motion="calm"。

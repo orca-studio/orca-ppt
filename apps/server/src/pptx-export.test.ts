@@ -200,18 +200,18 @@ describe('check-pptx 抓得到坏包', () => {
   })
 
   const cases: [string, string, (xml: string) => string, RegExp][] = [
-    ['文字改了', 'ppt/slides/slide1.xml', (x) => x.replace('两行', '三行'), /文字或换行变了/],
+    ['文字改了', 'ppt/slides/slide1.xml', (x) => x.replace('两行', '三行'), /文字或分段变了/],
     [
-      '换行合并了',
+      '两段并成一段',
       'ppt/slides/slide1.xml',
       (x) => x.replace(/<\/a:t><\/a:r>.*?<a:r>.*?<a:t>两行/, '两行'),
-      /文字或换行变了/,
+      /文字或分段变了/,
     ],
     [
-      '文本框会自动换行',
+      '文本框会缩字',
       'ppt/slides/slide1.xml',
-      (x) => x.replace('wrap="none"', 'wrap="square"'),
-      /自动换行/,
+      (x) => x.replace('<a:noAutofit/>', '<a:normAutofit/>'),
+      /缩字/,
     ],
     [
       '共享元素没起名字',
@@ -420,4 +420,54 @@ describe('渐变', () => {
     })
     expect(xml).toMatch(/<a:rPr [^>]*><a:gradFill/)
   })
+})
+
+describe('分段', () => {
+  it('排版折出来的行并回一段、交给 PowerPoint 折，<br> 另起一段', async (context) => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-pptx-paras-'))
+    const href = (path: string) => pathToFileURL(join(skill, path)).href
+    writeFileSync(
+      join(dir, 'deck.html'),
+      `<!doctype html><html lang="zh-CN" data-layout="standard"><head><meta charset="utf-8"><title>分段</title>
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reset.css')}">
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reveal.css')}">
+<link rel="stylesheet" href="${href('runtime/tokens.css')}">
+<link rel="stylesheet" href="${href('runtime/themes/editorial-forest.css')}">
+</head><body><div class="reveal"><div class="slides"><section>
+<p class="t-body" style="left:100px; top:100px; width:400px;">The quick brown fox jumps over the lazy dog and keeps on running.</p>
+<p class="t-body" style="left:100px; top:500px; width:1200px;">第一行<br>第二行</p>
+<p class="t-h1" style="left:100px; top:800px; width:1600px;">一行的标题</p>
+</section></div></div>
+<script src="${href('node_modules/reveal.js/dist/reveal.js')}"></script>
+<script src="${href('node_modules/gsap/dist/gsap.min.js')}"></script>
+<script src="${href('runtime/engine.js')}"></script></body></html>`,
+    )
+    const exported = run('export-pptx.mjs', [
+      join(dir, 'deck.html'),
+      '-o',
+      join(dir, 'deck.pptx'),
+      '--json',
+      join(dir, 'report.json'),
+    ])
+    if (exported.status !== 0 && /chrome|Executable|browserType\.launch/i.test(exported.stderr)) {
+      context.skip()
+    }
+    expect(exported.status, exported.stderr).toBe(0)
+    const report = JSON.parse(readFileSync(join(dir, 'report.json'), 'utf8'))
+    expect(report.slides[0].texts).toEqual([
+      'The quick brown fox jumps over the lazy dog and keeps on running.',
+      '第一行',
+      '第二行',
+      '一行的标题',
+    ])
+    const { readZip } = await lib('zip.mjs')
+    const xml = (readZip(readFileSync(join(dir, 'deck.pptx'))) as Map<string, Buffer>)
+      .get('ppt/slides/slide1.xml')!
+      .toString()
+    // 折了行的那段交给 PowerPoint 折；<br> 分开的两段、单行的标题都不折
+    expect(xml.match(/wrap="square"/g)).toHaveLength(1)
+    expect(xml.match(/wrap="none"/g)).toHaveLength(2)
+    const checked = run('check-pptx.mjs', [join(dir, 'deck.pptx'), join(dir, 'report.json')])
+    expect(checked.status, checked.stdout).toBe(0)
+  }, 60_000)
 })

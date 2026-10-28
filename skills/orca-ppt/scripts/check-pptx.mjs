@@ -6,8 +6,8 @@
 //
 // 结构：
 //   - zip 完整，每个部件在 [Content_Types].xml 里有类型，每条关系指向的部件都在
-//   - 每页的文字和浏览器里量的一致，作者写的换行没被改
-//   - 文本框不自动换行（wrap="none"），换行不交给看的人那台电脑
+//   - 每页的文字和浏览器里量的一致：一段是作者写的一段，<br> 另起一段，排版折出来的行并在段里
+//   - 文本框不缩字（noAutofit）：折行交给 PowerPoint，字号不许它改
 //   - 图片只有报告里写了原因的那些，没有意外转成图片的元素
 //   - 形状 id 不重复，动画和图片引用的东西都在
 //   - 共享元素在前后两页里各有一个、只有一个 `!!键`
@@ -109,7 +109,7 @@ slideParts.forEach((part, i) => {
   const rels = relsOf(part);
   const tree = find(slide, "p:spTree");
 
-  // 文字：每段一行，和浏览器量的逐行一致
+  // 文字：逐段和浏览器量的一致
   const paras = findAll(tree, "a:p")
     .map((p) => findAll(p, "a:t").map((t) => t.text).join(""))
     .filter((t) => t);
@@ -117,11 +117,11 @@ slideParts.forEach((part, i) => {
     const want = expected.texts;
     if (paras.length !== want.length || paras.some((t, k) => t !== want[k])) {
       const k = paras.findIndex((t, j) => t !== want[j]);
-      err(where, `文字或换行变了：第 ${k + 1} 行是「${paras[k] ?? "（没有）"}」，应该是「${want[k] ?? "（没有）"}」`);
+      err(where, `文字或分段变了：第 ${k + 1} 段是「${paras[k] ?? "（没有）"}」，应该是「${want[k] ?? "（没有）"}」`);
     }
   }
   for (const body of findAll(tree, "a:bodyPr")) {
-    if (body.attrs.wrap !== "none") err(where, "有文本框会自动换行（wrap 不是 none）");
+    if (!find(body, "a:noAutofit")) err(where, "有文本框会让 PowerPoint 缩字（不是 noAutofit）");
   }
 
   // 图片：数量和报告一致，每张都有原因

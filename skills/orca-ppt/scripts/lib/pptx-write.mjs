@@ -121,10 +121,11 @@ function run(r) {
 
 function textBody(t) {
   const ins = t.insets;
-  // wrap="none"：换行照浏览器量出来的行写死，不交给看的人那台电脑重新排
+  // wrap="square"：一段是作者写的一段，PowerPoint 按框宽折行，改字时后面的行跟着走；
+  // 只有单行的框写 wrap="none"，字体量得宽一点也不会被挤成两行
   // 竖排：eaVert 让一段成一列、从右往左排（和 writing-mode: vertical-rl 一样），标点自动换成竖排的写法
   const vert = t.vertical ? ' vert="eaVert"' : "";
-  const body = `<a:bodyPr${vert} wrap="none" lIns="${emu(ins.l)}" tIns="${emu(ins.t)}" rIns="${emu(ins.r)}" bIns="${emu(ins.b)}" anchor="t" rtlCol="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>`;
+  const body = `<a:bodyPr${vert} wrap="${t.wrap ? "square" : "none"}" lIns="${emu(ins.l)}" tIns="${emu(ins.t)}" rIns="${emu(ins.r)}" bIns="${emu(ins.b)}" anchor="t" rtlCol="0"><a:noAutofit/></a:bodyPr><a:lstStyle/>`;
   const paras = t.paras
     .map((p) => {
       const ppr = `<a:pPr algn="${p.align || "l"}"><a:lnSpc><a:spcPts val="${Math.round(p.lineHeight * 50)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:buNone/></a:pPr>`;
