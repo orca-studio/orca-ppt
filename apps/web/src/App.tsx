@@ -118,6 +118,21 @@ export function App({ serverUrl }: { serverUrl: string }) {
           .request('control.state', {})
           .then(setControl)
           .catch(() => {})
+        // server 里还开着一份、这个窗口什么都没开:接着开那份。macOS 上关了窗口 server 不停,
+        // 再开的窗口不接上的话,界面在首页、server 以为稿子还开着,agent 的下一个工具就报 DOCUMENT_CHANGED
+        void next
+          .request('deck.current', {})
+          .then(async ({ deckId, slide }) => {
+            if (!deckId || deckRef.current || openingRef.current) return
+            await openWith(next, deckId)
+            // 回到关窗口时停的那一页。await 之后 deckRef 可能已经变了,TS 按 await 前的判断收窄成 never
+            const opened = deckRef.current as OpenedDeck | undefined
+            if (!slide || opened?.deck.id !== deckId) return
+            setSlide(slide)
+            slideRef.current = slide
+            stage.current?.goto(slide)
+          })
+          .catch(() => {})
       }
     }
     next.connect()

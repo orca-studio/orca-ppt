@@ -672,8 +672,13 @@ app.whenReady().then(() => {
   if (isMac) app.dock?.setIcon(ICON)
   return createWindow()
 })
+// macOS 上关掉最后一个窗口,应用和 server 都还在:agent 正在做的事不该因为人关了窗口就断
+// (要截图、要看画布的工具会报 UI_DISCONNECTED,改稿子、读写阶段产物照常)。
+// 点 Dock 图标再开一个窗口,连回同一个 server。别的平台关窗口就是退出。
 app.on('window-all-closed', () => {
-  supervisor.stop()
   if (!isMac) app.quit()
+})
+app.on('activate', () => {
+  if (!squirrelEvent && BrowserWindow.getAllWindows().length === 0) void createWindow()
 })
 app.on('before-quit', () => supervisor.stop())

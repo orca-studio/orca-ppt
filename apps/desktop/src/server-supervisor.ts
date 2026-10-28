@@ -29,13 +29,28 @@ export const spawnNode: Launch = (entry, env) =>
 
 export class ServerSupervisor {
   #child: ServerProcess | undefined
+  #port: Promise<number> | undefined
 
   constructor(private readonly launch: Launch) {}
 
-  /** server 在 stdout 上报端口。等到那一行再开窗口,避免渲染层连一个还没起来的端口。 */
-  async start(entry: string, env: Record<string, string> = {}): Promise<number> {
+  /**
+   * server 在 stdout 上报端口。等到那一行再开窗口,避免渲染层连一个还没起来的端口。
+   * 已经在跑(或正在起)就沿用那一个:macOS 上关了窗口 server 不停,再开窗口连回同一个,
+   * agent 那头的 MCP 连接不断。server 退出了才重新起。
+   */
+  start(entry: string, env: Record<string, string> = {}): Promise<number> {
+    this.#port ??= this.#spawn(entry, env)
+    return this.#port
+  }
+
+  #spawn(entry: string, env: Record<string, string>): Promise<number> {
     const child = this.launch(entry, env)
     this.#child = child
+    child.on('exit', () => {
+      if (this.#child !== child) return
+      this.#child = undefined
+      this.#port = undefined
+    })
 
     return new Promise<number>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error('server 没有在 10 秒内报出端口')), 10_000)
@@ -57,5 +72,6 @@ export class ServerSupervisor {
   stop(): void {
     this.#child?.kill()
     this.#child = undefined
+    this.#port = undefined
   }
 }

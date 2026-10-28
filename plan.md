@@ -51,9 +51,7 @@
 - [x] ROADMAP 的「已知欠账」去掉已经不成立的两条;M4 里写清 `--interrupt` 和否掉的录制导出不是一回事。
 - [ ] **deck 和 skill 之外的引用会 403**(ROADMAP 已知欠账里原有的一条,还在)。
 
-## 6. 待定:server 要不要活得比窗口久
+## 6. 已定:server 活得比窗口久
 
-ARCHITECTURE 说「关掉窗口,server 还在」,但壳在最后一个窗口关掉时就停 server
-(`apps/desktop/src/main.ts` 的 `window-all-closed`),MCP 跟着断 —— agent 那头正在做的事会失败。
-二选一:改代码让 server 在 macOS 上活到应用退出(窗口关了 agent 照样能用,但没有画布,截图会失败);
-或者改文档,承认「窗口在,服务才在」。
+10-28 定为改代码:macOS 上关掉最后一个窗口,server 不停,MCP 不断;点 Dock 图标重开窗口,连回同一个 server,
+接着开那份稿子、停在那一页。见 ARCHITECTURE「长活儿活得比窗口久」。

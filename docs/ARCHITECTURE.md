@@ -30,9 +30,10 @@ _否掉:_ 单独的 MCP 进程 + 端口文件(多一个要启动、要发现、�
 为什么不直接写在 Electron 主进程里:
 
 - **长活儿活得比窗口久。** agent 在它自己的宿主里,本来就不受这个窗口影响;server 独立出来,
-  窗口关了它也可以不停。**现状和这条不符:** 壳在最后一个窗口关掉时就停 server
-  (`apps/desktop/src/main.ts` 的 `window-all-closed`),MCP 跟着断。要不要让它活下去是待定项,
-  见仓库根目录 `plan.md`。
+  窗口关了它也不停。macOS 上关掉最后一个窗口,应用和 server 都还在,MCP 不断:改稿子、读写阶段产物、
+  `capture_slide`(离屏渲染)照常,要看画布的工具报 `UI_DISCONNECTED`。点 Dock 图标再开窗口,连回同一个
+  server,接着开关窗口时那份稿子、停在那一页。退出应用才停 server;Windows、Linux 关窗口就是退出。
+  (2026-10-28 定:用户中途关掉窗口,不该打断 agent 正在做的事。)
 - server 是无头的,编排逻辑不用起 Electron 就能测。
 - 以后要 web 客户端也几乎免费。
 
