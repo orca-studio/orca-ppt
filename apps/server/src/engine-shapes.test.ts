@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest'
  *   - 裁剪形状 clip-path: polygon(…) 跟着位置逐点插值
  *   - 新入场元素的 3D 转角 rotate: y …，不被 GSAP 的上浮淡入压平
  *   - 3D 转角和平面转角一样绕盒子中心转
+ *   - 照片框（data-flip-mode="cross"）换图时交叉淡化，位置、形状、转角逐帧一起变
  * 用录制模式（?capture）逐毫秒 seek，在本机 Chrome 里量。没装 Chrome 就跳过（和 check-deck 一样）。
  */
 const skill = fileURLToPath(new URL('../../../skills/orca-ppt/', import.meta.url))
@@ -79,5 +80,82 @@ await browser.close();`,
     expect(end.rotate).toBe('y -34deg')
     // 配上对的元素也绕自己的中心转（reveal 默认把支点钉在左上角），开窗的左右两张才对称
     expect(end.origin).toBe('200px 300px')
+  }, 60_000)
+
+  it('照片框 data-flip-mode="cross"：第一帧就开始变，新旧照片交叉淡化，转角和形状一起插值', async (context) => {
+    const dir = mkdtempSync(join(tmpdir(), 'orca-engine-cross-'))
+    const deck = join(dir, 'deck.html')
+    const photo = (color: string) =>
+      `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="${color}"/></svg>`)}`
+    writeFileSync(
+      deck,
+      `<!doctype html><html lang="zh-CN" data-layout="standard"><head><meta charset="utf-8"><title>照片框</title>
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reset.css')}">
+<link rel="stylesheet" href="${href('node_modules/reveal.js/dist/reveal.css')}">
+<link rel="stylesheet" href="${href('runtime/tokens.css')}">
+<link rel="stylesheet" href="${href('runtime/themes/editorial-forest.css')}">
+</head><body><div class="reveal"><div class="slides">
+<section data-auto-animate data-auto-animate-duration="1.2" style="perspective:1400px;">
+  <img data-flip="f" data-flip-mode="cross" src="${photo('red')}" alt="" style="left:200px; top:200px; width:400px; height:600px; object-fit:cover; clip-path:${RECT}; rotate:y 34deg;">
+  <img id="gone" src="${photo('green')}" alt="" style="left:1400px; top:200px; width:200px; height:300px;">
+</section>
+<section data-auto-animate data-auto-animate-duration="1.2" style="perspective:1400px;">
+  <img data-flip="f" data-flip-mode="cross" src="${photo('blue')}" alt="" style="left:800px; top:300px; width:800px; height:400px; object-fit:cover; clip-path:${SLANT};">
+</section>
+</div></div>
+<script src="${href('node_modules/reveal.js/dist/reveal.js')}"></script>
+<script src="${href('node_modules/gsap/dist/gsap.min.js')}"></script>
+<script src="${href('runtime/engine.js')}"></script></body></html>`,
+    )
+    const probe = join(dir, 'probe.mjs')
+    writeFileSync(
+      probe,
+      `import { chromium } from ${JSON.stringify(href('node_modules/playwright-core/index.mjs'))};
+const browser = await chromium.launch({ channel: "chrome" });
+const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+await page.goto(${JSON.stringify(pathToFileURL(deck).href + '?capture')});
+await page.waitForFunction(() => window.__capture);
+const at = (ms) => page.evaluate(async (t) => {
+  await window.__capture.seek(t);
+  const s = Reveal.getSlide(1);
+  const next = s.querySelector(':scope > [data-flip="f"]:not(.st-ghost-el)');
+  const ghost = s.querySelector(':scope > [data-flip="f"].st-ghost-el');
+  return { left: parseFloat(next.style.left), opacity: +getComputedStyle(next).opacity, rotate: next.style.rotate,
+    clip: next.style.clipPath, tag: next.tagName, ghostShown: !!ghost && ghost.style.visibility !== "hidden",
+    gone: +getComputedStyle(s.querySelector(':scope > img.st-ghost-el')).opacity };
+}, ms);
+await page.evaluate(() => window.__capture.go(0));
+await page.evaluate(() => window.__capture.go(1));
+const start = await at(80);
+const mid = await at(600);
+const end = await at(5000);
+console.log(JSON.stringify({ start, mid, end }));
+await browser.close();`,
+    )
+    const result = spawnSync(process.execPath, [probe], { encoding: 'utf8' })
+    if (result.status !== 0 && /chrome|Executable|browserType\.launch/i.test(result.stderr)) {
+      context.skip()
+    }
+    expect(result.status, result.stderr).toBe(0)
+    const { start, mid, end } = JSON.parse(result.stdout)
+    // 换成背景图画的元素：reveal 不会按 src 把它配成共享元素
+    expect(start.tag).toBe('I')
+    // 第一帧：框已经离开起点，新照片还没出来，旧照片在
+    expect(start.left).toBeGreaterThan(200)
+    expect(start.opacity).toBe(0)
+    expect(start.ghostShown).toBe(true)
+    // 只在上一页的图淡出：克隆进新页的 <img> 不能被 reveal 按 src 配回原件、钉住不透明度
+    expect(start.gone).toBeLessThan(1)
+    // 半路：新旧叠着淡化，转角和形状都是插值出来的中间值
+    expect(mid.opacity).toBeGreaterThan(0)
+    expect(mid.opacity).toBeLessThan(1)
+    const deg = Number(/^y ([\d.]+)deg$/.exec(mid.rotate)?.[1])
+    expect(deg).toBeGreaterThan(0)
+    expect(deg).toBeLessThan(34)
+    expect(mid.clip).toMatch(/^polygon\(calc\(/)
+    // 放完：落在作者写的样子，旧照片藏起来
+    expect(end.left).toBe(800)
+    expect(end.opacity).toBe(1)
+    expect(end.ghostShown).toBe(false)
   }, 60_000)
 })

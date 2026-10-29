@@ -1046,6 +1046,16 @@
       fill.style.top = px(-parseFloat(host.style.top));
       img.replaceWith(fill);
     }
+    // 交叉淡化的照片框（data-flip-mode="cross"）也换成背景图画的 <i>：前后两页同一张照片换了个框时，
+    // reveal 会按 src 把两张 <img> 配成共享元素，和翻面抢着动。object-fit / object-position 换成背景的写法
+    for (const img of within(slides, 'img[data-flip-mode="cross"]')) {
+      const photo = document.createElement("i");
+      for (const { name, value } of img.attributes) if (name !== "src" && name !== "alt") photo.setAttribute(name, value);
+      photo.style.objectFit = photo.style.objectPosition = "";
+      photo.style.background = `url("${img.src}") ${img.style.objectPosition || "50% 50%"} / ${img.style.objectFit === "contain" ? "contain" : "cover"} no-repeat`;
+      photo.style.display = "block";
+      img.replaceWith(photo);
+    }
   }
   // 比较两张卡片的内容：图（含 .s-fill 的背景图）、字、类名
   const faceOf = (el) => [
@@ -1069,10 +1079,11 @@
     }
     return pairs;
   }
-  function flipTween(tl, ghost, next, d) {
+  function flipTween(tl, ghost, next, d, old) {
     const ease = "power2.inOut";
     const a = box(ghost);
     const b = box(next);
+    if (next.dataset.flipMode === "cross") return crossTween(tl, ghost, next, a, b, d, old);
     if (next.dataset.flipMode === "fade") {
       const dx = b.left - a.left, dy = b.top - a.top;
       gsap.set(next, { autoAlpha: 0 });
@@ -1109,6 +1120,62 @@
     };
     draw();
     tl.to(state, { e: 1, duration: d, ease, onUpdate: draw }, 0);
+  }
+
+  // data-flip-mode="cross"：照片框换了一种拼法，框里的照片也换了。不翻、不交给 reveal：
+  // 位置、尺寸、裁剪形状（四个顶点的 polygon）、3D 转角（rotate: y …）逐帧一起插值，新旧两张照片在途中交叉淡化。
+  // 直接改 left / top / width / height，转角绕元素自己的中心转 —— reveal 用 transform 缩放，支点钉在左上角，
+  // 转角和缩放叠在一起时框会甩出原来的范围
+  const CROSS_FADE = [0.1, 0.75];   // 新照片从 10% 开始淡入，到 75% 全显，旧的在它下面放完再藏
+  const turnOf = (el) => {
+    const m = /^(?:([xyz])\s+)?(-?[\d.]+)deg$/.exec(el.style.rotate.trim());
+    return m ? { axis: m[1] ?? "z", deg: +m[2] } : null;
+  };
+  function crossTween(tl, ghost, next, a, b, d, old) {
+    const ease = "power1.inOut";   // 比 power2 起步快：框一开始就在动，不像停了一拍
+    const saved = next.style.cssText;
+    const clipA = AUTHORED_CLIP.get(ghost) ?? ghost.style.clipPath;
+    const clipB = AUTHORED_CLIP.get(next) ?? next.style.clipPath;
+    AUTHORED_CLIP.set(next, clipB);
+    const pa = clipA && clipPoints(clipA), pb = clipB && clipPoints(clipB);
+    const clipOk = pa && pb && pa.length === pb.length;
+    if (pa && pb && !clipOk) console.warn(`[orca-transition-skill] data-flip="${next.dataset.flip}" 前后两页的 clip-path 顶点数不同（${pa.length} 和 ${pb.length}），形状直接跳过去`);
+    const ra = turnOf(ghost), rb = turnOf(next);
+    const axis = rb?.axis ?? ra?.axis ?? "z";
+    if (ra && rb && ra.axis !== rb.axis && ra.deg && rb.deg) console.warn(`[orca-transition-skill] data-flip="${next.dataset.flip}" 前后两页绕不同的轴转，转角直接跳过去`);
+    const lerp = (p, q, k) => p + (q - p) * k;
+    // 从转着的框转回平的：转场在新的一页上放，透视却该用上一页的（开窗那页写了 1400px，下一页没写就是 reveal 默认的 600px），
+    // 不然第一帧透视突然变强，框像猛地放大。转角回到 0 时透视不起作用，放完还回去
+    const section = next.parentElement;
+    const keepPerspective = ra?.deg && !rb?.deg && old ? getComputedStyle(old.parentElement).perspective : null;
+    const savedPerspective = section.style.perspective;
+    const state = { e: 0 };
+    const draw = () => {
+      const k = state.e;
+      if (k >= 1) {
+        next.style.cssText = saved;
+        ghost.style.visibility = "hidden";
+        if (keepPerspective) section.style.perspective = savedPerspective;
+        return;
+      }
+      if (keepPerspective) section.style.perspective = keepPerspective;
+      const geo = {
+        left: px(lerp(a.left, b.left, k)), top: px(lerp(a.top, b.top, k)),
+        width: px(lerp(a.width, b.width, k)), height: px(lerp(a.height, b.height, k)),
+        borderRadius: px(lerp(a.borderRadius, b.borderRadius, k)),
+      };
+      if (clipOk) geo.clipPath = `polygon(${pa.map((pt, i) => pt.map((v, j) =>
+        `calc(${lerp(v[0], pb[i][j][0], k).toFixed(3)}% + ${lerp(v[1], pb[i][j][1], k).toFixed(2)}px)`).join(" ")).join(", ")})`;
+      if (ra || rb) geo.rotate = `${axis} ${lerp(ra?.deg ?? 0, rb?.deg ?? 0, k).toFixed(3)}deg`;
+      Object.assign(ghost.style, geo);
+      Object.assign(next.style, geo);
+      // 形状不插值时（一边没写、顶点数不同、笔刷 mask）各自留着自己的形状，靠交叉淡化换过去
+      if (!clipOk) { ghost.style.clipPath = clipA; next.style.clipPath = clipB; }
+    };
+    draw();
+    tl.to(state, { e: 1, duration: d, ease, onUpdate: draw }, 0);
+    const [fadeIn, full] = CROSS_FADE;
+    tl.fromTo(next, { opacity: 0 }, { opacity: 1, duration: d * (full - fadeIn), ease: "none" }, d * fadeIn);
   }
 
   // 找出两页里键相同的 data-swap / data-text 元素对
@@ -1241,7 +1308,10 @@
     }
     for (const p of flips) {
       const g = ghostOf.get(p.old);
-      if (g) flipTween(tl, g, p.next, +p.next.dataset.duration || FLIP_D);
+      // cross 默认跟这一页的共享元素同长：照片框和标题、色块一起落定
+      const d = +p.next.dataset.duration
+        || (p.next.dataset.flipMode === "cross" && +section.dataset.autoAnimateDuration) || FLIP_D;
+      if (g) flipTween(tl, g, p.next, d, p.old);
     }
     lampTweens(tl, section, source);
     return tl;
@@ -2803,6 +2873,11 @@
     autoAnimateEasing: "cubic-bezier(0.65, 0, 0.35, 1)",
     // reveal 默认那一组，加上 rotate。auto-animate 自己用 transform 做位移和缩放，元素的旋转写在
     // transform 里会被盖掉，所以「绕圆心转」写 CSS 的独立属性 rotate（transitions.md「绕圆心转」）
+    // reveal 默认的配对，剔掉引擎自己插进新页的东西：上一页元素的克隆（淡出用）和 src 相同的图会被它按 src
+    // 配回上一页的原件，钉上 opacity:1 !important，淡出就失效，最后一帧整个消失
+    autoAnimateMatcher(from, to) {
+      return this.getAutoAnimatePairs(from, to).filter((p) => !p.to.closest(".st-ghost, .st-ghost-el"));
+    },
     autoAnimateStyles: ["opacity", "color", "background-color", "padding", "font-size", "line-height",
       "letter-spacing", "border-width", "border-color", "border-radius", "outline", "outline-offset", "rotate"],
     // 往前翻的键都交给 advance（见上）。往回翻不管：往回本来就是硬切。
@@ -2821,6 +2896,29 @@
     if (EMBED) serveRecap();
   });
   Reveal.on("slidechanged", onSlide);
+
+  // 停在一页时，把下一页要出现的图先解码好。没显示过的页，图要等第一次画出来才解码：
+  // 转场中途一下子入场几十张照片（照片墙），光栅线程忙着解码，画面会冻住几帧再跳到后面。
+  // decode() 在后台线程做，解出来的位图按地址缓存，到时候直接用。Image 对象留着，缓存才不会被提前回收
+  const decoded = new Map();
+  function predecode(slide) {
+    if (!slide) return;
+    const urls = new Set();
+    for (const img of slide.querySelectorAll("img[src]")) urls.add(img.src);
+    for (const el of slide.querySelectorAll("[style*='url(']")) {
+      for (const [, u] of el.style.backgroundImage.matchAll(/url\("?([^")]+)"?\)/g)) urls.add(new URL(u, location.href).href);
+    }
+    for (const url of urls) {
+      if (decoded.has(url) || url.startsWith("data:")) continue;
+      const img = new Image();
+      img.src = url;
+      decoded.set(url, img);
+      img.decode().catch(() => {});
+    }
+  }
+  const predecodeNext = () => predecode(Reveal.getSlide(Reveal.getIndices().h + 1));
+  Reveal.on("ready", predecodeNext);
+  Reveal.on("slidechanged", predecodeNext);
 
   // 往回翻、跳页一律硬切。转场都是按往后翻一页设计的，但 reveal 的 auto-animate 不看方向：
   // 往回时只要离开的那页没有 restart 就会倒着动（只有形态变换，没有错开入场这些补充），
