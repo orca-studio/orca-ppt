@@ -35,6 +35,7 @@
 | `window-card-flip` | 度假一日行程 | 酒店、民宿、目的地介绍：同一处风景的几个时刻，一排窗里亮着的那扇边走边翻面，翻过来是下一个时刻，窗里的画和背后的画对齐 | [window-card-flip/RECIPE.md](window-card-flip/RECIPE.md) |
 | `swirl-rings` | 两阶段规划 | 年度规划、培训方案、项目分期：两个阶段各三件事，两组圆环扇形各绕自己的圆心回旋长出来，咬成一个 S，换一组内容再转一次（页内动画） | [swirl-rings/RECIPE.md](swirl-rings/RECIPE.md) |
 | `glass-bars` | 门店指标对比 | 4–6 个对象的几项占比：一排等轴玻璃柱，彩色的数值从白底座里依次升起，换一组数原地长高、数字逐位滚 | [glass-bars/RECIPE.md](glass-bars/RECIPE.md) |
+| `photo-layouts` | 活动照片汇报 | 年度汇报、活动总结的一堆现场照片：每页用几张图由场景定，照片裁成笔刷、三角、平行四边形、梯形拼在一起，翻页时照片框边走边变形 | [photo-layouts/RECIPE.md](photo-layouts/RECIPE.md) |
 
 ## 怎么用一个同款
 
