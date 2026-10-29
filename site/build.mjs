@@ -58,6 +58,11 @@ function frontmatter(text) {
   return out
 }
 
+/**
+ * 首页的卡片:同款(recipes/<id>/RECIPE.md)和案例(examples/<id>/EXAMPLE.md),和 app 首页
+ * (packages/deck-core/src/recipes.ts)一样一起按 order 排。被同款 sample 指着的示例、和同款撞了 id
+ * 的示例不再单列。
+ */
 function readRecipes() {
   const root = join(SKILL, 'recipes')
   const list = []
@@ -90,7 +95,32 @@ function readRecipes() {
       pages: (readFileSync(join(dir, 'index.html'), 'utf8').match(/<section[\s>]/g) || []).length,
     })
   }
-  // 新上架的在前:order 是上架序号,大的在前,没写的排最后
+  const samples = new Set(list.map((r) => r.dir))
+  const examples = join(SKILL, 'examples')
+  for (const id of readdirSync(examples)) {
+    const file = join(examples, id, 'EXAMPLE.md')
+    if (!existsSync(file)) continue
+    const meta = frontmatter(readFileSync(file, 'utf8'))
+    const dir = join(examples, id)
+    if (meta.id !== id || !meta.title || samples.has(dir) || list.some((r) => r.id === id)) continue
+    if (!meta.poster) throw new Error(`案例 ${id} 没有 poster`)
+    const poster = resolve(dir, meta.poster)
+    if (relative(SKILL, poster).startsWith('..') || !existsSync(poster))
+      throw new Error(`案例 ${id} 的 poster 不在 skill 里或文件不存在：${meta.poster}`)
+    list.push({
+      id,
+      example: true,
+      title: meta.title,
+      mode: meta.mode ?? '汇报稿',
+      summary: meta.summary ?? '',
+      order: Number.isFinite(+meta.order) ? +meta.order : -Infinity,
+      dir,
+      path: `examples/${id}/`,
+      poster,
+      pages: (readFileSync(join(dir, 'index.html'), 'utf8').match(/<section[\s>]/g) || []).length,
+    })
+  }
+  // 新上架的在前:order 是上架序号(同款和案例一起排),大的在前,没写的排最后
   return list.sort((a, b) => b.order - a.order || a.id.localeCompare(b.id))
 }
 
@@ -134,8 +164,8 @@ function poster(recipe) {
 function card(recipe, cover) {
   return `
         <li class="card">
-          <a class="card-media" href="${recipe.path}" target="_blank" rel="noopener" data-play data-title="${esc(recipe.title)}" aria-label="放映「${esc(recipe.title)}」的样稿">
-            <img src="${cover}" alt="" loading="lazy" />
+          <a class="card-media" href="${recipe.path}" target="_blank" rel="noopener" data-play data-title="${esc(recipe.title)}" aria-label="放映「${esc(recipe.title)}」的${recipe.example ? '案例' : '样稿'}">
+            <img src="${cover}" alt="" loading="lazy" />${recipe.example ? '\n            <span class="card-kind">案例</span>' : ''}
             <span class="card-open">放映 ▶</span>
           </a>
           <div class="card-body">
@@ -188,4 +218,4 @@ let html = readFileSync(join(OUT, 'index.html'), 'utf8')
   .replace('<!--HERO_PATH-->', hero.path)
 writeFileSync(join(OUT, 'index.html'), html)
 
-console.log(`官网 → ${relative(process.cwd(), OUT)}:${recipes.length} 个同款`)
+console.log(`官网 → ${relative(process.cwd(), OUT)}:${recipes.length} 张卡片(含案例)`)

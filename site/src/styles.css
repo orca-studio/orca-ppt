@@ -389,17 +389,37 @@ code {
     opacity 180ms ease,
     transform 180ms var(--ease-out);
 }
-.card-media:focus-visible .card-open {
+/* 案例:一整份完整的稿子,不是能换内容复刻的手法。和 app 首页一样,悬停时右上角标出来 */
+.card-kind {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+  transition: opacity 180ms ease;
+}
+.card-media:focus-visible .card-open,
+.card-media:focus-visible .card-kind {
   opacity: 1;
   transform: none;
 }
 @media (hover: hover) and (pointer: fine) {
+  /* 只在能悬停的设备上收起:触屏上一直标着 */
+  .card-media:not(:focus-visible) .card-kind {
+    opacity: 0;
+  }
   .card-media:hover {
     box-shadow:
       0 0 0 1px #c9d0cd,
       0 18px 40px -24px rgba(21, 25, 24, 0.35);
   }
-  .card-media:hover .card-open {
+  .card-media:hover .card-open,
+  .card-media:hover .card-kind {
     opacity: 1;
     transform: none;
   }
