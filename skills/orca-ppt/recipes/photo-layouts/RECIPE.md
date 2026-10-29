@@ -2,7 +2,7 @@
 id: photo-layouts
 title: 活动照片汇报
 mode: 汇报稿
-order: 24
+order: 25
 summary: 年度汇报、活动总结里手上一堆现场照片：每一页用几张图由场景定，照片裁成笔刷、三角、平行四边形、梯形拼在一起，翻页时照片框边走边变形
 preview: 3-6
 cover: 0.3
