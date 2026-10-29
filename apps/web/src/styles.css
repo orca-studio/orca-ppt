@@ -1185,12 +1185,8 @@ body[data-resizing] iframe {
 }
 
 .gallery-kind {
-  margin-left: 6px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: var(--text-xs);
-  color: var(--muted);
-  box-shadow: inset 0 0 0 1px var(--line);
+  /* 只是角标:点上去和点封面一样打开案例 */
+  pointer-events: none;
 }
 
 .gallery-empty,

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { PushData, RequestResult } from '@orca-ppt/contracts'
-import { Button } from './ui/Button.js'
+import { Button, buttonClass } from './ui/Button.js'
 import { Segmented } from './ui/Segmented.js'
 import { assetUrl } from './assets.js'
 
@@ -187,7 +187,7 @@ export function when(time: number, now = new Date()): string {
   return date.getFullYear() === now.getFullYear() ? md : `${date.getFullYear()} 年 ${md}`
 }
 
-/** 一张同款卡。案例也用它:少了「做同款」。 */
+/** 一张同款卡。案例也用它:右上角的「做同款」换成不能点的「案例」角标。 */
 function RecipeCard({
   recipe,
   onPresent,
@@ -256,15 +256,19 @@ function RecipeCard({
             做同款
           </Button>
         )}
+        {/* 案例没有提示词可复制:右上角同一个位置只标一下它是案例,不能点 */}
+        {example && (
+          <span
+            className={`${buttonClass({ variant: 'primary', size: 'sm' })} gallery-copy gallery-kind`}
+          >
+            案例
+          </span>
+        )}
         {open && recipe.prompt && (
           <PromptMenu prompt={recipe.prompt} onClose={() => setOpen(false)} />
         )}
       </div>
-      <span className="gallery-title gallery-title--center">
-        {recipe.title}
-        {/* 没有「做同款」的卡片要说清为什么:它是一整份稿子,不是手法 */}
-        {example && <span className="gallery-kind">案例</span>}
-      </span>
+      <span className="gallery-title gallery-title--center">{recipe.title}</span>
     </article>
   )
 }
