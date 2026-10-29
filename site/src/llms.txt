@@ -14,6 +14,10 @@ Linux、或者用户不想装桌面版、只想要 skill 时，改读 [llms-web.
 
 约 200 MB。命令有超时就后台下载或调长超时，断了用 `curl -C -` 续传。
 
+直连 GitHub 太慢（几十 KB/s）时，安装包可以改从镜像下：在原地址前加 `https://gh-proxy.com/`（不通就换 `https://v4.gh-proxy.org/`），同样用 `-C -` 续传。
+镜像是第三方的，只用来下载安装包：后面的签名、公证或 SHA256 校验一步不少，`SHA256SUMS.txt` 仍从 github.com 下。
+对不上就停下，删掉安装包，告诉用户。两个镜像都不通就换回 GitHub 慢慢下。
+
 ### macOS（12 以上，Apple Silicon）
 
 已装（`/Applications/Orca PPT.app` 在）就只跑最后一行。

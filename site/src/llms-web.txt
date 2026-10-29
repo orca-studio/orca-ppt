@@ -8,6 +8,10 @@
    npm install -g https://github.com/orca-studio/orca-ppt/releases/latest/download/orca-ppt.tgz
    ```
 
+   直连 GitHub 太慢（几十 KB/s）时，包可以改从镜像下：在原地址前加 `https://gh-proxy.com/`（不通就换 `https://v4.gh-proxy.org/`），下到本地，
+   拿 github.com 上的 `SHA256SUMS.txt` 核对 `orca-ppt.tgz` 那一行，对上了再 `npm install -g ./orca-ppt.tgz`。
+   镜像是第三方的：校验文件不走镜像，对不上就停下，删掉包，告诉用户。
+
 3. **装 skill**：`orca-ppt skill` 打印随包附带的 skill 目录，把它链进你读 skill 的目录，名字用 `orca-ppt`：
    WorkBuddy 是 `~/.workbuddy/skills/orca-ppt`，Claude Code 是 `~/.claude/skills/orca-ppt`，Codex 等是
    `~/.agents/skills/orca-ppt`。macOS、Linux 用 `ln -s`；Windows 用目录联接
