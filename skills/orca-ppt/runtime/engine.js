@@ -161,14 +161,16 @@
   // 只标真的转了的：整份稿子里这个元素（按 data-id 认）至少有一页角度不是 0。
   // 全程 0° 的元素照 reveal 默认绕左上角变形 —— 改成绕中心后，又平移又缩放的元素中途会冲出原来的范围。
   // 这是跨页的：换掉一页可能让别的页上同 data-id 的元素开始转、或者不再转，所以每次都整份重标
+  // 角度取最后一段：「30deg」和绕轴的「y 34deg」都认（3D 转角也绕盒子中心转，开窗的两张图才对称）
+  const turnAngle = (el) => parseFloat(el.style.rotate.trim().split(/\s+/).pop()) || 0;
   function markTurns() {
     const els = document.querySelectorAll(".reveal .slides > section [style*='rotate']");
     const turned = new Set();
     for (const el of els) {
-      if (el.dataset.id && parseFloat(el.style.rotate)) turned.add(el.dataset.id);
+      if (el.dataset.id && turnAngle(el)) turned.add(el.dataset.id);
     }
     for (const el of els) {
-      if (!el.style.rotate || (!parseFloat(el.style.rotate) && !turned.has(el.dataset.id))) {
+      if (!el.style.rotate || (!turnAngle(el) && !turned.has(el.dataset.id))) {
         delete el.dataset.stTurn;
         continue;
       }
@@ -681,10 +683,57 @@
     // GSAP 跑完会把 opacity 写回行内，所以第一次见到时记下作者原来写的
     if (!AUTHORED_OPACITY.has(el)) AUTHORED_OPACITY.set(el, el.style.opacity === "" ? 1 : +el.style.opacity);
     const to = "autoAlpha" in spec.to ? { ...spec.to, autoAlpha: AUTHORED_OPACITY.get(el) } : { ...spec.to };
+    const keep = keepRotate([el]);
     gsap.set(el, spec.from);
-    tl.to(el, to, at);
+    keep?.();
+    tl.to(el, { ...to, onUpdate: keep }, at);
   }
   const AUTHORED_OPACITY = new WeakMap();
+
+  // 绕轴的 3D 转角（rotate: y 34deg）：GSAP 一碰 transform 就把独立的 rotate 折进 transform，
+  // 写成 rotate(y 34deg) —— 不合法，整条 transform 作废，转角就没了。每帧把作者写的值写回去。
+  // 平面的 rotate（30deg）GSAP 折得对，写回去反而转两次，不管
+  const AUTHORED_ROTATE = new WeakMap();
+  const AUTHORED_CLIP = new WeakMap();
+  function keepRotate(els) {
+    const list = els.filter((el) => {
+      if (!AUTHORED_ROTATE.has(el)) AUTHORED_ROTATE.set(el, el.style.rotate);
+      return AUTHORED_ROTATE.get(el).trim().includes(" ");
+    });
+    return list.length ? () => { for (const el of list) el.style.rotate = AUTHORED_ROTATE.get(el); } : undefined;
+  }
+
+  // 共享元素的裁剪形状（clip-path: polygon(…)）：reveal 不插值 clip-path，翻页一开始就跳成新形状。
+  // 前后两页都在行内写了 polygon、顶点数相同，就跟着位置一起逐点插值。
+  // 每个坐标拆成「百分比 + 像素」两部分（50%、12px、calc(100% - 12px) 都认），分别插值
+  function clipPoints(clip) {
+    const m = /^polygon\((.*)\)$/.exec(clip.trim());
+    if (!m) return null;
+    const length = (s) => {
+      const v = [0, 0];
+      const body = s.startsWith("calc(") ? s.slice(5, -1) : s;
+      for (const [, sign, n, unit] of body.matchAll(/([+-]?)\s*([\d.]+)(%|px)?/g)) v[unit === "%" ? 0 : 1] += (sign === "-" ? -1 : 1) * +n;
+      return v;
+    };
+    return m[1].split(",").map((pt) => (pt.match(/calc\([^)]*\)|\S+/g) ?? []).map(length));
+  }
+  function clipTween(tl, el, from, to, d, at) {
+    const a = clipPoints(from);
+    const b = clipPoints(to);
+    if (!a || !b) return;
+    if (a.length !== b.length) {
+      console.warn(`[orca-transition-skill] data-id="${el.dataset.id}" 前后两页的 clip-path 顶点数不同（${a.length} 和 ${b.length}），形状不插值、直接跳过去`);
+      return;
+    }
+    const lerp = (p, q, k) => p + (q - p) * k;
+    const css = (k) => `polygon(${a.map((pt, i) => pt.map((v, j) =>
+      `calc(${lerp(v[0], b[i][j][0], k).toFixed(3)}% + ${lerp(v[1], b[i][j][1], k).toFixed(2)}px)`).join(" ")).join(", ")})`;
+    const state = { k: 0 };
+    tl.fromTo(state, { k: 0 }, {
+      k: 1, duration: d, ease: "power2.inOut", immediateRender: true,
+      onUpdate: () => { el.style.clipPath = state.k === 1 ? to : css(state.k); },
+    }, at);
+  }
 
 
   // ───────── 元素级：原地替换（data-swap）和文字级匹配（data-text）─────────
@@ -1161,7 +1210,8 @@
     }
     const tl = timeline();
     // 从元素自己的透明度淡出：本来就透明（opacity:0 待命）的元素不能先被设成不透明再淡出，那会闪一下
-    tl.fromTo(ghosts, { autoAlpha: (_, el) => +getComputedStyle(el).opacity, y: 0 }, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in" }, 0);
+    const keepGhosts = keepRotate(ghosts);
+    tl.fromTo(ghosts, { autoAlpha: (_, el) => +getComputedStyle(el).opacity, y: 0 }, { autoAlpha: 0, y: -16, duration: 0.35, ease: "power1.in", onUpdate: keepGhosts }, 0);
     // 写了页内动画的元素（或里面包着它们的组）入场归页内动画管：这里再让它上浮淡入，
     // 转场一结束它就已经看得见了，点击分步的「点一下才出来」就没了
     const BUILD = "[data-anim], [data-path], [data-lit], [data-step]";
@@ -1170,6 +1220,18 @@
       && !(!el.dataset.id && prevSame.has(signature(el)))
       && !el.matches(BUILD) && !el.querySelector(BUILD));
     for (const el of incoming) enterTween(tl, el, +(el.dataset.autoAnimateDelay ?? 0.6));
+    // 共享元素的裁剪形状跟着位置一起变：时长、延迟、缓动和 reveal 挪位置的那一下对齐
+    for (const el of section.querySelectorAll(":scope > [data-id]")) {
+      const twin = source.querySelector(`:scope > [data-id="${CSS.escape(el.dataset.id)}"]`);
+      if (!twin || el.matches(BUILD) || !el.style.clipPath || !twin.style.clipPath) continue;
+      const to = AUTHORED_CLIP.get(el) ?? el.style.clipPath;
+      const from = AUTHORED_CLIP.get(twin) ?? twin.style.clipPath;
+      AUTHORED_CLIP.set(el, to);
+      AUTHORED_CLIP.set(twin, from);
+      if (from === to) continue;
+      const d = +(el.dataset.autoAnimateDuration ?? section.dataset.autoAnimateDuration ?? Reveal.getConfig().autoAnimateDuration);
+      clipTween(tl, el, from, to, d, +(el.dataset.autoAnimateDelay ?? 0));
+    }
     for (const p of pairs) {
       const g = ghostOf.get(p.old);
       if (!g) continue;
