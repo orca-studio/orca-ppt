@@ -1222,6 +1222,11 @@
     }
     return pairs;
   }
+  // reveal 不看 data-id 时的配对（getAutoAnimatePairs）：文字元素按标签 + 文字，媒体按 src
+  const REVEAL_TEXT = "h1, h2, h3, h4, h5, h6, p, li";
+  const REVEAL_MATCH = `${REVEAL_TEXT}, img, video, iframe`;
+  const revealKey = (el) => el.nodeName + ":::" + (el.matches(REVEAL_TEXT)
+    ? el.textContent.trim() : (el.getAttribute("src") || el.getAttribute("data-src")));
   // auto-animate 页的补充：reveal 会让上一页没配对的元素瞬间消失，新页没配对的元素只会淡入。
   // 这里把旧元素克隆出来淡出，新元素按 data-auto-animate-delay 上浮淡入。
   function autoAnimateExtras(section, prev) {
@@ -1242,6 +1247,13 @@
     const prevSame = sameIn(source);
     const currSame = sameIn(section);
     // 元素级的原地替换 / 文字级匹配：旧元素照常克隆出来，但不跟着淡出，交给下面的 swapTween / textTween
+    // reveal 自己还会按「标签 + 文字」配 p / h1–h6 / li、按 src 配 img / video / iframe（没写 data-id 也配）。
+    // 这些元素由 reveal 从上一页的位置挪过来：不能再当没配对的淡出、入场 —— 入场先把透明度设成 0，
+    // reveal 正好在这时读终点样式，把 0 钉成了终点，转场一结束元素就不见了（目录格的字 → 下一页的标题）
+    const revealKeys = (root) => new Map([...root.querySelectorAll(REVEAL_MATCH)]
+      .filter((el) => !el.closest(".st-ghost, .st-ghost-el")).map((el) => [revealKey(el), el]));
+    const prevKeys = revealKeys(source);
+    const currKeys = revealKeys(section);
     const pairs = elementPairs(section, source);
     // 翻面也一样：旧卡片克隆出来，交给 flipTween
     const flips = flipPairs(section, source);
@@ -1262,6 +1274,11 @@
         continue;
       }
       if (!id && !pairedOld.has(child) && currSame.has(signature(child))) continue;
+      const twin = !id && !pairedOld.has(child) && child.matches(REVEAL_MATCH) && currKeys.get(revealKey(child));
+      if (twin && twin.parentElement === section && !pairedNew.has(twin)) {
+        cursor = twin;
+        continue;
+      }
       const clone = ghostClone(child);
       clone.classList.add("st-ghost-el");
       if (cursor) cursor.after(clone);
@@ -1285,6 +1302,7 @@
     const incoming = [...section.children].filter((el) =>
       !prevIds.has(el.dataset.id) && !el.matches(".st-layer, .st-ghost-el") && !pairedNew.has(el)
       && !(!el.dataset.id && prevSame.has(signature(el)))
+      && !(!el.dataset.id && el.matches(REVEAL_MATCH) && prevKeys.has(revealKey(el)))
       && !el.matches(BUILD) && !el.querySelector(BUILD));
     for (const el of incoming) enterTween(tl, el, +(el.dataset.autoAnimateDelay ?? 0.6));
     // 共享元素的裁剪形状跟着位置一起变：时长、延迟、缓动和 reveal 挪位置的那一下对齐
