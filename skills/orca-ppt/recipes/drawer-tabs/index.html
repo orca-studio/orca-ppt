@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 分步骤年度计划</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/abyss.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Clearing，配色 abyss，版式 standard）
+封面  四格抽屉都收着，只露出序号；右边是标题
+1→2  关系：四格一起拉到最长，格里写出这一步；右边一栏往上滚一格            手法：共享元素（整组重排）  共享：drawer1–4、no1–4、cover、overview
+2→3  关系：第 1 格留着拉出来、其余收回；照片换成第 1 步的；右栏往上滚     手法：共享元素 + 原地替换  共享：drawer1–4、no1–4、overview、col1；替换 bg
+3→4  关系：第 1 格收回、第 2 格拉出来；照片换；右栏往上滚                 手法：同上
+4→5  关系：第 2 格收回、第 3 格拉出来                                       手法：同上
+5→6  关系：第 3 格收回、第 4 格拉出来                                       手法：同上
+6→7  关系：四格都收回，照片换回封面那张；右栏滚到结尾                       手法：共享元素 + 原地替换
+抽屉：左边一块侧板 .s-slot（x 0–300，铺满整高），四格 .s-drawer 从它右边沿伸出来，左边贴着侧板不画边。
+拉出来 = 格子变宽（收着 200、拉出 440、总览 760），序号跟着格子右端走。侧板写在抽屉后面，右边沿的影子压住抽屉根部。
+右栏：每一页的字是一个组（cover、overview、col1–col4、end），整份稿子同一列；这一页的在 top 340，
+上一页的滚到 −480（整个出画），下一页的在 1100 等着（画外待命）。翻一页整列往上滚一格。
+整页照片 data-swap="bg"，和抽屉同一个时长（1.2 秒）；照片上压一层从左到右变暗的底，右栏的字读得动。
+示例内容：雾岭山野社、活动次数、路线都是虚构的，照片是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：四格抽屉都收着，右边是标题 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3" data-page="cover">
+    <img data-swap="bg" src="art/cover.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:200px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:200px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:200px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:200px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:344px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:344px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:344px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:344px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="cover" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">雾岭山野社 · 2027</p>
+      <p class="t-display" style="left:0px; top:56px;">一年四步</p>
+      <p class="t-body" style="left:0px; top:260px; width:760px;">回头看、定路线、练体能、守底线。</p>
+    </div>
+    <div data-id="overview" class="s-group" style="left:1160px; top:1100px; width:640px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">2027 年度计划</p>
+      <p class="t-h1" style="left:0px; top:44px;">四步走完一年</p>
+      <p class="t-body" style="left:0px; top:168px; width:640px;">从回头看开始，到守住底线收尾。</p>
+    </div>
+  </section>
+
+  <!-- 2 总览：四格一起拉到最长，每格里写这一步 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <img data-swap="bg" src="art/cover.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:760px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:760px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:760px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:760px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:904px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:904px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:904px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:904px; top:751px; width:140px; text-align:right;">4</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.70" style="left:348px; top:216px;">回顾 · 去年走过的路</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.78" style="left:348px; top:411px;">路线 · 今年的四条线</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.86" style="left:348px; top:606px;">准备 · 出发前的准备</p>
+    <p class="t-h2 t-on-glass" data-auto-animate-delay="0.94" style="left:348px; top:801px;">安全 · 安全是底线</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="cover" class="s-group" style="left:900px; top:-480px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">雾岭山野社 · 2027</p>
+      <p class="t-display" style="left:0px; top:56px;">一年四步</p>
+      <p class="t-body" style="left:0px; top:260px; width:760px;">回头看、定路线、练体能、守底线。</p>
+    </div>
+    <div data-id="overview" class="s-group" style="left:1160px; top:340px; width:640px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">2027 年度计划</p>
+      <p class="t-h1" style="left:0px; top:44px;">四步走完一年</p>
+      <p class="t-body" style="left:0px; top:168px; width:640px;">从回头看开始，到守住底线收尾。</p>
+    </div>
+    <div data-id="col1" class="s-group" style="left:900px; top:1100px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 1 步 · 回顾</p>
+      <p class="t-h1" style="left:0px; top:44px;">去年走过的路</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">回顾 2026</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">十二次活动，九次按时出发。雨季改期的三次，都是出发前一晚才定下来的。</p>
+    </div>
+  </section>
+
+  <!-- 3 第 1 步「去年走过的路」：第 1 格拉出来，其余收回，整页照片换掉 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-swap="bg" src="art/day1.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:440px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:200px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:200px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:200px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:584px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:344px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:344px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:344px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="overview" class="s-group" style="left:1160px; top:-480px; width:640px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">2027 年度计划</p>
+      <p class="t-h1" style="left:0px; top:44px;">四步走完一年</p>
+      <p class="t-body" style="left:0px; top:168px; width:640px;">从回头看开始，到守住底线收尾。</p>
+    </div>
+    <div data-id="col1" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 1 步 · 回顾</p>
+      <p class="t-h1" style="left:0px; top:44px;">去年走过的路</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">回顾 2026</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">十二次活动，九次按时出发。雨季改期的三次，都是出发前一晚才定下来的。</p>
+    </div>
+    <div data-id="col2" class="s-group" style="left:900px; top:1100px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 2 步 · 路线</p>
+      <p class="t-h1" style="left:0px; top:44px;">今年的四条线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">一季一条</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">雾林、山脊、湖畔、看日出。从最短的雾林线开始，越走越高。</p>
+    </div>
+  </section>
+
+  <!-- 4 第 2 步「今年的四条线」：第 2 格拉出来，其余收回，整页照片换掉 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-swap="bg" src="art/day2.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:200px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:440px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:200px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:200px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:344px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:584px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:344px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:344px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="col1" class="s-group" style="left:900px; top:-480px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 1 步 · 回顾</p>
+      <p class="t-h1" style="left:0px; top:44px;">去年走过的路</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">回顾 2026</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">十二次活动，九次按时出发。雨季改期的三次，都是出发前一晚才定下来的。</p>
+    </div>
+    <div data-id="col2" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 2 步 · 路线</p>
+      <p class="t-h1" style="left:0px; top:44px;">今年的四条线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">一季一条</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">雾林、山脊、湖畔、看日出。从最短的雾林线开始，越走越高。</p>
+    </div>
+    <div data-id="col3" class="s-group" style="left:900px; top:1100px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 3 步 · 准备</p>
+      <p class="t-h1" style="left:0px; top:44px;">出发前的准备</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">体能与装备</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">每月两次周末拉练。装备清单提前一周发到群里，缺什么社里借。</p>
+    </div>
+  </section>
+
+  <!-- 5 第 3 步「出发前的准备」：第 3 格拉出来，其余收回，整页照片换掉 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-swap="bg" src="art/day3.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:200px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:200px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:440px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:200px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:344px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:344px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:584px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:344px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="col2" class="s-group" style="left:900px; top:-480px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 2 步 · 路线</p>
+      <p class="t-h1" style="left:0px; top:44px;">今年的四条线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">一季一条</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">雾林、山脊、湖畔、看日出。从最短的雾林线开始，越走越高。</p>
+    </div>
+    <div data-id="col3" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 3 步 · 准备</p>
+      <p class="t-h1" style="left:0px; top:44px;">出发前的准备</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">体能与装备</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">每月两次周末拉练。装备清单提前一周发到群里，缺什么社里借。</p>
+    </div>
+    <div data-id="col4" class="s-group" style="left:900px; top:1100px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 4 步 · 安全</p>
+      <p class="t-h1" style="left:0px; top:44px;">安全是底线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">领队守则</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">领队全程带卫星电话。天气不对就掉头，山一直在那儿。</p>
+    </div>
+  </section>
+
+  <!-- 6 第 4 步「安全是底线」：第 4 格拉出来，其余收回，整页照片换掉 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-swap="bg" src="art/day4.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:200px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:200px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:200px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:440px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:344px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:344px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:344px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:584px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="col3" class="s-group" style="left:900px; top:-480px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 3 步 · 准备</p>
+      <p class="t-h1" style="left:0px; top:44px;">出发前的准备</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">体能与装备</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">每月两次周末拉练。装备清单提前一周发到群里，缺什么社里借。</p>
+    </div>
+    <div data-id="col4" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 4 步 · 安全</p>
+      <p class="t-h1" style="left:0px; top:44px;">安全是底线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">领队守则</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">领队全程带卫星电话。天气不对就掉头，山一直在那儿。</p>
+    </div>
+    <div data-id="end" class="s-group" style="left:900px; top:1100px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">雾岭山野社 · 2027</p>
+      <p class="t-display" style="left:0px; top:56px;">山里见</p>
+      <p class="t-body" style="left:0px; top:260px; width:760px;">第一次活动在三月，走雾林线。</p>
+    </div>
+  </section>
+
+  <!-- 7 结尾：四格都收回去，和封面一样 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <img data-swap="bg" src="art/cover.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(90deg, color-mix(in oklch, var(--bg) 20%, transparent) 20%, color-mix(in oklch, var(--bg) 72%, transparent) 60%);"></div>
+    <div data-id="drawer1" class="s-drawer" style="left:300px; top:170px; width:200px; height:150px;"></div>
+    <div data-id="drawer2" class="s-drawer" style="left:300px; top:365px; width:200px; height:150px;"></div>
+    <div data-id="drawer3" class="s-drawer" style="left:300px; top:560px; width:200px; height:150px;"></div>
+    <div data-id="drawer4" class="s-drawer" style="left:300px; top:755px; width:200px; height:150px;"></div>
+    <p data-id="no1" class="t-display t-on-glass" style="left:344px; top:166px; width:140px; text-align:right;">1</p>
+    <p data-id="no2" class="t-display t-on-glass" style="left:344px; top:361px; width:140px; text-align:right;">2</p>
+    <p data-id="no3" class="t-display t-on-glass" style="left:344px; top:556px; width:140px; text-align:right;">3</p>
+    <p data-id="no4" class="t-display t-on-glass" style="left:344px; top:751px; width:140px; text-align:right;">4</p>
+    <div class="s-slot" style="left:0px; top:0px; width:300px; height:1080px;"></div>
+    <div data-id="col4" class="s-group" style="left:900px; top:-480px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">第 4 步 · 安全</p>
+      <p class="t-h1" style="left:0px; top:44px;">安全是底线</p>
+      <p class="t-label" style="left:0px; top:156px; width:240px; height:48px; line-height:44px; text-align:center; border:2px solid var(--text-dim); border-radius:24px;">领队守则</p>
+      <p class="t-body" style="left:0px; top:240px; width:760px;">领队全程带卫星电话。天气不对就掉头，山一直在那儿。</p>
+    </div>
+    <div data-id="end" class="s-group" style="left:900px; top:340px; width:900px; height:400px;">
+      <p class="t-label t-accent" style="left:0px; top:0px;">雾岭山野社 · 2027</p>
+      <p class="t-display" style="left:0px; top:56px;">山里见</p>
+      <p class="t-body" style="left:0px; top:260px; width:760px;">第一次活动在三月，走雾林线。</p>
+    </div>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 商业计划书</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/split.css">
+  <link rel="stylesheet" href="../../runtime/palettes/lime.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Split，配色 lime，版式 standard）
+白纸是底色，黑是一块 .s-surface 直角形状 panel：整页 → 一条线 → 左栏 → 一条线 → 右半边 → 一条线 → 整页。
+黑白分屏就是这块黑在页与页之间变形（「整页 ↔ 卡片」），不是换背景。
+跟着走的还有：荧光绿圆章 globe（每页都有，换位置）、斜贴的色签 tag（封面、问题、结尾三页）、页眉三样（不动，压到黑上时字变白）。
+1→2  整页黑收成底下一条线                 共享：panel、globe、页眉；tag 淡出
+2→3  线长成左栏                           共享：panel、globe、页眉
+3→4  左栏收成中间一条线；照片框缩到左下   共享：panel、globe、art、页眉；tag 淡入
+4→5  线长成右半边                         共享：panel、globe、页眉
+5→6  右半边收成标题下的线                 共享：panel、globe、页眉
+6→7  线铺满整页                           共享：panel、globe、页眉
+7→8  整页不动，绿格从三格换成四格方阵      共享：panel、globe、页眉；tag 淡入
+照片框写 data-flip="art"（3→4 同一张只走位置），封面的珊瑚和第 6 页的玻璃没配对，淡入淡出。
+示例内容：绿点出行、城市数、换电次数、融资额都是虚构的，照片是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：整页黑，标题压在左上，色签斜贴在标题尾巴上 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3" data-page="cover">
+    <div data-id="panel" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <p data-id="brand" class="t-label t-on-surface" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label t-on-surface" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label t-on-surface" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-h2 t-on-surface" style="left:120px; top:220px;">绿点出行</p>
+    <p class="t-display t-on-surface" style="left:120px; top:300px;">商业计划书</p>
+    <div data-id="tag" class="s-group" style="left:840px; top:420px; width:220px; height:64px; rotate:-6deg;">
+      <div class="s-accent" style="left:0px; top:0px; width:220px; height:64px;"></div>
+      <p class="t-tag t-on-accent" style="left:0px; top:16px; width:220px; text-align:center;">2027 版</p>
+    </div>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/coral.webp" alt="" style="left:560px; top:600px; width:560px; height:360px;">
+    <div data-id="globe" class="s-group" style="left:1060px; top:560px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-h2 t-on-surface" style="left:1240px; top:620px; width:560px;">让三公里以内的出行，不用再等车</p>
+    <p class="t-label t-on-surface" style="left:1240px; top:760px; opacity:0.6;">电单车换电网络 · 2027 商业计划</p>
+    <p class="t-tag t-on-surface" style="left:120px; top:880px;">了解更多</p>
+    <div class="s-accent" style="left:120px; top:924px; width:128px; height:6px;"></div>
+  </section>
+
+  <!-- 2 目录：整页黑收成底下一条线，四项错开排 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <div data-id="panel" class="s-surface" style="left:560px; top:900px; width:1240px; height:6px;"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-display" style="left:120px; top:180px;">目录</p>
+    <div data-id="globe" class="s-group" style="left:560px; top:220px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-h2" style="left:120px; top:878px;">商业计划</p>
+    <p class="t-tag" style="left:120px; top:460px;">01</p>
+    <p class="t-h2" style="left:184px; top:456px; width:360px;">公司介绍</p>
+    <p class="t-label t-dim" style="left:184px; top:524px; width:360px;">从一个园区的换电柜开始</p>
+    <p class="t-tag" style="left:920px; top:460px;">02</p>
+    <p class="t-h2" style="left:984px; top:456px; width:360px;">要解决的问题</p>
+    <p class="t-label t-dim" style="left:984px; top:524px; width:360px;">短途出行的三个难处</p>
+    <p class="t-tag" style="left:520px; top:680px;">03</p>
+    <p class="t-h2" style="left:584px; top:676px; width:360px;">我们的方案</p>
+    <p class="t-label t-dim" style="left:584px; top:744px; width:360px;">换电、调度、会员</p>
+    <p class="t-tag" style="left:1320px; top:680px;">04</p>
+    <p class="t-h2" style="left:1384px; top:676px; width:360px;">市场与模式</p>
+    <p class="t-label t-dim" style="left:1384px; top:744px; width:360px;">数字、收入、融资</p>
+  </section>
+
+  <!-- 3 公司介绍：线长成左边一整栏黑，照片放在黑栏里 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel" class="s-surface" style="left:0px; top:0px; width:640px; height:1080px;"></div>
+    <p data-id="brand" class="t-label t-on-surface" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/facade.webp" alt="" style="left:120px; top:180px; width:400px; height:400px;">
+    <p class="t-h2 t-on-surface" style="left:120px; top:660px; width:440px;">一个园区，一百台换电柜</p>
+    <p class="t-label t-on-surface" style="left:120px; top:900px; opacity:0.6;">2022 年起，杭州滨江</p>
+    <p class="t-display" style="left:760px; top:180px;">公司介绍</p>
+    <div data-id="globe" class="s-group" style="left:1440px; top:200px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-tag" style="left:760px; top:520px;">我们是谁</p>
+    <p class="t-body" style="left:760px; top:572px; width:960px;">做电单车的换电网络：骑到柜子前，三十秒换一块满电的电池，接着走。</p>
+    <p class="t-tag" style="left:760px; top:760px;">走到哪了</p>
+    <p class="t-body" style="left:760px; top:812px; width:960px;">9 座城市，4200 台换电柜，每天 18 万次换电。</p>
+  </section>
+
+  <!-- 4 问题：黑栏收成中间一条线，上面三条问题，下面照片和大标题，色签贴在标题右下 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel" class="s-surface" style="left:120px; top:520px; width:1680px; height:6px;"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-tag" style="left:120px; top:220px;">01</p>
+    <p class="t-h2" style="left:184px; top:216px; width:440px;">等车太久</p>
+    <p class="t-label t-dim" style="left:184px; top:284px; width:440px;">三公里的路，等车十五分钟</p>
+    <p class="t-tag" style="left:700px; top:220px;">02</p>
+    <p class="t-h2" style="left:764px; top:216px; width:440px;">充电太慢</p>
+    <p class="t-label t-dim" style="left:764px; top:284px; width:440px;">电单车充满要五个小时</p>
+    <p class="t-tag" style="left:1280px; top:220px;">03</p>
+    <p class="t-h2" style="left:1344px; top:216px; width:440px;">停放太乱</p>
+    <p class="t-label t-dim" style="left:1344px; top:284px; width:440px;">路口堆成一片，没人管</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/facade.webp" alt="" style="left:120px; top:600px; width:640px; height:380px;">
+    <div data-id="globe" class="s-group" style="left:800px; top:640px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-display" style="left:960px; top:640px;">三个难处</p>
+    <div data-id="tag" class="s-group" style="left:1420px; top:800px; width:220px; height:64px; rotate:-6deg;">
+      <div class="s-accent" style="left:0px; top:0px; width:220px; height:64px;"></div>
+      <p class="t-tag t-on-accent" style="left:0px; top:16px; width:220px; text-align:center;">要解决的</p>
+    </div>
+  </section>
+
+  <!-- 5 方案：线长成右半边黑，左白右黑，三条方案写在黑的那边 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel" class="s-surface" style="left:960px; top:0px; width:960px; height:1080px;"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label t-on-surface" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label t-on-surface" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-display" style="left:120px; top:180px;">我们的方案</p>
+    <div data-id="globe" class="s-group" style="left:120px; top:640px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-tag" style="left:120px; top:760px;">和别家不一样的地方</p>
+    <p class="t-body" style="left:120px; top:812px; width:720px;">不卖车，只换电：车是用户自己的，电池是我们的。</p>
+    <p class="t-tag t-on-surface" style="left:1040px; top:220px;">01</p>
+    <p class="t-h2 t-on-surface" style="left:1104px; top:216px; width:640px;">换电柜</p>
+    <p class="t-label t-on-surface" style="left:1104px; top:284px; width:640px; opacity:0.6;">三十秒换一块满电电池</p>
+    <p class="t-tag t-on-surface" style="left:1040px; top:420px;">02</p>
+    <p class="t-h2 t-on-surface" style="left:1104px; top:416px; width:640px;">调度系统</p>
+    <p class="t-label t-on-surface" style="left:1104px; top:484px; width:640px; opacity:0.6;">哪里缺电池，车先开过去</p>
+    <p class="t-tag t-on-surface" style="left:1040px; top:620px;">03</p>
+    <p class="t-h2 t-on-surface" style="left:1104px; top:616px; width:640px;">骑行会员</p>
+    <p class="t-label t-on-surface" style="left:1104px; top:684px; width:640px; opacity:0.6;">月卡 39 元，不限次换电</p>
+    <p class="t-tag t-on-surface" style="left:1040px; top:880px;">了解更多</p>
+    <div class="s-accent" style="left:1040px; top:924px; width:128px; height:6px;"></div>
+  </section>
+
+  <!-- 6 市场机会：黑块收成标题下的线，三个大数字各压一道荧光绿下划线 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel" class="s-surface" style="left:120px; top:400px; width:1680px; height:6px;"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-h1" style="left:120px; top:220px;">市场机会</p>
+    <p class="t-label t-dim" style="left:520px; top:250px; width:640px;">三公里以内，是城市里最大的出行市场</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/glass.webp" alt="" style="left:1440px; top:180px; width:360px; height:180px;">
+    <div data-id="globe" class="s-group" style="left:1600px; top:600px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <p class="t-display" style="left:120px; top:560px;">68%</p>
+    <div class="s-accent" style="left:120px; top:760px; width:360px; height:6px;"></div>
+    <p class="t-label" style="left:120px; top:800px;">短途出行里电单车的占比</p>
+    <p class="t-display" style="left:540px; top:560px;">120+</p>
+    <div class="s-accent" style="left:540px; top:760px; width:360px; height:6px;"></div>
+    <p class="t-label" style="left:540px; top:800px;">谈好的合作园区</p>
+    <p class="t-display" style="left:960px; top:560px;">9 分钟</p>
+    <div class="s-accent" style="left:960px; top:760px; width:360px; height:6px;"></div>
+    <p class="t-label" style="left:960px; top:800px;">平均每次骑行</p>
+  </section>
+
+  <!-- 7 商业模式：黑块又铺满整页，三格荧光绿一字排开 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <div data-id="panel" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <p data-id="brand" class="t-label t-on-surface" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label t-on-surface" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label t-on-surface" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <p class="t-display t-on-surface" style="left:120px; top:180px;">商业模式</p>
+    <div data-id="globe" class="s-group" style="left:820px; top:220px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+    <div class="s-accent" style="left:120px; top:440px; width:560px; height:340px;"></div>
+    <p class="t-tag t-on-accent" style="left:160px; top:480px;">01</p>
+    <p class="t-h2 t-on-accent" style="left:160px; top:640px; width:480px;">换电服务费</p>
+    <p class="t-label t-on-accent" style="left:160px; top:712px; width:480px;">按次收，一次两元</p>
+    <div class="s-accent-soft" style="left:680px; top:440px; width:560px; height:340px;"></div>
+    <p class="t-tag t-on-accent" style="left:720px; top:480px;">02</p>
+    <p class="t-h2 t-on-accent" style="left:720px; top:640px; width:480px;">会员月卡</p>
+    <p class="t-label t-on-accent" style="left:720px; top:712px; width:480px;">39 元一个月，不限次</p>
+    <div class="s-accent-soft" style="left:1240px; top:440px; width:560px; height:340px;"></div>
+    <p class="t-tag t-on-accent" style="left:1280px; top:480px;">03</p>
+    <p class="t-h2 t-on-accent" style="left:1280px; top:640px; width:480px;">园区合作</p>
+    <p class="t-label t-on-accent" style="left:1280px; top:712px; width:480px;">柜子进园区，按年收场地分成</p>
+    <p class="t-h2 t-on-surface" style="left:120px; top:860px;">三条收入</p>
+    <div class="s-accent" style="left:440px; top:888px; width:1360px; height:6px;"></div>
+  </section>
+
+  <!-- 8 融资计划：整页黑，左边四格绿色方阵，色签贴回标题尾巴收尾 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <div data-id="panel" class="s-surface" style="left:0px; top:0px; width:1920px; height:1080px;"></div>
+    <p data-id="brand" class="t-label t-on-surface" style="left:120px; top:72px;">≡　绿点出行</p>
+    <p data-id="date" class="t-label t-on-surface" style="left:1200px; top:72px;">2027 年 3 月 18 日</p>
+    <p data-id="city" class="t-label t-on-surface" style="left:1560px; top:72px; width:240px; text-align:right;">上海 · 徐汇</p>
+    <div class="s-accent" style="left:120px; top:200px; width:400px; height:380px;"></div>
+    <p class="t-tag t-on-accent" style="left:152px; top:232px;">01</p>
+    <p class="t-h2 t-on-accent" style="left:152px; top:480px; width:340px;">A 轮 3000 万</p>
+    <div class="s-accent-soft" style="left:520px; top:200px; width:400px; height:380px;"></div>
+    <p class="t-tag t-on-accent" style="left:552px; top:232px;">02</p>
+    <p class="t-h2 t-on-accent" style="left:552px; top:480px; width:340px;">新开 8 座城市</p>
+    <div class="s-accent-soft" style="left:120px; top:580px; width:400px; height:380px;"></div>
+    <p class="t-tag t-on-accent" style="left:152px; top:612px;">03</p>
+    <p class="t-h2 t-on-accent" style="left:152px; top:860px; width:340px;">柜子到 2 万</p>
+    <div class="s-accent-soft" style="left:520px; top:580px; width:400px; height:380px;"></div>
+    <p class="t-tag t-on-accent" style="left:552px; top:612px;">04</p>
+    <p class="t-h2 t-on-accent" style="left:552px; top:860px; width:340px;">2028 年打平</p>
+    <p class="t-display t-on-surface" style="left:1000px; top:220px;">融资计划</p>
+    <div data-id="tag" class="s-group" style="left:1460px; top:380px; width:220px; height:64px; rotate:-6deg;">
+      <div class="s-accent" style="left:0px; top:0px; width:220px; height:64px;"></div>
+      <p class="t-tag t-on-accent" style="left:0px; top:16px; width:220px; text-align:center;">一起出发</p>
+    </div>
+    <p class="t-h2 t-on-surface" style="left:1000px; top:620px; width:800px;">这一轮的钱，全部用在换电柜上</p>
+    <p class="t-label t-on-surface" style="left:1000px; top:760px; opacity:0.6;">hello@lvdian.example</p>
+    <div data-id="globe" class="s-group" style="left:1000px; top:860px; width:72px; height:72px;">
+      <div class="s-accent" style="left:0px; top:0px; width:72px; height:72px; border-radius:50%;"></div>
+      <svg viewBox="0 0 96 96" style="left:12px; top:12px; width:48px; height:48px;"><circle class="l-text" cx="48" cy="48" r="36" fill="none"/><path class="l-text" d="M48 12 C28 30 28 66 48 84 C68 66 68 30 48 12" fill="none"/><path class="l-text" d="M12 48 H84" fill="none"/></svg>
+    </div>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 商业计划路演</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/noir.css">
+  <link rel="stylesheet" href="../../runtime/palettes/ember.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Noir，配色 ember，版式 standard）
+整份稿子只有两样东西在页与页之间走：一块橙色 hi 和一张纹理大图 art。其余的字每页换，没配对，淡入淡出。
+顶上一条导航（brand、nav、date）每页同位置，翻页时纹丝不动，当整份稿子的锚。
+1→2  关系：胶囊长成目录第一格；大图淡出                手法：共享元素（形态变换）  共享：hi、导航
+2→3  关系：第一格飞到左下变成数字卡，格里的章节名飞到左上当标题；大图从右下进来  手法：共享元素  共享：hi、ch1、导航
+3→4  关系：数字卡缩回胶囊；宽图收成竖条，换图            手法：共享元素 + 照片框交叉淡化（data-flip-mode="cross"）
+4→5  关系：胶囊长成数字卡、压在图的右下角；竖条右挪换图  手法：同上
+5→6  关系：数字卡飞到左上当方案第一格；竖条横过来换图    手法：同上
+6→7  关系：第一格缩回胶囊；横图挪到左上换图              手法：同上
+7→8  关系：左上的图撑满整页（同一张，不换）；胶囊回到左下  手法：同上
+橙色 hi 一直是 .s-accent：胶囊的圆角写高度的一半，卡片写 var(--radius-l)，互变时圆角一起插值。
+大图写 data-flip="art"，不写 data-id；同一张就只走位置和大小，换了一张就途中交叉淡化。
+示例内容：赤野能源、站点数、电价、收入构成都是虚构的，纹理图是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：纹理大图铺满，标题贴右，底下一排数字；橙色只有「了解更多」这颗胶囊 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3" data-page="cover">
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/wave.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(180deg, color-mix(in oklch, var(--bg) 30%, transparent) 0%, transparent 30%, color-mix(in oklch, var(--bg) 92%, transparent) 72%);"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p class="t-h2" style="left:120px; top:240px; width:520px;">用储能，让每一度光电都不浪费</p>
+    <p class="t-display" style="left:1000px; top:230px;">把光存起来</p>
+    <div data-id="hi" class="s-accent" style="left:120px; top:820px; width:220px; height:56px; border-radius:28px;"></div>
+    <p class="t-label t-on-accent" style="left:120px; top:836px; width:220px; text-align:center;">了解更多</p>
+    <p class="t-body" style="left:120px; top:900px; width:700px;">2027 商业计划 · 融资路演</p>
+    <p class="t-h1" style="left:1000px; top:800px;">12</p>
+    <p class="t-label t-dim" style="left:1000px; top:900px;">落地城市</p>
+    <p class="t-h1" style="left:1280px; top:800px;">340</p>
+    <p class="t-label t-dim" style="left:1280px; top:900px;">储能站点</p>
+    <p class="t-h1" style="left:1560px; top:800px;">98%</p>
+    <p class="t-label t-dim" style="left:1560px; top:900px;">在线率</p>
+  </section>
+
+  <!-- 2 目录：胶囊长成第一格，其余五格是深灰卡 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p class="t-display" style="left:120px; top:220px;">目录</p>
+    <p class="t-body" style="left:120px; top:800px; width:520px;">六个部分，十五分钟讲完。</p>
+    <div data-id="hi" class="s-accent" style="left:760px; top:200px; width:500px; height:220px; border-radius:var(--radius-l);"></div>
+    <p class="t-label t-on-accent" style="left:792px; top:232px;">01</p>
+    <p data-id="ch1" class="t-h2 t-on-accent" style="left:792px; top:272px; width:440px;">关于我们</p>
+    <p class="t-label t-on-accent" style="left:792px; top:364px;">从一座工业园开始</p>
+    <div class="s-surface" style="left:1300px; top:200px; width:500px; height:220px;"></div>
+    <p class="t-label t-on-surface" style="left:1332px; top:232px;">02</p>
+    <p class="t-h2 t-on-surface" style="left:1332px; top:272px; width:440px;">我们看到的问题</p>
+    <p class="t-label t-on-surface" style="left:1332px; top:364px; opacity:0.6;">弃光、峰谷、运维</p>
+    <div class="s-surface" style="left:760px; top:460px; width:500px; height:220px;"></div>
+    <p class="t-label t-on-surface" style="left:792px; top:492px;">03</p>
+    <p class="t-h2 t-on-surface" style="left:792px; top:532px; width:440px;">市场机会</p>
+    <p class="t-label t-on-surface" style="left:792px; top:624px; opacity:0.6;">工商业储能的窗口期</p>
+    <div class="s-surface" style="left:1300px; top:460px; width:500px; height:220px;"></div>
+    <p class="t-label t-on-surface" style="left:1332px; top:492px;">04</p>
+    <p class="t-h2 t-on-surface" style="left:1332px; top:532px; width:440px;">我们的方案</p>
+    <p class="t-label t-on-surface" style="left:1332px; top:624px; opacity:0.6;">站点、平台、服务</p>
+    <div class="s-surface" style="left:760px; top:720px; width:500px; height:220px;"></div>
+    <p class="t-label t-on-surface" style="left:792px; top:752px;">05</p>
+    <p class="t-h2 t-on-surface" style="left:792px; top:792px; width:440px;">怎么赚钱</p>
+    <p class="t-label t-on-surface" style="left:792px; top:884px; opacity:0.6;">四条收入</p>
+    <div class="s-surface" style="left:1300px; top:720px; width:500px; height:220px;"></div>
+    <p class="t-label t-on-surface" style="left:1332px; top:752px;">06</p>
+    <p class="t-h2 t-on-surface" style="left:1332px; top:792px; width:440px;">联系我们</p>
+    <p class="t-label t-on-surface" style="left:1332px; top:884px; opacity:0.6;">融资与合作</p>
+  </section>
+
+  <!-- 3 关于我们：橙格飞到左下变成数字卡，压住大图的左边 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p data-id="ch1" class="t-h1" style="left:120px; top:220px;">关于我们</p>
+    <p class="t-label t-accent" style="left:1240px; top:210px;">成立于 2021 · 苏州</p>
+    <p class="t-body" style="left:1240px; top:256px; width:560px;">给工业园区建储能站，白天存光伏，晚上放给工厂。</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/fins.webp" alt="" style="left:440px; top:480px; width:860px; height:460px; border-radius:var(--radius-l);">
+    <div data-id="hi" class="s-accent" style="left:160px; top:560px; width:400px; height:320px; border-radius:var(--radius-l);"></div>
+    <p class="t-display t-on-accent" style="left:192px; top:590px;">340</p>
+    <p class="t-label t-on-accent" style="left:192px; top:820px;">座储能站，分布在 12 座城市</p>
+    <div class="s-surface" style="left:1340px; top:480px; width:460px; height:460px;"></div>
+    <p class="t-h2 t-on-surface" style="left:1380px; top:520px; width:380px;">从一座工业园开始，一座一座建</p>
+    <p class="t-label t-on-surface" style="left:1380px; top:880px; opacity:0.6;">第一座站：苏州工业园，2021</p>
+  </section>
+
+  <!-- 4 问题：大图收成竖条居中，标题和三条痛点分在两边；橙卡缩回胶囊 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p class="t-h1" style="left:120px; top:240px;">我们看到的问题</p>
+    <p class="t-body" style="left:120px; top:360px; width:520px;">工业园区装了光伏，电却没用好。</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/dunes.webp" alt="" style="left:720px; top:200px; width:520px; height:760px; border-radius:var(--radius-l);">
+    <div data-id="hi" class="s-accent" style="left:120px; top:880px; width:220px; height:56px; border-radius:28px;"></div>
+    <p class="t-label t-on-accent" style="left:120px; top:896px; width:220px; text-align:center;">三个痛点</p>
+    <p class="t-h2" style="left:1320px; top:260px;">弃光</p>
+    <p class="t-body" style="left:1320px; top:330px; width:480px;">白天发的光，三成没人用</p>
+    <p class="t-h2" style="left:1320px; top:500px;">峰谷</p>
+    <p class="t-body" style="left:1320px; top:570px; width:480px;">晚高峰的电价是午间的三倍</p>
+    <p class="t-h2" style="left:1320px; top:740px;">运维</p>
+    <p class="t-body" style="left:1320px; top:810px; width:480px;">老站点靠人巡检，一趟两天</p>
+  </section>
+
+  <!-- 5 市场机会：竖图往右挪，橙卡从胶囊长成数字卡、压在图的右下角 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p class="t-h1" style="left:120px; top:300px;">市场机会</p>
+    <p class="t-label t-accent" style="left:120px; top:440px;">工商业储能</p>
+    <p class="t-body" style="left:120px; top:488px; width:560px;">电价分时拉大，园区愿意为省下的电费买单。</p>
+    <p class="t-label t-accent" style="left:120px; top:680px;">我们的位置</p>
+    <p class="t-body" style="left:120px; top:728px; width:560px;">已经在 12 座城市跑通，接下来铺长三角。</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/core.webp" alt="" style="left:820px; top:160px; width:520px; height:840px; border-radius:var(--radius-l);">
+    <div data-id="hi" class="s-accent" style="left:1180px; top:620px; width:460px; height:300px; border-radius:var(--radius-l);"></div>
+    <p class="t-display t-on-accent" style="left:1212px; top:640px;">3 倍</p>
+    <p class="t-label t-on-accent" style="left:1212px; top:860px;">峰谷电价差，三年里翻了一番</p>
+  </section>
+
+  <!-- 6 方案：橙卡回到左上当第一格，大图横过来铺在左下，标题错位放在图右边 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <div data-id="hi" class="s-accent" style="left:120px; top:180px; width:520px; height:260px; border-radius:var(--radius-l);"></div>
+    <p class="t-label t-on-accent" style="left:152px; top:212px;">01</p>
+    <p class="t-h2 t-on-accent" style="left:152px; top:252px;">储能站</p>
+    <p class="t-label t-on-accent" style="left:152px; top:384px;">园区里建，十年运营</p>
+    <div class="s-surface" style="left:700px; top:180px; width:520px; height:260px;"></div>
+    <p class="t-label t-on-surface" style="left:732px; top:212px;">02</p>
+    <p class="t-h2 t-on-surface" style="left:732px; top:252px;">调度平台</p>
+    <p class="t-label t-on-surface" style="left:732px; top:384px; opacity:0.6;">按电价自动充放</p>
+    <div class="s-surface" style="left:1280px; top:180px; width:520px; height:260px;"></div>
+    <p class="t-label t-on-surface" style="left:1312px; top:212px;">03</p>
+    <p class="t-h2 t-on-surface" style="left:1312px; top:252px;">运维服务</p>
+    <p class="t-label t-on-surface" style="left:1312px; top:384px; opacity:0.6;">远程巡检，四小时到场</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/dunes.webp" alt="" style="left:120px; top:500px; width:1080px; height:440px; border-radius:var(--radius-l);">
+    <p class="t-h1" style="left:1280px; top:620px;">我们的方案</p>
+    <p class="t-body" style="left:1280px; top:732px; width:520px;">建站、调度、运维，一家做完。</p>
+  </section>
+
+  <!-- 7 怎么赚钱：大图横在左上，橙色变回胶囊停在标题下面，收入分两行四格 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/wave.webp" alt="" style="left:120px; top:180px; width:1040px; height:380px; border-radius:var(--radius-l);">
+    <p class="t-h1" style="left:1240px; top:260px;">怎么赚钱</p>
+    <p class="t-body" style="left:1240px; top:372px; width:560px;">四条收入，第一条占七成。</p>
+    <div data-id="hi" class="s-accent" style="left:1240px; top:480px; width:220px; height:56px; border-radius:28px;"></div>
+    <p class="t-label t-on-accent" style="left:1240px; top:496px; width:220px; text-align:center;">四条收入</p>
+    <div class="s-surface-2" style="left:120px; top:640px; width:1680px; height:2px;"></div>
+    <p class="t-h2" style="left:120px; top:680px;">电费分成</p>
+    <p class="t-label t-dim" style="left:420px; top:694px;">省下的电费，园区和我们三七分</p>
+    <p class="t-h2" style="left:960px; top:680px;">容量租赁</p>
+    <p class="t-label t-dim" style="left:1260px; top:694px;">把储能容量按年租给电网</p>
+    <div class="s-surface-2" style="left:120px; top:810px; width:1680px; height:2px;"></div>
+    <p class="t-h2" style="left:120px; top:850px;">平台订阅</p>
+    <p class="t-label t-dim" style="left:420px; top:864px;">调度平台按站点收年费</p>
+    <p class="t-h2" style="left:960px; top:850px;">运维合同</p>
+    <p class="t-label t-dim" style="left:1260px; top:864px;">别家的站也接，按次收费</p>
+  </section>
+
+  <!-- 8 结尾：大图撑满整页，和封面一样；橙色还是一颗胶囊 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <img data-flip="art" data-flip-mode="cross" data-duration="1.2" src="art/wave.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; border-radius:0;">
+    <div style="left:0px; top:0px; width:1920px; height:1080px; background:linear-gradient(180deg, color-mix(in oklch, var(--bg) 30%, transparent) 0%, transparent 30%, color-mix(in oklch, var(--bg) 92%, transparent) 70%);"></div>
+    <p data-id="brand" class="t-label" style="left:120px; top:80px;">赤野能源</p>
+    <p data-id="nav" class="t-label t-dim" style="left:840px; top:80px;">关于　　产品　　服务　　联系</p>
+    <p data-id="date" class="t-label t-dim" style="left:1560px; top:80px; width:240px; text-align:right;">2027 · 03</p>
+    <p class="t-display" style="left:120px; top:620px;">一起把光存起来</p>
+    <div data-id="hi" class="s-accent" style="left:120px; top:860px; width:220px; height:56px; border-radius:28px;"></div>
+    <p class="t-label t-on-accent" style="left:120px; top:876px; width:220px; text-align:center;">联系我们</p>
+    <p class="t-body" style="left:400px; top:866px; width:700px;">hello@chiye.example</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

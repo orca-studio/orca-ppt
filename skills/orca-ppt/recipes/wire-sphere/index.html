@@ -1,0 +1,696 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 年度回顾</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/clearing.css">
+  <link rel="stylesheet" href="../../runtime/palettes/abyss.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Clearing，配色 abyss，版式 standard）
+封面  一行大标题「鹿鸣书店的 2026」
+1→2  关系：大标题缩成顶上一行小字，十二个圆排成两行一个接一个浮上来，圈里写月份  手法：共享元素（title）+ 入场错开
+2→3  关系：十二个圆一个接一个飞到右边，各自转开，叠成球；左边的字等球成形后出来   手法：共享元素（g1–g12 + m1–m12）
+3→4  关系：同一个球挪到中间，绕自己的轴转 30°；十二个月分列两边入场          手法：共享元素（m1–m12，3D 转角插值）
+4→5  关系：球收到左边、转过来，一到三月的圆亮起来；这三个月从全年移到右边      手法：共享元素（m1–m12）+ 元素交接（M1–M3）
+5→6  关系：球再转 45°，四到六月的圆亮起来、一到三月暗下去；换一季的三个月      手法：共享元素（m1–m12）
+6→7、7→8  同上
+8→9  关系：十二个圆全部亮起来、放平，叠成一个圆，圈住全年的数                手法：共享元素（m1–m12）
+线框球：十二个只有描边的圆，同一个框、同一个圆心，第 n 个圆就是第 n 个月。每个写一个 3D 转角 rotate:「轴 x y z + 角度」。
+第 i 个圆（0–11）的转角 = 绕 z 转 20°，再绕 x 转 −40°，再绕 y 转 (15i − 82.5)° + 自转角；放平那页三个都是 0。
+三次旋转合成一根轴、一个角度（换算见 RECIPE.md）。
+快侧对着镜头的圆会被压扁、细线断成点：先在圆自己的平面里转一下，让压扁的方向对上左右两边，左右描边按压扁的倍数加粗（border-width 第二个值）。
+自转角取 15 的倍数（封面 90、全年 60、四个季度 75 / 30 / −15 / −60）：离侧对最近的圆还差 7.5°。
+每个圆一个颜色：四季各取一个分类色（冬 --cat-4 青、春 --cat-5 绿、夏 --cat-1 橙、秋 --cat-2 洋红），中间的月份用 color-mix 在两季之间混；月份标签同色。
+季度页这一季的三个圆描边 3px，其余 opacity 0.25；结尾十二个圆一起变成强调色。颜色、粗细、透明度都跟着转场一起变。
+一个圆三层：外层组 g{n} 管位置和大小；中间一层 600×600 写 perspective，组小于 600 时再写 scale 缩下去；最里面的圆 m{n} 框永远 600，只变转角、颜色、粗细。
+示例内容：鹿鸣书店和全年的事、数字都是虚构的。
+-->
+
+<div class="slides">
+
+  <!-- 1 封面：一行大标题 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2" data-page="cover">
+    <p data-id="title" class="t-display" style="left:160px; top:400px; width:1600px; text-align:center;">鹿鸣书店的 2026</p>
+    <p class="t-body t-dim" style="left:160px; top:600px; width:1600px; text-align:center;">年度回顾</p>
+  </section>
+
+  <!-- 2 日历：大标题缩到顶上，十二个圆一个接一个弹出来，一个圆写一个月 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <p data-id="title" class="t-label t-dim" style="left:160px; top:180px; width:1600px; text-align:center;">鹿鸣书店的 2026</p>
+    <div data-id="g1" class="s-group" data-auto-animate-delay="0.4" style="left:190px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.60" style="left:190px; top:411px; width:240px; text-align:center;">一月</p>
+    <div data-id="g2" class="s-group" data-auto-animate-delay="0.46" style="left:450px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.66" style="left:450px; top:411px; width:240px; text-align:center;">二月</p>
+    <div data-id="g3" class="s-group" data-auto-animate-delay="0.52" style="left:710px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.72" style="left:710px; top:411px; width:240px; text-align:center;">三月</p>
+    <div data-id="g4" class="s-group" data-auto-animate-delay="0.58" style="left:970px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.78" style="left:970px; top:411px; width:240px; text-align:center;">四月</p>
+    <div data-id="g5" class="s-group" data-auto-animate-delay="0.64" style="left:1230px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.84" style="left:1230px; top:411px; width:240px; text-align:center;">五月</p>
+    <div data-id="g6" class="s-group" data-auto-animate-delay="0.7" style="left:1490px; top:320px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.90" style="left:1490px; top:411px; width:240px; text-align:center;">六月</p>
+    <div data-id="g7" class="s-group" data-auto-animate-delay="0.76" style="left:190px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="0.96" style="left:190px; top:671px; width:240px; text-align:center;">七月</p>
+    <div data-id="g8" class="s-group" data-auto-animate-delay="0.82" style="left:450px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="1.02" style="left:450px; top:671px; width:240px; text-align:center;">八月</p>
+    <div data-id="g9" class="s-group" data-auto-animate-delay="0.88" style="left:710px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="1.08" style="left:710px; top:671px; width:240px; text-align:center;">九月</p>
+    <div data-id="g10" class="s-group" data-auto-animate-delay="0.94" style="left:970px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="1.14" style="left:970px; top:671px; width:240px; text-align:center;">十月</p>
+    <div data-id="g11" class="s-group" data-auto-animate-delay="1.0" style="left:1230px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="1.20" style="left:1230px; top:671px; width:240px; text-align:center;">十一月</p>
+    <div data-id="g12" class="s-group" data-auto-animate-delay="1.06" style="left:1490px; top:580px; width:240px; height:240px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; scale:0.4; transform-origin:0 0; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:5.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-h2" data-auto-animate-delay="1.26" style="left:1490px; top:671px; width:240px; text-align:center;">十二月</p>
+  </section>
+
+  <!-- 3 成球：十二个圆一个接一个飞到右边，各自转到自己的角度，叠成一个球；左边一句话 -->
+  <section data-auto-animate data-auto-animate-duration="2.2" data-hold="3">
+    <p data-auto-animate-delay="1.8" class="t-label t-dim" style="left:120px; top:340px;">十二个月</p>
+    <p data-auto-animate-delay="1.8" class="t-display" style="left:120px; top:400px;">叠成一年</p>
+    <p data-auto-animate-delay="1.8" class="t-body t-dim" style="left:120px; top:600px;">一个月一件事，一件一件说</p>
+    <div data-id="g1" class="s-group" data-auto-animate-delay="0.0" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" data-auto-animate-delay="0.0" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:2px 2.6px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" data-auto-animate-delay="0.05" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" data-auto-animate-delay="0.05" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:2px 2.8px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" data-auto-animate-delay="0.1" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" data-auto-animate-delay="0.1" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:2px 3.3px; border-radius:50%; rotate:-0.429 -0.247 -0.869 126.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" data-auto-animate-delay="0.15" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" data-auto-animate-delay="0.15" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:2px 4.3px; border-radius:50%; rotate:-0.504 -0.215 -0.836 140.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" data-auto-animate-delay="0.2" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" data-auto-animate-delay="0.2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:2px 6.8px; border-radius:50%; rotate:-0.584 -0.184 -0.790 152.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" data-auto-animate-delay="0.25" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" data-auto-animate-delay="0.25" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:2px 20.0px; border-radius:50%; rotate:-0.664 -0.146 -0.734 161.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" data-auto-animate-delay="0.3" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" data-auto-animate-delay="0.3" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:2px 20.0px; border-radius:50%; rotate:-0.738 -0.098 -0.668 169.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" data-auto-animate-delay="0.35" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" data-auto-animate-delay="0.35" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:2px 6.8px; border-radius:50%; rotate:-0.804 -0.036 -0.594 177.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" data-auto-animate-delay="0.4" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" data-auto-animate-delay="0.4" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:2px 4.3px; border-radius:50%; rotate:0.855 -0.047 0.516 176.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" data-auto-animate-delay="0.45" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" data-auto-animate-delay="0.45" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:2px 3.3px; border-radius:50%; rotate:0.886 -0.156 0.437 171.2deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" data-auto-animate-delay="0.5" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" data-auto-animate-delay="0.5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:2px 2.8px; border-radius:50%; rotate:0.882 -0.297 0.365 166.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" data-auto-animate-delay="0.55" style="left:1020px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" data-auto-animate-delay="0.55" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:2px 2.6px; border-radius:50%; rotate:0.831 -0.464 0.307 160.5deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 全年：球挪到中间，十二个月分列两边 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="4">
+    <div data-id="M1" class="s-group" style="left:140px; top:110px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-4);">一月</p>
+      <p class="t-h2" style="left:0px; top:36px;">冬日读书会</p>
+    </div>
+    <div data-id="M2" class="s-group" style="left:140px; top:258px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-4) 67%, var(--cat-5));">二月</p>
+      <p class="t-h2" style="left:0px; top:36px;">闭店翻新</p>
+    </div>
+    <div data-id="M3" class="s-group" style="left:140px; top:406px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-4) 34%, var(--cat-5));">三月</p>
+      <p class="t-h2" style="left:0px; top:36px;">二楼开放</p>
+    </div>
+    <div data-id="M4" class="s-group" style="left:140px; top:554px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-5);">四月</p>
+      <p class="t-h2" style="left:0px; top:36px;">世界读书日</p>
+    </div>
+    <div data-id="M5" class="s-group" style="left:140px; top:702px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-5) 67%, var(--cat-1));">五月</p>
+      <p class="t-h2" style="left:0px; top:36px;">小程序上线</p>
+    </div>
+    <div data-id="M6" class="s-group" style="left:140px; top:850px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-5) 34%, var(--cat-1));">六月</p>
+      <p class="t-h2" style="left:0px; top:36px;">旧书交换</p>
+    </div>
+    <div data-id="M7" class="s-group" style="left:1360px; top:110px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-1);">七月</p>
+      <p class="t-h2" style="left:0px; top:36px;">夏夜营业</p>
+    </div>
+    <div data-id="M8" class="s-group" style="left:1360px; top:258px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-1) 67%, var(--cat-2));">八月</p>
+      <p class="t-h2" style="left:0px; top:36px;">作者签售</p>
+    </div>
+    <div data-id="M9" class="s-group" style="left:1360px; top:406px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-1) 34%, var(--cat-2));">九月</p>
+      <p class="t-h2" style="left:0px; top:36px;">学生卡</p>
+    </div>
+    <div data-id="M10" class="s-group" style="left:1360px; top:554px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-2);">十月</p>
+      <p class="t-h2" style="left:0px; top:36px;">第二家店</p>
+    </div>
+    <div data-id="M11" class="s-group" style="left:1360px; top:702px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-2) 67%, var(--cat-4));">十一月</p>
+      <p class="t-h2" style="left:0px; top:36px;">年度书单</p>
+    </div>
+    <div data-id="M12" class="s-group" style="left:1360px; top:850px; width:440px; height:96px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-2) 34%, var(--cat-4));">十二月</p>
+      <p class="t-h2" style="left:0px; top:36px;">跨年朗读会</p>
+    </div>
+    <div data-id="g1" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:2px 2.8px; border-radius:50%; rotate:-0.253 -0.751 -0.611 57.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:2px 2.6px; border-radius:50%; rotate:-0.295 -0.527 -0.797 70.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:2px 2.6px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:2px 2.8px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:2px 3.3px; border-radius:50%; rotate:-0.429 -0.247 -0.869 126.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:2px 4.3px; border-radius:50%; rotate:-0.504 -0.215 -0.836 140.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:2px 6.8px; border-radius:50%; rotate:-0.584 -0.184 -0.790 152.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:2px 20.0px; border-radius:50%; rotate:-0.664 -0.146 -0.734 161.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:2px 20.0px; border-radius:50%; rotate:-0.738 -0.098 -0.668 169.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:2px 6.8px; border-radius:50%; rotate:-0.804 -0.036 -0.594 177.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:2px 4.3px; border-radius:50%; rotate:0.855 -0.047 0.516 176.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:2px 3.3px; border-radius:50%; rotate:0.886 -0.156 0.437 171.2deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 第一季度「安顿下来」：球收到左边、转过来，这一季的三个圆亮起来，三个月从全年里移过来 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="4">
+    <p class="t-label t-dim" style="left:1020px; top:190px;">第一季度 · 一月到三月</p>
+    <p class="t-h1" style="left:1020px; top:232px;">安顿下来</p>
+    <div data-id="M1" class="s-group" style="left:1020px; top:340px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-4);">一月</p>
+      <p class="t-h2" style="left:0px; top:36px;">冬日读书会</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">每周六一场，一共 12 场</p>
+    </div>
+    <div data-id="M2" class="s-group" style="left:1020px; top:520px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-4) 67%, var(--cat-5));">二月</p>
+      <p class="t-h2" style="left:0px; top:36px;">闭店翻新</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">书架加高，换了暖光</p>
+    </div>
+    <div data-id="M3" class="s-group" style="left:1020px; top:700px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-4) 34%, var(--cat-5));">三月</p>
+      <p class="t-h2" style="left:0px; top:36px;">二楼开放</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">多出 40 个座位</p>
+    </div>
+    <div data-id="g1" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:3px 4.0px; border-radius:50%; rotate:-0.295 -0.527 -0.797 70.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:3px 4.0px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:3px 4.2px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.429 -0.247 -0.869 126.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.504 -0.215 -0.836 140.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:-0.584 -0.184 -0.790 152.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:-0.664 -0.146 -0.734 161.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:-0.738 -0.098 -0.668 169.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:-0.804 -0.036 -0.594 177.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:0.855 -0.047 0.516 176.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:0.886 -0.156 0.437 171.2deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:2px 2.8px; border-radius:50%; opacity:0.25; rotate:0.882 -0.297 0.365 166.0deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 第二季度「人多起来」：球收到左边、转过来，这一季的三个圆亮起来，三个月从全年里移过来 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="4">
+    <p class="t-label t-dim" style="left:1020px; top:190px;">第二季度 · 四月到六月</p>
+    <p class="t-h1" style="left:1020px; top:232px;">人多起来</p>
+    <div data-id="M4" class="s-group" style="left:1020px; top:340px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-5);">四月</p>
+      <p class="t-h2" style="left:0px; top:36px;">世界读书日</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">一天来了 1260 人</p>
+    </div>
+    <div data-id="M5" class="s-group" style="left:1020px; top:520px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-5) 67%, var(--cat-1));">五月</p>
+      <p class="t-h2" style="left:0px; top:36px;">小程序上线</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">能查库存、能预约</p>
+    </div>
+    <div data-id="M6" class="s-group" style="left:1020px; top:700px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-5) 34%, var(--cat-1));">六月</p>
+      <p class="t-h2" style="left:0px; top:36px;">旧书交换</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">毕业生留下 900 本</p>
+    </div>
+    <div data-id="g1" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.054 -0.994 -0.090 62.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.163 -0.929 -0.331 56.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:2px 2.8px; border-radius:50%; opacity:0.25; rotate:-0.253 -0.751 -0.611 57.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:3px 4.0px; border-radius:50%; rotate:-0.295 -0.527 -0.797 70.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:3px 4.0px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:3px 4.2px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.429 -0.247 -0.869 126.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.504 -0.215 -0.836 140.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:-0.584 -0.184 -0.790 152.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:-0.664 -0.146 -0.734 161.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:-0.738 -0.098 -0.668 169.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:-0.804 -0.036 -0.594 177.0deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 第三季度「往外走」：球收到左边、转过来，这一季的三个圆亮起来，三个月从全年里移过来 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="4">
+    <p class="t-label t-dim" style="left:1020px; top:190px;">第三季度 · 七月到九月</p>
+    <p class="t-h1" style="left:1020px; top:232px;">往外走</p>
+    <div data-id="M7" class="s-group" style="left:1020px; top:340px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-1);">七月</p>
+      <p class="t-h2" style="left:0px; top:36px;">夏夜营业</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">周末开到夜里十一点</p>
+    </div>
+    <div data-id="M8" class="s-group" style="left:1020px; top:520px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-1) 67%, var(--cat-2));">八月</p>
+      <p class="t-h2" style="left:0px; top:36px;">作者签售</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">三位作者，三场</p>
+    </div>
+    <div data-id="M9" class="s-group" style="left:1020px; top:700px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-1) 34%, var(--cat-2));">九月</p>
+      <p class="t-h2" style="left:0px; top:36px;">学生卡</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">开学季办了 2100 张</p>
+    </div>
+    <div data-id="g1" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:0.211 -0.959 0.191 98.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:0.131 -0.981 0.144 85.4deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:0.044 -0.997 0.060 73.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.054 -0.994 -0.090 62.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.163 -0.929 -0.331 56.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:2px 2.8px; border-radius:50%; opacity:0.25; rotate:-0.253 -0.751 -0.611 57.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:3px 4.0px; border-radius:50%; rotate:-0.295 -0.527 -0.797 70.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:3px 4.0px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:3px 4.2px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.429 -0.247 -0.869 126.8deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.504 -0.215 -0.836 140.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:-0.584 -0.184 -0.790 152.1deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 第四季度「再开一家」：球收到左边、转过来，这一季的三个圆亮起来，三个月从全年里移过来 -->
+  <section data-auto-animate data-auto-animate-duration="1.6" data-hold="4">
+    <p class="t-label t-dim" style="left:1020px; top:190px;">第四季度 · 十月到十二月</p>
+    <p class="t-h1" style="left:1020px; top:232px;">再开一家</p>
+    <div data-id="M10" class="s-group" style="left:1020px; top:340px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:var(--cat-2);">十月</p>
+      <p class="t-h2" style="left:0px; top:36px;">第二家店</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">选在大学城</p>
+    </div>
+    <div data-id="M11" class="s-group" style="left:1020px; top:520px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-2) 67%, var(--cat-4));">十一月</p>
+      <p class="t-h2" style="left:0px; top:36px;">年度书单</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">读者投票选出 30 本</p>
+    </div>
+    <div data-id="M12" class="s-group" style="left:1020px; top:700px; width:440px; height:136px;">
+      <p class="t-label" style="left:0px; top:0px; color:color-mix(in oklch, var(--cat-2) 34%, var(--cat-4));">十二月</p>
+      <p class="t-h2" style="left:0px; top:36px;">跨年朗读会</p>
+      <p class="t-label t-dim" style="left:0px; top:104px;">零点一起读完最后一页</p>
+    </div>
+    <div data-id="g1" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-4); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:0.485 -0.841 0.240 134.9deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 67%, var(--cat-5)); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:0.382 -0.895 0.231 123.3deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-4) 34%, var(--cat-5)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:0.293 -0.931 0.217 110.9deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-5); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:0.211 -0.959 0.191 98.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 67%, var(--cat-1)); border-width:2px 20.0px; border-radius:50%; opacity:0.25; rotate:0.131 -0.981 0.144 85.4deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-5) 34%, var(--cat-1)); border-width:2px 6.8px; border-radius:50%; opacity:0.25; rotate:0.044 -0.997 0.060 73.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-1); border-width:2px 4.3px; border-radius:50%; opacity:0.25; rotate:-0.054 -0.994 -0.090 62.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 67%, var(--cat-2)); border-width:2px 3.3px; border-radius:50%; opacity:0.25; rotate:-0.163 -0.929 -0.331 56.0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-1) 34%, var(--cat-2)); border-width:2px 2.8px; border-radius:50%; opacity:0.25; rotate:-0.253 -0.751 -0.611 57.7deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--cat-2); border-width:3px 4.0px; border-radius:50%; rotate:-0.295 -0.527 -0.797 70.1deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 67%, var(--cat-4)); border-width:3px 4.0px; border-radius:50%; rotate:-0.322 -0.373 -0.870 89.5deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:260px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid color-mix(in oklch, var(--cat-2) 34%, var(--cat-4)); border-width:3px 4.2px; border-radius:50%; rotate:-0.366 -0.292 -0.884 109.6deg;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 结尾：十二个圆放平，叠成一个亮的圆，圈住全年的数 -->
+  <section data-auto-animate data-auto-animate-duration="1.8" data-hold="4">
+    <div data-id="g1" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m1" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g2" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m2" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g3" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m3" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g4" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m4" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g5" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m5" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g6" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m6" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g7" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m7" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g8" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m8" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g9" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m9" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g10" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m10" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g11" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m11" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <div data-id="g12" class="s-group" style="left:660px; top:240px; width:600px; height:600px;">
+      <div class="s-group" style="left:0px; top:0px; width:600px; height:600px; perspective:2400px;">
+        <div data-id="m12" style="left:0px; top:0px; width:600px; height:600px; border:solid var(--accent); border-width:3px 3.0px; border-radius:50%; rotate:z 0deg;"></div>
+      </div>
+    </div>
+    <p class="t-label t-dim" data-auto-animate-delay="1.2" style="left:660px; top:396px; width:600px; text-align:center;">2026 · 鹿鸣书店</p>
+    <p class="t-h1" data-auto-animate-delay="1.2" style="left:660px; top:448px; width:600px; text-align:center;">48 场活动</p>
+    <p class="t-label t-dim" data-auto-animate-delay="1.2" style="left:660px; top:570px; width:600px; text-align:center;">每个月，都有人来</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>

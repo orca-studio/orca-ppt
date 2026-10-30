@@ -36,6 +36,10 @@
 | `swirl-rings` | S 形圆环 | 年度规划、培训方案、项目分期：两个阶段各三件事，两组圆环扇形各绕自己的圆心回旋长出来，咬成一个 S，换一组内容再转一次（页内动画） | [swirl-rings/RECIPE.md](swirl-rings/RECIPE.md) |
 | `glass-bars` | 玻璃柱 | 4–6 个对象的几项占比：一排等轴玻璃柱，彩色的数值从白底座里依次升起，换一组数原地长高、数字逐位滚 | [glass-bars/RECIPE.md](glass-bars/RECIPE.md) |
 | `photo-layouts` | 拼图形 | 年度汇报、活动总结的一堆现场照片：每页用几张图由场景定，照片裁成笔刷、三角、平行四边形、梯形拼在一起，翻页时照片框边走边变形 | [photo-layouts/RECIPE.md](photo-layouts/RECIPE.md) |
+| `wire-sphere` | 三维旋转 | 年度回顾、全年总结：十二个圆叠成线框球，一个圆是一个月，一季度一页球转一下、这一季的三个圆亮起来，最后放平叠成一个亮的圆 | [wire-sphere/RECIPE.md](wire-sphere/RECIPE.md) |
+| `drawer-tabs` | 抽拉效果 | 年度计划、分阶段方案：3–5 步，左边一排磨砂序号格像抽屉，讲到哪一步哪一格从侧板里拉出来，整页照片跟着换，右边的字整列往上滚 | [drawer-tabs/RECIPE.md](drawer-tabs/RECIPE.md) |
+| `black-orange` | 黑底撞色 | 公司介绍、商业计划、融资路演：大面积黑底只用一种橙色，一块橙色在胶囊按钮、目录高亮格、数字卡之间接力，一张纹理大图每页换位置 | [black-orange/RECIPE.md](black-orange/RECIPE.md) |
+| `black-white-split` | 黑白分屏 | 商业计划、品牌提案：白纸和一块黑轮流占画面，黑块在整页、一条线、左栏、右半边之间变形，荧光绿圆章和斜贴的色签跟着跳，标题压缩超粗 | [black-white-split/RECIPE.md](black-white-split/RECIPE.md) |
 
 ## 怎么用一个同款
 
