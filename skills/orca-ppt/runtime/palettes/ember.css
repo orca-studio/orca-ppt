@@ -1,0 +1,30 @@
+/* 配色：余烬
+ * 一句话：近黑底 + 一种饱和橙，黑白灰占满画面，橙色只点按钮、数字、高亮卡。**深底**。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量，盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          近黑                --surface     深灰（卡片）
+ *   --surface-2   浅一级的深灰         --accent      饱和橙（色块）
+ *   --accent-soft 亮橙（和 --accent 同色相，做橙卡的渐变）
+ *   --text / --text-dim  暖白 / 暖灰    --text-on-surface 暖白
+ *   --text-on-accent 近黑（橙块上的字） --accent-text 亮橙（深底上的强调字）
+ *
+ * **橙色上的字用深色**：白字压在这个橙上不到 3:1。
+ * 撞色只有一种：再加第二个彩色，黑底的沉稳就没了。
+ *
+ * 可以互变的颜色：--accent ↔ --accent-soft；--surface ↔ --surface-2。
+ * 深灰和橙之间不要互变，中途发棕。
+ */
+
+:root {
+  --bg: #0a0a0b;
+  --surface: #17171a;
+  --surface-2: #26262b;
+  --text: #f4f2ee;
+  --text-dim: #8f8b86;
+  --text-on-surface: #f4f2ee;
+  --accent: #ff5b1a;
+  --accent-soft: #ff8a4c;
+  --text-on-accent: #140804;
+  --accent-text: #ff7a3a;
+}

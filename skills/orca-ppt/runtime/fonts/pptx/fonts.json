@@ -286,5 +286,13 @@
     "file": "space-grotesk-normal-700.ttf",
     "typeface": "Space Grotesk",
     "subfamily": "Bold"
+  },
+  {
+    "family": "Anton",
+    "weight": 400,
+    "style": "normal",
+    "file": "anton-normal-400.ttf",
+    "typeface": "Anton",
+    "subfamily": "Regular"
   }
 ]

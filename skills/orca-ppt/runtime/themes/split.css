@@ -1,0 +1,30 @@
+/* 主题：Split（黑白分屏）
+ * 标签：dynamic
+ * 一句话：商业计划、品牌提案 —— 白纸和黑块轮流占画面，一种荧光色点睛，压缩超粗的大标题和数字
+ * 默认配色：lime
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 大标题和数字用 Anton（压缩超粗，只有西文）；中文落到苹方。Anton 只有 400 一档，
+ * 所以标题写 700 并关掉合成：西文仍是 Anton 400 原样，中文拿到苹方的粗体。
+ * 正文 Inter；小标签不转大写。圆角全零，色块是方的。
+ *
+ * 新增类：
+ *   .t-tag  压缩粗体小字（32px）：序号「01」、色签里的字、「了解更多」 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+
+  --font: "Inter", -apple-system, "PingFang SC", sans-serif;
+  --font-display: "Anton", "PingFang SC", sans-serif;
+}
+
+.t-display, .t-metric, .t-h1 {
+  font-family: var(--font-display); font-weight: 700; font-synthesis: none; letter-spacing: -0.01em;
+}
+.t-h2 { font-weight: 700; }
+.t-label { font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
+
+.t-tag { font-family: var(--font-display); font-size: 32px; font-weight: 700; font-synthesis: none; line-height: 1; white-space: nowrap; }

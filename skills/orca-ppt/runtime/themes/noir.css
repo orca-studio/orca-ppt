@@ -1,0 +1,26 @@
+/* 主题：Noir（黑底撞色）
+ * 标签：premium
+ * 一句话：公司介绍、商业计划 —— 大面积黑，一种橙色点睛，纹理大图撑场面，标题贴边不居中
+ * 默认配色：ember
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 高级感靠收着：标题用 Inter 400、收紧字距，不加粗；小标签不转大写、不拉字距，像网页导航；
+ * 圆角小（6 / 12 / 16），卡片像一块屏幕，不像气泡。
+ *
+ * 本主题不新增类。橙色胶囊按钮就是 .s-accent，圆角写高度的一半 —— 这样它能和别页的橙卡互变。 */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 6px;
+  --radius-m: 12px;
+  --radius-l: 16px;
+
+  --font: "Inter", -apple-system, "PingFang SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+.t-display { font-weight: 400; letter-spacing: -0.03em; }
+.t-metric { font-weight: 400; letter-spacing: -0.04em; }
+.t-h1 { font-weight: 400; letter-spacing: -0.02em; }
+.t-h2 { font-weight: 500; }
+.t-label { font-weight: 400; letter-spacing: 0.02em; text-transform: none; }

@@ -1,0 +1,29 @@
+/* 配色：荧光绿
+ * 一句话：白纸 + 纯黑整块 + 一种荧光绿。黑白占满画面，绿色只点色签、下划线、高亮格。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量，盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          近白纸面            --surface     纯黑（整页黑块、分屏的黑半边）
+ *   --surface-2   浅灰小卡片          --accent      荧光绿（色块）
+ *   --accent-soft 淡荧光绿（同色相，高亮格里的次一级）
+ *   --text / --text-dim  近黑 / 灰     --text-on-surface 近白（黑块上的字）
+ *   --text-on-accent 近黑（绿块上的字） --accent-text 深橄榄绿（白纸上的强调字）
+ *
+ * **荧光绿只做色块，不做白纸上的字**：它在白底上对比度不到 1.3:1，白纸上要强调的字用 --accent-text。
+ * 黑块是 .s-surface 的整页形状，黑白分屏就是它在页与页之间变形（transitions.md「整页 ↔ 卡片」）。
+ *
+ * 可以互变的颜色：--accent ↔ --accent-soft。黑和绿之间不要互变，中途发脏。
+ */
+
+:root {
+  --bg: #f6f6f3;
+  --surface: #111111;
+  --surface-2: #e6e6e1;
+  --text: #111111;
+  --text-dim: #5b5b57;
+  --text-on-surface: #f6f6f3;
+  --accent: #c8f031;
+  --accent-soft: #e7f8a6;
+  --text-on-accent: #111111;
+  --accent-text: #4a6400;
+}

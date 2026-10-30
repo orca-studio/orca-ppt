@@ -53,6 +53,8 @@ const FAMILIES = [
   'Space+Grotesk:wght@400;500;700',
   // Pin & Paper:手写批注
   // Sakura Chroma(同款 sakura-chroma):窄体粗标题 + 无衬线正文
+  // Split(同款 black-white-split):压缩超粗的数字和序号
+  'Anton',
 ]
 
 /**
