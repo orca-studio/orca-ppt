@@ -160,6 +160,16 @@ html, body, .reveal { background: var(--bg); }
            box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.24); }
 .s-veil { left: 0; top: 0; width: var(--canvas-w); height: var(--canvas-h); pointer-events: none;
           background: linear-gradient(180deg, rgb(0 0 0 / 0.78) 0%, rgb(0 0 0 / 0.34) 26%, rgb(0 0 0 / 0.16) 60%, rgb(0 0 0 / 0.42) 100%); }
+/* 抽屉（同款 drawer-tabs）：.s-slot 是贴着画布左缘、铺满整高的侧板，右边沿一道亮线、往右投一片影子；
+   .s-drawer 是从侧板右边沿伸出来的序号格，左边贴着侧板不画边，上、右、下一圈白细线，里面是磨砂的半透明白。
+   「拉出来」就是格子变宽。侧板写在抽屉后面，影子才压得住抽屉的根部，看着像从侧板底下抽出来的。
+   两样都压在整页照片上，和 .s-glass 一样不跟配色走，格上的字用 .t-on-glass。 */
+.s-slot { background: rgb(255 255 255 / 0.06);
+          -webkit-backdrop-filter: brightness(1.2) saturate(0.9); backdrop-filter: brightness(1.2) saturate(0.9);
+          box-shadow: 2px 0 0 rgb(255 255 255 / 0.3), 20px 0 36px rgb(0 0 0 / 0.65); }
+.s-drawer { background: linear-gradient(90deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.14));
+            -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+            border: 2px solid rgb(255 255 255 / 0.7); border-left: 0; }
 
 /* 立体柱（visual-spec.md「立体柱」）：一根等轴的方柱，顶面菱形高 40、左右两个侧面，全用背景渐变画，不用 clip-path ——
    页内动画「升起」（emerge）要用 clip-path 裁底边，两个不能写在同一个元素上。宽 160（顶面菱形 160×40），高至少 60。

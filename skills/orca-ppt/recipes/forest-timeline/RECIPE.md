@@ -1,18 +1,18 @@
 ---
 id: forest-timeline
-title: 年度回顾与规划
+title: 一条线走到底
 mode: 汇报稿
 order: 9
-summary: 封面标题下那条粉色细线长成时间轴，再长成条形图里最长的一条、收成关键数字下的粗线，最后缩回封面的位置
+summary: 年度回顾与规划：封面标题下那条粉色细线长成时间轴，再长成条形图里最长的一条、收成关键数字下的粗线，最后缩回封面的位置
 sample: ../../examples/forest-timeline
 preview: 2-4
 cover: 2.5
 poster: poster.jpg
 ---
 
-# 年度回顾与规划
+# 一条线走到底
 
-手法：一条线走完全稿
+样稿场景：年度回顾与规划。手法：一条线走完全稿
 
 ## 参考拆解
 

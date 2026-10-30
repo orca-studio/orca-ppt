@@ -1,18 +1,18 @@
 ---
 id: editorial-tri-tone
-title: 价值观宣讲
+title: 卡片墙钻入
 mode: 汇报稿
 order: 6
-summary: 腮红粉底上刊名缩成页眉、八张酒红奶油黄卡片弹出成一面墙，镜头推进第一张酒红卡，它铺满整页成为这条原则的详情页
+summary: 价值观宣讲、几条平级原则：腮红粉底上刊名缩成页眉、八张酒红奶油黄卡片弹出成一面墙，镜头推进第一张酒红卡，它铺满整页成为这条原则的详情页
 sample: ../../examples/editorial-tri-tone
 preview: 1-3
 cover: 6
 poster: poster.jpg
 ---
 
-# 价值观宣讲
+# 卡片墙钻入
 
-手法：原则墙钻进一张卡
+样稿场景：价值观宣讲。手法：原则墙钻进一张卡
 
 ## 参考拆解
 

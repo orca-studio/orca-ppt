@@ -1,18 +1,18 @@
 ---
 id: drink-showcase
-title: 新品发布
+title: 四栏切换
 mode: 汇报稿
 order: 2
-summary: 四个产品并排成四栏，色块一栏栏向右换主角，旧产品上出、新产品下入，最后一栏展开成全屏详情，再往里看一层配料
+summary: 新品发布、几款平级产品逐个亮相：四个产品并排成四栏，色块一栏栏向右换主角，旧产品上出、新产品下入，最后一栏展开成全屏详情，再往里看一层配料
 sample: ../../examples/drink-showcase
 preview: 2-5
 cover: 4.5
 poster: poster.jpg
 ---
 
-# 新品发布
+# 四栏切换
 
-手法：四栏产品切换
+样稿场景：新品发布。手法：四栏产品切换
 
 ## 参考拆解
 
