@@ -4,7 +4,7 @@ title: 黑底撞色
 mode: 汇报稿
 order: 28
 summary: 公司介绍、商业计划、融资路演：大面积黑底，一种橙色点睛，一块橙色在胶囊按钮、目录高亮格、数字卡之间接力，一张纹理大图每页换位置
-preview: 2-5
+preview: 1-4
 cover: 0.3
 poster: poster.jpg
 ---

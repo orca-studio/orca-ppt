@@ -4,8 +4,8 @@ title: 黑白分屏
 mode: 汇报稿
 order: 29
 summary: 商业计划、品牌提案：白纸和一块黑轮流占画面，黑块在整页、一条线、左栏、右半边之间变形，荧光绿圆章和斜贴的色签跟着跳，标题压缩超粗
-preview: 3-5
-cover: 0.3
+preview: 4-7
+cover: 2.6
 poster: poster.jpg
 ---
 
