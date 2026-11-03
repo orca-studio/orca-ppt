@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN" data-layout="standard">
+<head>
+  <meta charset="utf-8">
+  <title>同款 · 新品发布短片</title>
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reset.css">
+  <link rel="stylesheet" href="../../node_modules/reveal.js/dist/reveal.css">
+  <link rel="stylesheet" href="../../runtime/tokens.css">
+  <link rel="stylesheet" href="../../runtime/themes/split.css">
+  <link rel="stylesheet" href="../../runtime/palettes/ember.css">
+</head>
+<body>
+<div class="reveal">
+
+<!-- 转场计划（主题 Split，配色 ember，版式 standard）
+整份稿子只有一扇窗 win 在走：照片框写 data-flip="win" data-flip-mode="cross"，框铺满整张画布（0 0 1920 1080），
+只改行内 clip-path 的四个顶点。照片不动，窗口的边在动，下一张照片在窗口变形的途中淡进来 —— 像镜头在黑底上开一扇会变形的窗。
+窗缩成一个小框时（三角、收尾的产品）才改框的位置和大小。四边形一律写四个点，三角形重一个点。
+1→2  关系：铺满的产品图收成一条横贯的斜带，换成用它的人；斜置大标题沿斜带的下沿出来 手法：照片框交叉淡化（多边形）
+2→3  关系：斜带加宽，换成屏幕特写；卖点贴着下沿                                   手法：同上
+3→4  关系：宽斜带收成竖窗（左右竖直，上下斜），换成人像                           手法：同上
+4→5  关系：竖窗横过来，换成另一个用它的人；短句沿下沿                             手法：同上
+5→6  关系：斜带收成一排正倒交错的三角形中间那一块，其余四块逐块出现               手法：同上 + 页内动画（fade 错开）
+6→7  关系：中间那块三角放大成一扇斜窗，其余四块淡出；「持久续航」贴着下沿         手法：同上
+7→8  关系：斜窗收成画面正中的产品                                                 手法：同上
+8→9  关系：产品淡出，标题落版                                                     手法：淡入淡出
+9→10 关系：标题淡出，只留品牌标记                                                     手法：淡入淡出
+斜置的字用一个 .s-group 包起来转（rotate），字自己不转；组不配对，翻页时淡入淡出。
+主斜角 -18°：窗口的斜边都是同一族平行线（y = c − 0.3249·x），斜字都 rotate:-18deg，只有三角那页例外。
+示例内容：ORCA BOOK PRO、O6 芯片是虚构的产品，品牌标记是系统 emoji 🫍（滤镜调成银色），照片是 AI 生成的。
+-->
+
+<div class="slides">
+
+  <!-- 1 产品：铺满整页的窗，黑底上一台合着的电脑 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2" data-page="cover">
+    <img data-flip="win" data-flip-mode="cross" src="art/laptop.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%);">
+  </section>
+
+  <!-- 2 开窗：横贯整页的斜带，斜置大标题贴着下沿 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-flip="win" data-flip-mode="cross" src="art/designer.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(0px 480px, 1920px -144px, 1920px 276px, 0px 900px);">
+    <div class="s-group" data-anim="fade 0.6s @0.6" style="left:751px; top:522px; width:1000px; height:290px; rotate:-18deg;">
+      <p class="t-h2" style="left:0px; top:0px;">新款</p>
+      <p class="t-display" style="left:0px; top:56px;">ORCA BOOK PRO</p>
+      <p class="t-h1" style="left:0px; top:220px;">搭载 O6 芯片</p>
+    </div>
+  </section>
+
+  <!-- 3 屏幕：窗撑满整页 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-flip="win" data-flip-mode="cross" src="art/screen.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(0px 300px, 1920px -324px, 1920px 386px, 0px 1010px);">
+    <div class="s-group" data-anim="fade 0.6s @0.9" style="left:764px; top:633px; width:980px; height:170px; rotate:-18deg;">
+      <p class="t-h2" style="left:0px; top:96px;">更快的</p>
+      <p class="t-display" style="left:170px; top:0px;">图形处理器</p>
+    </div>
+  </section>
+
+  <!-- 4 人像：收成竖窗，左右竖直、上下斜 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2.5">
+    <img data-flip="win" data-flip-mode="cross" src="art/portrait.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(520px 211px, 1480px -101px, 1480px 919px, 520px 1231px);">
+  </section>
+
+  <!-- 5 斜窗：竖窗横过来，短句沿着下沿 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-flip="win" data-flip-mode="cross" src="art/craftsman.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(240px 282px, 1680px -186px, 1680px 574px, 240px 1042px);">
+    <div class="s-group" data-anim="fade 0.6s @0.8" style="left:1022px; top:719px; width:600px; height:90px; rotate:-18deg;">
+      <p class="t-h1" style="left:0px; top:0px;">为每一门手艺而来</p>
+    </div>
+  </section>
+
+  <!-- 6 三角分屏：五块正倒交错，中间那块是 win，其余逐块出现 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="4">
+    <img src="art/top1.webp" alt="" data-anim="fade 0.4s @1.0" style="left:120px; top:140px; width:560px; height:620px; object-fit:cover; clip-path:polygon(50% 0, 50% 0, calc(100% - 8px) 100%, 8px 100%);">
+    <img src="art/top2.webp" alt="" data-anim="fade 0.4s @1.2" style="left:400px; top:140px; width:560px; height:620px; object-fit:cover; clip-path:polygon(8px 0, calc(100% - 8px) 0, 50% 100%, 50% 100%);">
+    <img data-flip="win" data-flip-mode="cross" src="art/top3.webp" alt="" style="left:680px; top:140px; width:560px; height:620px; object-fit:cover; clip-path:polygon(50% 0, 50% 0, calc(100% - 8px) 100%, 8px 100%);">
+    <img src="art/top4.webp" alt="" data-anim="fade 0.4s @1.4" style="left:960px; top:140px; width:560px; height:620px; object-fit:cover; clip-path:polygon(8px 0, calc(100% - 8px) 0, 50% 100%, 50% 100%);">
+    <img src="art/top5.webp" alt="" data-anim="fade 0.4s @1.6" style="left:1240px; top:140px; width:560px; height:620px; object-fit:cover; clip-path:polygon(50% 0, 50% 0, calc(100% - 8px) 100%, 8px 100%);">
+    <div class="s-group" data-anim="rise 0.6s @1.8" style="left:0px; top:790px; width:1920px; height:170px;">
+      <p class="t-h2" style="left:500px; top:96px;">搭配上更快的</p>
+      <p class="t-display" style="left:820px; top:0px;">AI 处理能力</p>
+    </div>
+  </section>
+
+  <!-- 7 斜窗：中间那块三角放大成一扇斜窗；「持久续航」贴着下沿 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="3">
+    <img data-flip="win" data-flip-mode="cross" src="art/night.webp" alt="" style="left:0px; top:0px; width:1920px; height:1080px; object-fit:cover; clip-path:polygon(300px 283px, 1560px -127px, 1560px 583px, 300px 993px);">
+    <div class="s-group" data-anim="fade 0.6s @0.8" style="left:1072px; top:660px; width:700px; height:220px; rotate:-18deg;">
+      <p class="t-h2" style="left:0px; top:0px;">超长</p>
+      <p class="t-display" style="left:0px; top:56px;">持久续航</p>
+    </div>
+  </section>
+
+  <!-- 8 产品：斜窗收成画面正中的产品 -->
+  <section data-auto-animate data-auto-animate-duration="1.2" data-hold="2">
+    <img data-flip="win" data-flip-mode="cross" src="art/laptop.webp" alt="" style="left:640px; top:360px; width:640px; height:360px; object-fit:cover; clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%);">
+  </section>
+
+  <!-- 9 标题落版 -->
+  <section data-auto-animate data-auto-animate-duration="1.0" data-hold="2.5">
+    <div class="s-group" data-anim="rise 0.7s @0.3" style="left:480px; top:300px; width:960px; height:420px;">
+      <p class="t-h2" style="left:0px; top:0px;">新款</p>
+      <p class="t-display" style="left:0px; top:60px;">ORCA BOOK PRO</p>
+      <p class="t-display" style="left:0px; top:240px;">搭载 O6 芯片</p>
+    </div>
+  </section>
+
+  <!-- 10 只留品牌：虎鲸 emoji，滤镜调成银色 -->
+  <section data-auto-animate data-auto-animate-duration="1.0" data-hold="3">
+    <p class="t-display" data-anim="fade 0.8s @0.2" style="left:0px; top:460px; width:1920px; text-align:center; filter:grayscale(1) contrast(0.45) brightness(1.6);">🫍</p>
+  </section>
+
+</div>
+</div>
+<script src="../../node_modules/reveal.js/dist/reveal.js"></script>
+<script src="../../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../../runtime/engine.js"></script>
+</body>
+</html>
