@@ -19,6 +19,7 @@
 | `showcase.css` | 纸白底 + 四种饱和果汁色的直角全出血色块，产品图是主角，文字压小；Inter，圆角全零，描边胶囊按钮和圆章。默认配色 `fruit-soda` | 本 skill 自己的，给产品陈列（同款 `recipes/drink-showcase`） |
 | `noir.css` | 近黑底 + 一种饱和橙撞色，纹理大图撑场面；Inter 400 细标题、收紧字距，小标签不转大写，小圆角。默认配色 `ember` | 公众号「妙想Design」版式分享 vol21（同款 `recipes/black-orange`） |
 | `split.css` | 白纸 + 纯黑整块 + 一种荧光绿，黑块在页与页之间变形成分屏；Anton 压缩超粗标题和数字（中文落苹方粗体）+ Inter，圆角全零，`.t-tag` 压缩粗小字。默认配色 `lime` | 公众号「妙想Design」版式分享（同款 `recipes/black-white-split`） |
+| `bento.css` | 苹果官网式 bento 卡片墙：浅灰底 + 白卡 + 纯黑卡，圆角统一 28、卡片间距统一 20（apple.com 实测）；Inter 600 收紧字距（中文落苹方），`.s-ink` 纯黑卡、`.t-copy` 会换行的说明小字、`.s-cell` 底色卡、`.s-smooth` squircle 圆角。默认配色 `porcelain` | 抖音 · PT老农《为什么苹果的卡片很高级》 + apple.com.cn 实测 |
 
 ## 使用主题
 

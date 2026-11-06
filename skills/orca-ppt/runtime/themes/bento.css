@@ -1,0 +1,38 @@
+/* 主题：Bento（苹果风卡片）
+ * 标签：premium
+ * 一句话：产品介绍、设计分享 —— 浅灰底上一格格白卡片，偶尔一块黑卡压场，像官网的便当盒拼格
+ * 默认配色：porcelain
+ * 在 tokens.css 之后引入。规则见 references/themes.md。
+ *
+ * 规则来自一条讲苹果官网卡片的笔记（抖音 · PT老农《为什么苹果的卡片很高级》）：
+ *   圆角固定、不随卡片尺寸变；卡片间距横竖统一；底色和卡片只差一点灰度。
+ * 数值取 apple.com 实测（computed style）：圆角统一 28px，卡片间距统一 20px。1920 画布全屏约 1:1 对应屏幕像素，和网页尺度相当，不再放大。
+ * 标题 Inter 600、收紧字距，正文 400；中文落苹方。
+ *
+ * 新增类：
+ *   .s-smooth  曲率连续圆角（squircle）：写在 .s-surface / .s-surface-2 / img 上，转角从直边平滑过渡，不是一段圆弧接直线
+ *   .s-cell    占位格：页面底色的一格，用在模板缩略、空格位上
+ *   .s-ink     纯黑卡片（官网黑底卡片墙里那种 #000），颜色从 --surface 推出来、亮度压到 0，圆角同 .s-surface-2
+ *   .t-copy    卡片里的说明文字：28px 半粗、行高 1.45、按宽度自然换行（官网说明卡那种），要写 width
+ */
+@import url("../fonts/fonts.css");
+
+:root {
+  --radius-s: 16px;
+  --radius-m: 28px;
+  --radius-l: 28px;
+
+  --font: "Inter", -apple-system, "PingFang SC", sans-serif;
+}
+
+.t-display { font-weight: 600; letter-spacing: -0.035em; }
+.t-metric { font-weight: 600; letter-spacing: -0.045em; }
+.t-h1 { font-weight: 600; letter-spacing: -0.02em; }
+.t-h2 { font-weight: 600; letter-spacing: -0.01em; }
+.t-body { font-weight: 400; }
+.t-label { font-weight: 500; letter-spacing: 0; text-transform: none; line-height: 1.35; }
+
+.s-smooth { corner-shape: squircle; }
+.s-cell { background: var(--bg); border-radius: var(--radius-m); }
+.t-copy { font-size: 28px; font-weight: 600; line-height: 1.45; letter-spacing: -0.005em; white-space: normal; }
+.s-ink { background: oklch(from var(--surface) 0 0 0); border-radius: var(--radius-m); }

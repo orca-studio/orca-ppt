@@ -1,0 +1,28 @@
+/* 配色：瓷白
+ * 一句话：#F5F5F7 浅灰底 + 纯白卡片 + 近黑卡片，一点系统蓝。底和卡片只差一点灰度，卡片像浮在纸面上,浅底。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ *
+ * 变量映射：
+ *   --bg          浅灰 #F5F5F7          --surface     近黑 #1D1D1F（压场的黑卡、整页黑底）
+ *   --surface-2   纯白 #FFFFFF（主力卡片）  --accent      系统蓝
+ *   --accent-soft 深一档的蓝
+ *   --text / --text-dim  近黑 / 中灰
+ *   --text-on-surface    浅灰（黑卡上的文字）
+ *   --text-on-accent     白（蓝块上的文字）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（同一个蓝的两档）。
+ * surface（近黑）和 surface-2（纯白）明度差太大，不能互变。
+ */
+
+:root {
+  --bg: #f5f5f7;
+  --surface: #1d1d1f;
+  --surface-2: #ffffff;
+  --text: #1d1d1f;
+  --text-dim: #6e6e73;
+  --text-on-surface: #f5f5f7;
+  --accent: #0071e3;
+  --accent-soft: #0062c4;
+  --text-on-accent: #ffffff;
+  --accent-text: #0066cc;
+}
