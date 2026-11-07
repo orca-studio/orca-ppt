@@ -297,10 +297,12 @@ describe('check-pptx 抓得到坏包', () => {
 })
 
 /*
- * 每个同款样稿都导一遍、核一遍。要开本机 Chrome；没装就跳过，不算失败（和 check-deck 一样）。
+ * 每个同款样稿都导一遍、核一遍，再用 pptx-read 读回来。要开本机 Chrome；没装就跳过，不算失败
+ * （和 check-deck 一样）。
  */
 describe('同款样稿导出 PPTX', () => {
-  it('每个样稿都能导出，导出的包过 check-pptx', async (context) => {
+  it('每个样稿都能导出，导出的包过 check-pptx，读得回来', async (context) => {
+    const { readPptx, outlineMarkdown } = await lib('pptx-read.mjs')
     const dir = mkdtempSync(join(tmpdir(), 'orca-pptx-recipes-'))
     const failed: string[] = []
     for (const recipe of await listRecipes(skill)) {
@@ -324,6 +326,29 @@ describe('同款样稿导出 PPTX', () => {
       }
       const checked = run('check-pptx.mjs', [pptx, report])
       if (checked.status !== 0) failed.push(checked.stdout)
+
+      // 读回来的大纲：文字逐段和浏览器里量的一致，图片和转成图片的元素一样多，每块都有位置
+      const deck = readPptx(readFileSync(pptx))
+      const want = JSON.parse(readFileSync(report, 'utf8')) as {
+        slides: { texts: string[]; rasters: unknown[] }[]
+      }
+      outlineMarkdown(deck)
+      type Block = { kind: string; box: unknown; paragraphs?: { text: string }[] }
+      if (deck.slides.length !== want.slides.length) {
+        failed.push(`${recipe.id} 读回来 ${deck.slides.length} 页，导出了 ${want.slides.length} 页`)
+      }
+      deck.slides.forEach((s: { blocks: Block[] }, i: number) => {
+        const where = `${recipe.id} 第 ${i + 1} 页`
+        const texts = s.blocks.flatMap((b) => b.paragraphs?.map((p) => p.text) ?? [])
+        if (JSON.stringify(texts) !== JSON.stringify(want.slides[i]?.texts)) {
+          failed.push(`${where} 读回来的文字不对`)
+        }
+        const images = s.blocks.filter((b) => b.kind === 'image').length
+        if (images !== want.slides[i]?.rasters.length) {
+          failed.push(`${where} 读回来 ${images} 张图片`)
+        }
+        if (s.blocks.some((b) => !b.box)) failed.push(`${where} 有块没读到位置`)
+      })
     }
     expect(failed).toEqual([])
   }, 240_000)
