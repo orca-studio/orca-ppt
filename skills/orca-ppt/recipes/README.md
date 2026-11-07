@@ -41,6 +41,7 @@
 | `black-orange` | 黑底撞色 | 公司介绍、商业计划、融资路演：大面积黑底只用一种橙色，一块橙色在胶囊按钮、目录高亮格、数字卡之间接力，一张纹理大图每页换位置 | [black-orange/RECIPE.md](black-orange/RECIPE.md) |
 | `black-white-split` | 黑白分屏 | 商业计划、品牌提案：白纸和一块黑轮流占画面，黑块在整页、一条线、左栏、右半边之间变形，荧光绿圆章和斜贴的色签跟着跳，标题压缩超粗 | [black-white-split/RECIPE.md](black-white-split/RECIPE.md) |
 | `poly-window` | 窗口变形 | 新品发布短片、品牌宣传：黑底上只开一扇斜切的多边形窗，窗口边走边变形带出下一个画面，中途拆成一排正倒交错的三角，最后收成正中的产品 | [poly-window/RECIPE.md](poly-window/RECIPE.md) |
+| `apple-bento` | 苹果卡片 | 产品发布、功能亮点、宣传短片：苹果官网式 bento 卡片墙（圆角统一 28、间距统一 20），拼贴封面里的缩略卡片墙放大成整页，黑卡墙从下往上扫上来，再收成半屏黑白、钻进一张卡里长出主图 | [apple-bento/RECIPE.md](apple-bento/RECIPE.md) |
 
 ## 怎么用一个同款
 
