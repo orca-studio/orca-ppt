@@ -1,0 +1,32 @@
+/* 配色：灯下（lamplight）
+ * 一句话：雨夜深蓝底 + 米黄纸卡 + 路灯暖黄。像夜里路灯下摊开一张作文纸：底是暗的，纸是暖的，荧光笔是灯的颜色,**深底**。
+ * 在主题之后引入 —— 它只定义那 10 个颜色变量,盖掉主题里的同名值。
+ * 适合配 ink-wash（楷体标题、宋体正文）做语文课件、范文讲读。
+ *
+ * 变量映射：
+ *   --bg          雨夜深蓝            --surface     米黄纸（片段卡、范文卡）
+ *   --surface-2   深一档的灰蓝（雷区卡这类压在夜色上的小卡片）
+ *   --accent      路灯暖黄（强调条、点亮的标签）
+ *   --accent-soft 浅暖黄（荧光笔：压在纸卡关键句后面的高亮条）
+ *   --text / --text-dim  近白 / 灰蓝
+ *   --text-on-surface    深褐墨色（米黄纸上的正文）
+ *   --text-on-accent     深褐（暖黄、浅暖黄上的字）
+ *   --accent-text        暖黄（深底上的强调字，强调色本身就够亮）
+ *
+ * 可以互变的颜色：accent ↔ accent-soft（暖黄 ↔ 浅暖黄，同色系）。
+ * surface（米黄）和 surface-2（灰蓝）明度差太大，不能互变。
+ * 背景就是深色：不需要整页深色形状（themes.md「深底配色要当心」）。
+ */
+
+:root {
+  --bg: #0d1422;
+  --surface: #efe6d0;
+  --surface-2: #1f2a3d;
+  --text: #eef0f4;
+  --text-dim: #a9b2c3;
+  --text-on-surface: #2a2419;
+  --accent: #f0b04a;
+  --accent-soft: #f7dc8e;
+  --text-on-accent: #1e1608;
+  --accent-text: #f0b04a;
+}
