@@ -216,6 +216,8 @@ html, body, .reveal { background: var(--bg); }
 .s-shadow { border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / 0.36), rgb(0 0 0 / 0)); }
 /* 一组拼起来的形状整体投一道柔和的影子（拼成 S 的扇形）。写在 .s-group 上，影子跟着组转 */
 .s-lift { filter: drop-shadow(0 16px 24px rgb(0 0 0 / 0.16)); }
+/* 循环飘动层：里面那张图由 engine.js 换成平铺背景、按 data-drift 的速度一直挪（雨、雪） */
+.s-drift { pointer-events: none; }
 
 /* 页内动画（transitions.md「页内动画」）。
    .s-group：把几个形状编成一组一起动（灯头 + 灯身），组里的子元素按组的左上角绝对定位。

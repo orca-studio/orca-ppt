@@ -2561,6 +2561,49 @@
       v.currentTime = target;
     });
 
+  // ───────── 循环飘动层（data-drift） ─────────
+  // 雨、雪、飘过的雾：一张能无缝平铺的图，按固定速度一直往一个方向走，永不停。
+  //   <div class="s-drift" data-drift="vx vy" style="left:0px; top:0px; width:1920px; height:1080px;">
+  //     <img src="art/rain.png" alt="">
+  //   </div>
+  // vx vy 是每秒多少 px。引擎把里面的图换成这个框的平铺背景，每帧挪 background-position。
+  // 不走页内动画的时间线（那条线在点击分步之间会停住），走一个全局时钟：
+  //   放映时是 gsap.ticker 的时间，两页上同一层（同 data-id、同速度、同图）在同一刻的位移一样，翻页时雨不断、不重开；
+  //   录制时是这一份录制累计到第几毫秒（go 切页时接上一段停下的那一刻），逐帧确定。
+  //   减少动效时不动，定格在第 0 秒的样子。
+  // 图的平铺尺寸默认是框的尺寸，<img> 写了 width / height 就按它铺。
+  const DRIFT = "[data-drift]";
+  function prepareDrifts(slides = allSlides()) {
+    for (const host of within(slides, DRIFT)) {
+      if (host.dataset.driftTile) continue;
+      const img = host.querySelector(":scope > img");
+      if (!img) { err(`data-drift 的框里要放一张 <img>（要平铺着飘的那张图）`); continue; }
+      const w = +img.getAttribute("width") || parseFloat(host.style.width) || W;
+      const h = +img.getAttribute("height") || parseFloat(host.style.height) || H;
+      host.style.backgroundImage = `url("${img.src}")`;
+      host.style.backgroundRepeat = "repeat";
+      host.style.backgroundSize = `${w}px ${h}px`;
+      host.dataset.driftTile = `${w} ${h}`;
+      img.remove();
+    }
+    driftAt(driftNow());
+  }
+  const wrap = (v, m) => ((v % m) + m) % m;
+  function driftAt(t) {
+    for (const host of document.querySelectorAll(`.reveal .slides ${DRIFT}`)) {
+      const tile = host.dataset.driftTile;
+      if (!tile) continue;
+      const [w, h] = tile.split(" ").map(Number);
+      const [vx = 0, vy = 0] = host.dataset.drift.trim().split(/[\s,]+/).map(Number);
+      host.style.backgroundPosition = `${f1(wrap(vx * t, w))}px ${f1(wrap(vy * t, h))}px`;
+    }
+  }
+  let driftBase = 0;  // 录制：之前几段累计的毫秒
+  let driftLast = 0;  // 录制：这一段最后 seek 到的毫秒
+  // 减少动效（?calm）：雨定格成静止的一层。自动移动、超过 5 秒的内容要能停下来（WCAG 2.2.2）
+  const driftNow = () => (CAPTURE ? (driftBase + driftLast) / 1000 : CALM ? 0 : gsap.ticker.time);
+  if (!CAPTURE && !CALM) gsap.ticker.add(() => driftAt(gsap.ticker.time));
+
   function stopScene() {
     sceneCall?.kill();
     sceneCall = null;
@@ -2814,6 +2857,7 @@
     prepareLamps(slides);
     prepareStory(slides);
     prepareVideos(slides);
+    prepareDrifts(slides);
     prepareRecaps(slides);
     // 别的页上的回顾屏正好回顾到这一页：嵌着的那份重新载
     const reloaded = [];
@@ -2851,6 +2895,7 @@
   prepareLamps();
   prepareStory();
   prepareVideos();
+  prepareDrifts();
   prepareRecaps();
   // 单独打开（双击 deck.html、AI 助手的内置浏览器）时给一条播放条（见文末）：没有 Orca PPT 的画布和
   // 工具栏，页面上又没有任何能点的东西，不知道按键盘的人只能看到第一页。
@@ -2966,6 +3011,9 @@
     async go(index) {
       for (const a of captured) a.finish();
       current?.progress(1);
+      // 飘动层接着上一段停下的那一刻走，录出来的视频里雨不会每页重开
+      driftBase += driftLast;
+      driftLast = 0;
       const target = Reveal.getSlide(index);
       if (Reveal.getIndices().h === index && !scene) startScene(target, 0); // 第一页不会触发 slidechanged
       Reveal.slide(index);
@@ -3012,6 +3060,8 @@
       scene?.time(Math.max(0, ms - sceneOffset) / 1000);
       await Promise.all(videos.map((v) => seekVideo(v, Math.max(0, ms - sceneOffset) / 1000)));
       await recap?.time(Math.max(0, ms - sceneOffset));
+      driftLast = ms;
+      driftAt(driftNow());
     },
     count: () => Reveal.getTotalSlides(),
     // 放映时转场没放完就按下一页,剩下的在这么多毫秒里快进放完(见 advance)。

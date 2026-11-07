@@ -84,6 +84,7 @@
 | `.s-arc` | 圆环扇形：一个正圆挖掉中间（`--hole`），`--band-in`–`--band-out` 是强调色的一圈、其余是 `--surface-2`；那一圈顺时针从 `--arc-a` 渐到 `--arc-b`（0 是 `--accent-soft`，1 是 `--accent`），带上的字用 `.t-on-accent`，象限用 `clip-path:inset(…)` 裁 | 拼成 S 的扇形、一整圈的季度环；几块接着排，色温一路升高，读得出往前冲的势能（同款 `swirl-rings`） |
 | `.s-shadow` | 落在地上的软阴影：一个中间深、往外淡没的椭圆 | 立体柱、立着的物件脚下 |
 | `.s-lift` | 一组形状整体投一道柔和的影子，写在 `.s-group` 上 | 拼起来的扇形、圆环（同款 `swirl-rings`） |
+| `.s-drift` | 铺满画布的循环飘动层：里面一张能无缝平铺的图，按 `data-drift` 的速度一直挪 | 雨夜、雪景的底景：雨、雪一直在下，翻页不断（见 `transitions.md`「循环飘动」） |
 
 线条类（只用在 `<svg>` 里的 `path` / `polyline` / `line` 上）：`.l-accent` `.l-surface` `.l-text` 线宽 6，`.l-dim` 线宽 2（基线、参考线）。
 不许在 svg 上写 `stroke` 颜色，虚线可以写 `stroke-dasharray`。
