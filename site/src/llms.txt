@@ -89,3 +89,20 @@ claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
 
 在 MCP 设置里加：名字 `orca-ppt`，HTTP / Streamable HTTP，地址 `http://127.0.0.1:6722/mcp`。
 只支持 stdio 的现在接不上，如实告诉用户。
+
+## 连不上的时候
+
+装好之后，`orca-ppt` 的工具调不通、或者会话里根本没有这组工具，多半是用户把 Orca PPT 退出了：MCP 跟着应用走，
+macOS 上关掉窗口不断，⌘Q 退出才断；Windows 上关掉最后一个窗口就断。
+
+1. **看应用在不在**：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:6722/mcp`（Windows 用 `curl.exe`），
+   406 就是在跑，连不上就是没开。
+2. **没开就打开**，等到第 1 步返回 406（一般几秒）：
+
+   ```bash
+   open -a "Orca PPT"                                     # macOS
+   Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"  # Windows PowerShell
+   ```
+
+3. **重连**：先直接再调一次工具，能通就继续。不通说明你这边不会自己重连，请用户动手：
+   Claude Code 里输 `/mcp`，选 `orca-ppt` →「Reconnect」；WorkBuddy、Codex 等新建任务 / 新开会话。
