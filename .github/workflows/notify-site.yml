@@ -1,5 +1,5 @@
 # 官网在私有仓 orca-studio/orca-ppt-cloud(2026-11-09 迁过去)。它从本仓的 skill 读同款、样稿和 runtime,
-# 所以 main 上这些一变,就通知它重新构建、部署。
+# 还把 references/install.md 发布成 connect-desktop.txt。所以 main 上这些一变,就通知它重新构建、部署。
 name: Notify website
 
 on:
@@ -9,6 +9,8 @@ on:
       - skills/orca-ppt/examples/**
       - skills/orca-ppt/recipes/**
       - skills/orca-ppt/runtime/**
+      # 官网把它原样发布成 connect-desktop.txt
+      - skills/orca-ppt/references/install.md
       - .github/workflows/notify-site.yml
   workflow_dispatch:
 

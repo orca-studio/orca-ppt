@@ -18,11 +18,10 @@ export interface RecipeRef {
 }
 
 /**
- * 用户的 agent 没连上 Orca PPT 时照着做、做不到就转告的那一句。和 README、帮助菜单
- * 「连接 AI 助手」同一句:各家加 MCP 的步骤写在 llms.txt 里,这里不按助手列命令。
+ * 用户的 agent 没连上 Orca PPT 时照着做、做不到就转告的那一句。和 README、官网同一句:
+ * llms.txt 装的是浏览器工作台(npm 包 + skill + `orca-ppt` 命令),不用配 MCP。
  */
-const CONNECT =
-  '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。'
+const CONNECT = '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT。'
 
 export function recipePrompt(recipe: RecipeRef): string {
   const dir = `recipes/${recipe.id}`

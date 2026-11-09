@@ -149,8 +149,10 @@ Cursor 手动加进 `~/.cursor/mcp.json`:
 { "mcpServers": { "orca-ppt": { "type": "http", "url": "http://127.0.0.1:6722/mcp" } } }
 ```
 
-应用菜单「帮助 > 连接 AI 助手…」不给命令,给的是一句发给助手的话(读 `llms.txt`,自己连上)。
-2026-11-09 起官网的 `llms.txt`(在私有仓 orca-ppt-cloud 的 `site/src/`)只写浏览器工作台(npm 包 + `orca-ppt` 命令),不再写桌面版和各家加 MCP 的步骤。
+应用菜单「帮助 > 连接 AI 助手…」不给命令,给的是一句发给助手的话(读 `connect-desktop.txt`,自己连上)。
+各家怎么加 MCP、连不上怎么办写在 skill 的 `references/install.md`,官网构建时把它发布成
+`https://ppt.orca-studio.ai/connect-desktop.txt`。官网的 `llms.txt` 只装浏览器工作台(npm 包 + `orca-ppt` 命令),
+不讲桌面版(2026-11-09)。
 
 **为什么是 HTTP 不是 stdio:** stdio 要在 agent 配置里写一条指向本仓 `dist` 的路径
 (打包之后就废了),还要多起一个进程、再想办法告诉它连哪个端口。HTTP 只要一行,而且
@@ -161,8 +163,8 @@ MCP 就住在 server 进程里 —— 工具调的就是界面调的那批方法
 的。
 
 应用没开的时候 MCP 连不上,这是对的:画布在应用里,没有应用就没有可看的东西。
-助手发现连不上时怎么办(看端口、打开应用、请用户重连)原来写在 `llms.txt` 末节「连不上的时候」(2026-11-09 起 `llms.txt` 只写浏览器工作台,这一节已去掉):
-那时助手读不到 skill,只能靠安装说明。
+助手发现连不上时怎么办(看端口、打开应用、请用户重连)写在 skill 的 `references/install.md`「连不上时」;
+读不到 skill 的助手照官网发布的 `connect-desktop.txt` 做,是同一份。
 
 ## UI 与 MCP 的操作对齐
 

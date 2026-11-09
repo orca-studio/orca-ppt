@@ -573,12 +573,13 @@ let serverPort = 0
 
 /**
  * 「帮助 > 连接 AI 助手…」:给一句发给助手的话,点一下就拷走。连接交给助手自己做 ——
- * 各家加 MCP 的入口不一样,llms.txt 按助手分别写了步骤,应用不替别家写配置。
+ * 各家加 MCP 的入口不一样,步骤写在 skill 的 references/install.md,官网把它发布成
+ * connect-desktop.txt;应用不替别家写配置。llms.txt 只装浏览器工作台,不讲桌面版。
  */
 async function showConnectAgent(): Promise<void> {
   const url = `http://127.0.0.1:${serverPort}/mcp`
   const prompt =
-    '读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。'
+    '读 https://ppt.orca-studio.ai/connect-desktop.txt ，把你自己连上 Orca PPT 桌面版。'
   const result = await dialog.showMessageBox({
     type: 'info',
     message: '连上你的 AI 助手',

@@ -1,8 +1,42 @@
-# Orca PPT 应用:装上、连上、连不上时怎么办
+# Orca PPT 桌面版:连上、连不上时怎么办
 
-本 skill 自己就能用:照 SKILL.md 做出一个 HTML 文件,浏览器打开就能放映,`capture.mjs` 能录成视频。
-**Orca PPT 是配套的桌面应用**,不是必需的。它多给的是:用户和你看着同一块画布、你改哪里
-画布就框出哪里、改错了能用 `undo` 退回去、你改稿子时用户不会同时动它。
+本 skill 自己就能用:照 SKILL.md 做出一个 HTML 文件,浏览器打开就能放映。本机有 `orca-ppt` 命令时,
+照 `workbench.md` 用浏览器工作台,不用配 MCP —— 这是默认的用法。
+
+**Orca PPT 桌面版**是增值的选择:全屏放映、离线、本地字体和素材都在一个应用里。它和浏览器工作台是
+同一块画布:用户和你看着同一份稿子、你改哪里画布就框出哪里、改错了能用 `undo` 退回去。
+桌面版通过 MCP 连接,下面是怎么连。
+
+这份文档也发布在 https://ppt.orca-studio.ai/connect-desktop.txt ,桌面版菜单「帮助 > 连接 AI 助手」
+给用户的那句话指向它。
+
+## 连上桌面版
+
+1. **桌面版要开着。** MCP 跟着应用走,在 `http://127.0.0.1:6722/mcp`(Streamable HTTP,本机,无鉴权);
+   GET 它返回 406 就是在跑。没装就请用户从 https://ppt.orca-studio.ai 下载安装。
+2. **加 MCP**,名字一律 `orca-ppt`。改配置文件前先读原文件、留备份,只加这一条;
+   要用户「批准 / 信任」的,让用户自己点,别改批准记录。
+
+   - **Claude Code**:`claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp`
+   - **Codex**:`codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp`
+   - **WorkBuddy**:写进 `~/.workbuddy/mcp.json`,已有文件就往 `mcpServers` 里加:
+
+     ```json
+     {
+       "mcpServers": {
+         "orca-ppt": { "type": "streamableHttp", "url": "http://127.0.0.1:6722/mcp", "timeout": 300000 }
+       }
+     }
+     ```
+
+     然后请用户:重启 WorkBuddy → 侧边栏「专家 · 技能 · 连接器」→「连接器」→「自定义连接器」→
+     「MCP 服务管理」,在「我的 MCP」里找到 `orca-ppt` 点「信任」→ 新建任务再用(旧任务里看不到工具)。
+
+   - **其他助手**:在 MCP 设置里加,名字 `orca-ppt`,HTTP / Streamable HTTP,地址同上。
+     只支持 stdio 的接不上,如实告诉用户,改用浏览器工作台(https://ppt.orca-studio.ai/llms.txt)。
+
+3. **请用户重启你**(或新开会话 / 任务)。
+4. **验证**:调 `deck_status`,返回 `NO_DECK_OPEN` 或页数都算连上了。
 
 ## 怎么判断连上了
 
@@ -13,21 +47,17 @@
 
 按顺序排查,每一步都要**告诉用户做什么**,别自己反复重试。
 
-1. **应用开着吗?** MCP 由应用自己提供(`http://127.0.0.1:6722/mcp`),应用没开就连不上。
-   请用户打开 Orca PPT。
-2. **MCP 加过没有?** 没加过就请用户加一次(在用户自己的终端里跑):
-
-   ```bash
-   claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
-   codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp
-   ```
-
-   其他宿主按 https://ppt.orca-studio.ai/llms.txt 里对应的一节加。
+1. **应用开着吗?** `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:6722/mcp`(Windows 用 `curl.exe`),
+   406 就是在跑。连不上多半是用户把应用退出了:macOS 上关掉窗口不断,⌘Q 退出才断;Windows 上关掉最后一个窗口就断。
+   没开就打开(macOS `open -a "Orca PPT"`;Windows `Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"`),
+   等到返回 406。
+2. **MCP 加过没有?** 没加过就照上面「连上桌面版」加一次。
 3. **应用刚重启过?** 有的宿主在应用重启的空档里连失败一次,之后就不再自己重试 ——
-   应用早就好了,这边还显示断开。Claude Code 里请用户运行 `/mcp`,选 orca-ppt 重新连接。
+   应用早就好了,这边还显示断开。先直接再调一次工具;不通就请用户动手:Claude Code 里运行 `/mcp`,
+   选 orca-ppt 重新连接;WorkBuddy、Codex 等新建任务 / 新开会话。
 
-连不上也不耽误做稿子:本机有 `orca-ppt` 命令就照 `workbench.md` 用命令操作工作台,不用配 MCP;
-没有就照 SKILL.md 的流程做,浏览器打开放映。
+连不上也不耽误做稿子:本机有 `orca-ppt` 命令就照 `workbench.md` 用命令操作工作台(桌面版开着时,
+`orca-ppt call` 操作的就是桌面版);没有就照 SKILL.md 的流程做,浏览器打开放映。
 
 ## 工具返回的错误码
 

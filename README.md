@@ -2,58 +2,40 @@
 
 **和 AI 一起，把想法做成演示稿。**
 
-[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg) · [下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe) · [官网](https://ppt.orca-studio.ai) · [联系我们](#联系我们)
+[官网](https://ppt.orca-studio.ai) · [桌面版](#桌面版) · [联系我们](#联系我们)
 
 ## 开始使用
 
-有两种用法，做出来的稿子是一样的，区别在于工作台开在哪里、AI 助手怎么连上它：
+Orca PPT 自己不带 AI，由你已经在用的 AI 助手来安装和使用它。WorkBuddy、Codex、Claude Code 都试过。
 
-|                            | 装 Orca PPT 应用（推荐） | 不装桌面版              |
-| -------------------------- | ------------------------ | ----------------------- |
-| 工作台                     | 桌面应用                 | 浏览器里                |
-| 在画面上点一下，指给 AI 看 | ✓                        | ✓                       |
-| 同款首页，点「做同款」     | ✓                        | ✓                       |
-| 实时预览、双击改字、撤销   | ✓                        | ✓                       |
-| 导出 PPTX                  | ✓                        | ✓                       |
-| 全屏放映                   | ✓                        | 在浏览器里翻页放映      |
-| AI 助手怎么连              | MCP（需要重启 AI 助手）  | `orca-ppt` 命令，不用配 |
-| 平台                       | macOS 或 Windows         | 浏览器                  |
-
-### 用法一：装 Orca PPT 应用（推荐）
-
-1. **让 AI 助手装好 Orca PPT 并连上它。** Orca PPT 自己不带 AI，由你已经在用的 AI 助手来安装和使用它。
-   把下面这句话发给你的 AI 助手：
-
-   ```
-   读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT 应用，并把你自己连上它。
-   ```
-
-   它会下载安装、完成配置；需要你动手的地方（比如重启助手、在设置里点「信任」）会告诉你。
-   支持 WorkBuddy、Codex、Claude Code，其他支持 MCP 的助手一般也可以。
-   想自己装也行：[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg)
-   （macOS 12 以上，Apple Silicon）拖进「应用程序」，或者
-   [下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe)
-   （Windows 10 以上，64 位）双击安装，再把上面那句话发给助手。
-
-   以后每次用，都**先打开 Orca PPT，再打开 AI 助手**。之后有新版本，Orca PPT 会自动更新。
-
-2. **做第一份稿子。** 在 Orca PPT 首页挑一个同款，点「做同款」，把复制的那段话贴给 AI 助手，补上你的内容。
-
-### 用法二：不装桌面版
-
-装一个 npm 包：带 Orca PPT 的 skill（设计规范和脚本，AI 助手照着它做稿子）、`orca-ppt` 命令和
-浏览器里的工作台。不需要装应用，macOS、Windows、Linux 都能用。
-
-1. **让 AI 助手装好。** 把下面这句话发给你的 AI 助手：
+1. **让 AI 助手装好。** 把下面这句话发给它：
 
    ```
    读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT。
    ```
 
-   要用的 Node.js、Chrome 它会自己检查、装上；每次用之前，它会自己把工作台在浏览器里打开。
+   它会装一个 npm 包：Orca PPT 的 skill（设计规范和脚本，AI 助手照着它做稿子）、`orca-ppt` 命令和
+   浏览器里的工作台。要用的 Node.js、Chrome 它会自己检查、装上，装好就在浏览器里打开工作台。
+   macOS、Windows、Linux 都能用，不用配 MCP。
 
 2. **做第一份稿子。** 在工作台首页挑一个同款，点「做同款」，把复制的那段话贴给 AI 助手，补上你的内容；
    或者直接跟它说要做什么稿子。工作台的标签页留在前台，在后台浏览器会让它变慢。
+
+### 桌面版
+
+想要全屏放映、离线使用，可以再装桌面版：[下载 Mac 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg)
+（macOS 12 以上，Apple Silicon）拖进「应用程序」，或者
+[下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe)
+（Windows 10 以上，64 位）双击安装。之后有新版本会自动更新。
+
+桌面版和浏览器工作台是同一块画布，AI 助手通过 MCP 连上它。装好后在菜单「帮助 > 连接 AI 助手」复制一句话发给助手，
+或者直接发：
+
+```
+读 https://ppt.orca-studio.ai/connect-desktop.txt ，把你自己连上 Orca PPT 桌面版。
+```
+
+需要你动手的地方（比如重启助手、在设置里点「信任」）它会告诉你。以后每次用，先打开桌面版，再打开 AI 助手。
 
 ### 安装、接入遇到问题？
 
@@ -63,7 +45,7 @@
 
 ![Orca PPT](./docs/brand/social-card-1200x630.png)
 
-Orca PPT 让你用自己的 AI 助手做出**会动的演示稿**（桌面应用，也能在浏览器里用）：
+Orca PPT 让你用自己的 AI 助手做出**会动的演示稿**（在浏览器里用，也有桌面版）：
 翻页时，标题会滑到新的位置，卡片会展开成整页，数字会变成图表 —— 像发布会上那样连贯，
 而不是一页一页地硬切。
 
@@ -71,7 +53,7 @@ Orca PPT 让你用自己的 AI 助手做出**会动的演示稿**（桌面应用
 
 ### 看到喜欢的效果，就「做同款」
 
-打开 Orca PPT，首页就是一排同款，每张卡片是这个效果的封面。
+打开工作台，首页就是一排同款，每张卡片是这个效果的封面。
 
 喜欢哪个，点卡片右上角的「做同款」，把那段话复制给你的 AI 助手，再补上你自己的内容
 （主题、每页要讲什么、名单……），它就会照着这个效果做出你的版本。
@@ -89,7 +71,7 @@ Orca PPT 让你用自己的 AI 助手做出**会动的演示稿**（桌面应用
 
 ### 指给 AI 看，而不是描述给它听
 
-稿子在 Orca PPT 里实时放映。觉得哪里不对，直接在画面上点那个位置，写一句「这儿太挤了」，
+稿子在工作台里实时放映。觉得哪里不对，直接在画面上点那个位置，写一句「这儿太挤了」，
 AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右边那个标题」。
 
 文字要改，双击就能改；改错了可以撤销。
@@ -97,7 +79,7 @@ AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右�
 ### 做完直接放映
 
 成品是你电脑上的一个普通文件夹，用浏览器打开就能放映，方向键翻页。
-在 Orca PPT 里也可以全屏放映。
+桌面版里还可以全屏放映。
 
 ## 常见问题
 
@@ -105,7 +87,7 @@ AI 拿到的就是那个确切的位置，不用你费劲形容「第三页右�
 不需要。你只要会跟 AI 助手说话。连接 AI 助手也是发一句话给它，让它自己配置，只做一次。
 
 **能导出成 PowerPoint 吗？**
-能。在 Orca PPT 的「文件」菜单里选「导出 PPTX…」，也可以让 AI 助手帮你导出。成品本身是网页形式的演示稿，
+能。让 AI 助手帮你导出就行；桌面版的「文件」菜单里也有「导出 PPTX…」。成品本身是网页形式的演示稿，
 动效最完整。导出 PPTX 后，共享元素、形态变换这类连贯动效靠 PowerPoint 的「平滑」保留；有些转场会退成
 淡入淡出，导出时会告诉你是哪几页。
 
@@ -118,11 +100,11 @@ Orca PPT 是开源的，MIT 许可，免费使用。
 
 **哪里能看到更多效果？**
 [ppt.orca-studio.ai](https://ppt.orca-studio.ai) 是 Orca PPT 的官网：所有同款点开就能放映，
-在浏览器里一页页翻，也是下载安装包的地方。
+在浏览器里一页页翻，也是下载桌面版的地方。
 
-**支持 Windows 吗？Linux 呢？**
-Windows 支持：[下载 Windows 版](https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe)
-（Windows 10 以上，64 位）。Linux 没有桌面版，用上面的「用法二：不装桌面版」，在浏览器里用。
+**支持 Windows 和 Linux 吗？**
+都支持。浏览器工作台在 macOS、Windows、Linux 上都能用。桌面版有 Mac 和 Windows 两个版本，
+Linux 没有桌面版。
 
 ## 联系我们
 
