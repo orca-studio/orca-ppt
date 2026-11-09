@@ -1,5 +1,5 @@
 # npm 包(orca-ppt.tgz)的 Windows 冒烟测试:在 CI 的 Windows 机器上全局装 → 新建、检查、导出 →
-# 后台起 serve → 用 orca-ppt call 操作(三种参数写法)→ 截图 → 停掉。照 llms-web.txt 给 AI 助手的那条路走。
+# 后台起 serve → 用 orca-ppt call 操作(三种参数写法)→ 截图 → 停掉。照 llms.txt 给 AI 助手的那条路走。
 # 用法:pwsh tools/smoke-npm-win.ps1 release
 param([Parameter(Mandatory)][string]$ReleaseDir)
 $ErrorActionPreference = 'Stop'
@@ -22,7 +22,7 @@ Run '起始文件' { orca-ppt templates } | Out-Null
 $skill = (Run 'skill 目录' { orca-ppt skill }).Trim()
 if (-not (Test-Path (Join-Path $skill 'references\workbench.md'))) { throw "包里的 skill 不全:$skill" }
 
-# 稿子放在 C 盘:全局 npm 目录在 C 盘,稿子和 skill 要在同一个盘(跨盘会被拒,见 llms-web.txt)
+# 稿子放在 C 盘:全局 npm 目录在 C 盘,稿子和 skill 要在同一个盘(跨盘会被拒,见 llms.txt)
 $decks = Join-Path $env:TEMP 'orca-ppt-smoke'
 New-Item -ItemType Directory -Force $decks | Out-Null
 $deck = (Run '新建' { orca-ppt new smoke --from recipe:glass-bars --dir $decks }).Trim()
@@ -38,7 +38,7 @@ try {
   Run 'call:key=value(带反斜杠的路径)' { orca-ppt call open_deck "path=$deck" } | Out-Null
   Run 'call:key=value' { orca-ppt call show_slide index=2 } | Out-Null
   Run 'call:标准输入' { '{"index":1}' | orca-ppt call show_slide - } | Out-Null
-  # JSON 直接当参数:PowerShell 调 npm 的 .cmd 时可能吃掉双引号。只记结果,不算失败 —— llms-web.txt 里
+  # JSON 直接当参数:PowerShell 调 npm 的 .cmd 时可能吃掉双引号。只记结果,不算失败 —— llms.txt 里
   # 已经让 Windows 上用 key=value 或标准输入
   Write-Host '--- call:JSON 参数(只记录)'
   orca-ppt call show_slide '{"index":0}' 2>&1 | Out-String | Write-Host

@@ -47,7 +47,7 @@
 1. **让 AI 助手装好。** 把下面这句话发给你的 AI 助手：
 
    ```
-   读 https://ppt.orca-studio.ai/llms-web.txt ，帮我装好 Orca PPT。
+   读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT。
    ```
 
    要用的 Node.js、Chrome 它会自己检查、装上；每次用之前，它会自己把工作台在浏览器里打开。

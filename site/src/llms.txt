@@ -1,108 +1,38 @@
-# 安装 Orca PPT（桌面版 + MCP）
+# 安装 Orca PPT
 
-Linux、或者用户不想装桌面版、只想要 skill 时，改读 [llms-web.txt](https://ppt.orca-studio.ai/llms-web.txt)
-（npm 包，带 skill、`orca-ppt` 命令和浏览器工作台）。
+装好以后，用户在浏览器里看到 Orca PPT 工作台：首页是同款画廊，挑一个点「做同款」就能开始。
+macOS、Windows、Linux 都一样。
 
-1. **装好并打开 Orca PPT**（已装就只打开），见「安装」。应用开着时 MCP 在
-   `http://127.0.0.1:6722/mcp`（Streamable HTTP，本机，无鉴权）；GET 它返回 406 就是在跑。
-2. **加 MCP**：按你自己是哪个助手，照下面对应一节加，名字一律 `orca-ppt`。
-   改配置文件前先读原文件、留备份，只加这一条；要用户「批准 / 信任」的，让用户自己点，别改批准记录。
-3. **请用户重启你**。
-4. **验证**：调 `deck_status`，返回 `NO_DECK_OPEN` 或页数都算连上了。
+1. **检查依赖，缺什么装什么**：Node.js 22.18 以上（`node -v`）；Chrome 或 Edge（`orca-ppt` 用它渲染稿子，
+   不会自己下载浏览器）。
+2. **装 `orca-ppt`**（升级也是重跑这一行）：
 
-## 安装
-
-约 200 MB。命令有超时就后台下载或调长超时，断了用 `curl -C -` 续传。
-
-直连 GitHub 太慢（几十 KB/s）时，安装包可以改从镜像下：在原地址前加 `https://gh-proxy.com/`（不通就换 `https://v4.gh-proxy.org/`），同样用 `-C -` 续传。
-镜像是第三方的，只用来下载安装包：后面的签名、公证或 SHA256 校验一步不少，`SHA256SUMS.txt` 仍从 github.com 下。
-对不上就停下，删掉安装包，告诉用户。两个镜像都不通就换回 GitHub 慢慢下。
-
-### macOS（12 以上，Apple Silicon）
-
-已装（`/Applications/Orca PPT.app` 在）就只跑最后一行。
-
-```bash
-curl -fL -C - -o /tmp/OrcaPPT.dmg https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-mac-arm64.dmg
-hdiutil attach -nobrowse -readonly -mountpoint /tmp/orca-ppt-dmg /tmp/OrcaPPT.dmg
-codesign -dv "/tmp/orca-ppt-dmg/Orca PPT.app" 2>&1 | grep TeamIdentifier   # 应为 R2MFZSZP4R
-spctl -a -vv "/tmp/orca-ppt-dmg/Orca PPT.app"                             # 应为 accepted / Notarized Developer ID
-cp -R "/tmp/orca-ppt-dmg/Orca PPT.app" /Applications/
-hdiutil detach /tmp/orca-ppt-dmg
-open -a "Orca PPT"
-```
-
-签名或公证对不上就停下：别拷进「应用程序」，卸载 DMG，告诉用户。`hdiutil` 提示已废弃可以忽略。
-
-### Windows（10 以上，64 位）
-
-已装（`$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe` 在）就只跑最后一行。在 PowerShell 里运行，不需要管理员：
-
-```powershell
-$setup = "$env:TEMP\OrcaPPT-Setup.exe"
-curl.exe -fL -C - -o $setup https://github.com/orca-studio/orca-ppt/releases/latest/download/OrcaPPT-win-x64-Setup.exe
-curl.exe -fsSL -o "$env:TEMP\OrcaPPT-SHA256SUMS.txt" https://github.com/orca-studio/orca-ppt/releases/latest/download/SHA256SUMS.txt
-$hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
-Select-String -Quiet -SimpleMatch $hash "$env:TEMP\OrcaPPT-SHA256SUMS.txt"   # 应为 True
-Start-Process $setup -ArgumentList '--silent' -Wait
-Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"
-```
-
-摘要对不上（`False`）就停下：删掉安装包，告诉用户。
-
-命令被你的权限拦下时，把下载链接给用户自己装。Windows 提示「已保护你的电脑」时点「更多信息」→「仍要运行」。
-
-## 加 MCP
-
-### WorkBuddy
-
-写进 `~/.workbuddy/mcp.json`，已有文件就往 `mcpServers` 里加：
-
-```json
-{
-  "mcpServers": {
-    "orca-ppt": { "type": "streamableHttp", "url": "http://127.0.0.1:6722/mcp", "timeout": 300000 }
-  }
-}
-```
-
-然后请用户按顺序：
-
-1. **重启 WorkBuddy**（不重启看不到这一条）。
-2. **信任**：侧边栏移到「专家 · 技能 · 连接器」→「连接器」→「自定义连接器」→「MCP 服务管理」，
-   在「我的 MCP」里找到 `orca-ppt`，点「信任」。不用再重启。
-3. **新建任务**再用（旧任务里看不到工具）。
-
-### Codex
-
-```bash
-codex mcp add orca-ppt --url http://127.0.0.1:6722/mcp
-```
-
-### Claude Code
-
-```bash
-claude mcp add --transport http orca-ppt http://127.0.0.1:6722/mcp
-```
-
-### 其他助手
-
-在 MCP 设置里加：名字 `orca-ppt`，HTTP / Streamable HTTP，地址 `http://127.0.0.1:6722/mcp`。
-只支持 stdio 的现在接不上，如实告诉用户。
-
-## 连不上的时候
-
-装好之后，`orca-ppt` 的工具调不通、或者会话里根本没有这组工具，多半是用户把 Orca PPT 退出了：MCP 跟着应用走，
-macOS 上关掉窗口不断，⌘Q 退出才断；Windows 上关掉最后一个窗口就断。
-
-1. **看应用在不在**：`curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:6722/mcp`（Windows 用 `curl.exe`），
-   406 就是在跑，连不上就是没开。
-2. **没开就打开**，等到第 1 步返回 406（一般几秒）：
-
-   ```bash
-   open -a "Orca PPT"                                     # macOS
-   Start-Process "$env:LOCALAPPDATA\OrcaPPT\OrcaPPT.exe"  # Windows PowerShell
+   ```
+   npm install -g https://github.com/orca-studio/orca-ppt/releases/latest/download/orca-ppt.tgz
    ```
 
-3. **重连**：先直接再调一次工具，能通就继续。不通说明你这边不会自己重连，请用户动手：
-   Claude Code 里输 `/mcp`，选 `orca-ppt` →「Reconnect」；WorkBuddy、Codex 等新建任务 / 新开会话。
+   直连 GitHub 太慢（几十 KB/s）时，包可以改从镜像下：在原地址前加 `https://gh-proxy.com/`（不通就换 `https://v4.gh-proxy.org/`），下到本地，
+   拿 github.com 上的 `SHA256SUMS.txt` 核对 `orca-ppt.tgz` 那一行，对上了再 `npm install -g ./orca-ppt.tgz`。
+   镜像是第三方的：校验文件不走镜像，对不上就停下，删掉包，告诉用户。
+
+3. **装 skill**：`orca-ppt skill` 打印随包附带的 skill 目录，把它链进你读 skill 的目录，名字用 `orca-ppt`：
+   WorkBuddy 是 `~/.workbuddy/skills/orca-ppt`，Claude Code 是 `~/.claude/skills/orca-ppt`，Codex 等是
+   `~/.agents/skills/orca-ppt`。macOS、Linux 用 `ln -s`；Windows 用目录联接
+   `cmd /c mklink /J <链接> <skill 目录>`（不用管理员）。那里已经有一个 `orca-ppt` 时先问用户再换。
+   升级不用重链：包装在原处，链接一直指着最新的。
+4. **打开工作台给用户看**：
+
+   ```
+   orca-ppt serve --detach --no-open
+   ```
+
+   它放到后台常驻，打印工作台的网址。你有自带的浏览器就用它打开这个网址；没有就去掉 `--no-open` 再跑一次，
+   它会用 Chrome 或 Edge 打开。网址里的令牌每次启动都换，用这次打印的。
+5. **告诉用户装好了**：在工作台首页挑一个同款，点「做同款」，把复制的那段话发给你；或者直接说要做什么稿子。
+   skill 一般在新对话里才加载，请用户新开一个对话 / 任务再说。
+
+## 打不开的时候
+
+- **网址打开说连不上**：后台的工作台停了，或者用的是旧网址。重跑 `orca-ppt serve --detach --no-open`，用新打印的网址。
+- **`serve` 起不来**：看它打印的日志末尾。端口 6722 被别的程序占着就加 `--port <别的端口>`。
+- **报 `NO_BROWSER`**：装上 Chrome 或 Edge 再试，不用重启。

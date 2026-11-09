@@ -398,19 +398,20 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     参数三种写法:`key=value`(值按 JSON 读)、一个 JSON 对象、`-` 从标准输入读 JSON —— Windows 上
     PowerShell 调 npm 生成的 `orca-ppt.cmd` 会吃掉参数里的双引号,前后两种不靠引号。
   - **打开工作台**:`serve` 先找 Chrome、再找 Edge,都没有才用系统默认浏览器 —— 渲染器截图、导出用的
-    就是 Chromium,工作台在同一个内核里看,转场才对得上。llms-web.txt 让助手优先用它**自带的浏览器**
+    就是 Chromium,工作台在同一个内核里看,转场才对得上。llms.txt 让助手优先用它**自带的浏览器**
     打开 `serve --detach --no-open` 打印的网址,用户在助手旁边就能看到。浏览器版启动时先试连一次:
     令牌是上一次启动的、或者 serve 没在跑,直说原因,不留白屏。
   - **Windows**:`.github/workflows/npm-package-windows.yml` 在 Windows 构建机上打包、全局装、新建 /
     检查 / 导出、后台 serve、三种参数写法的 `call`、截图、停掉(`tools/smoke-npm-win.ps1`)。Linux 不测。
-  - **llms 只写安装,用法在 skill**(2026-10-27 定):`llms-web.txt` 只有装依赖、`npm install -g`、
-    把 `orca-ppt skill` 打印的目录链进助手读 skill 的目录、确认连得上;开工作台、`tools` / `call`、
+  - **llms 只写安装,用法在 skill**(2026-10-27 定):`llms.txt` 只有装依赖、`npm install -g`、
+    把 `orca-ppt skill` 打印的目录链进助手读 skill 的目录、打开工作台;开工作台、`tools` / `call`、
     注意事项写在 `skills/orca-ppt/references/workbench.md`(SKILL.md 开头一句「本机有 `orca-ppt` 命令时」
     指过去)。规范只在 skill 一处(AGENTS.md 边界 4),而且跟着包发版,说明和命令对得上。
-  - **默认接入仍是桌面版 + MCP,CLI + 浏览器工作台是备选**(2026-10-27 定;同一天先定过反过来,当天改回):
-    `llms.txt` 是桌面版 + MCP,开头一句把 Linux、不想装桌面版、只想要 skill 的用户分到 `llms-web.txt`(npm 包、
-    `serve --detach`、`tools` / `call`)。备选那条不用配 MCP、不用点「信任」、不用下 DMG,但要 Node 和
-    Chrome、截图给的是文件路径、浏览器后台限速、没有全屏放映和取锚裁切图;桌面版没有这些问题。
+  - **默认接入是浏览器工作台,桌面版是增值**(2026-11-09 定,推翻 10-27 的「桌面版 + MCP 为默认」):
+    以桌面版为主门槛太高 —— 下载应用、连 AI 助手、复制提示词让助手操作桌面版,普通用户每一步都是挑战。
+    `llms.txt` 只写 npm 包 + `serve`,目标是让用户最快看到工作台,不提桌面版;原来的 `llms-web.txt` 并进来后删掉。
+    10-27 记下的浏览器版短板(要 Node 和 Chrome、截图给的是文件路径、浏览器后台限速、没有全屏放映和
+    取锚裁切图)从「备选的代价」变成要修的问题。
   - **后台常驻**:`orca-ppt serve --detach` 起一个独立进程就返回,`stop` 停掉;正在跑的那个记在
     `~/.orca-ppt/serve.json`(进程号、端口、带 token 的网址,只给自己读),再跑 `--detach` 只报网址。
     AI 助手的命令有超时,前台的 serve 会被掐掉;有了它,助手发现 6722 连不上可以自己拉起来。
@@ -434,7 +435,7 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 稿子按相对路径引 `node_modules/reveal.js/…`,交给 npm 装会被提到顶层。所以 tgz 自己用 tar 打,
 不用 npm pack(它会剔掉 node_modules)。**不发 npmjs**:和安装包同一次发版传到 GitHub Release
 (`orca-ppt-<版本>.tgz` 加固定名字 `orca-ppt.tgz`,摘要并进 `SHA256SUMS.txt`),
-`npm install -g <tgz 地址>` 就能装,写在 `site/src/llms-web.txt`。依赖(Node、Chrome)由用户的
+`npm install -g <tgz 地址>` 就能装,写在 `site/src/llms.txt`。依赖(Node、Chrome)由用户的
 AI 助手检查、缺了它来装,产品不自己下载浏览器。
 
 还没做:桌面 app 把同一个包放进 Resources、把 CLI 也露出来(ego-lite 的做法)。
@@ -528,6 +529,7 @@ CDN 上,离线就坏)· **每份稿子自带一份运行时**(引擎、reveal、
 | 2026-10-27 | 初次使用默认走 CLI + 浏览器工作台(npm 包、`orca-ppt serve --detach`、`orca-ppt tools` / `call`);MCP + 桌面版改为进阶。`tools` / `call` 是 `/mcp` 的薄客户端                                                                                                      | 尽可能降低初次使用的门槛:不用配 MCP、点「信任」,不用下 200 MB 的安装包;依赖由 AI 助手装。工具只维护 `/mcp` 一份                                                                           |
 | 2026-10-27 | 改回:默认接入仍是桌面版 + MCP,CLI + 浏览器工作台是备选(推翻同日上一条)。skill 加固定位置 `~/.local/share/orca-ppt/skill`(一根链接,server、CLI 启动时指向自己那份)                                                                                                | CLI + 网页省掉的是装的时候几步,运行时的坑多(依赖、令牌、后台限速、截图走文件、功能少),桌面版没有这些;固定位置让 npm 包换 Node 版本、Windows 桌面版升级之后新稿子不丢样式                  |
 | 2026-09-24 | 事件日志落成 JSONL(`~/.orca-ppt/recording.jsonl`),不用 SQLite;删掉「录制 job」的残留说法                                                                                                                                                                         | 要的只是追加和按游标顺序读,万条级,没有查询;一行一条零依赖、坏行能跳过、人能直接看。录制导出 09-20 已否掉                                                                                  |
+| 2026-11-09 | 默认接入改成浏览器工作台,桌面版是增值(推翻 10-27 第二条);`llms.txt` 只写 npm 包 + `serve`,不提桌面版,删掉 `llms-web.txt`                                                                                                                                         | 以桌面版为主门槛太高:下载应用、连 AI 助手、复制提示词让助手操作,普通用户每一步都是挑战                                                                                                    |
 
 ### 已实现的打包和按需读取
 

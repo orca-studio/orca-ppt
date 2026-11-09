@@ -104,7 +104,7 @@ try {
   // GNU tar 会把 `D:\…` 里的冒号当成远程主机(tools/package.mjs 也是这么绕的)
   run('tar', ['-czf', name, 'package'], stage)
   await cp(join(stage, name), versioned)
-  // 不带版本号的那份:llms-web.txt 指向 releases/latest/download/orca-ppt.tgz,发新版不用改
+  // 不带版本号的那份:llms.txt 指向 releases/latest/download/orca-ppt.tgz,发新版不用改
   await cp(versioned, join(release, 'orca-ppt.tgz'))
   const sha = createHash('sha256')
     .update(await readFile(versioned))
