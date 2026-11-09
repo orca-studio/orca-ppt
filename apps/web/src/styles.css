@@ -7,7 +7,6 @@
  */
 :root {
   --pane-left: 260px;
-  --pane-right: 360px;
 
   /*
    * 中文字体要点名。macOS 上 -apple-system 会自己回退到苹方,Windows 上不点名就看
@@ -327,15 +326,11 @@ select:focus-visible {
   /*
    * 两个方向都写死 minmax(0, …)。不写行的话隐式行是 auto,按内容长高:左栏缩略图一多、
    * 窗口一矮,整排就比窗口还高,画布按撑高后的高度居中,稿子被推到窗口下面、切掉半截。
-   * 列同理:1fr 默认最小是内容宽,窄窗口里会把右栏挤出窗口。
+   * 列同理:1fr 默认最小是内容宽,窄窗口里会把画布挤出窗口。
    */
-  /*
-   * 右栏拖过就用拖出来的宽度,但不超过窗口的 45%:窗口缩小时画布仍是主角。
-   * 两栏开合只改这两个变量,列的写法只有这一处。
-   */
+  /* 左栏开合只改这个变量,列的写法只有这一处。 */
   --nav-col: var(--pane-left);
-  --inspector-col: min(var(--pane-right-user, var(--pane-right)), 45vw);
-  grid-template-columns: var(--nav-col) minmax(0, 1fr) var(--inspector-col);
+  grid-template-columns: var(--nav-col) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
@@ -347,14 +342,12 @@ select:focus-visible {
 @media (max-width: 1200px) {
   :root {
     --pane-left: 200px;
-    --pane-right: 300px;
   }
 }
 
 @media (max-width: 900px) {
   :root {
     --pane-left: 0px;
-    --pane-right: 260px;
   }
 
   .shell .pane--nav {
@@ -816,64 +809,6 @@ select:focus-visible {
   overflow: hidden;
 }
 
-/* ── 右栏开合、拖宽 ───────────────────────────────────────────────── */
-
-.shell[data-inspector='off'] {
-  --inspector-col: 0px;
-}
-
-.shell[data-inspector='off'] .pane--stage {
-  border-right: 0;
-}
-
-.shell[data-inspector='off'] .pane--inspector {
-  overflow: hidden;
-}
-
-.pane--inspector {
-  position: relative;
-}
-
-/* 看得见的只有 1px 分隔线,能按住的范围左右各宽出几像素 */
-.pane-resizer {
-  position: absolute;
-  inset: 0 auto 0 -4px;
-  width: 8px;
-  z-index: 2;
-  cursor: col-resize;
-  touch-action: none;
-}
-
-.pane-resizer::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 3px;
-  width: 2px;
-  background: var(--accent);
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-
-.pane-resizer:hover::after,
-.pane-resizer:focus-visible::after,
-body[data-resizing] .pane-resizer::after {
-  opacity: 1;
-}
-
-.pane-resizer:focus-visible {
-  outline: none;
-}
-
-/* 拖的时候指针可能跑出拖柄、扫过画布的 iframe:光标不变,也别选中文字 */
-body[data-resizing] {
-  cursor: col-resize;
-  user-select: none;
-}
-
-body[data-resizing] iframe {
-  pointer-events: none;
-}
-
 /* ── 工具栏左侧那组圆钮 ─────────────────────────────────────────── */
 
 .toolbar-nav {
@@ -1198,134 +1133,67 @@ body[data-resizing] iframe {
   color: var(--danger);
 }
 
-/* ── 右栏:三个作用域 ─────────────────────────────────────────
-   三档是**作用域**不是工具:这一次转场 / 这一页 / 整份稿子。
-   人心里想改的东西天然带着一个作用域,按作用域分,找东西不用记它归在哪个工具下。 */
+/* ── 页胶片的右键菜单 ─────────────────────────────────────────
+   菜单 lg(12) 内边距 4 → 菜单项 md(8),圆角同心。进场快、只淡入不位移:右键菜单是工具,
+   不是一段表演;fixed 定位,贴着指针出。 */
 
-.inspector-head {
-  padding: var(--space-2) var(--space-3);
-}
-
-.inspector {
+.page-menu {
+  position: fixed;
+  z-index: 20;
   display: grid;
-  gap: var(--space-2);
-  align-content: start;
-}
-
-.inspector-row {
-  display: flex;
-  gap: var(--space-3);
-  align-items: baseline;
-}
-
-/* 标签列对齐:值参差不齐的话整块读起来像一堆碎片。标签小一号,值是正文。 */
-.inspector-row > span:first-child {
-  min-width: 4.5em;
-  flex: none;
-  font-size: var(--text-sm);
-}
-
-.inspector-row > span:last-child {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 「没写」后面那个属性名:给想自己补上的人一个线索,但不抢值的位置。 */
-.inspector-hint {
-  margin-left: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-/* 分节标题:和上面拉开一段,人才看得出这是新的一块,不是上一行的续。 */
-.inspector h3 {
-  margin: var(--space-3) 0 0;
-  font-size: var(--text-md);
-  font-weight: var(--weight-strong);
-}
-
-.inspector-carries {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 6px;
-}
-
-.inspector-carries li {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-  min-width: 0;
-}
-
-.inspector-carries code {
-  font-size: var(--text-xs);
-  padding: 1px 5px;
-  border-radius: var(--radius-sm);
-  background: var(--control);
-  flex: none;
-}
-
-.inspector-carries .muted {
-  font-size: var(--text-xs);
-  flex: none;
-}
-
-.inspector-carries em {
-  font-style: normal;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.inspector-builds li {
-  flex-wrap: wrap;
-}
-
-.inspector-builds li > span:last-child {
-  flex-basis: 100%;
-  padding-left: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--muted);
-}
-
-.inspector-actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.inspector-actions .btn {
-  flex: 1;
-}
-
-.page-actions {
-  border: 0;
-  padding: 0;
-  margin: 0 0 var(--space-5);
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-.page-actions legend {
-  font-weight: var(--weight-strong);
-  margin-bottom: var(--space-2);
-}
-.page-actions label {
-  display: grid;
-  gap: var(--space-1);
-}
-.page-actions input {
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--control);
-  color: inherit;
+  min-width: 140px;
+  padding: var(--space-1);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--stage-shadow);
+  animation: page-menu-in var(--duration-fast) var(--ease-out);
+}
+
+.page-menu button {
+  height: var(--control-md);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+  text-align: left;
+  cursor: default;
+}
+
+.page-menu button:focus-visible {
+  background: var(--control-hover);
+  outline: none;
+}
+
+/* 悬停只在有指针悬停的设备上生效,触屏上点一下不会留着一块灰 */
+@media (hover: hover) {
+  .page-menu button:hover:not(:disabled) {
+    background: var(--control-hover);
+  }
+}
+
+.page-menu button:disabled {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.page-menu button[data-danger] {
+  color: var(--danger);
+}
+
+@keyframes page-menu-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-menu {
+    animation: none;
+  }
 }
 
 /* serve 打开的网址缺 token:界面连不上 server,只留这一句 */

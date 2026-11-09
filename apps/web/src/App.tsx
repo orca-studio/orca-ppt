@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
-  CanvasElement,
   Control,
   HistoryState,
   PendingRequest,
@@ -10,9 +9,8 @@ import type {
 } from '@orca-ppt/contracts'
 import { cropUrl, toAnchor } from './anchors.js'
 import { Pending } from './Pending.js'
-import { Gallery, type MyDeck, type Recipe, type RecipeFocus, type Theme } from './Gallery.js'
-import { Inspector } from './Inspector.js'
-import { clampInspectorWidth, readLayout, writeLayout, type Layout } from './layout.js'
+import { Gallery, type MyDeck, type Recipe, type RecipeFocus } from './Gallery.js'
+import { readLayout, writeLayout, type Layout } from './layout.js'
 import { applyTheme, readTheme, type ThemeSource } from './theme.js'
 import { Stage, type SlideInfo, type StageHandle, type TextEdit } from './Stage.js'
 import { idle, isLive, prune, reduce, type AgentActivity } from './agent-activity.js'
@@ -37,7 +35,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const presentRef = useRef<() => void>(() => {})
   const exportPptxRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
-  const toggleInspectorRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
   const stepHistoryRef = useRef<(direction: 'undo' | 'redo') => void>(() => {})
 
@@ -59,9 +56,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
   // undefined = 还在加载：别先闪一下空状态
   const [recipes, setRecipes] = useState<Recipe[] | undefined>(undefined)
   const [myDecks, setMyDecks] = useState<MyDeck[] | undefined>(undefined)
-  const [themes, setThemes] = useState<Theme[]>([])
   /** 页面类型 id → 显示名。和标签一样:文件里写 id,界面显示 label。 */
-  const [pageLabels, setPageLabels] = useState<Record<string, string>>({})
   const [theme, setThemeState] = useState<ThemeSource>(readTheme)
   const [now, setNow] = useState(() => Date.now())
   const [layout, setLayout] = useState<Layout>(readLayout)
@@ -69,7 +64,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [recipeFocus, setRecipeFocus] = useState<RecipeFocus>()
   /** agent 正指着的同款卡片:摆成悬停的样子(见 Gallery 的 pointed)。 */
   const [pointedRecipe, setPointedRecipe] = useState<string>()
-  const [selection, setSelection] = useState<CanvasElement | null>(null)
   const [picking, setPicking] = useState(false)
   const [note, setNote] = useState('')
 
@@ -87,7 +81,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       const opened = await via.request('deck.open', { path })
       setDeck(opened)
       deckRef.current = opened
-      setSelection(null)
       setSlide(0)
       slideRef.current = 0
       setRequests((await via.request('requests.list', { deckId: opened.deck.id })).requests)
@@ -165,7 +158,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // 稿子在磁盘上变了 —— 不管是 agent 改的还是用户自己在编辑器里改的,画布都跟着走。
     next.subscribe('deck.changed', (data) => {
       // 先抓更新前的值:setDeck 是异步的,更新里写 ref 再比较会比到新值。
-      if (data.deckId === deckRef.current?.deck.id) setSelection(null)
       const previousUrl = deckRef.current?.previewUrl
       setDeck((current) => {
         if (!current || current.deck.id !== data.deckId) return current
@@ -203,7 +195,7 @@ export function App({ serverUrl }: { serverUrl: string }) {
     })
 
     // 转场计划写在稿子的注释里,跟着稿子一起变。只在打开时读一次的话,agent 把样稿改成
-    // 别的内容之后,右栏的「关系 / 手法」还停在样稿那份。
+    // 别的内容之后,页胶片上的转场记号和提示还停在样稿那份。
     next.subscribe('transition.changed', (data) => {
       setDeck((current) => {
         if (!current || current.deck.id !== data.deckId) return current
@@ -248,7 +240,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       if (deckRef.current?.deck.id !== data.deckId) return
       setDeck(undefined)
       deckRef.current = undefined
-      setSelection(null)
       setRequests([])
       setThumbs([])
       // 放映中关掉稿子(agent 的 close_deck):放映窗口跟着关,不留一个全屏窗口挂着
@@ -353,7 +344,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
               ? await canvas.selectCanvas(data)
               : await canvas.inspectCanvas(data.include, data.expectedRevision)
           if (data.deckId !== deckRef.current?.deck.id) throw new Error('DOCUMENT_CHANGED')
-          setSelection(evidence.selection)
           await next.request('canvas.result', { requestId: data.requestId, evidence })
         } catch (cause) {
           await next.request('canvas.result', {
@@ -411,7 +401,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     // agent 说「你看第 4 页」,画布跟着跳。
     next.subscribe('deck.slide', (data) => {
       if (data.deckId !== deckRef.current?.deck.id) return
-      if (data.index !== slideRef.current) setSelection(null)
       setSlide(data.index)
       slideRef.current = data.index
       stage.current?.goto(data.index)
@@ -428,7 +417,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       else if (action === 'present') presentRef.current()
       else if (action === 'export-pptx') exportPptxRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
-      else if (action === 'toggle-inspector') toggleInspectorRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
       else if (action.startsWith('theme:')) {
@@ -444,16 +432,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
       .then((result) => setRecipes(result.recipes))
       .catch(() => setRecipes([]))
 
-    // 主题名和页面类型的显示名:工具栏、页胶片要用。
+    // 标签不能自由决定:拼错的、没挂标签的都在这儿,不默默放过。
     void next
       .request('catalog.list', {})
       .then((result) => {
-        setThemes(result.themes)
-        setPageLabels(Object.fromEntries(result.pages.map((page) => [page.id, page.label])))
-        // 标签不能自由决定:拼错的、没挂标签的都在这儿,不默默放过。
         if (result.tagIssues.length > 0) console.warn('标签有问题:', result.tagIssues)
       })
-      .catch(() => setThemes([]))
+      .catch(() => {})
 
     const initial = host.initialDeck
     if (initial) void openWith(next, initial)
@@ -529,30 +514,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }
   }, [note])
 
-  const selectElement = useCallback(async (clear = false) => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current || !stage.current) return
-    try {
-      const context = await active.request('canvas.inspect', {
-        deckId: current.deck.id,
-        include: 'context',
-      })
-      if (!context.current) throw new Error('画布正在更新，请稍后选择。')
-      const picked = clear ? null : await stage.current.pick()
-      if (!clear && !picked) return
-      const result = await active.request('canvas.select', {
-        deckId: current.deck.id,
-        selector: picked?.selector ?? null,
-        slide: picked?.slide ?? context.slide ?? 0,
-        expectedRevision: context.revision,
-      })
-      setSelection(result.selection)
-    } catch (cause) {
-      stage.current?.notify(cause instanceof Error ? cause.message : String(cause))
-    }
-  }, [])
-
   const editPages = useCallback(async (change: RequestParams<'deck.editPages'>['change']) => {
     const active = transport.current,
       current = deckRef.current
@@ -587,42 +548,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }
   }, [])
 
-  const replaceSelectedImage = useCallback(
-    async (source: string) => {
-      const active = transport.current,
-        current = deckRef.current,
-        picked = selection
-      if (!active || !current || !picked || picked.tag !== 'img' || !picked.source) return
-      const page = slideRef.current
-      try {
-        const context = await active.request('canvas.inspect', {
-          deckId: current.deck.id,
-          include: 'context',
-        })
-        if (
-          !context.current ||
-          !context.ready ||
-          context.slide !== page ||
-          context.selection?.selector !== picked.selector ||
-          context.selection.source !== picked.source
-        )
-          throw new Error('选中的图片已变化，请重新选择。')
-        const result = await active.request('deck.replaceImage', {
-          deckId: current.deck.id,
-          slide: page,
-          selector: picked.selector,
-          oldSource: picked.source,
-          source,
-          expectedRevision: context.revision,
-        })
-        if (!result.ok) throw new Error(result.reason ?? '图片替换失败')
-      } catch (cause) {
-        stage.current?.notify(cause instanceof Error ? cause.message : String(cause))
-      }
-    },
-    [selection],
-  )
-
   /** 点「跑」不直接驱动谁 —— 挂进待办队列,等 agent 来拉。 */
 
   const present = useCallback(() => {
@@ -645,15 +570,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const toggleNav = useCallback(() => {
     setLayout((current) => {
       const merged: Layout = { ...current, nav: !current.nav }
-      writeLayout(merged)
-      return merged
-    })
-  }, [])
-
-  /** 菜单里的「显示/隐藏右栏」。 */
-  const toggleInspector = useCallback(() => {
-    setLayout((current) => {
-      const merged: Layout = { ...current, inspector: !current.inspector }
       writeLayout(merged)
       return merged
     })
@@ -687,7 +603,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   exportPptxRef.current = () => void exportPptx()
 
   toggleNavRef.current = toggleNav
-  toggleInspectorRef.current = toggleInspector
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
@@ -697,17 +612,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
       theme,
     })
   }, [deck?.previewUrl, exporting, theme])
-
-  /** 接管 / 交还。走协议 —— 界面能做的每一件事都是一个协议方法。 */
-  const setHolder = useCallback(
-    (method: 'control.takeOver' | 'control.stop' | 'control.release') => {
-      void transport.current
-        ?.request(method, {})
-        .then(setControl)
-        .catch(() => {})
-    },
-    [],
-  )
 
   const toggleAutoplay = useCallback(() => {
     const active = transport.current
@@ -768,22 +672,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [])
   stepHistoryRef.current = (direction) => void stepHistory(direction)
 
-  /** 指着一次转场说「这儿不对」—— 产生一条转场锚,和画布上点元素同一个去处。 */
-  const flagTransition = useCallback(
-    (from: number, to: number) => {
-      const active = transport.current
-      const current = deckRef.current
-      if (!active || !current) return
-      void active.request('requests.add', {
-        deckId: current.deck.id,
-        kind: 'anchor',
-        anchor: { kind: 'transition', from, to, note },
-      })
-      setNote('')
-    },
-    [note],
-  )
-
   toggleAutoplayRef.current = toggleAutoplay
 
   /** 这一步该怎么做。上游不合规时 server 会拒绝并说清卡在哪 —— 那也是人要看的。 */
@@ -824,8 +712,8 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const [slideInfo, setSlideInfo] = useState<SlideInfo | null>(null)
   useEffect(() => {
     let cancelled = false
-    // **先等画布加载完**。不等的话,刚打开稿子时问到的永远是 null,右栏一直显示
-    // 「画布还没加载」—— 看起来像功能坏了,其实只是问早了。
+    // **先等画布加载完**。不等的话,刚打开稿子时问到的永远是 null,顶栏的「重放页内动画」
+    // 就一直不出来 —— 看起来像功能坏了,其实只是问早了。
     void stage.current
       ?.whenReady()
       .then(() => stage.current?.slideInfo())
@@ -853,17 +741,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
     }
   }, [slide, deck?.slideCount])
 
-  /** 这份稿子用的主题,显示人读的那个名字。 */
-  const themeTitle = themes.find((item) => item.name === deck?.theme)?.title ?? deck?.theme
-
-  /** 一页显示什么文字。outline 的 subject 是定下来的决定,优先于从稿子认出来的标签。 */
-  const titleOf = useCallback(
-    (index: number) => deck?.slides[index]?.subject ?? deck?.slideTitles[index] ?? '—',
-    [deck],
-  )
-
   // 这一页的点击分步(引擎报的)。换了稿子就清掉:老引擎不报,不清的话会一直挂着上一份的
   const [steps, setSteps] = useState<{ done: number; clicks: number } | undefined>(undefined)
+  /** 页胶片上右键点开的页面菜单。 */
+  const [pageMenu, setPageMenu] = useState<{ index: number; x: number; y: number } | null>(null)
   const deckId = deck?.deck.id
   useEffect(() => setSteps(undefined), [deckId])
   // 回到首页时重拉同款列表:样稿或引擎改过的话缓存键变了,server 借这一下排重录。
@@ -884,7 +765,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   }, [deckId, state])
 
   const onSlideChange = useCallback((index: number) => {
-    if (index !== slideRef.current) setSelection(null)
     setSlide(index)
     slideRef.current = index
     const current = deckRef.current
@@ -963,6 +843,10 @@ export function App({ serverUrl }: { serverUrl: string }) {
         tools={
           deck && (
             <CanvasControls
+              // 转场好不好看归人判(skill 流程第 7 步):进这一页的转场、这一页的页内动画,
+              // 人看完觉得不对得能随手再放一遍。第一页没有进来的转场;没有页内动画的页不摆第二个
+              onReplayTransition={slide > 0 ? () => replay(slide - 1) : undefined}
+              onReplayPage={slideInfo?.builds ? () => replayPage(slide) : undefined}
               history={history}
               // 撤销 / 重做暂时不摆按钮:现在稿子全程是 agent 在改,人不满意会直接说「改回去」,
               // agent 调 undo 工具退回去。能力都在(协议、MCP 的 undo / redo、菜单的 ⌘Z / ⇧⌘Z),
@@ -991,21 +875,9 @@ export function App({ serverUrl }: { serverUrl: string }) {
           control={control}
           server={state === 'open' ? undefined : TRANSPORT_LABEL[state]}
           connected={state === 'open' && agentLive}
-          onTakeOver={() => setHolder('control.takeOver')}
-          onStop={() => setHolder('control.stop')}
-          onRelease={() => setHolder('control.release')}
         />
       </Toolbar>
-      <div
-        className="shell"
-        data-nav={layout.nav ? 'on' : 'off'}
-        data-inspector={layout.inspector ? 'on' : 'off'}
-        style={
-          layout.inspectorWidth === null
-            ? undefined
-            : ({ '--pane-right-user': `${layout.inspectorWidth}px` } as CSSProperties)
-        }
-      >
+      <div className="shell" data-nav={layout.nav ? 'on' : 'off'}>
         {/* 左栏只干一件事:在这份稿子里导航。阶段栏是「怎么做出它」,不是一回事。 */}
         <section className="pane pane--nav">
           <div className="pane-body">
@@ -1044,6 +916,13 @@ export function App({ serverUrl }: { serverUrl: string }) {
                         // 写是「这儿被改了」,后者更要紧,也留得更久。
                         data-agent={agent.touched.get(index)?.kind}
                         onClick={() => goto(index)}
+                        onContextMenu={(event) => {
+                          // 只读样稿、agent 拿着稿子时不给菜单:改不了的东西不摆出来
+                          if (readOnly || agentHolds) return
+                          event.preventDefault()
+                          goto(index)
+                          setPageMenu({ index, x: event.clientX, y: event.clientY })
+                        }}
                       >
                         {thumbs[index] ? (
                           <img className="filmstrip-thumb" src={assetUrl(thumbs[index])} alt="" />
@@ -1057,6 +936,17 @@ export function App({ serverUrl }: { serverUrl: string }) {
               </ol>
             )}
           </div>
+          {deck && pageMenu && (
+            <PageMenu
+              {...pageMenu}
+              slideCount={deck.slideCount}
+              onClose={() => setPageMenu(null)}
+              onChange={(change) => {
+                setPageMenu(null)
+                void editPages(change)
+              }}
+            />
+          )}
         </section>
 
         <section className="pane pane--stage">
@@ -1085,91 +975,91 @@ export function App({ serverUrl }: { serverUrl: string }) {
             </div>
           )}
         </section>
-
-        <section className="pane pane--inspector">
-          {layout.inspector && (
-            <PaneResizer
-              onResize={(width) => changeLayout({ inspectorWidth: clampInspectorWidth(width) })}
-              onReset={() => changeLayout({ inspectorWidth: null })}
-            />
-          )}
-          {deck && (
-            <Inspector
-              selection={selection}
-              locked={readOnly}
-              onEditPages={editPages}
-              onReplaceImage={replaceSelectedImage}
-              onSelect={() => void selectElement()}
-              onClearSelection={() => void selectElement(true)}
-              slide={slide}
-              slideCount={deck.slideCount}
-              title={titleOf(slide)}
-              info={slideInfo}
-              note={deck.transitionPlan.find((row) => row.from === slide)}
-              themeTitle={themeTitle}
-              pageType={
-                deck.pageTypes[slide]
-                  ? (pageLabels[deck.pageTypes[slide]] ?? deck.pageTypes[slide] ?? undefined)
-                  : undefined
-              }
-              onReplay={() => replay(slide)}
-              onReplayPage={() => replayPage(slide)}
-              onFlag={() => flagTransition(slide, slide + 1)}
-            />
-          )}
-        </section>
       </div>
     </div>
   )
 }
 
 /**
- * 右栏左边缘那条拖柄:按住左右拖改宽度,双击回到默认宽度,聚焦后方向键也能调。
- * 宽度从栏的实际宽度起算 —— 窗口窄时 CSS 会把它压窄,不能从记住的数字起算。
+ * 页胶片的右键菜单:前移、后移、删除、在后面加一页。和 Keynote、PowerPoint 的页面导航一样,
+ * 页面操作跟着页走,不另开一栏。都是 deck.editPages,agent 调的是同一个协议方法,能撤销。
+ *
+ * 点菜单外面、按 Esc、滚动页胶片都关掉 —— 菜单是一瞬间的事,不该比人的注意力留得久。
  */
-function PaneResizer({
-  onResize,
-  onReset,
+function PageMenu({
+  index,
+  x,
+  y,
+  slideCount,
+  onClose,
+  onChange,
 }: {
-  onResize: (width: number) => void
-  onReset: () => void
+  index: number
+  x: number
+  y: number
+  slideCount: number
+  onClose: () => void
+  onChange: (change: RequestParams<'deck.editPages'>['change']) => void
 }) {
-  const widthOf = (handle: HTMLElement) => handle.parentElement?.getBoundingClientRect().width ?? 0
+  const menu = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const close = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key !== 'Escape') return
+      if (event.type === 'pointerdown' && menu.current?.contains(event.target as Node)) return
+      onClose()
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    window.addEventListener('blur', onClose)
+    document.addEventListener('scroll', onClose, true)
+    menu.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus()
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+      window.removeEventListener('blur', onClose)
+      document.removeEventListener('scroll', onClose, true)
+    }
+  }, [onClose])
+  const items: Array<{
+    label: string
+    disabled: boolean
+    change: RequestParams<'deck.editPages'>['change']
+  }> = [
+    { label: '前移', disabled: index === 0, change: { action: 'move', index, to: index - 1 } },
+    {
+      label: '后移',
+      disabled: index >= slideCount - 1,
+      change: { action: 'move', index, to: index + 1 },
+    },
+    {
+      label: '在后面加一页',
+      disabled: false,
+      change: { action: 'insert', index: index + 1, title: '新页面' },
+    },
+    { label: '删除这一页', disabled: slideCount <= 1, change: { action: 'delete', index } },
+  ]
   return (
     <div
-      className="pane-resizer"
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="拖动调整右栏宽度,双击恢复默认"
-      tabIndex={0}
-      onPointerDown={(event) => {
-        if (event.button !== 0) return
-        event.preventDefault()
-        const handle = event.currentTarget
-        const startX = event.clientX
-        const startWidth = widthOf(handle)
-        // 听 window 不靠 setPointerCapture:画布会抢走捕获,指针一扫过它拖动就断了
-        document.body.dataset.resizing = 'true'
-        const move = (e: PointerEvent) => onResize(startWidth + (startX - e.clientX))
-        const up = () => {
-          window.removeEventListener('pointermove', move)
-          window.removeEventListener('pointerup', up)
-          window.removeEventListener('pointercancel', up)
-          delete document.body.dataset.resizing
-        }
-        window.addEventListener('pointermove', move)
-        window.addEventListener('pointerup', up)
-        window.addEventListener('pointercancel', up)
-      }}
-      onDoubleClick={onReset}
-      onKeyDown={(event) => {
-        const step = event.shiftKey ? 64 : 16
-        if (event.key === 'ArrowLeft') onResize(widthOf(event.currentTarget) + step)
-        else if (event.key === 'ArrowRight') onResize(widthOf(event.currentTarget) - step)
-        else return
-        event.preventDefault()
-      }}
-    />
+      ref={menu}
+      className="page-menu"
+      role="menu"
+      aria-label={`第 ${index + 1} 页`}
+      // 贴着指针出;靠近窗口底边时往上翻,不让菜单出窗
+      style={{ left: x, top: Math.min(y, window.innerHeight - 4 * 30 - 16) }}
+    >
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          role="menuitem"
+          disabled={item.disabled}
+          data-danger={item.change.action === 'delete' || undefined}
+          onClick={() => onChange(item.change)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -1188,7 +1078,7 @@ async function pickDeck(open: (path: string) => unknown): Promise<void> {
 
 /**
  * 页码下面那颗星:进入这一页有转场(PowerPoint 缩略图栏的同一个记号)。
- * 转场的细节、「指着它说不对」都在右栏「转场」那一档,这里只做记号。
+ * 转场的手法写在鼠标悬停提示里;重放进这一页的转场在顶栏。这里只做记号。
  */
 function TransitionMark() {
   return (

@@ -8,7 +8,7 @@ export interface ToolbarProps {
   title: string | undefined
   /** 回首页(关掉这份稿子)。 */
   onHome: () => void
-  /** 紧跟在首页、页胶片后面的稿子操作(撤销、重做、指给 agent 看)。没打开稿子时不给。 */
+  /** 紧跟在首页、页胶片后面的稿子操作(重放、撤销、重做、指给 agent 看)。没打开稿子时不给。 */
   tools?: ReactNode
   children?: ReactNode
   layout: Layout
@@ -18,8 +18,7 @@ export interface ToolbarProps {
 export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children }: ToolbarProps) {
   return (
     <header className="toolbar">
-      {/* 页胶片和首页是一组:同款圆钮挨着放,不和一段文字混排。页胶片开关在最左,和它管的左栏
-          同一边(右栏开关在最右,一样的道理) */}
+      {/* 页胶片和首页是一组:同款圆钮挨着放,不和一段文字混排。页胶片开关在最左,和它管的左栏同一边 */}
       <div className="toolbar-nav">
         <Button
           variant="ghost"
@@ -40,26 +39,19 @@ export function Toolbar({ title, layout, onLayoutChange, onHome, tools, children
 
       {/* 标题居中,和 macOS 窗口标题一样;两边按钮多少变了它也不跟着挪 */}
       <span className="toolbar-title">{title ?? 'Orca PPT'}</span>
-      <div className="toolbar-agent">
-        {children}
-        {/* 右栏开关放在最右,和它管的那一栏同一边(Keynote、Xcode 也这样摆) */}
-        <Button
-          variant="ghost"
-          icon
-          on={layout.inspector}
-          onClick={() => onLayoutChange({ inspector: !layout.inspector })}
-          title={layout.inspector ? '收起右栏(⌥⌘0)' : '显示右栏(⌥⌘0)'}
-          aria-label="右栏"
-          aria-pressed={layout.inspector}
-        >
-          <SidebarIcon right />
-        </Button>
-      </div>
+      <div className="toolbar-agent">{children}</div>
     </header>
   )
 }
 
 export interface CanvasControlsProps {
+  /**
+   * 重放进这一页的那次转场。转场好不好看归人判(skill 流程第 7 步),人得能随手再看一遍;
+   * 第一页没有进来的转场,不给。和 agent 的 navigate replay 是同一个协议方法。
+   */
+  onReplayTransition?: (() => void) | undefined
+  /** 把这一页的页内动画从头放一遍。这一页没有页内动画时不给。 */
+  onReplayPage?: (() => void) | undefined
   /** 改字的撤销 / 重做。和 ⌘Z / ⇧⌘Z、agent 的 undo / redo 是同一对协议方法。 */
   history: HistoryState
   /** 摆不摆撤销 / 重做。只读样稿上不摆。 */
@@ -77,6 +69,8 @@ export interface CanvasControlsProps {
 }
 
 export function CanvasControls({
+  onReplayTransition,
+  onReplayPage,
   history,
   showHistory,
   locked,
@@ -89,10 +83,35 @@ export function CanvasControls({
 }: CanvasControlsProps) {
   // 只读样稿上两样都不摆 —— 翻页和页码在左栏(缩略图、页码、方向键)。
   // 以前这几个钮单独占画布底下一整条,现在挪到顶栏首页旁边,高度让给画布(和 Keynote、PowerPoint 一样)
-  if (!showHistory && !showPick) return null
+  if (!showHistory && !showPick && !onReplayTransition && !onReplayPage) return null
   return (
     <div className="toolbar-tools" role="toolbar" aria-label="稿子操作">
       <div className="toolbar-nav">
+        {/* 重放在只读样稿上也摆:看同款的人一样要再看一遍转场 */}
+        {onReplayTransition && (
+          <Button
+            variant="ghost"
+            icon
+            onClick={onReplayTransition}
+            title="重放进这一页的转场"
+            aria-label="重放转场"
+            data-ui-target="canvas.replay"
+          >
+            <ReplayIcon />
+          </Button>
+        )}
+        {onReplayPage && (
+          <Button
+            variant="ghost"
+            icon
+            onClick={onReplayPage}
+            title="重放这一页的页内动画"
+            aria-label="重放页内动画"
+            data-ui-target="canvas.replayPage"
+          >
+            <ReplayIcon inner />
+          </Button>
+        )}
         {showHistory && (
           <>
             {/* 提示里说清撤的是哪一处 —— 光写「撤销」人不敢点。 */}
@@ -157,6 +176,26 @@ const LOCKED_TITLE = 'agent 正在操作,等它停下再撤销'
 
 /** 用 SVG 不用「▶」:那个字符的字形本身偏右偏上,怎么摆都不在圆心上。 */
 
+/**
+ * 重放:绕一圈回到起点的箭头。页内动画那个在圈里多一个点 —— 两个钮挨着,
+ * 一个是「这一页怎么进来的」,一个是「这一页里面怎么动」。
+ */
+function ReplayIcon({ inner = false }: { inner?: boolean }) {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true">
+      <path
+        d="M11.2 6.5a4.7 4.7 0 1 1-1.4-3.35M10.1 1v2.3H7.8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {inner && <circle cx="6.5" cy="6.5" r="1.3" fill="currentColor" />}
+    </svg>
+  )
+}
+
 /** 回转箭头。重做是它的镜像。 */
 function UndoIcon({ flipped = false }: { flipped?: boolean }) {
   return (
@@ -208,9 +247,9 @@ function HomeIcon() {
   )
 }
 
-/** 和 macOS 侧栏开关一个意思:一个方框,靠边那一竖是侧栏。 */
-function SidebarIcon({ right = false }: { right?: boolean }) {
-  const x = right ? 9.6 : 5.4
+/** 和 macOS 侧栏开关一个意思:一个方框,靠左那一竖是侧栏。 */
+function SidebarIcon() {
+  const x = 5.4
   return (
     <svg width="15" height="13" viewBox="0 0 15 13" aria-hidden="true">
       <rect

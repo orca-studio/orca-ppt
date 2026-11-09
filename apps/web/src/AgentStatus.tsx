@@ -1,5 +1,4 @@
 import type { Control } from '@orca-ppt/contracts'
-import { Button } from './ui/Button.js'
 
 /**
  * 右上角那一处状态:本地服务连没连上、agent 连没连上、它在干什么、谁拿着稿子。
@@ -11,23 +10,22 @@ import { Button } from './ui/Button.js'
  * 只有圆点,不写字:连上(绿)/ 没连上(灰)/ 断线(红)/ agent 在干活(一明一暗)。
  * 本来就是 agent 驱动的 —— 它在做什么、等什么批准,人在 agent 的对话里都看得到,
  * 这里再写一遍作用有限;画布和页胶片上它碰到哪儿亮哪儿,也比一行字清楚。
- * 按钮(接管 / 停止 / 交还)照摆。那句话仍在,读屏和鼠标悬停(title)还能拿到。
+ * 那句话仍在,读屏和鼠标悬停(title)还能拿到。
+ *
+ * 以前圆点旁边还有「接管 / 停止 / 交还给 Agent」三个按钮,2026-11-09 去掉了:
+ * 工作台常放在 AI 助手的侧边栏里,停止用对话框自己的停止键就在旁边;接管只在「agent 正在改、
+ * 人也要同时手动改」时有用,而改动本来就按稿子排队、写页带版本号、改字要先找到原文,人改过的
+ * 地方 agent 改不上,不会覆盖。协议方法 control.takeOver / stop / release 还在,MCP 和 CLI 照用。
  */
 export function AgentStatus({
   control,
   server,
   connected,
-  onTakeOver,
-  onStop,
-  onRelease,
 }: {
   control: Control
   /** 本地服务的连接说明。连着时为 undefined。 */
   server: string | undefined
   connected: boolean
-  onTakeOver: () => void
-  onStop: () => void
-  onRelease: () => void
 }) {
   const active = control.holder === 'agent'
   const taken = control.holder === 'user'
@@ -53,21 +51,6 @@ export function AgentStatus({
       <span className="visually-hidden" role="status" aria-live="polite">
         {status}
       </span>
-      {active && (
-        <>
-          <Button size="sm" variant="ghost" onClick={onTakeOver}>
-            接管
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onStop}>
-            停止
-          </Button>
-        </>
-      )}
-      {taken && (
-        <Button size="sm" variant="ghost" onClick={onRelease}>
-          交还给 Agent
-        </Button>
-      )}
     </div>
   )
 }

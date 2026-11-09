@@ -97,7 +97,7 @@ interface ChangeFlag {
   seq: number
 }
 
-/** 这一页在画布上的情况。右栏「页」那一档显示它。 */
+/** 这一页在画布上的情况。顶栏靠它判断摆不摆「重放页内动画」。 */
 export interface SlideInfo {
   index: number
   /** 停留多久(秒)。没写 `data-hold` 时是 null —— 如实报,不编一个默认值。 */
@@ -199,7 +199,7 @@ export const Stage = forwardRef<StageHandle, StageProps>(function Stage(
   const flagTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   /**
    * 画布加载好了没有。**初值是「没好」** —— 初次挂载时 dom-ready 还没来过,
-   * 给 false 的话刚打开稿子时问什么都答不上来(右栏会一直显示「画布还没加载」)。
+   * 给 false 的话刚打开稿子时问什么都答不上来(顶栏会一直以为这页没有页内动画)。
    */
   const loading = useRef(true)
   const runtimeErrors = useRef<CanvasError[]>([])
