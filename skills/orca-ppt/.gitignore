@@ -40,14 +40,8 @@ examples/_assets/*
 /index.html
 examples/*/thumb.jpg
 
-# build-site.mjs 的产物
-/site/
-
 # 验证配色时渲的组合样张（theme--palette.jpg），不进仓库
 runtime/themes/samples/*--*.jpg
-
-# wrangler 本地缓存
-.wrangler/
 
 # 产品共享元素教学案例（保留源文件）
 !examples/drink-showcase/

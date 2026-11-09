@@ -154,7 +154,7 @@ ${process.env.GA_ID ? `<!-- Google tag (gtag.js) -->
   gtag('js', new Date());
   gtag('config', '${esc(process.env.GA_ID)}');
 </script>` : ""}
-<!-- 本地字体：这个页面和 site/ 都不该依赖公网，见 scripts/fetch-fonts.mjs -->
+<!-- 本地字体：这个页面和官网都不该依赖公网，见 scripts/fetch-fonts.mjs -->
 <link rel="stylesheet" href="runtime/fonts/fonts.css">
 <style>
 :root{--bg:#0b0b0f;--card:#16161c;--line:#23232c;--text:#f5f5f7;--dim:#8e8e98;--faint:#6e6e78;--accent:#ff7a1a}
