@@ -272,6 +272,11 @@ function measure(index) {
   };
   function textOf(block, o) {
     const cs = getComputedStyle(block);
+    // 一路上的缩放（scale: 0.38 缩小显示的小卡片墙）。字的位置是在屏幕上量的，已经缩过了；
+    // 字号、字距、行高、内边距是算好的样式，还是没缩的 —— 不乘上它，PowerPoint 里框是小的、字是原大，
+    // 叠成一团（同款 apple-bento 首页那两面卡片墙）。按横向的缩放算，转角不影响
+    const lin = linearOf(block);
+    const zoom = Math.hypot(lin.a, lin.b) || 1;
     // 竖排（writing-mode: vertical-rl）：一「行」是一列，从右往左排。按列分组，写进 PowerPoint 的竖排文本框（eaVert）。
     // 按横排的办法按 top 分行的话，每个字都成了单独的一行，换列时又并回前一行 —— 大字重影、多列挤成一列
     const vertical = cs.writingMode.startsWith("vertical");
@@ -291,7 +296,7 @@ function measure(index) {
       const eo = opacityOf(node.parentElement);
       if (eo < 0.05) continue;
       const keepsNewlines = /^(pre|pre-wrap|pre-line|break-spaces)$/.test(ecs.whiteSpace);
-      const fontSize = parseFloat(ecs.fontSize);
+      const fontSize = parseFloat(ecs.fontSize) * zoom;
       const { font, ea } = fontOf(ecs);
       const style = {
         font,
@@ -300,7 +305,7 @@ function measure(index) {
         weight: parseInt(ecs.fontWeight, 10),
         bold: parseInt(ecs.fontWeight, 10) >= 600,
         italic: ecs.fontStyle === "italic",
-        spacing: ecs.letterSpacing === "normal" ? 0 : parseFloat(ecs.letterSpacing) || 0,
+        spacing: ecs.letterSpacing === "normal" ? 0 : (parseFloat(ecs.letterSpacing) || 0) * zoom,
         ...(withAlpha(rgba(ecs.color), eo) ?? { color: "000000", alpha: 0 }),
       };
       const clip = clipOf(node);
@@ -369,10 +374,12 @@ function measure(index) {
     }
     if (paras.at(-1)) delete paras.at(-1).spaceAfter;
     const align = { center: "ctr", right: "r", end: "r", justify: "just" }[cs.textAlign] ?? "l";
-    const lh = cs.lineHeight === "normal" ? parseFloat(cs.fontSize) * 1.2 : parseFloat(cs.lineHeight);
+    const lh = (cs.lineHeight === "normal" ? parseFloat(cs.fontSize) * 1.2 : parseFloat(cs.lineHeight)) * zoom;
+    const pad = padOf(cs);
     return {
       align,
       lineHeight: lh,
+      insets: { l: pad.l * zoom, t: pad.t * zoom, r: pad.r * zoom, b: pad.b * zoom },
       paras: paras.map((p) => ({ lines: p.lines, runs: p.runs.map(({ key, ...r }) => r) })),
       // 有段落折了行，才交给 PowerPoint 折；只有一行的（标题）不折，宽一点点也不会被挤成两行
       wrap: !vertical && paras.some((p) => p.lines > 1),
@@ -436,7 +443,7 @@ function measure(index) {
       // 渐变只铺在字上：自己不出色块，字在下面按文本框导（textOf 给字填渐变）
       if (textBlocks.has(el)) {
         const text = textOf(el, o);
-        if (text) items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text: { ...text, insets: padOf(cs) } });
+        if (text) items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text });
       }
       continue;
     }
@@ -507,8 +514,8 @@ function measure(index) {
       const text = textOf(el, o);
       if (text) {
         const box = items.at(-1)?.owner === el ? items.at(-1) : null;
-        if (box) box.text = { ...text, insets: padOf(cs) };
-        else items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text: { ...text, insets: padOf(cs) } });
+        if (box) box.text = text;
+        else items.push({ ...base, kind: "box", geom: "rect", fill: null, line: null, text });
       }
     }
   }
