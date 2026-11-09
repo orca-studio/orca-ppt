@@ -55,11 +55,9 @@
 2. **做第一份稿子。** 在工作台首页挑一个同款，点「做同款」，把复制的那段话贴给 AI 助手，补上你的内容；
    或者直接跟它说要做什么稿子。工作台的标签页留在前台，在后台浏览器会让它变慢。
 
-### 安装、接入遇到问题？进交流群
+### 安装、接入遇到问题？
 
-<a href="site/src/contact/wecom-group-qrcode.jpg"><img src="site/src/contact/wecom-group-qrcode.jpg" width="160" height="160" alt="企业微信群二维码"></a>
-
-微信或企业微信扫码加入。也可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
+在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
 
 ## 它能做什么
 
@@ -128,11 +126,7 @@ Windows 支持：[下载 Windows 版](https://github.com/orca-studio/orca-ppt/re
 
 ## 联系我们
 
-<a href="site/src/contact/wecom-group-qrcode.jpg"><img src="site/src/contact/wecom-group-qrcode.jpg" width="160" height="160" alt="企业微信群二维码"></a>
-
-微信或企业微信扫码，加入交流群。
-
-使用中遇到问题，也可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
+使用中遇到问题，可以在 [GitHub Issues](https://github.com/orca-studio/orca-ppt/issues) 里提。
 
 ## 给开发者
 
