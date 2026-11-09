@@ -16,19 +16,19 @@
 
 由 `orca-app-icon.png` 派生的文件（裁到底板再缩放）：
 
-| 派生文件                                                                                | 用在哪                                     |
-| --------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `apps/desktop/assets/icon.png`                                                          | 桌面应用图标（macOS 留白，824 居中加投影） |
-| `apps/web/public/brand/orca-icon.png`                                                   | 应用界面的浏览器图标（256）                |
-| `site/src/brand/orca-icon.png`、`site/src/favicon.ico`、`site/src/apple-touch-icon.png` | 官网                                       |
-| `docs/brand/src/orca-icon.png`                                                          | 分享卡片排版用                             |
-| `apps/server/src/mcp-http.ts` 里的内联图标                                              | MCP 连接时给宿主显示的图标（256）          |
+| 派生文件                                                                                                  | 用在哪                                     |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `apps/desktop/assets/icon.png`                                                                            | 桌面应用图标（macOS 留白，824 居中加投影） |
+| `apps/web/public/brand/orca-icon.png`                                                                     | 应用界面的浏览器图标（256）                |
+| orca-ppt-cloud 的 `site/src/brand/orca-icon.png`、`site/src/favicon.ico`、`site/src/apple-touch-icon.png` | 官网                                       |
+| `docs/brand/src/orca-icon.png`                                                                            | 分享卡片排版用                             |
+| `apps/server/src/mcp-http.ts` 里的内联图标                                                                | MCP 连接时给宿主显示的图标（256）          |
 
 ## 改分享卡片
 
 1. 改 `src/social-card.html` 的文案或画面（`src/still-*.jpg` 是两份同款样片的封面帧）。
 2. 用浏览器按 1200 × 630 截图，覆盖 `social-card-1200x630.png`。
-3. 拷一份到 `site/src/brand/`（官网的 og:image 用它）。
+3. 拷一份到 orca-ppt-cloud 的 `site/src/brand/`（官网的 og:image 用它）。
 
 ## 品牌色
 

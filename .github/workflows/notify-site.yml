@@ -1,0 +1,35 @@
+# 官网在私有仓 orca-studio/orca-ppt-cloud(2026-11-09 迁过去)。它从本仓的 skill 读同款、样稿和 runtime,
+# 所以 main 上这些一变,就通知它重新构建、部署。
+name: Notify website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - skills/orca-ppt/examples/**
+      - skills/orca-ppt/recipes/**
+      - skills/orca-ppt/runtime/**
+      - .github/workflows/notify-site.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # ORCA_PPT_CLOUD_DISPATCH:能对 orca-ppt-cloud 发 repository_dispatch 的令牌
+      # (fine-grained PAT,只给这一个仓的 Contents: Read and write)
+      - name: Dispatch skill-updated
+        env:
+          GH_TOKEN: ${{ secrets.ORCA_PPT_CLOUD_DISPATCH }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::没设 ORCA_PPT_CLOUD_DISPATCH,官网不会自动重新部署;到 orca-ppt-cloud 手动跑 Deploy website"
+            exit 0
+          fi
+          gh api repos/orca-studio/orca-ppt-cloud/dispatches \
+            -f event_type=skill-updated -f "client_payload[ref]=${{ github.sha }}"

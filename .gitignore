@@ -6,4 +6,3 @@ release/
 .DS_Store
 .env
 .env.local
-site/.cache/

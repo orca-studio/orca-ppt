@@ -435,7 +435,7 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
 稿子按相对路径引 `node_modules/reveal.js/…`,交给 npm 装会被提到顶层。所以 tgz 自己用 tar 打,
 不用 npm pack(它会剔掉 node_modules)。**不发 npmjs**:和安装包同一次发版传到 GitHub Release
 (`orca-ppt-<版本>.tgz` 加固定名字 `orca-ppt.tgz`,摘要并进 `SHA256SUMS.txt`),
-`npm install -g <tgz 地址>` 就能装,写在 `site/src/llms.txt`。依赖(Node、Chrome)由用户的
+`npm install -g <tgz 地址>` 就能装,写在官网的 `llms.txt`(orca-ppt-cloud 的 `site/src/llms.txt`)。依赖(Node、Chrome)由用户的
 AI 助手检查、缺了它来装,产品不自己下载浏览器。
 
 还没做:桌面 app 把同一个包放进 Resources、把 CLI 也露出来(ego-lite 的做法)。
@@ -534,7 +534,7 @@ _否掉:_ 工作台自己带账号和登录(本地工作台多出凭证要保管
 **还没定:** 免费的要不要登录;付费卖的是 PPTX 下载、做同款还是两样都卖;导出服务放云端(稿子要上传)
 还是做成私有包装进桌面版(导出留在本地)。
 
-**顺序:** 现在起不再往本仓加服务端代码和新同款 → 写第一行服务端代码时建云端仓,迁 `site/`,
+**顺序:** 现在起不再往本仓加服务端代码和新同款 → 写第一行服务端代码时建云端仓,迁 `site/`(2026-11-09 已迁,本仓 main 上同款有改动时 `notify-site.yml` 通知它重新部署),
 同款复制一份过去 → 工作台能加载远程同款之后,从 skill 删掉 `recipes/`、`examples/`(现在 24 MB,
 是 npm 包的大头),只留入门样稿;工作台首页从同款画廊改成「我的稿子」。
 
