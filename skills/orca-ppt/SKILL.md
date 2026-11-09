@@ -53,35 +53,30 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 5. **写页面**：做同款时从同款的样稿开始（见下面「示例怎么用」末段）。其余汇报稿从 `templates/starter.html` 开始，故事稿从 `templates/story-starter.html` 开始，把 `{{ROOT}}` 换成
    这份 HTML 到本 skill 根目录的相对路径。主题和配色怎么引见 `themes.md`「使用主题」：
    **主题和配色两个文件都要引** —— 只引主题不引配色，整份稿子退回默认的深底橙色，而且不报错。
-6. **核版式**：
+6. **核版式和转场**：
    ```bash
    node <skill>/scripts/check-deck.mjs <deck>.html
+   node <skill>/scripts/check-deck.mjs <deck>.html --like <skill>/recipes/<id>/index.html   # 做同款时
    ```
    核的是 `visual-spec.md` 里那些写死了数值的规则 —— 安全区、强调色面积、一页最多一个
    `.t-metric`、强调块上的文字有没有加 `.t-on-accent`、大数字压在面板上有没有加
    `.t-on-surface`。**它不管你把东西放在哪**，只核放完之后对不对得上；`✗` 要修，`·` 是提醒。
 
-7. **过一遍转场**：
+   转场也在这里核，**只核机器判得了对错的**，不录帧：引擎报出来的配不上（标签不同、clip-path 顶点数不同……）、
+   有转场时长却什么都没动。做同款时加 `--like` 和样稿比：每次翻页配上的元素比样稿少，就是换内容时把配对弄丢了
+   （多半是改了没写 `data-id` 的字，两页要一字不差才配得上）。
+7. **交给人看效果**：转场动得好不好看、节奏对不对，是人一眼就能判的事，归用户。交付时请用户在工作台里
+   从头翻一遍；用户指出哪一页不对，再回第 5 步改。没有工作台时，请用户用浏览器打开 `deck.html` 方向键翻。
+8. **看关键帧（只在用户要你看时）**：默认不做。用户明确要你自己核转场时 —— 开发同款、改 skill、
+   用户说「你自己录一下看看第 4 页」 —— 才跑：
    ```bash
    node <skill>/scripts/capture.mjs <deck>.html
    ```
-   逐帧 seek 整份稿子，不出视频，不用装 ffmpeg。输出末尾「页面报告的问题」必须为空，有报错先修。
-   「提醒（转场可能没动起来）」里列的页：那次转场里只有不到一半的帧在动，多半是跳过去了，先看它的关键帧。
-
-   工具要解析结果时加 `--json <报告>.json`：同样的内容（页面自报的问题、提醒、每页的转场帧区间、
-   动了几帧、关键帧路径），但是机器可读的。**别去解析 stdout** —— 那是给人看的，措辞随时会改。
-
-   用户要视频时才加 `-o <deck>.mp4`，这要系统里有 ffmpeg。
-8. **看关键帧**：capture 打印的关键帧目录里，每页有转场里均匀取的 5 帧 `pNN-t1.png` … `pNN-t5.png`
-   和停稳后的 `pNN-end.png`。逐页对照 `transitions.md` 末尾的「自检标准」：上一页的 `-end` 和这一页的
-   `-t1` 看有没有跳变，`-t2` … `-t4` 看共享元素是不是连续飞过去、中途有没有重叠出界，`-t5` 和 `-end`
-   看落位。有问题回第 5 步改。
-
-   关键帧看不出节奏：太快的转场在几张图里也像是连续的。能放视频、或者用户开着 Orca PPT 应用时，
-   再按正常速度放一遍。
-
-   **匹配剪辑（`match-cut`）没有转场帧**，只有 `-end`。它是硬切，验法见 `transitions.md`「自检标准」第 7 条：
-   把上一页的 `-end` 和这一页的 `-end` 叠起来看。
+   逐帧 seek 整份稿子，出每页转场里均匀取的 5 帧 `pNN-t1.png` … `pNN-t5.png` 和停稳后的 `pNN-end.png`，
+   逐页对照 `transitions.md` 末尾的「自检标准」看。输出末尾「页面报告的问题」必须为空；
+   「提醒（转场可能没动起来）」里列的页先看它的关键帧。
+   工具要解析结果时加 `--json <报告>.json`，**别去解析 stdout**；用户要视频时才加 `-o <deck>.mp4`（要 ffmpeg）。
+   **匹配剪辑（`match-cut`）没有转场帧**，只有 `-end`，验法见「自检标准」第 7 条。
 
 ## 放映
 
@@ -108,7 +103,7 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | `runtime/palettes/` | 配色，只给那 10 个颜色变量。**任意配色配任意主题**，在主题之后引入 |
 | `runtime/pairs.json` | 颜色配对表（哪个类压在哪个类上），`check-palettes.mjs` 读它 |
 | `runtime/engine.js` | reveal 初始化 + 各种转场的实现 + 录制接口 |
-| `scripts/capture.mjs` | 逐帧过一遍转场（系统 Chrome，不下载浏览器）：出每页的关键帧、每次转场动了几帧、页面自报的问题；`--json` 出机器可读报告，`-o x.mp4` 才拼视频（要 ffmpeg） |
+| `scripts/capture.mjs` | 逐帧过一遍转场（系统 Chrome，不下载浏览器）：出每页的关键帧、每次转场动了几帧、页面自报的问题；`--json` 出机器可读报告，`-o x.mp4` 才拼视频（要 ffmpeg）。只在用户要你看关键帧时跑（流程第 8 步） |
 | `scripts/export-pptx.mjs` | 导出 PPTX（功能不完整的导出选项），按 `transitions.md`「导出 PPTX」回退，打印哪几次翻页降级；`--json` 出报告 |
 | `scripts/check-pptx.mjs` | 拿 `export-pptx.mjs` 的报告核对导出的包：结构、文字、共享元素的名字、每页的转场档位 |
 | `scripts/extract-pptx.mjs` | 用户给了现成的 PPTX 当素材时用：整理成 `outline.md`（每页的文字、层级、字号颜色、图片、表格、图表数据、备注）和 `media/`，照着重新做网页稿；`--json` 出完整大纲，`--frames` 出每页渲染图（要 LibreOffice） |

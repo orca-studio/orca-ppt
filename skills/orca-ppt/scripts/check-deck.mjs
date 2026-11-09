@@ -1,6 +1,7 @@
 // 核一份稿子有没有违反 visual-spec.md 里那些写死了数值的规则。
 //
 //   node scripts/check-deck.mjs <deck.html> [更多稿子…]
+//   node scripts/check-deck.mjs <deck.html> --like recipes/<同款>/index.html   做同款时和样稿比转场配对
 //   node scripts/check-deck.mjs examples/*/index.html
 //   npm run deck
 //
@@ -29,7 +30,11 @@ const RUNTIME = resolve(dirname(fileURLToPath(import.meta.url)), "../runtime");
 const SPEC = JSON.parse(readFileSync(resolve(RUNTIME, "spec.json"), "utf8"));
 const PAGE_TYPES = JSON.parse(readFileSync(resolve(RUNTIME, "pages.json"), "utf8")).pages.map((p) => p.id);
 
-const decks = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+const argv = process.argv.slice(2);
+// --like <样稿>：做同款时和样稿比，每次翻页配上的元素有没有变少（见下面「和样稿比配对」）
+const likeAt = argv.indexOf("--like");
+const LIKE = likeAt >= 0 ? argv[likeAt + 1] : null;
+const decks = argv.filter((a, i) => !a.startsWith("-") && !(likeAt >= 0 && i === likeAt + 1));
 if (decks.length === 0) {
   console.error("用法：node scripts/check-deck.mjs <deck.html> [更多稿子…]");
   process.exit(1);
@@ -348,7 +353,30 @@ async function auditGlass(page) {
   return problems;
 }
 
+// 每次翻页 reveal 配上了几个元素（data-auto-animate-target 不是 unmatched 的）。
+// 有的同款两页都写 data-auto-animate 却不靠 reveal 配对（引擎自己用 GSAP 动），那几次就是 0，所以 0 本身不算错；
+// 只有和样稿比少了才说明换内容时把配对弄丢了 —— 最常见的是改了没写 data-id 的那段字（两页要一字不差才配得上）
+const pairCount = () => {
+  const s = document.querySelector(".slides > section.present");
+  return [...s.querySelectorAll("[data-auto-animate-target]")]
+    .filter((el) => el.dataset.autoAnimateTarget && !el.dataset.autoAnimateTarget.startsWith("unmatched")).length;
+};
+async function pairsOf(browser, file) {
+  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
+  await page.goto(pathToFileURL(file).href);
+  await page.waitForFunction(() => window.__capture && (!window.Reveal || window.Reveal.isReady?.()));
+  const count = await page.evaluate(() => window.__capture.count());
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    await page.evaluate((n) => window.__capture.go(n), i);
+    out.push(await page.evaluate(pairCount));
+  }
+  await page.close();
+  return out;
+}
+
 const browser = await chromium.launch({ channel: "chrome" });
+const likePairs = LIKE ? await pairsOf(browser, resolve(LIKE)) : null;
 let total = 0;
 
 for (const deck of decks) {
@@ -365,12 +393,44 @@ for (const deck of decks) {
 
   const count = await page.evaluate(() => window.__capture.count());
   const found = [];
+  // 引擎发现转场配不上时会在控制台报 [orca-transition-skill]（标签不同配不上、clip-path 顶点数不同……），
+  // capture.mjs 的「页面报告的问题」就是它们。这里切页时就能收到，不用逐帧录
+  let at = 0;
+  page.on("console", (m) => {
+    const text = m.text();
+    if (!text.startsWith("[orca-transition-skill]") || !["error", "warning"].includes(m.type())) return;
+    found.push({ page: at + 1, rule: "转场", level: m.type() === "error" ? "error" : "warn", msg: text.replace("[orca-transition-skill] ", "") });
+  });
+  // 整个画面的指纹：每个元素的位置、大小、透明度、变换、裁切。转场里两个时刻指纹一样 = 什么都没动
+  const frame = () => page.evaluate(() => [...document.querySelectorAll(".reveal *")]
+    .map((e) => {
+      const r = e.getBoundingClientRect();
+      const cs = getComputedStyle(e);
+      return `${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.width)},${Math.round(r.height)},${cs.opacity},${cs.transform},${cs.clipPath}`;
+    }).join("|"));
   const styleSwap = await page.evaluate(() => document.documentElement.dataset.demo === "style-swap");
   let turns = {};
+  const pairs = [];
   for (let i = 0; i < count; i++) {
     // 切到这一页并冻住动画，再把时间轴推到转场、入场和页内动画（data-path 这类）都放完。
     // 页内动画的元素可以从画外开始走（灯从顶上落下来），量起点会误报出界，量的是它停下来的地方
+    at = i;
     const { transition, scene } = await page.evaluate((n) => window.__capture.go(n), i);
+
+    // —— 转场的静态检查（SKILL.md 第 6 步）：不录帧，只判机器判得了对错的两件事。
+    //    动得好不好看归人，在工作台里翻一遍看（第 7 步）
+    pairs.push(await page.evaluate(pairCount));
+    if (i > 0) {
+      // 有转场时长却什么都没动：转场开头和一半时的画面一模一样，多半是跳过去了
+      if (transition > 0) {
+        await page.evaluate(() => window.__capture.seek(0));
+        const start = await frame();
+        await page.evaluate((ms) => window.__capture.seek(ms), transition / 2);
+        if ((await frame()) === start) {
+          found.push({ page: i + 1, rule: "转场没动", level: "warn", msg: `第 ${i}→${i + 1} 页的转场有 ${Math.round(transition)}ms，但开头和一半时画面一模一样，多半是跳过去了。拿不准就请用户在工作台里翻一下这一页` });
+        }
+      }
+    }
     if (styleSwap && i > 0) {
       for (const f of [0.3, 0.5, 0.7]) {
         await page.evaluate((ms) => window.__capture.seek(ms), transition * f);
@@ -397,6 +457,19 @@ for (const deck of decks) {
       }
     }
     turns = now;
+  }
+
+  // —— 和样稿比配对（--like）：页数一样才逐次比；页数不同说明增删过页，对不上号，只提一句
+  if (likePairs) {
+    if (likePairs.length !== pairs.length) {
+      found.push({ page: 0, rule: "转场配对", level: "warn", msg: `稿子 ${pairs.length} 页、样稿 ${likePairs.length} 页，页数不同没法逐次比配对。请用户在工作台里翻一遍，看看该移动的有没有变成淡入淡出` });
+    } else {
+      pairs.forEach((n, i) => {
+        if (i > 0 && n < likePairs[i]) {
+          found.push({ page: i + 1, rule: "转场配对", msg: `第 ${i}→${i + 1} 页样稿配上了 ${likePairs[i]} 个元素，这份只有 ${n} 个：少了的那些翻页时会淡出再淡入，而不是移过来。多半是改了没写 data-id 的字 —— 两页要一字不差，或者两边写同一个 data-id（transitions.md「共享元素 / 形态变换」）` });
+        }
+      });
+    }
   }
 
   // —— 整份稿子的检查：页面类型词表、手法次数、连续同一种手法、镂空聚焦的洞
