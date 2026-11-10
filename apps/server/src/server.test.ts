@@ -14,11 +14,10 @@ let pushes: any[]
 /** 每个用例可以在 startServer 之前往里塞允许目录(假 skill)。 */
 let allowRoots: string[]
 
-/** 假的渲染器(缩略图、导出 PPTX)。用例按需填 `render`;不填就说渲不了。 */
+/** 假的渲染器(缩略图)。用例按需填 `render`;不填就说渲不了。 */
 let render: Partial<Renderer> = {}
 const renderer: Renderer = {
   thumbnails: (job) => render.thumbnails?.(job) ?? Promise.reject(new Error('没有假的缩略图')),
-  exportPptx: (job) => render.exportPptx?.(job) ?? Promise.reject(new Error('没有假的导出')),
 }
 
 beforeEach(async () => {
@@ -984,105 +983,6 @@ describe('shared page and image edits', () => {
         })
       ).data.ok,
     ).toBe(false)
-  })
-})
-
-describe('导出 PPTX', () => {
-  const report = {
-    slides: [
-      { index: 1, lost: [], rasters: [] },
-      { index: 2, lost: ['页内动画'], rasters: [{ name: 'img', reason: '<img>' }] },
-    ],
-    degraded: [{ from: 1, to: 2, technique: '整页推近', tier: '降级', kind: 'fade' }],
-    fonts: ['Inter'],
-  }
-  /** 扮演渲染器:收到导出请求就往 server 给的临时文件里写点东西,交回报告 */
-  function actAsShell(reply: (request: any) => Promise<unknown>) {
-    const requests: any[] = []
-    render.exportPptx = (job) => {
-      requests.push(job)
-      return reply(job)
-    }
-    return { requests, stop: () => delete render.exportPptx }
-  }
-  beforeEach(async () => {
-    process.env.ORCA_PPT_PPTX_DIR = await mkdtemp(join(tmpdir(), 'pptx-tmp-'))
-  })
-  afterEach(() => {
-    delete process.env.ORCA_PPT_PPTX_DIR
-  })
-
-  it('壳导到临时文件,server 挪到要的位置,临时文件删掉,报告说给人听', async () => {
-    const { id } = await builtDeck()
-    const shell = actAsShell(async (request) => {
-      await writeFile(request.outPath, 'pptx')
-      return report
-    })
-    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), '稿子.pptx')
-    const result = await call('deck.exportPptx', { deckId: id, path: target })
-    shell.stop()
-    expect(result.data).toEqual({
-      path: target,
-      slides: 2,
-      degraded: report.degraded,
-      lost: [{ slide: 2, items: ['页内动画'] }],
-      rasters: 1,
-      fonts: ['Inter'],
-    })
-    expect(await readFile(target, 'utf8')).toBe('pptx')
-    expect(shell.requests[0].outPath.startsWith(process.env.ORCA_PPT_PPTX_DIR!)).toBe(true)
-    await expect(readFile(shell.requests[0].outPath)).rejects.toThrow()
-  })
-
-  it('目标路径不对就不请壳导', async () => {
-    const { id } = await builtDeck()
-    const shell = actAsShell(async () => {})
-    const dir = await mkdtemp(join(tmpdir(), 'pptx-out-'))
-    for (const [path, message] of [
-      ['相对/稿子.pptx', '绝对路径'],
-      [join(dir, '稿子.key'), '.pptx'],
-      [join(dir, '没有这个目录', '稿子.pptx'), '目录不存在'],
-    ]) {
-      expect((await call('deck.exportPptx', { deckId: id, path })).error.message).toContain(message)
-    }
-    shell.stop()
-    expect(shell.requests).toEqual([])
-  })
-
-  it('壳导失败,原因带回来', async () => {
-    const { id } = await builtDeck()
-    const shell = actAsShell(() => Promise.reject(new Error('稿子没有录制接口')))
-    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
-    const result = await call('deck.exportPptx', { deckId: id, path: target })
-    shell.stop()
-    expect(result.error.message).toContain('稿子没有录制接口')
-    await expect(readFile(target)).rejects.toThrow()
-  })
-
-  it('报告的形状在 server 这边校验:渲染方交回来的不对就报错,不往下传', async () => {
-    const { id } = await builtDeck()
-    const shell = actAsShell(async (request) => {
-      await writeFile(request.outPath, 'pptx')
-      return { slides: 'x' }
-    })
-    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
-    const result = await call('deck.exportPptx', { deckId: id, path: target })
-    shell.stop()
-    expect(result.error).toBeDefined()
-    await expect(readFile(target)).rejects.toThrow()
-  })
-
-  it('没有渲染器:说 NO_RENDERER,不假装导好了', async () => {
-    socket.close()
-    await server.close()
-    server = await startServer()
-    socket = new WebSocket(`ws://127.0.0.1:${server.port}`)
-    await new Promise((done) => socket.once('open', done))
-    listen()
-    const { id } = await builtDeck()
-    const target = join(await mkdtemp(join(tmpdir(), 'pptx-out-')), 'a.pptx')
-    const result = await call('deck.exportPptx', { deckId: id, path: target })
-    expect(result.error.message).toMatch(/^NO_RENDERER:/)
   })
 })
 

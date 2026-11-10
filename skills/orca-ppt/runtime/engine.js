@@ -19,7 +19,7 @@
 (() => {
   const CAPTURE = new URLSearchParams(location.search).has("capture");
   // 录制模式下，引擎改动页面（包层、插 ghost、搭灯的支架）之前，先给每个元素记下它在源文件里的位置
-  // （从 .slides 起一路 :nth-child）。导出 PPTX 按它把每个形状对回稿子里的元素；复制出来的 ghost 带着原件的
+  // （从 .slides 起一路 :nth-child）。外部工具（比如导出器）按它把每个形状对回稿子里的元素；复制出来的 ghost 带着原件的
   if (CAPTURE) {
     const slides = document.querySelector(".reveal .slides");
     for (const el of slides?.querySelectorAll("*") ?? []) {

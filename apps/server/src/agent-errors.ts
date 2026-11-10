@@ -43,7 +43,7 @@ export const AgentError = {
   noRenderer: () =>
     say(
       'NO_RENDERER',
-      '这个运行环境没有可用的浏览器 —— 缩略图、导出 PPTX 都要开一个把稿子渲出来',
+      '这个运行环境没有可用的浏览器 —— 缩略图要开一个把稿子渲出来',
       '请用户在 Orca PPT 桌面版里打开这份稿子再试',
     ),
   skillNotFound: () =>

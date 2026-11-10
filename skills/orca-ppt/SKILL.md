@@ -104,9 +104,6 @@ description: 生成带电影级转场的 HTML 演示稿（reveal.js + GSAP）。
 | `runtime/pairs.json` | 颜色配对表（哪个类压在哪个类上），`check-palettes.mjs` 读它 |
 | `runtime/engine.js` | reveal 初始化 + 各种转场的实现 + 录制接口 |
 | `scripts/capture.mjs` | 逐帧过一遍转场（系统 Chrome，不下载浏览器）：出每页的关键帧、每次转场动了几帧、页面自报的问题；`--json` 出机器可读报告，`-o x.mp4` 才拼视频（要 ffmpeg）。只在用户要你看关键帧时跑（流程第 8 步） |
-| `scripts/export-pptx.mjs` | 导出 PPTX（功能不完整的导出选项），按 `transitions.md`「导出 PPTX」回退，打印哪几次翻页降级；`--json` 出报告 |
-| `scripts/check-pptx.mjs` | 拿 `export-pptx.mjs` 的报告核对导出的包：结构、文字、共享元素的名字、每页的转场档位 |
-| `scripts/extract-pptx.mjs` | 用户给了现成的 PPTX 当素材时用：整理成 `outline.md`（每页的文字、层级、字号颜色、图片、表格、图表数据、备注）和 `media/`，照着重新做网页稿；`--json` 出完整大纲，`--frames` 出每页渲染图（要 LibreOffice） |
 | `scripts/check-deck.mjs` | 核稿子有没有违反 `visual-spec.md` 里写死数值的规则（`npm run deck`） |
 | `scripts/check-palettes.mjs` | 核配色的对比度（`npm run palettes`），新建配色必须跑 |
 | `templates/starter.html` | 汇报稿起始文件 |

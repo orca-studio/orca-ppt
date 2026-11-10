@@ -3,19 +3,13 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import {
-  resolveSkillPath,
-  type PptxJob,
-  type Renderer,
-  type ThumbnailJob,
-} from '@orca-ppt/deck-core'
+import { resolveSkillPath, type Renderer, type ThumbnailJob } from '@orca-ppt/deck-core'
 
 /**
  * 不开桌面版时的渲染器:playwright 开系统里装好的 Chrome(没有就试 Edge),不下载浏览器。
  * `orca-ppt serve` 用它,以后 CLI 也用它(见 docs/ARCHITECTURE.md「一个内核,三种形态」)。
  *
- * playwright-core 和导出逻辑都从 skill 里取 —— skill 的 `capture.mjs` / `export-pptx.mjs`
- * 用的就是这一份,版本跟着 skill 走,不在产品里再装一份。
+ * playwright-core 从 skill 里取 —— skill 的 `capture.mjs` 用的就是这一份,版本跟着 skill 走,不在产品里再装一份。
  *
  * 一次只渲一件事:几个任务抢同一个浏览器只会互相拖慢。浏览器第一次用时才开,之后一直留着。
  */
@@ -45,16 +39,6 @@ interface Browser {
 }
 interface Playwright {
   chromium: { launch(options: { channel: string }): Promise<Browser> }
-}
-interface ExportCore {
-  VIEW: { width: number; height: number }
-  exportDeck(page: {
-    evaluate: (fn: (arg: never) => unknown, arg?: unknown) => Promise<unknown>
-    screenshot: (input: {
-      clip: { x: number; y: number; width: number; height: number }
-      transparent?: boolean
-    }) => Promise<Buffer>
-  }): Promise<{ pptx: Buffer; report: unknown }>
 }
 
 export interface PlaywrightRenderer extends Renderer {
@@ -94,7 +78,7 @@ export function playwrightRenderer(
           // 和 server 的环境类错误一个写法(apps/server/src/agent-errors.ts):前缀给宿主认,
           // 「下一步」给助手照做 —— 依赖由用户的 AI 助手装,产品不自己下载浏览器
           throw new Error(
-            'NO_BROWSER:没找到系统里的 Chrome 或 Edge,渲不了缩略图、截不了图、导不了 PPTX。下一步:装上 Google Chrome 再试。',
+            'NO_BROWSER:没找到系统里的 Chrome 或 Edge,渲不了缩略图、截不了图。下一步:装上 Google Chrome 再试。',
           )
         }
       }
@@ -179,29 +163,8 @@ export function playwrightRenderer(
     }
   }
 
-  const exportPptx = async (job: PptxJob): Promise<unknown> => {
-    const core = (await import(
-      pathToFileURL(join(await skill(), 'scripts/lib/pptx-export.mjs')).href
-    )) as ExportCore
-    const page = await (await open()).newPage({ viewport: core.VIEW, deviceScaleFactor: 1 })
-    try {
-      await page.goto(`${job.previewUrl}?capture#/0`)
-      // 和 skill 的 export-pptx.mjs 一样把 page 交给同一份导出逻辑
-      const { pptx, report } = await core.exportDeck({
-        evaluate: (fn, arg) => page.evaluate(fn as (arg: never) => unknown, arg),
-        screenshot: ({ clip, transparent }) =>
-          page.screenshot({ clip, omitBackground: Boolean(transparent) }),
-      })
-      await writeFile(job.outPath, pptx)
-      return report
-    } finally {
-      await page.close().catch(() => {})
-    }
-  }
-
   return {
     thumbnails: (job) => queued(() => thumbnails(job)),
-    exportPptx: (job) => queued(() => exportPptx(job)),
     close: async () => {
       const opened = browser
       browser = undefined

@@ -33,7 +33,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const deckRef = useRef<OpenedDeck | undefined>(undefined)
   // 菜单处理器在只跑一次的 effect 里注册,拿 state 会读到旧值。
   const presentRef = useRef<() => void>(() => {})
-  const exportPptxRef = useRef<() => void>(() => {})
   const toggleNavRef = useRef<() => void>(() => {})
   const toggleAutoplayRef = useRef<() => void>(() => {})
   const stepHistoryRef = useRef<(direction: 'undo' | 'redo') => void>(() => {})
@@ -49,7 +48,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
   const thumbTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [agent, setAgent] = useState<AgentActivity>(idle)
   const [autoplay, setAutoplay] = useState(false)
-  const [exporting, setExporting] = useState(false)
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false })
   /** 稿子此刻归谁动。agent 拿着时画布盖上遮罩,人要动先接管。 */
   const [control, setControl] = useState<Control>({ holder: 'none', explicit: false })
@@ -415,7 +413,6 @@ export function App({ serverUrl }: { serverUrl: string }) {
     host.onMenuAction?.((action) => {
       if (action === 'open') void pickDeck(open)
       else if (action === 'present') presentRef.current()
-      else if (action === 'export-pptx') exportPptxRef.current()
       else if (action === 'toggle-nav') toggleNavRef.current()
       else if (action === 'toggle-autoplay') toggleAutoplayRef.current()
       else if (action === 'undo' || action === 'redo') stepHistoryRef.current(action)
@@ -577,41 +574,15 @@ export function App({ serverUrl }: { serverUrl: string }) {
 
   presentRef.current = present
 
-  /**
-   * 导出 PPTX。存到哪由人在保存对话框里选;导出本身走协议,agent 调的是同一个方法。
-   * 导成了不提示 —— 点下「保存」这件事就结束了;导失败才说。
-   */
-  const exportPptx = useCallback(async () => {
-    const active = transport.current
-    const current = deckRef.current
-    if (!active || !current || !host.pickPptxPath) return
-    const path = await host.pickPptxPath({
-      dir: current.deck.path,
-      name: current.deck.title,
-      ...(current.readOnly ? { readOnly: true } : {}),
-    })
-    if (!path) return
-    setExporting(true)
-    try {
-      await active.request('deck.exportPptx', { deckId: current.deck.id, path })
-    } catch (cause) {
-      await host.pptxFailed?.(cause instanceof Error ? cause.message : String(cause))
-    } finally {
-      setExporting(false)
-    }
-  }, [])
-  exportPptxRef.current = () => void exportPptx()
-
   toggleNavRef.current = toggleNav
 
   // 菜单里的启用状态和主题勾选跟着界面走。
   useEffect(() => {
     void host.setMenuState?.({
       canPresent: Boolean(deck?.previewUrl),
-      exporting,
       theme,
     })
-  }, [deck?.previewUrl, exporting, theme])
+  }, [deck?.previewUrl, theme])
 
   const toggleAutoplay = useCallback(() => {
     const active = transport.current

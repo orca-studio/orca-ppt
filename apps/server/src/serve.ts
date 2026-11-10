@@ -25,7 +25,7 @@ export async function serve(args: string[], options: { webRoot: string }): Promi
   const port = Number(opt('--port') ?? process.env.ORCA_PPT_PORT ?? 6722)
   const deck = opt('--deck')
   const token = randomBytes(24).toString('base64url')
-  // 缩略图、导出 PPTX、浏览器里截图:系统 Chrome(没有就 Edge),第一次用时才开
+  // 缩略图、浏览器里截图:系统 Chrome(没有就 Edge),第一次用时才开
   const renderer = playwrightRenderer()
 
   let server: Awaited<ReturnType<typeof startServer>>
@@ -106,7 +106,7 @@ export async function readServeState(env = process.env): Promise<ServeState | un
 /**
  * 打开工作台:先找 Chrome,再找 Edge,都没有才用系统默认浏览器。
  *
- * 渲染器截图、导出用的就是 Chrome / Edge(Chromium):工作台在同一个内核里看,转场才和截图、导出
+ * 渲染器截图用的就是 Chrome / Edge(Chromium):工作台在同一个内核里看,转场才和截图
  * 对得上 —— 默认浏览器可能是 Safari 或 Firefox。打不开不算失败:网址已经打出来了,人自己点。
  */
 function openBrowser(href: string): void {

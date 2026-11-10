@@ -23,11 +23,7 @@ export interface ElectronBridge {
   /** 菜单里的动作。菜单只是另一个触发器,走的是同一条协议方法。 */
   onMenuAction?: (handler: (action: string) => void) => void
   /** 菜单里的启用状态和勾选,跟着界面走。 */
-  setMenuState?: (state: {
-    canPresent: boolean
-    exporting?: boolean
-    theme: string
-  }) => Promise<void>
+  setMenuState?: (state: { canPresent: boolean; theme: string }) => Promise<void>
   /** 设主题。壳这一层也要设,否则原生菜单/对话框和界面对不上。 */
   setTheme?: (source: 'system' | 'light' | 'dark') => Promise<boolean>
   /** 全屏放映。稿子好不好只有放映能回答。 */
@@ -38,14 +34,6 @@ export interface ElectronBridge {
   presentAutoplay?: (on: boolean) => Promise<boolean>
   /** 放映窗口还在不在自动播放。没在放映返回 null。 */
   presentAutoplayRunning?: () => Promise<boolean | null>
-  /** 壳弹保存对话框,只把路径交回来。 */
-  pickPptxPath?: (input: {
-    dir: string
-    name: string
-    readOnly?: boolean
-  }) => Promise<string | undefined>
-  /** 导出失败,壳弹一个对话框说原因。导成了不提示。 */
-  pptxFailed?: (reason: string) => Promise<void>
   /** 用系统默认应用打开一个阶段产物。改产物用用户自己的编辑器。 */
   openFile?: (path: string) => Promise<string | undefined>
   contentBounds?: () => Promise<

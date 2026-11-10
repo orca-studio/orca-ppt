@@ -263,7 +263,7 @@ _否掉:_ ego 的做法 —— 引导时不问,把软链撒进本机六十来个
 ## 一个内核,三种形态:桌面、本地 Web、CLI
 
 **目标形态,还没实现。** 同一个内核同时撑起 Electron 界面、浏览器里的本地工作台和不开界面
-的 CLI。WorkBuddy 这类 agent 装好 CLI 和 skill 就能新建、改写、检查、导出;人想看、想指给
+的 CLI。WorkBuddy 这类 agent 装好 CLI 和 skill 就能新建、改写、检查;人想看、想指给
 AI 看,再开桌面版或 `orca-ppt serve`。
 
 **Web 版只做本地。** 没有云端稿子、没有线上工作台:server 永远跑在用户自己的机器上,
@@ -275,7 +275,7 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 │ deck-agent   品味:阶段提示、产物校验、spec-check、配方提示  │
 │ deck-core    机械:新建/实例化、找入口、切页、改字、改页、    │
 │              模板/主题/同款列表、阶段状态、预览路径规划       │
-│ Renderer     接口:截单页 / 缩略图 / 导 PPTX / 录视频         │
+│ Renderer     接口:截单页 / 缩略图                           │
 └────────────────────────────────────────────────────────┘
         ▲                          ▲
    CLI 直接调                server(有状态:打开的稿子、撤销、控制权、
@@ -291,26 +291,26 @@ AI 看,再开桌面版或 `orca-ppt serve`。
 **`deck-core`(`packages/deck-core`,已落地)。** 原来 `apps/server/src` 里只吃路径的纯函数:
 `templates.ts`、`recipes.ts`、`phases.ts`、`decks.ts`、`page-edit.ts`、`edit.ts`、
 `asset-digest.ts`;第 5 步又挪进来找 skill 和读主题目录的 `skill.ts`(连同 `tags.ts`、`recent.ts`)、
-PPTX 目标路径检查和报告摘要的 `pptx.ts`,以及新建稿子的编排 `create.ts`(`createDeck`,server 的
+以及新建稿子的编排 `create.ts`(`createDeck`,server 的
 `deck.create` 和 CLI 的 `new` 共用)。`spec-check.ts` 是确定性检查,按「Deck Mode」那张表进了 `deck-agent`;
 依赖方向是 deck-core → deck-agent,所以 `checkDeck` 不自己切页,由调用方用 deck-core 的
 `sliceSections` 切好传进去 —— 切页要解析 HTML,是机械活。内核包不 import `electron` / `ws`,不持有进程级
 状态 —— 撤销历史、控制权、操作记录是「有人在场协作」才有的东西,留在 server。
 
 **`Renderer`(接口在 `packages/deck-core/src/renderer.ts`,桌面版已落地)。** 所有「开一个浏览器
-把稿子渲出来」的活走一个接口:缩略图、导 PPTX。样板已经在 skill 里:
-`scripts/lib/pptx-export.mjs` 的 `exportDeck(page)` 只依赖 `evaluate` + `screenshot`。
+把稿子渲出来」的活走一个接口:缩略图。(导出 PPTX 原来也走这里,2026-11-10 搬进私有的
+orca-ppt-cloud,见「开源仓和云端仓」。)
 
 - playwright + 系统 Chrome 一份,给 CLI 和 `serve` 用(`packages/render`,
-  已落地)。playwright-core 和导出逻辑都从 skill 里取,和 `capture.mjs` / `export-pptx.mjs` 是同一份;
+  已落地)。playwright-core 从 skill 里取,和 `capture.mjs` 是同一份;
   先找 Chrome,没有再找 Edge,不下载浏览器;第一次用时才开,一次只渲一件事。
-- Electron 隐藏窗口一份,给桌面版用(`pptx-exporter.ts` / 主进程的缩略图渲染)。server 跑在
+- Electron 隐藏窗口一份,给桌面版用(主进程的缩略图渲染)。server 跑在
   `utilityProcess` 里,经 parentPort 发 `RenderRequest`、收 `RenderReply`
   (`apps/server/src/renderer-port.ts`),不经过界面:窗口关了、界面断了照样渲得出来。
 
 server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 `NO_RENDERER`,不假装成功。
 原来的 `thumbnails.request` / `pptx.request` 推送和 `thumbnails.result` / `pptx.result` 回传已经从
-契约里删掉。PPTX 报告的形状在 server 这边按契约校验,渲染方是另一个进程。
+契约里删掉。
 
 **例外是 `capture_slide`:** 它的语义是「人此刻在画布上看到的那一页」,有界面连着时照旧走界面。
 界面截不了(浏览器版没有壳,回 `CANVAS_UNCAPTURABLE`)或者根本没开界面时,退回渲染器离屏渲
@@ -319,12 +319,12 @@ server 启动时注入其一(`startServer({ renderer })`);不注入就一律报 
 **`Host`(`apps/web/src/host.ts`,已落地)。** 取代 web 里直接调的 `window.orca`:界面只读 `host`,
 桌面版是 preload 的窄桥,浏览器里这些能力缺着,界面按「缺」处理。只剩真正的壳能力:
 
-| 能力                 | Electron                  | 浏览器                                              |
-| -------------------- | ------------------------- | --------------------------------------------------- |
-| 选稿子目录           | 原生对话框                | 最近打开 + 填路径(不在 server 里分平台弹系统对话框) |
-| 放映                 | 新窗口,盖住菜单栏         | Fullscreen API                                      |
-| 菜单、红绿灯、主题   | 有                        | 没有或页内替代                                      |
-| 裁切图、缩略图、导出 | 走协议,server 调 Renderer | 同左                                                |
+| 能力               | Electron                  | 浏览器                                              |
+| ------------------ | ------------------------- | --------------------------------------------------- |
+| 选稿子目录         | 原生对话框                | 最近打开 + 填路径(不在 server 里分平台弹系统对话框) |
+| 放映               | 新窗口,盖住菜单栏         | Fullscreen API                                      |
+| 菜单、红绿灯、主题 | 有                        | 没有或页内替代                                      |
+| 裁切图、缩略图     | 走协议,server 调 Renderer | 同左                                                |
 
 **`CanvasDriver`(`apps/web/src/canvas.tsx` 的 `CanvasView`,已落地)。** 取代 `Stage.tsx` 里直接用的
 `<webview>`,只有跑一段代码、重载、失焦、量位置、要 guest id,外加几个加载事件(整页导航、
@@ -365,7 +365,7 @@ _否掉:_ 同源 iframe(上面的理由)· 把稿子塞进界面的 DOM 或 Shad
 `embedded: true` 多实例(稿子是完整 HTML,要改写才塞得进去;Shadow DOM 不隔离 JS)·
 server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全得重写)。
 
-浏览器里现在有的:页胶片缩略图、导出 PPTX、`capture_slide`(都走 playwright 渲染器)。
+浏览器里现在有的:页胶片缩略图、`capture_slide`(都走 playwright 渲染器)。
 还没有的:取锚时的裁切图(锚本身照样有,文字描述永远带上)、全屏放映窗口(打算用新窗口,
 和官方演讲者视图一个路子)、加载完成前的页面报错(guest 脚本在 `</body>` 前才装上)。
 
@@ -385,9 +385,8 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     agent 这时发的检视、跟随改动会变慢甚至等到超时。桌面版窗口没有这个问题。
 - **CLI**(`apps/cli`,命令 `orca-ppt`,开发时 `pnpm orca-ppt`,已落地):直接调 `deck-core`、
   `deck-agent` 和 playwright 渲染器,不经过 server。命令:`new`、`recipes`、`templates`、`themes`、
-  `prompt <阶段>`、`check`、`export`(`--report` 写完整报告给 skill 的 `check-pptx.mjs`)、`serve`;
-  都有 `--json`。每一条在协议里都有对应的方法(`deck.create`、`catalog.*`、`phase.*`、
-  `deck.exportPptx`)。录屏自检、核稿子这些是 skill 的脚本,照 SKILL.md 直接跑,不包进 CLI。
+  `prompt <阶段>`、`check`、`serve`;
+  都有 `--json`。每一条在协议里都有对应的方法(`deck.create`、`catalog.*`、`phase.*`)。录屏自检、核稿子这些是 skill 的脚本,照 SKILL.md 直接跑,不包进 CLI。
   和界面的同步靠**磁盘**:CLI 写了 `deck.html`,开着的桌面版或 `serve` 由 `deck-watch.ts` 发现并
   刷新画布,CLI 不需要知道有没有 server 在跑。
   - **`orca-ppt tools` / `orca-ppt call <工具> '<JSON>'`(已落地,`apps/cli/src/mcp.ts`)**:CLI 当
@@ -397,12 +396,12 @@ server 用无头 Chrome 渲染再把画面推给浏览器(延迟、重,交互全
     连的端口:`--port`,其次后台 serve 记下的,再是 6722(桌面版也在这,所以也能操作桌面版)。
     参数三种写法:`key=value`(值按 JSON 读)、一个 JSON 对象、`-` 从标准输入读 JSON —— Windows 上
     PowerShell 调 npm 生成的 `orca-ppt.cmd` 会吃掉参数里的双引号,前后两种不靠引号。
-  - **打开工作台**:`serve` 先找 Chrome、再找 Edge,都没有才用系统默认浏览器 —— 渲染器截图、导出用的
+  - **打开工作台**:`serve` 先找 Chrome、再找 Edge,都没有才用系统默认浏览器 —— 渲染器截图用的
     就是 Chromium,工作台在同一个内核里看,转场才对得上。llms.txt 让助手优先用它**自带的浏览器**
     打开 `serve --detach --no-open` 打印的网址,用户在助手旁边就能看到。浏览器版启动时先试连一次:
     令牌是上一次启动的、或者 serve 没在跑,直说原因,不留白屏。
   - **Windows**:`.github/workflows/npm-package-windows.yml` 在 Windows 构建机上打包、全局装、新建 /
-    检查 / 导出、后台 serve、三种参数写法的 `call`、截图、停掉(`tools/smoke-npm-win.ps1`)。Linux 不测。
+    检查、后台 serve、三种参数写法的 `call`、截图、停掉(`tools/smoke-npm-win.ps1`)。Linux 不测。
   - **llms 只写安装,用法在 skill**(2026-10-27 定):`llms.txt` 只有装依赖、`npm install -g`、
     把 `orca-ppt skill` 打印的目录链进助手读 skill 的目录、打开工作台;开工作台、`tools` / `call`、
     注意事项写在 `skills/orca-ppt/references/workbench.md`(SKILL.md 开头一句「本机有 `orca-ppt` 命令时」
@@ -484,7 +483,7 @@ server 比对路径前一律 realpath(见「放映画布怎么找资源」),软�
 
 **ffmpeg 不是必须依赖。** `capture.mjs` 默认只做转场自检:逐帧 seek,出每页的关键帧、每次
 转场动了几帧、页面自报的问题,不拼视频;`-o x.mp4` 才调 ffmpeg,没装就说清怎么办。CLI 的
-「过一遍转场」就是它。`capture` / `export-pptx` 要系统 Chrome,怎么交到新手手里,CLI 对外发
+「过一遍转场」就是它。`capture` 要系统 Chrome,怎么交到新手手里,CLI 对外发
 之前要定。Windows 上很多机器只有 Edge,浏览器按 `chrome` →
 `msedge` 的顺序找。浏览器版的「选目录」两边都先做「最近打开 + 填路径」,不在 server 里分
 平台弹系统对话框。CLI 单文件分发时,macOS 要签名和公证,Windows 要代码签名、过 SmartScreen,
@@ -507,21 +506,26 @@ AI 助手在工作台里做稿是**进阶需求**。同款和案例放在官网�
 业务分两块:
 
 - **设计**:助手在本地工作台里做 HTML 创意稿(同款配方、版式、转场)。网页稿是作品本身。
-- **导出**:把做好的 HTML 稿转成 PPTX 等格式,在用户本机跑。
+- **导出**:把做好的 HTML 稿转成 PPTX 等格式,连同读入现成的 PPTX 当素材。增值服务,不在开源仓。
+
+短期只提供浏览器工作台(npm 包),桌面版(Electron 打包)停发,以后作为进阶功能做成增值服务。
 
 **设计不受导出目标约束。** 不能让某个具体的导出软件(PowerPoint、WPS)反过来决定设计能用什么手法:
 导出还原不了的转场只在导出那一刻回退,并告诉用户哪几页降级(`transitions.md`「导出 PPTX」);
-设计阶段不检查、不提醒导出效果,用户说最后要交 PPTX 也不换手法;回退对照表跟着导出走,不进 `contracts`。
+设计阶段不检查、不提醒导出效果;回退对照表跟着导出走,不进 `contracts`。
 
-**导出先开源、只把更好的结果做成增值(B 起步)。** 基础导出留在公开仓、谁都能用 —— 用户的基础需求是拿到能用的
-PPTX,导出质量本身就是获客手段。增值的是字体映射、PowerPoint / WPS 兼容修正、原生图表表格、批量导出这些,
-走 API 从服务器取。导出质量明显领先之后,再考虑把核心引擎搬成闭源、授权后下载到本地跑。
-_否掉(现在):_ 一开始就把导出引擎闭源(要单独发版、签名,而基础导出本来就拦不严)。
+**开源的本地工作台只做设计,不带导出(2026-11-10 定)。** 导出器(`export-pptx` / `check-pptx` /
+`extract-pptx`、`scripts/lib/pptx-*`、嵌入字体、回退表、导出测试、`PPTX-FIDELITY.md`)整体搬进
+orca-ppt-cloud 的 `export/`;开源仓删掉协议方法 `deck.exportPptx`、MCP 的 `export_pptx`、CLI 的
+`export`、桌面版的「导出 PPTX…」菜单和导出窗口。官网模板的 PPTX 由我们用它导出、验过再上架;用户自己的稿子
+导出以后作为增值服务,形态(授权后下载到本地跑)到时候再定。引擎给每个元素记的源位置(`data-pptx-src`,
+录制模式下)留在开源的 `engine.js` 里,导出器靠它把形状对回稿子。
+_推翻:_ 同日先定的「导出先开源、只把更好的结果做成增值」。
 
 | 仓                           | 放什么                                                                                                                                                         | 公开 |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
 | `orca-studio/orca-ppt`(本仓) | web studio(`apps/web`)、本地 server、CLI、桌面版、`contracts`、`deck-agent`、`deck-core`,skill 的规范部分(引擎、转场、主题、版式、自检脚本),少量随包的入门样稿 | 是   |
-| `orca-studio/orca-ppt-cloud` | 官网(`site/` 迁过去)、后端 API(同款目录、下载、登录、签名链接、会员、用量)、全部同款内容(免费 + 付费)、PPTX 导出服务、同款的生产和发布工具                     | 否   |
+| `orca-studio/orca-ppt-cloud` | 官网(`site/` 迁过去)、后端 API(同款目录、下载、登录、签名链接、会员、用量)、全部同款内容(免费 + 付费)、PPTX 导出器(`export/`)、同款的生产和发布工具            | 否   |
 
 **为什么拆:** 付费同款、账号和支付、签名密钥、做成会员能力的导出器,都不能进公开仓 —— 放进去谁都拿得走。
 官网原来放在本仓,理由是「同仓才能跟着同款自动更新」;同款改从服务器发以后这条理由不成立,官网跟着服务端走。
@@ -566,11 +570,10 @@ _否掉:_ 工作台自己带账号和登录(本地工作台多出凭证要保管
   记进 `catalog.json`,官网显示成「下载 PPTX(百度网盘)」。新版本建新分享、换链接,不覆盖旧文件。传阿里云 OSS、
   `tools/publish.mjs` 一条命令上架,等模板多了、要统计下载时再做(2026-11-09 定,推迟同日的 OSS 方案)。
   **第一期只上免费模板**:分享链接谁都能下,付费的要签名链接,得有保管密钥的服务端。
-- **用户自己的稿子在本地导出**(`deck.exportPptx`、`orca-ppt export`,现在的这条路)。稿子本来就在磁盘上,
+- **用户自己的稿子以后在本地导出**(导出器从云端授权后下到本机跑;开源工作台里已经没有导出)。稿子本来就在磁盘上,
   字体素材和工作台里看到的一致,不上传、不花服务器的钱。
-- **不在「能不能导出」上收费。** 应用开源,导出器也已经以 MIT 留在公开仓历史里,本地的东西拦不严。基础导出免费;
-  会员买的是更好的结果 —— 付费同款的 PPTX 模板,加上私有包里继续做的保真改进(原生图表、表格、可编辑性、
-  WPS 兼容),登录后下到本地用,代码不进公开仓。
+- **导出本身就是增值服务**(2026-11-10 改,推翻 11-09 的「不在能不能导出上收费」)。开源仓历史里还留着 MIT 的旧导出器,
+  拦不住会翻历史的人;要卖的是继续做下去的保真(原生图表、表格、可编辑性、WPS 兼容)和省事。
 - 在线导出只和在线工作台一起考虑:都是「server 搬上云」这同一个决定的结果。
 
 _否掉:_ 服务端按需导出用户的稿子(要上传整个目录、缺字体会走样、要管用户内容、按次付 Chrome 的钱,
@@ -624,6 +627,7 @@ _否掉:_ 服务端按需导出用户的稿子(要上传整个目录、缺字体
 | 2026-11-09 | 第一期用配置文件 + 阿里云 OSS:模板 PPTX 本地导出、人工验过后由 `tools/publish.mjs` 按版本和哈希命名传 OSS、地址写回云端仓 `recipes/catalog.json`;免费 / 付费、上不上架也记在这份文件里;只上免费模板。推翻同日「云端 CI 生成、传 R2、后台数据库决定」                                                                                                                          | 上架前本来就要人在 PowerPoint / WPS 里验,CI 生成省不了这一步;模板主要给国内用户,OSS 比 R2 快;没有账号和付费之前,数据库只是多一样要运维的东西                                              |
 | 2026-11-09 | 第一期模板 PPTX 用百度网盘分享分发:`catalog.json` 记分享链接和提取码,官网显示成下载按钮;阿里云 OSS 和 `publish.mjs` 推后(推迟同日的 OSS 方案)                                                                                                                                                                                                                                 | 现在模板少,手动传网盘、建分享比写上传脚本、配 OSS 快;国内用户都有网盘。要统计下载、模板多了再上 OSS                                                                                       |
 | 2026-11-10 | 产品形态定为「本地 webui + skill,用户的助手驱动,增值走 JSON API」;业务分设计(HTML 创意稿)和导出(本地转 PPTX 等);设计不受导出目标约束,降级只在导出时报告;导出先开源,增值做在保真改进上                                                                                                                                                                                         | 让 PowerPoint 的能力反过来限制手法,等于放弃产品的核心价值(平滑过渡);导出质量先拿来获客,拦不严的东西不急着收费                                                                             |
+| 2026-11-10 | 导入、导出 PPTX 搬出开源仓:导出器、核对、读入现成 PPTX、嵌入字体、回退表、导出测试进 orca-ppt-cloud `export/`;删掉 `deck.exportPptx`、MCP `export_pptx`、CLI `export`、桌面版导出菜单。开源工作台只做设计;推翻同日「导出先开源」                                                                                                                                              | 导出是增值服务,放在公开仓谁都拿得走;设计和导出分开以后,设计这边也不再被导出能力牵着走                                                                                                     |
 
 ### 已实现的打包和按需读取
 

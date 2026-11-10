@@ -13,8 +13,6 @@ interface ParentPort {
 
 /** 一份稿子每页渲一张,比单张截图慢得多,给足时间。 */
 const THUMBNAILS_TIMEOUT = 90_000
-/** 导出 PPTX 要逐页渲染、截图。 */
-const PPTX_TIMEOUT = 300_000
 
 /**
  * 桌面版:server 跑在 Electron 的 utilityProcess 里,经 parentPort 找主进程的隐藏窗口渲。
@@ -54,12 +52,10 @@ export function parentPortRenderer(
   return {
     thumbnails: async (job) =>
       (await call({ method: 'thumbnails', job }, THUMBNAILS_TIMEOUT)) as Array<string | null>,
-    exportPptx: (job) => call({ method: 'exportPptx', job }, PPTX_TIMEOUT),
   }
 }
 
 /** 没有浏览器可用的运行环境:要渲的一律说清楚做不了,不假装成功。 */
 export const noRenderer: Renderer = {
   thumbnails: () => Promise.reject(new Error(AgentError.noRenderer())),
-  exportPptx: () => Promise.reject(new Error(AgentError.noRenderer())),
 }

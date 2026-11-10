@@ -1,36 +1,32 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process'
 import { existsSync, openSync, readFileSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { DeckPhase, PptxExportReport } from '@orca-ppt/contracts'
+import { fileURLToPath } from 'node:url'
+import { DeckPhase } from '@orca-ppt/contracts'
 import { readSpec } from '@orca-ppt/deck-agent'
 import {
   createDeck,
   expandHome,
-  findEntryName,
   linkStableSkill,
   listRecipes,
   listTemplates,
   phaseGate,
-  pptxTargetProblem,
   readCatalog,
   readPhaseStatus,
   resolveSkillPath,
-  summarizePptx,
 } from '@orca-ppt/deck-core'
-import { playwrightRenderer } from '@orca-ppt/render'
 import { readServeState, serve } from '@orca-ppt/server/serve'
 import { callTool, listTools } from './mcp.js'
 
 /**
- * `orca-ppt`:不开应用也能做稿子。agent 批量新建、按阶段写、检查、导出,人想看再开
+ * `orca-ppt`:不开应用也能做稿子。agent 批量新建、按阶段写、检查,人想看再开
  * `orca-ppt serve` 或桌面版 —— 它们看的是同一个目录,磁盘就是同步通道。
  *
  * 这是一个**库客户端**:直接调 deck-core / deck-agent / 渲染器,不经过 server。但这里能做的
- * 每一件事,协议里都有对应的方法(`deck.create`、`catalog.*`、`phase.*`、`deck.exportPptx`),
+ * 每一件事,协议里都有对应的方法(`deck.create`、`catalog.*`、`phase.*`),
  * 不长出界面和 MCP 都没有的能力(见 docs/ARCHITECTURE.md「一个内核,三种形态」)。
  *
  * 规范、配方、自检脚本在 skill 里:`orca-ppt` 只做产品那一侧的事,写稿子照 skill 的 SKILL.md。
@@ -47,9 +43,6 @@ const HELP = `用法:orca-ppt <命令> [参数]
                     取一个阶段的做法。上游产物不合规就拒绝,说清卡在哪,退出码 1
   check [--deck <目录>] [--phase <阶段>]
                     对阶段产物跑确定性检查。有不合规的,退出码 1
-  export [--deck <目录>] [-o <文件.pptx>] [--report <文件.json>]
-                    导出 PPTX,要系统里有 Chrome 或 Edge。不给 -o 就放在稿子目录旁边。
-                    --report 写完整的导出报告,skill 的 check-pptx.mjs 拿它核对导出的包
   serve [--port 6722] [--deck <目录>] [--no-open] [--detach]
                     在浏览器里打开工作台。--detach 放到后台常驻,打印网址就返回;
                     已经在跑就只打印它的网址
@@ -68,14 +61,6 @@ const HELP = `用法:orca-ppt <命令> [参数]
   --json            机器可读的输出
   --deck 不给就是当前目录。阶段:${DeckPhase.options.join(' ')}
 `
-
-/** PowerPoint 里实际用的转场,说人话(和 skill 的 export-pptx.mjs 一样)。 */
-const SHOWN: Record<string, string> = {
-  morph: '平滑',
-  fade: '淡入淡出',
-  wipe: '擦除',
-  none: '无转场',
-}
 
 /**
  * 发布出去的包(tools/pack-npm.mjs)是这个形状:bin/orca-ppt.js 旁边有 web/ 和 skill/。
@@ -215,48 +200,6 @@ switch (command) {
       phases,
     )
     if (phases.some((row) => row.status === 'failed')) process.exit(1)
-    break
-  }
-  case 'export': {
-    const root = deckDir()
-    const entry = await findEntryName(root)
-    if (!entry) fail(`这个目录里没有出稿文件(deck.html):${root}`)
-    const target = resolve(expandHome(opt('-o', '--out') ?? `${root}.pptx`))
-    const problem = await pptxTargetProblem(target)
-    if (problem) fail(problem)
-    const renderer = playwrightRenderer()
-    try {
-      // 稿子按 file:// 打开:引到 skill 的相对路径和双击打开时一样解析
-      const raw = await renderer.exportPptx({
-        previewUrl: pathToFileURL(join(root, entry)).href,
-        outPath: target,
-      })
-      // 契约只认摘要要用的字段;报告文件写原样的那份,check-pptx 要每页预期的文字这些
-      const summary = summarizePptx(target, PptxExportReport.parse(raw))
-      const reportFile = opt('--report')
-      if (reportFile) {
-        // 和 skill 的 export-pptx.mjs --json 同一个形状
-        await writeFile(
-          resolve(expandHome(reportFile)),
-          JSON.stringify({ deck: join(root, entry), pptx: target, ...(raw as object) }, null, 2),
-        )
-      }
-      print(
-        [
-          `导出:${summary.path}(${summary.slides} 页)`,
-          ...summary.degraded.map(
-            (d) =>
-              `  第 ${d.from}→${d.to} 页 ${d.technique}:${d.tier},PowerPoint 里换成${SHOWN[d.kind] ?? d.kind}`,
-          ),
-          ...summary.lost.map((l) => `  第 ${l.slide} 页导不出来:${l.items.join('、')}`),
-          ...(summary.rasters ? [`${summary.rasters} 个元素转成了图片`] : []),
-          `没嵌进文件的字体(看的那台电脑要装):${summary.fonts.join('、') || '无'}`,
-        ],
-        summary,
-      )
-    } finally {
-      await renderer.close()
-    }
     break
   }
   case 'serve': {

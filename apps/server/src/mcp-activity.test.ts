@@ -18,7 +18,6 @@ import type { McpActivity } from './mcp-http.js'
 let render: Partial<Renderer> = {}
 const renderer: Renderer = {
   thumbnails: (job) => render.thumbnails?.(job) ?? Promise.reject(new Error('没有假的缩略图')),
-  exportPptx: (job) => render.exportPptx?.(job) ?? Promise.reject(new Error('没有假的导出')),
 }
 let server: OrcaServer
 let socket: WebSocket

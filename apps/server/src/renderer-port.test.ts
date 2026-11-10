@@ -37,7 +37,7 @@ describe('parentPortRenderer', () => {
   it('主进程渲失败,原因原样带回来', async () => {
     const fake = fakePort()
     const renderer = parentPortRenderer(fake.port)!
-    const pending = renderer.exportPptx({ previewUrl: 'u', outPath: '/tmp/pptx-exports/a.pptx' })
+    const pending = renderer.thumbnails({ previewUrl: 'u', slideCount: 1 })
     fake.reply({ id: fake.sent[0].id, error: '稿子没有录制接口' })
     await expect(pending).rejects.toThrow('稿子没有录制接口')
   })
@@ -46,9 +46,6 @@ describe('parentPortRenderer', () => {
 describe('noRenderer', () => {
   it('一律说 NO_RENDERER,不假装成功', async () => {
     await expect(noRenderer.thumbnails({ previewUrl: 'u', slideCount: 1 })).rejects.toThrow(
-      /^NO_RENDERER:/,
-    )
-    await expect(noRenderer.exportPptx({ previewUrl: 'u', outPath: 'o' })).rejects.toThrow(
       /^NO_RENDERER:/,
     )
   })

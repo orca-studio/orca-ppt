@@ -1,4 +1,4 @@
-# npm 包(orca-ppt.tgz)的 Windows 冒烟测试:在 CI 的 Windows 机器上全局装 → 新建、检查、导出 →
+# npm 包(orca-ppt.tgz)的 Windows 冒烟测试:在 CI 的 Windows 机器上全局装 → 新建、检查 →
 # 后台起 serve → 用 orca-ppt call 操作(三种参数写法)→ 截图 → 停掉。照 llms.txt 给 AI 助手的那条路走。
 # 用法:pwsh tools/smoke-npm-win.ps1 release
 param([Parameter(Mandatory)][string]$ReleaseDir)
@@ -27,8 +27,6 @@ $decks = Join-Path $env:TEMP 'orca-ppt-smoke'
 New-Item -ItemType Directory -Force $decks | Out-Null
 $deck = (Run '新建' { orca-ppt new smoke --from recipe:glass-bars --dir $decks }).Trim()
 Run '检查' { orca-ppt check --deck $deck } | Out-Null
-Run '导出 PPTX' { orca-ppt export --deck $deck } | Out-Null
-if (-not (Test-Path "$deck.pptx")) { throw "没导出来:$deck.pptx" }
 
 try {
   Run '后台起 serve' { orca-ppt serve --detach --no-open } | Out-Null

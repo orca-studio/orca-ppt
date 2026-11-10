@@ -21,8 +21,7 @@ import { buildMenuTemplate, type MenuAction } from './app-menu.js'
 import { ServerSupervisor } from './server-supervisor.js'
 import { handleSquirrelEvent, isSquirrelFirstRun } from './squirrel.js'
 import { ThumbnailQueue } from './thumbnail-queue.js'
-import { exportPptx } from './pptx-exporter.js'
-import type { PptxJob, RenderReply, RenderRequest, ThumbnailJob } from '@orca-ppt/deck-core'
+import type { RenderReply, RenderRequest, ThumbnailJob } from '@orca-ppt/deck-core'
 import { UpdateSourceType, makeUserNotifier, updateElectronApp } from 'update-electron-app'
 
 /**
@@ -95,7 +94,6 @@ app.on('second-instance', () => {
 /** 菜单只是另一个触发器:动作发给渲染层,它走和顶栏按钮同一条协议方法。 */
 type MenuState = {
   canPresent: boolean
-  exporting?: boolean
   theme: 'system' | 'light' | 'dark'
 }
 
@@ -525,27 +523,13 @@ function renderThumbnails(input: ThumbnailJob): Promise<Array<string | null>> {
 }
 
 /**
- * 导出 PPTX。一次只导一份:隐藏窗口里逐页 seek,并行只会互相拖慢。
- * 先写到 server 给的临时文件,挪到用户选的位置是 server 的事。
- */
-let pptxTail: Promise<unknown> = Promise.resolve()
-function queuedExportPptx(job: PptxJob): Promise<unknown> {
-  const run = pptxTail.then(() => exportPptx(job))
-  pptxTail = run.catch(() => {})
-  return run
-}
-
-/**
  * server 经 parentPort 找主进程渲(apps/server/src/renderer-port.ts)。不经过界面:
- * 窗口关了、界面断了,缩略图和 PPTX 照样渲得出来。
+ * 窗口关了、界面断了,缩略图照样渲得出来。
  */
 async function answerRender(child: UtilityProcess, request: RenderRequest): Promise<void> {
   let reply: RenderReply
   try {
-    const value =
-      request.method === 'thumbnails'
-        ? await renderThumbnails(request.job)
-        : await queuedExportPptx(request.job)
+    const value = await renderThumbnails(request.job)
     reply = { id: request.id, value }
   } catch (cause) {
     reply = { id: request.id, error: cause instanceof Error ? cause.message : String(cause) }
@@ -598,36 +582,6 @@ ipcMain.handle('deck:pick', async () => {
     title: '打开 deck 目录',
   })
   return result.canceled ? undefined : result.filePaths[0]
-})
-
-/**
- * 导出 PPTX 存到哪。和打开目录一样,渲染层只拿到一个路径字符串,写文件的是 server。
- * 默认放在稿子目录旁边;只读的稿子(同款样稿在 app 包里)放进「下载」。
- */
-ipcMain.handle(
-  'deck:pick-pptx',
-  async (_event, input: { dir: string; name: string; readOnly?: boolean }) => {
-    const dir = input.readOnly ? app.getPath('downloads') : input.dir
-    const name = input.name.replace(/[/\\:*?"<>|]/g, '-').trim() || 'deck'
-    const result = await dialog.showSaveDialog({
-      title: '导出 PPTX',
-      defaultPath: join(dir, `${name}.pptx`),
-      filters: [{ name: 'PowerPoint 演示文稿', extensions: ['pptx'] }],
-    })
-    return result.canceled ? undefined : result.filePath
-  },
-)
-
-/**
- * 导出失败才说话。导成了不提示:人在保存对话框里点下「保存」,这件事就结束了。
- */
-ipcMain.handle('deck:pptx-failed', async (_event, reason: string) => {
-  await dialog.showMessageBox({
-    type: 'warning',
-    message: '没导出来',
-    detail: reason,
-    buttons: ['好'],
-  })
 })
 
 /** 菜单里的启用状态和勾选跟着界面走,渲染层变了就报一声。 */

@@ -32,13 +32,12 @@ import { pageMetadata } from './page-metadata.js'
 import { readEditFile, writeEditFiles, type FileChanges } from './edit-files.js'
 import { listSkill, readSkill } from './skill-content.js'
 import { randomUUID } from 'node:crypto'
-import { copyFile, mkdir, readFile, rm, writeFile, realpath, stat } from 'node:fs/promises'
+import { readFile, writeFile, realpath, stat } from 'node:fs/promises'
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { basename, dirname, join, relative, isAbsolute, extname } from 'node:path'
 import {
   CanvasEvidence,
-  PptxExportReport,
   requests,
   RequestEnvelope,
   type RequestParams,
@@ -55,7 +54,6 @@ import {
 } from '@orca-ppt/contracts'
 import { WebSocketServer } from 'ws'
 import { Roundtrip } from './roundtrip.js'
-import { pptxExportDir, pptxTargetProblem, summarizePptx } from '@orca-ppt/deck-core'
 import {
   dropPartial,
   latestCover,
@@ -118,7 +116,7 @@ export async function startServer(
     /** 操作记录落在哪。默认 ~/.orca-ppt/recording.jsonl;测试给一个临时文件。 */
     recordingFile?: string
     /**
-     * 缩略图、导出 PPTX 找谁渲。桌面版是主进程的隐藏窗口(见 renderer-port.ts),
+     * 缩略图找谁渲。桌面版是主进程的隐藏窗口(见 renderer-port.ts),
      * 测试给一个假的;不给就一律报 NO_RENDERER。
      */
     renderer?: Renderer
@@ -1328,28 +1326,6 @@ export async function startServer(
           slide: params.slide ?? 0,
         })
         return {}
-      }
-      case 'deck.exportPptx': {
-        const params = parseParams('deck.exportPptx', raw)
-        const target = expandHome(params.path)
-        const problem = await pptxTargetProblem(target)
-        if (problem) throw new Error(problem)
-        const opened = await openDeck(deckPathOf(params.deckId))
-        const previewUrl = mountPreview(opened)
-        if (!previewUrl) throw new Error(AgentError.noBuild())
-
-        const dir = pptxExportDir()
-        await mkdir(dir, { recursive: true })
-        const outPath = join(dir, `${randomUUID()}.pptx`)
-        try {
-          // 报告的形状在这里按契约校验:渲染方是另一个进程(或以后的另一个浏览器)
-          const report = PptxExportReport.parse(await renderer.exportPptx({ previewUrl, outPath }))
-          // 不用 rename:临时目录和目标可能不在同一个卷上
-          await copyFile(outPath, target)
-          return summarizePptx(target, report)
-        } finally {
-          await rm(outPath, { force: true })
-        }
       }
       case 'deck.stopPresent': {
         const params = parseParams('deck.stopPresent', raw)

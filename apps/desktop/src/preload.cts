@@ -28,10 +28,6 @@ electron.contextBridge.exposeInMainWorld('orca', {
     electron.ipcRenderer.invoke('deck:open-file', path),
   captureCanvas: (input: unknown): Promise<string | undefined> =>
     electron.ipcRenderer.invoke('deck:capture-full', input),
-  pickPptxPath: (input: unknown): Promise<string | undefined> =>
-    electron.ipcRenderer.invoke('deck:pick-pptx', input),
-  pptxFailed: (reason: string): Promise<void> =>
-    electron.ipcRenderer.invoke('deck:pptx-failed', reason),
   present: (input: unknown): Promise<boolean> => electron.ipcRenderer.invoke('deck:present', input),
   stopPresent: (): Promise<boolean> => electron.ipcRenderer.invoke('deck:stop-present'),
   presentAutoplay: (on: boolean): Promise<boolean> =>
