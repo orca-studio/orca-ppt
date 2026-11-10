@@ -1,3 +1,4 @@
+# 2026-11-10 起暂停:短期只发 npm 包,用 release-npm.yml。桌面版以后作为增值服务再上,到时候再用。
 # 第一步:打包、签名、做 dmg 和 zip、提交 Apple 公证。不等公证结果。
 # 同一次运行里另起一台 Windows 机器出 Squirrel 安装包,产物一起交给「Publish Orca PPT」。
 # 手动触发,填一个已经推送的版本 tag(和 apps/desktop/package.json 的 version 一致)。

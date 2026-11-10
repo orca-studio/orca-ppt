@@ -1,3 +1,4 @@
+# 2026-11-10 起暂停:短期只发 npm 包,用 release-npm.yml。桌面版以后作为增值服务再上,到时候再用。
 # 第二步:查一次公证结果。还在处理就正常结束,稍后再跑;通过就 staple 应用、用它重做 dmg 再公证一次
 # (要签名证书;这一次等结果,通常几分钟)、staple dmg、做 Gatekeeper 检查,
 # 把 dmg、zip、Windows 安装包(Setup.exe、RELEASES、nupkg)、SHA256SUMS.txt 发到本仓的

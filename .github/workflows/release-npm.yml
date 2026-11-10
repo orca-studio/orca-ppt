@@ -1,0 +1,117 @@
+# 只发 npm 包(浏览器工作台 + CLI + skill):打包 → 在 Windows 上装一遍、用一遍 → 发 GitHub Release。
+# 2026-11-10 起短期只提供浏览器工作台,桌面版的 dmg / exe 停发,以后作为增值服务再上
+# (release-build.yml、release-publish.yml 留着)。手动触发,填一个已经推送的版本 tag(和 apps/desktop/package.json 的 version 一致)。
+# 见 docs/RELEASE.md。
+name: Release Orca PPT (web)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 已推送的版本 tag,和版本号一致(例如 v0.1.22)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orca-ppt-release
+  cancel-in-progress: false
+
+jobs:
+  pack:
+    if: github.repository == 'orca-studio/orca-ppt'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      SOURCE_TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check tag format
+        run: '[[ "$SOURCE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]'
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Check the tag matches the version
+        run: |
+          VERSION="$(node -p "require('./apps/desktop/package.json').version")"
+          [[ "$SOURCE_TAG" == "v$VERSION" ]] || { echo "tag $SOURCE_TAG 和版本 $VERSION 对不上" >&2; exit 1; }
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm install -g pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          (cd skills/orca-ppt && npm ci --no-audit --no-fund)
+      - name: Build and pack
+        run: |
+          set -euo pipefail
+          pnpm build
+          node tools/pack-npm.mjs dist/release
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: orca-ppt-npm-${{ github.run_id }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: 14
+
+  # 发出去之前,照 llms.txt 那条路在 Windows 上装一遍、用一遍:用的就是要发的那个 tgz
+  smoke-windows:
+    needs: pack
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: orca-ppt-npm-${{ github.run_id }}
+          path: release
+      - name: Install and use the package
+        shell: pwsh
+        run: tools/smoke-npm-win.ps1 release
+
+  publish:
+    needs: smoke-windows
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: orca-ppt-npm-${{ github.run_id }}
+          path: release
+      - name: Publish GitHub Release
+        working-directory: release
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          TGZ="orca-ppt-$VERSION.tgz"
+          [[ -f "$TGZ" && -f orca-ppt.tgz && -f SHA256SUMS-npm.txt ]] || { echo "没有 npm 包" >&2; exit 1; }
+          cp SHA256SUMS-npm.txt SHA256SUMS.txt
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$TAG 已经发布过,不覆盖" >&2; exit 1
+          fi
+          # orca-ppt.tgz 是固定名字:llms.txt 指向 releases/latest/download/orca-ppt.tgz,发新版不用改官网
+          gh release create "$TAG" "$TGZ" orca-ppt.tgz SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Orca PPT $VERSION" \
+            --notes "Orca PPT ${VERSION}。把这句话发给 AI 助手：读 https://ppt.orca-studio.ai/llms.txt ，帮我装好 Orca PPT。或者自己装：\`npm install -g https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$TGZ\`，然后 \`orca-ppt serve\`。这一版不带桌面版安装包。"
+          # 匿名下载回来对一遍摘要
+          mkdir -p ../verify && cd ../verify
+          curl -fsSL -o "$TGZ" "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$TGZ"
+          shasum -a 256 -c ../release/SHA256SUMS.txt
+          echo "已发布 [$TAG](https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG)。" >> "$GITHUB_STEP_SUMMARY"

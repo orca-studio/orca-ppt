@@ -1,5 +1,18 @@
 # 打包、公证与发布
 
+> **2026-11-10 起,短期只提供浏览器工作台,桌面版的 dmg / exe 停发。** 桌面版以后作为进阶功能、做成增值服务再上。 发版只跑 Actions →
+> **Release Orca PPT (web)**(`.github/workflows/release-npm.yml`):
+>
+> 1. 改 `apps/desktop/package.json` 的 `version`(npm 包的版本也取它),跑 `pnpm typecheck && pnpm test && pnpm lint`,提交到 `main`;
+> 2. 打 tag 并推送:`git tag -a v0.1.22 -m 'Orca PPT 0.1.22' && git push origin main refs/tags/v0.1.22`;
+> 3. Actions → **Release Orca PPT (web)** → Run workflow,`tag` 填 `v0.1.22`。它在 Linux 上打 `orca-ppt.tgz`,
+>    在 Windows 上照 llms.txt 装一遍、用一遍(`tools/smoke-npm-win.ps1`),都过了才发 Release(只有 tgz 和 `SHA256SUMS.txt`)。
+>
+> 不用 Apple 公证,一次跑完。README 和官网的桌面版下载入口已经撤掉:`releases/latest/download/` 下没有 dmg / exe 了。
+> 已经装了 0.1.21 桌面版的人还能用,只是不再自动更新(最新的 Release 里没有给它的 zip)。
+> 下面是桌面版的流程,留着给以后做增值服务时用:那时安装包不一定还放在公开仓的 Release 上(付费的东西放进去谁都能下),
+> 到时候再定从哪里发。
+
 结构照 [orca-studio/Compositor](https://github.com/orca-studio/Compositor) 的
 `docs/release-workflows.md`:两个手动 GitHub Actions,**提交公证和发布分开**,不让 runner
 干等 Apple。区别是打包工具换成 Electron 的,自动更新用 Electron 官方的
