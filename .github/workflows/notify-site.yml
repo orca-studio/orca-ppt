@@ -23,14 +23,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      # ORCA_CLOUD_DISPATCH:能对 orca-cloud 发 repository_dispatch 的令牌
-      # (fine-grained PAT,只给 orca-studio/orca-cloud 这一个仓的 Contents: Read and write)
+      # ORCA_PPT_CLOUD_DISPATCH:能对 orca-cloud 发 repository_dispatch 的令牌
+      # (fine-grained PAT「orca-ppt → cloud dispatch」,只给 orca-studio/orca-cloud 这一个仓的 Contents: Read and write;
+      #  secret 名字沿用迁移前的,令牌本身 2026-11-11 改成了指向 orca-cloud)
       - name: Dispatch skill-updated
         env:
-          GH_TOKEN: ${{ secrets.ORCA_CLOUD_DISPATCH }}
+          GH_TOKEN: ${{ secrets.ORCA_PPT_CLOUD_DISPATCH }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::没设 ORCA_CLOUD_DISPATCH,官网不会自动重新部署;到 orca-cloud 手动跑 Deploy ppt"
+            echo "::warning::没设 ORCA_PPT_CLOUD_DISPATCH,官网不会自动重新部署;到 orca-cloud 手动跑 Deploy ppt"
             exit 0
           fi
           gh api repos/orca-studio/orca-cloud/dispatches \
